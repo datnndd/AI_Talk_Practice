@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LingoAI | Master Languages with Real-Time Conversations</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Phosphor Icons -->
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<!-- Google Fonts: Lexend -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3182ed',
+            secondary: '#2F80ED',
+            zinc: {
+              950: '#09090b',
+            }
+          },
+          fontFamily: {
+            sans: ['Lexend', 'sans-serif'],
+            geist: ['Lexend', 'sans-serif'], // Fallback to Lexend as requested theme font
+          },
+          borderRadius: {
+            '4xl': '2.5rem',
+            'custom': '8px', // ROUND_EIGHT
+          },
+          animation: {
+            'float': 'float 6s ease-in-out infinite',
+            'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-20px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-animations">
+    /* Spring physics simulation for buttons */
+    .btn-spring {
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .btn-spring:hover {
+      transform: scale(1.05) translateY(-2px);
+    }
+    .btn-spring:active {
+      transform: scale(0.95);
+    }
+
+    /* Glassmorphism effects */
+    .liquid-glass {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    /* Bento Grid Micro-animations */
+    .bento-card:hover .bento-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+    .bento-icon {
+      transition: transform 0.3s ease;
+    }
+  </style>
+</head>
+<body class="bg-white text-zinc-900 font-sans selection:bg-primary selection:text-white">
+<!-- BEGIN: Navigation -->
+<nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100">
+<div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white">
+<i class="ph-fill ph-translate text-2xl"></i>
+</div>
+<span class="text-xl font-bold tracking-tight">LingoAI</span>
+</div>
+<div class="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-600">
+<a class="hover:text-primary transition-colors" href="#">Methodology</a>
+<a class="hover:text-primary transition-colors" href="#">Features</a>
+<a class="hover:text-primary transition-colors" href="#">Pricing</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-sm font-semibold text-zinc-900 px-4 py-2 hover:bg-zinc-50 rounded-custom transition-colors">Log In</button>
+<button class="btn-spring bg-primary text-white text-sm font-semibold px-6 py-2.5 rounded-custom shadow-lg shadow-primary/20">Get Started</button>
+</div>
+</div>
+</nav>
+<!-- END: Navigation -->
+<!-- BEGIN: Hero Section -->
+<main class="pt-32 pb-20 overflow-hidden">
+<div class="max-w-7xl mx-auto px-6">
+<div class="grid lg:grid-cols-2 gap-16 items-center">
+<!-- Text Content -->
+<div class="relative z-10" data-purpose="hero-text">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-primary text-xs font-bold uppercase tracking-widest mb-6">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+            Next-Gen Language Learning
+          </div>
+<h1 class="text-6xl lg:text-7xl font-bold tracking-tighter leading-[1.1] mb-8 text-zinc-950">
+            Master any language with <span class="text-primary">real‑time</span> AI conversations
+          </h1>
+<p class="text-xl text-zinc-500 mb-10 max-w-lg leading-relaxed">
+            Forget repetitive flashcards. Practice speaking naturally with an AI tutor that adapts to your level and interests in real-time.
+          </p>
+<div class="flex flex-col sm:flex-row gap-4">
+<button class="btn-spring bg-primary text-white px-8 py-4 rounded-custom text-lg font-bold shadow-xl shadow-primary/25">
+              Start Learning for Free
+            </button>
+<button class="px-8 py-4 rounded-custom text-lg font-bold border border-zinc-200 hover:bg-zinc-50 transition-colors inline-flex items-center gap-2">
+<i class="ph ph-play-circle text-2xl"></i>
+              Watch Demo
+            </button>
+</div>
+<div class="mt-12 flex items-center gap-6">
+<div class="flex -space-x-3">
+<img alt="User" class="w-10 h-10 rounded-full border-2 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAY08Ak-BchbX0VZ50FJw479uFeekF2BjKSLuKigzCyPbrnpHvTr0vqWbXQSBjCoxftYryqZUVhUdHSun0yyXUub3jzFwMYGFpzg15oR_NXnzhLN0OF7knYeDKstYg55Bw0-HHjPbNBtRmjuF14x4MoPKfEdmlcr_Ss4kQKk72UDTV-w7iLMErYG5ykaoJN47bfboC6D0TiyJlo8M3PeurEizc1R19yVKgAjcdt9x3PncOMTT9r9RqxRYIoiHbjGSG1_NlPPpFanWLf"/>
+<img alt="User" class="w-10 h-10 rounded-full border-2 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsPFMEp080goEatXTLUWjAm7oe1HSLs4yo_BK1pCys7pL39niWXVGL_KpbdYe55kg4-2qgo45NwrNg3amdSA-snqrvJkXu2kO46Q6jRVT88VqvAfOnOKPkZ8RGc7K4hXHhWsjnA7uOEsDfCkqsg6O1hzlFvnvQmy1OzJdey8Ya5aXMHY6YWssCCmMoZ9rXG2tWgUldM15uksQKQw6VU5ut8T-Ts9_hzl-EGkv5qWWwCNbJLYnAjnpFlyTBFJxL9oHtA3ahd7jxdkEq"/>
+<img alt="User" class="w-10 h-10 rounded-full border-2 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpAiGesz0v7MW22ItryN9VUZ_Ra54aBGm2K7JnrJ8E3ZyPB7hEAIT5bwPywy45vwt0rOII40-sxbrtM3E62DSQ1h2Q5oC1uMXCYAoxaadO-NXE5SIepjncOurdvS75VJqFbBvLoqZID7fMSv5UPiye1LIr6zR_aC92TMKeI2yBrhog-topfkHMskzq9Srl4XNvEXVfiYEHl5hT7F8CpsasgmtXVC4hImKgTnb1OQSb8hxDaLNK2bPhhL-ytSmTxqHPEcLQLhtauggX"/>
+</div>
+<p class="text-sm text-zinc-500 font-medium">Joined by <span class="text-zinc-900 font-bold">12,000+</span> language learners</p>
+</div>
+</div>
+<!-- Graphic/Interface -->
+<div class="relative" data-purpose="hero-visual">
+<!-- Background decorative element -->
+<div class="absolute -top-20 -right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+<div class="relative animate-float">
+<!-- Liquid Glass Interface Preview -->
+<div class="liquid-glass p-8 rounded-4xl border border-white/40 shadow-2xl relative z-20">
+<div class="flex items-center justify-between mb-8">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 bg-zinc-100 rounded-full overflow-hidden">
+<img alt="AI Avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjalZV0uphA1SmceQgkvfHRWB9fWihgWmBPicoo9yd3wPWtAvmV4tvby1CNWGIH-L5WZ4Ss-x_9dbTKKAd9jNJ3Cj-PUAlqfiRbCaOm-AYN-DfxGHZLYeszLn_rKHmDnw-F5P_wY1Gct-FkktdWXfEoYGf6XqDIhmvmkb8W9K22Rwk68M0j948127mJpQaVbfQm5Z90XBJZUaV-3i0FifV8cK8ptxYuw_wqCRC3itPCckVXxLniA0hzCwVPEYhmsmYNxf42hJ1Hn-Q"/>
+</div>
+<div>
+<h4 class="font-bold text-zinc-900">Isabella</h4>
+<span class="text-xs text-green-500 font-medium flex items-center gap-1">
+<div class="w-1.5 h-1.5 bg-green-500 rounded-full"></div> AI Tutor Online
+                    </span>
+</div>
+</div>
+<div class="flex gap-2">
+<div class="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center"><i class="ph ph-gear text-zinc-500"></i></div>
+</div>
+</div>
+<div class="space-y-4 mb-8">
+<div class="bg-zinc-100 p-4 rounded-2xl rounded-tl-none max-w-[80%]">
+<p class="text-sm text-zinc-800">¡Hola! ¿Cómo estuvo tu día hoy? Me gustaría saber qué hiciste de especial.</p>
+</div>
+<div class="bg-primary p-4 rounded-2xl rounded-tr-none max-w-[80%] ml-auto text-white">
+<p class="text-sm">Hoy fui al mercado central y compré muchas frutas frescas.</p>
+</div>
+<div class="bg-zinc-50/50 border border-zinc-100 p-4 rounded-2xl">
+<p class="text-xs font-bold text-primary uppercase mb-2">Live Feedback</p>
+<p class="text-sm text-zinc-600">Great job! "Frutas" is plural, and you used the correct conjugation for "compré". Try using "verduras" (vegetables) next time to expand your vocabulary.</p>
+</div>
+</div>
+<div class="flex justify-center">
+<div class="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/40 pulse-slow cursor-pointer">
+<i class="ph-fill ph-microphone text-3xl"></i>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- END: Hero Section -->
+<!-- BEGIN: Feature Bento Grid -->
+<section class="py-24 bg-zinc-50">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center max-w-2xl mx-auto mb-16">
+<h2 class="text-4xl font-bold tracking-tight text-zinc-950 mb-4">Mastery built into every interaction</h2>
+<p class="text-zinc-500">Our platform uses advanced neural processing to create a learning path that's as unique as you are.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6 h-auto md:h-[600px]">
+<!-- AI Conversations Card -->
+<div class="bento-card md:col-span-8 bg-white p-10 rounded-4xl border border-zinc-200 shadow-sm flex flex-col justify-between overflow-hidden relative group" data-purpose="bento-feature">
+<div class="relative z-10">
+<div class="bento-icon w-14 h-14 bg-blue-50 text-primary rounded-2xl flex items-center justify-center mb-6">
+<i class="ph-bold ph-chats-teardrop text-2xl"></i>
+</div>
+<h3 class="text-2xl font-bold mb-4">Contextual AI Conversations</h3>
+<p class="text-zinc-500 max-w-md">Our AI doesn't just read scripts. It understands context, sarcasm, and regional dialects to give you a true immersion experience.</p>
+</div>
+<div class="absolute bottom-0 right-0 w-1/2 opacity-10 group-hover:opacity-20 transition-opacity">
+<i class="ph-light ph-cpu text-[200px]"></i>
+</div>
+</div>
+<!-- Personalized Paths Card -->
+<div class="bento-card md:col-span-4 bg-zinc-950 text-white p-10 rounded-4xl shadow-xl flex flex-col justify-between overflow-hidden group" data-purpose="bento-feature">
+<div class="relative z-10">
+<div class="bento-icon w-14 h-14 bg-white/10 text-white rounded-2xl flex items-center justify-center mb-6">
+<i class="ph-bold ph-path text-2xl"></i>
+</div>
+<h3 class="text-2xl font-bold mb-4">Personalized Curriculum</h3>
+<p class="text-zinc-400">Lessons adapt in real-time based on your mistakes and successes.</p>
+</div>
+<div class="mt-8">
+<div class="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[75%]"></div>
+</div>
+<p class="text-[10px] uppercase tracking-widest mt-2 text-zinc-500 font-bold">75% Daily Goal Reached</p>
+</div>
+</div>
+<!-- Progress Tracking Card -->
+<div class="bento-card md:col-span-4 bg-white p-10 rounded-4xl border border-zinc-200 shadow-sm flex flex-col group" data-purpose="bento-feature">
+<div class="bento-icon w-14 h-14 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center mb-6">
+<i class="ph-bold ph-chart-line-up text-2xl"></i>
+</div>
+<h3 class="text-2xl font-bold mb-4">Granular Analytics</h3>
+<p class="text-zinc-500 text-sm">Visualize your fluency growth with detailed heatmaps of your vocabulary and grammar strength.</p>
+<div class="mt-auto pt-6 flex gap-2 items-end h-20">
+<div class="w-full bg-zinc-100 rounded-t-lg h-[40%] group-hover:bg-primary/20 transition-all"></div>
+<div class="w-full bg-zinc-100 rounded-t-lg h-[60%] group-hover:bg-primary/20 transition-all"></div>
+<div class="w-full bg-zinc-100 rounded-t-lg h-[90%] group-hover:bg-primary transition-all"></div>
+<div class="w-full bg-zinc-100 rounded-t-lg h-[70%] group-hover:bg-primary/20 transition-all"></div>
+</div>
+</div>
+<!-- Language Choice Card -->
+<div class="bento-card md:col-span-8 bg-primary/5 p-10 rounded-4xl border border-primary/10 shadow-sm flex items-center justify-between group" data-purpose="bento-feature">
+<div class="max-w-sm">
+<h3 class="text-2xl font-bold mb-4">30+ Major Languages</h3>
+<p class="text-zinc-600">From Japanese to Portuguese, learn with native-level AI accuracy across dozens of dialects.</p>
+</div>
+<div class="grid grid-cols-3 gap-3">
+<div class="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl">🇪🇸</div>
+<div class="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl">🇫🇷</div>
+<div class="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl">🇩🇪</div>
+<div class="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl">🇯🇵</div>
+<div class="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl">🇮🇹</div>
+<div class="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-xl">🇧🇷</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: Feature Bento Grid -->
+<!-- BEGIN: Social Proof -->
+<section class="py-24 overflow-hidden">
+<div class="max-w-7xl mx-auto px-6">
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+<div>
+<h2 class="text-4xl font-bold tracking-tight text-zinc-950 mb-2">Loved by polyglots</h2>
+<p class="text-zinc-500">Real stories from our global community of learners.</p>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-1 text-primary">
+<i class="ph-fill ph-star"></i>
+<i class="ph-fill ph-star"></i>
+<i class="ph-fill ph-star"></i>
+<i class="ph-fill ph-star"></i>
+<i class="ph-fill ph-star"></i>
+</div>
+<span class="font-bold">4.9/5 Average Rating</span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Testimonial 1 -->
+<div class="p-8 rounded-3xl bg-zinc-50 border border-zinc-100 flex flex-col" data-purpose="testimonial-card">
+<div class="flex items-center gap-4 mb-6">
+<img alt="Sarah J." class="w-12 h-12 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHIYVpw12LSDg60m-Rj2VaH_i2ZBz-h2CPIkSP0URoZtoUyDVJ3wQacuH0puW7GW2dkhNLeNmmmVesICY42tcSwtJcrtVpAya-NLn3XHjSp9gSUhkh6DthtYvDpogOkAtcEmcoqyxQFMW2_XcyvW1yKxA9L0JQES7RffW6Um7L71TEBVqnHSPOQHKNSQoxXCyVtOJGmJ2cmVgpHrv8Y1MWlmUm6Xha9DUqAZnzlWSaHOtIELPuSiCOJyk79ypPPUGIiDMnN1ton46V"/>
+<div>
+<h4 class="font-bold text-zinc-900">Sarah Jenkins</h4>
+<p class="text-xs text-zinc-500">Learning Spanish &amp; Italian</p>
+</div>
+</div>
+<p class="text-zinc-600 leading-relaxed italic">
+            "The real-time feedback is a game changer. I've used every app on the market, but nothing compares to actually speaking with LingoAI's tutors."
+          </p>
+</div>
+<!-- Testimonial 2 -->
+<div class="p-8 rounded-3xl bg-zinc-50 border border-zinc-100 flex flex-col" data-purpose="testimonial-card">
+<div class="flex items-center gap-4 mb-6">
+<img alt="David K." class="w-12 h-12 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvV0zrHCVlmKKbM3ZQzie4uH7Lcugyx1D_e9kYOH-gJr7JRnrzir02kt9BFPyQEPWtgkpEyCGf1oJ8RwVlhmEdyzM0PpK-8IeRJIbaOZBbM6nl9oo1dLJbwwLQw7y6zuDynwxx4iXPsovbuFtd2u6UZ-9yZ2qztml4eiAVsHU81a9ypml1FhYvJXYCQsbkMRpAtOkrqjP9WUxE4aUulZkr38I30ANBgYFhEV4HxbQxh3TKkZeNBWpcCU-gcGTVgnniksrTbgg4_9I3"/>
+<div>
+<h4 class="font-bold text-zinc-900">David Kwon</h4>
+<p class="text-xs text-zinc-500">Learning German</p>
+</div>
+</div>
+<p class="text-zinc-600 leading-relaxed italic">
+            "I went from zero to being able to order dinner in Berlin within 3 weeks. The AI's patience is what makes it so much less stressful than human tutors."
+          </p>
+</div>
+<!-- Testimonial 3 -->
+<div class="p-8 rounded-3xl bg-zinc-50 border border-zinc-100 flex flex-col" data-purpose="testimonial-card">
+<div class="flex items-center gap-4 mb-6">
+<img alt="Elena R." class="w-12 h-12 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAV0yxzeaiCj7iLXFRQy14-YjaPy-EwhbcuzieoWfv68Vrkjvx_1paKPDnL--9K5N7TWsVMO5wOr5w0bWefI-j1lIa-hDTAJNw-NzQ_oUZrMtrU8qMTSbCpGwliCeCsRW1sHZlBYhcLfcplpqEw0UNiBmfjlZHG6zeOSee0uoNjZkVgtlpawbs4TUFk6pAkVjHRLLlUG2L-Q8BqlPnfv6VuxPyrlOqHNIyyaBGD-ku1BsjUt77Npr08G041DkDv13q_K4pYHM5ahf7_"/>
+<div>
+<h4 class="font-bold text-zinc-900">Elena Rodriguez</h4>
+<p class="text-xs text-zinc-500">Learning Japanese</p>
+</div>
+</div>
+<p class="text-zinc-600 leading-relaxed italic">
+            "The Bento-style dashboard makes it so easy to see my progress. I love how it tracks my 'confidence score' for different conversation topics."
+          </p>
+</div>
+</div>
+</div>
+</section>
+<!-- END: Social Proof -->
+<!-- BEGIN: CTA Section -->
+<section class="py-24">
+<div class="max-w-7xl mx-auto px-6">
+<div class="bg-primary rounded-4xl p-12 md:p-20 text-center relative overflow-hidden">
+<!-- Abstract background pattern -->
+<div class="absolute inset-0 opacity-10 pointer-events-none">
+<svg height="100%" width="100%" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<pattern height="40" id="dots" patternunits="userSpaceOnUse" width="40" x="0" y="0">
+<circle cx="2" cy="2" fill="white" r="2"></circle>
+</pattern>
+</defs>
+<rect fill="url(#dots)" height="100%" width="100%"></rect>
+</svg>
+</div>
+<div class="relative z-10 max-w-2xl mx-auto">
+<h2 class="text-4xl md:text-5xl font-bold text-white mb-8 tracking-tight">Ready to become fluent?</h2>
+<p class="text-blue-100 text-xl mb-12">Start your 14-day premium trial today. No credit card required to start your first conversation.</p>
+<button class="btn-spring bg-white text-primary px-10 py-5 rounded-custom text-xl font-bold shadow-2xl">
+            Get Started Now
+          </button>
+</div>
+</div>
+</div>
+</section>
+<!-- END: CTA Section -->
+<!-- BEGIN: Footer -->
+<footer class="bg-zinc-50 border-t border-zinc-200 pt-20 pb-10">
+<div class="max-w-7xl mx-auto px-6">
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 mb-16">
+<div class="col-span-2 lg:col-span-2">
+<div class="flex items-center gap-2 mb-6">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center text-white">
+<i class="ph-fill ph-translate text-xl"></i>
+</div>
+<span class="text-lg font-bold">LingoAI</span>
+</div>
+<p class="text-zinc-500 max-w-xs mb-8">
+            The world's most advanced AI-powered language immersion platform. Built for the modern learner.
+          </p>
+<div class="flex gap-4">
+<a class="w-10 h-10 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-all" href="#"><i class="ph ph-twitter-logo"></i></a>
+<a class="w-10 h-10 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-all" href="#"><i class="ph ph-instagram-logo"></i></a>
+<a class="w-10 h-10 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-400 hover:text-primary hover:border-primary transition-all" href="#"><i class="ph ph-linkedin-logo"></i></a>
+</div>
+</div>
+<div>
+<h5 class="font-bold text-zinc-950 mb-6 uppercase text-xs tracking-widest">Product</h5>
+<ul class="space-y-4 text-zinc-500 text-sm">
+<li><a class="hover:text-primary transition-colors" href="#">Tutor AI</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Curriculum</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Pricing</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Enterprise</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-bold text-zinc-950 mb-6 uppercase text-xs tracking-widest">Company</h5>
+<ul class="space-y-4 text-zinc-500 text-sm">
+<li><a class="hover:text-primary transition-colors" href="#">About</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Blog</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Careers</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Contact</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-bold text-zinc-950 mb-6 uppercase text-xs tracking-widest">Legal</h5>
+<ul class="space-y-4 text-zinc-500 text-sm">
+<li><a class="hover:text-primary transition-colors" href="#">Privacy</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Terms</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Cookies</a></li>
+</ul>
+</div>
+</div>
+<div class="pt-8 border-t border-zinc-200 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-zinc-400 text-sm">© 2024 LingoAI Inc. All rights reserved.</p>
+<p class="text-zinc-400 text-sm flex items-center gap-2">Made with <i class="ph-fill ph-heart text-red-400"></i> for global citizens.</p>
+</div>
+</div>
+</footer>
+<!-- END: Footer -->
+</body></html>

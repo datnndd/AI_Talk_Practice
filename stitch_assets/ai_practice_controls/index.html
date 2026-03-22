@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Liquid Glass AI Interface</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Phosphor Icons -->
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#2F80ED',
+            success: '#27AE60',
+          },
+          fontFamily: {
+            sans: ['Lexend', 'sans-serif'],
+            geist: ['Inter', 'sans-serif'],
+          },
+          borderRadius: {
+            'theme': '8px',
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="liquid-glass-effects">
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.4);
+      --glass-border: rgba(255, 255, 255, 0.5);
+      --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+
+    body {
+      background: linear-gradient(135deg, #f0f7ff 0%, #e0e7ff 100%);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .glass-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      position: relative;
+    }
+
+    .glass-panel::after {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      pointer-events: none;
+      border-radius: inherit;
+    }
+
+    .chat-bubble-ai {
+      background: rgba(241, 245, 249, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .chat-bubble-user {
+      border: 2px solid #2F80ED;
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .typewriter::after {
+      content: "|";
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      from, to { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .scroll-hide::-webkit-scrollbar {
+      display: none;
+    }
+    .scroll-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style data-purpose="layout-structure">
+    .main-container {
+      height: calc(100vh - 40px);
+      max-width: 1440px;
+      margin: 20px auto;
+    }
+  </style>
+<style>
+    .camera-preview {
+      position: absolute;
+      top: 1.5rem;
+      left: 1.5rem;
+      width: 28%;
+      aspect-ratio: 16/10;
+      border-radius: 12px;
+      overflow: hidden;
+      z-index: 50;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+    .live-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      z-index: 5;
+    }
+    .live-dot {
+      width: 5px;
+      height: 5px;
+      background: white;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    .camera-controls {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      display: flex;
+      gap: 6px;
+      z-index: 5;
+    }
+    .camera-btn {
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      color: white;
+      padding: 6px;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .camera-btn:hover {
+      background: rgba(0,0,0,0.6);
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.3; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body class="p-4 md:p-6 font-sans antialiased text-slate-800">
+<main class="main-container grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+<section class="lg:col-span-8 flex flex-col glass-panel rounded-theme overflow-hidden h-full relative" data-purpose="chat-interface">
+<!-- Camera Preview -->
+<div class="camera-preview glass-panel">
+<div class="live-badge">
+<span class="live-dot"></span>
+          Live
+        </div>
+<img alt="Student Webcam" class="w-full h-full object-cover opacity-90" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDz8Q5HqEkgjbkiCVVIqc88w2W_-1CkgIwDWuHy4cXYUt4fBDUTeZvmN27F2HdN6wq69W_rmEENLJlJAZmKg6bQyA4M9OMKkW_wxdMwl6q8rF3JXdO0_muDG2Z9fuheod1_-FHAgO6-VCUMnpFlXjJq3KGtvyjJRVIxCxlRXU2IeQoBdp8r8874MfIEgqqfGup092w80JnetCRGUi8TQSs_SVm6J-V4FK1FJIcmGChNH7-_jtfn50Ow0kAdWwQe_jrOysjjRX_ZSlLn"/>
+<div class="camera-controls">
+<button class="camera-btn" title="Mute Microphone"><i class="ph ph-microphone-slash"></i></button>
+<button class="camera-btn" title="Hide Camera"><i class="ph ph-video-camera-slash"></i></button>
+</div>
+</div>
+<!-- Header -->
+<header class="p-4 border-b border-white/20 flex items-center justify-between pl-36">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white">
+<i class="ph-fill ph-sparkle text-xl"></i>
+</div>
+<div>
+<h2 class="font-semibold text-sm">Linguist AI</h2>
+<span class="text-xs text-slate-500 flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-success"></span> Online
+            </span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-white/20 rounded-full transition-colors"><i class="ph ph-gear text-xl"></i></button>
+</div>
+</header>
+<!-- Chat Messages Area -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6 scroll-hide pt-32 pb-12" data-purpose="message-history">
+<div class="flex items-start gap-3 max-w-[85%]">
+<div class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+<i class="ph ph-robot text-lg"></i>
+</div>
+<div class="chat-bubble-ai p-4 rounded-tr-2xl rounded-br-2xl rounded-bl-2xl shadow-sm">
+<p class="font-geist text-sm leading-relaxed">
+              Bonjour ! I'm your language companion. Would you like to practice your French conversation skills today? We could discuss cuisine, travel, or literature.
+            </p>
+</div>
+</div>
+<div class="flex items-start gap-3 flex-row-reverse max-w-[85%] ml-auto">
+<div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 border border-primary flex items-center justify-center">
+<i class="ph ph-user text-lg text-primary"></i>
+</div>
+<div class="chat-bubble-user p-4 rounded-tl-2xl rounded-bl-2xl rounded-br-2xl shadow-sm">
+<p class="font-geist text-sm leading-relaxed">
+              Oui, j'aimerais parler de la cuisine française. Qu'est-ce que vous recommandez comme plat classique ?
+            </p>
+</div>
+</div>
+<div class="flex items-start gap-3 max-w-[85%]">
+<div class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+<i class="ph ph-robot text-lg"></i>
+</div>
+<div class="chat-bubble-ai p-4 rounded-tr-2xl rounded-br-2xl rounded-bl-2xl shadow-sm">
+<p class="font-geist text-sm leading-relaxed">
+              Excellent choice! For a classic dish, you can't go wrong with <span class="italic font-medium">Boeuf Bourguignon</span>. It's a rich beef stew braised in red wine. Have you ever tried making it?
+            </p>
+</div>
+</div>
+</div>
+<!-- Simplified Input Bar -->
+<footer class="p-6 pt-2" data-purpose="input-section">
+<div class="flex flex-col gap-3">
+<div class="glass-panel rounded-full flex items-center px-4 py-2 group focus-within:ring-2 ring-primary/30 transition-all">
+<div class="flex items-center gap-1">
+<button class="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors" title="Suggest">
+<i class="ph ph-sparkle text-xl"></i>
+</button>
+</div>
+<div class="flex-1 mx-2 relative h-10 flex items-center">
+<span class="text-slate-400 font-geist text-sm typewriter" id="typewriter">Ask me about French cuisine...</span>
+<input class="absolute inset-0 bg-transparent border-none focus:ring-0 text-sm font-geist opacity-0 focus:opacity-100 placeholder-transparent transition-opacity" placeholder="Type your message..." type="text"/>
+</div>
+<button class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center hover:shadow-lg transition-all shadow-md" title="Voice Input">
+<i class="ph ph-microphone text-xl"></i>
+</button>
+</div>
+<!-- AI Suggested Answer Section -->
+<div class="px-6">
+<div class="flex items-center gap-2 text-xs text-slate-500 mb-1">
+<i class="ph-fill ph-sparkle text-primary"></i>
+<span class="font-medium uppercase tracking-wider">AI Suggested Answer</span>
+</div>
+<div class="glass-panel rounded-xl px-4 py-2 border-white/30 cursor-pointer hover:bg-white/50 transition-colors">
+<p class="text-xs italic text-slate-400 font-geist">
+                "Je voudrais en savoir plus sur les vins de Bordeaux..."
+              </p>
+</div>
+</div>
+</div>
+</footer>
+</section>
+<!-- Right Panel (Metrics) -->
+<aside class="lg:col-span-4 flex flex-col gap-6 h-full" data-purpose="feedback-panel">
+<section class="glass-panel rounded-theme p-6 flex-1" data-purpose="metrics-display">
+<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-8 font-geist">Real-time Feedback</h3>
+<div class="space-y-8">
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<label class="text-sm font-medium font-geist">Pronunciation</label>
+<span class="text-xs font-bold text-success font-geist">88%</span>
+</div>
+<div class="w-full bg-slate-200/50 rounded-full h-2">
+<div class="bg-success h-2 rounded-full transition-all duration-500" style="width: 88%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<label class="text-sm font-medium font-geist">Grammar</label>
+<span class="text-xs font-bold text-success font-geist">92%</span>
+</div>
+<div class="w-full bg-slate-200/50 rounded-full h-2">
+<div class="bg-success h-2 rounded-full transition-all duration-500" style="width: 92%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<label class="text-sm font-medium font-geist">Fluency</label>
+<span class="text-xs font-bold text-success font-geist">74%</span>
+</div>
+<div class="w-full bg-slate-200/50 rounded-full h-2">
+<div class="bg-success h-2 rounded-full transition-all duration-500" style="width: 74%"></div>
+</div>
+</div>
+</div>
+<div class="mt-12 p-4 rounded-theme bg-primary/5 border border-primary/10">
+<h4 class="text-xs font-bold text-primary uppercase mb-2 font-geist">Pro Tip</h4>
+<p class="text-xs leading-relaxed text-slate-600 font-geist">
+            Focus on the "R" sound in "Bourguignon". Try placing your tongue slightly further back.
+          </p>
+</div>
+</section>
+<section class="glass-panel rounded-theme p-6 h-1/3" data-purpose="session-stats">
+<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-4 font-geist">Session Info</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="p-3 rounded-lg bg-white/40">
+<span class="block text-xs text-slate-400 font-geist">Duration</span>
+<span class="text-lg font-semibold font-geist">12:45</span>
+</div>
+<div class="p-3 rounded-lg bg-white/40">
+<span class="block text-xs text-slate-400 font-geist">Vocabulary</span>
+<span class="text-lg font-semibold font-geist">24 new</span>
+</div>
+</div>
+<button class="w-full mt-4 py-3 bg-white border border-slate-200 rounded-theme text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors uppercase tracking-widest font-geist">
+          End Session
+        </button>
+</section>
+</aside>
+</main>
+<script data-purpose="ui-interactions">
+    const typewriter = document.getElementById('typewriter');
+    const input = document.querySelector('input');
+    const phrases = ["Ask me about French cuisine...", "How do I say 'delicious'?", "Tell me a joke in French..."];
+    let phraseIndex = 0;
+    let charIndex = 0;
+    let isDeleting = false;
+
+    function type() {
+      const current = phrases[phraseIndex];
+      
+      if (isDeleting) {
+        typewriter.textContent = current.substring(0, charIndex - 1);
+        charIndex--;
+      } else {
+        typewriter.textContent = current.substring(0, charIndex + 1);
+        charIndex++;
+      }
+
+      if (!isDeleting && charIndex === current.length) {
+        setTimeout(() => isDeleting = true, 2000);
+      } else if (isDeleting && charIndex === 0) {
+        isDeleting = false;
+        phraseIndex = (phraseIndex + 1) % phrases.length;
+      }
+
+      const speed = isDeleting ? 50 : 100;
+      setTimeout(type, speed);
+    }
+
+    window.onload = () => {
+      type();
+    };
+
+    input.addEventListener('focus', () => {
+      typewriter.style.visibility = 'hidden';
+    });
+    input.addEventListener('blur', (e) => {
+      if (!e.target.value) typewriter.style.visibility = 'visible';
+    });
+  </script>
+</body></html>

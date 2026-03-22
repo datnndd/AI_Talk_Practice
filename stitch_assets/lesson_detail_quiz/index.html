@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lesson Detail: Intro to French Gastronomy</title>
+<!-- Load Tailwind CSS v3 with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Load Lexend font as per requested theme -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '#3182ed',
+            success: '#22c55e', // Standard Green
+            warning: '#eab308', // Standard Yellow
+          },
+          fontFamily: {
+            sans: ['Lexend', 'sans-serif'],
+          },
+          borderRadius: {
+            'theme': '8px', // ROUND_EIGHT
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="liquid-glass-effect">
+    /* Liquid Glass styling for the media player */
+    .liquid-glass {
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(12px) saturate(180%);
+      -webkit-backdrop-filter: blur(12px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    }
+    
+    .video-overlay {
+      background: linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(0,0,0,0.4) 100%);
+    }
+  </style>
+<style data-purpose="typography-and-spacing">
+    body {
+      font-family: 'Lexend', sans-serif;
+      background-color: #ffffff;
+      color: #1a1a1a;
+      line-height: 1.6;
+    }
+    /* Visual Density 3: Increased white space */
+    .section-spacing {
+      padding-top: 5rem;
+      padding-bottom: 5rem;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+<!-- BEGIN: MainHeader -->
+<header class="border-b border-gray-100 sticky top-0 bg-white z-50" data-purpose="lesson-header">
+<div class="max-w-5xl mx-auto px-6 py-8">
+<nav class="mb-4">
+<a class="text-brand font-medium text-sm hover:underline" href="#">Back to Curriculum</a>
+</nav>
+<h1 class="text-4xl font-bold tracking-tight text-gray-900 mb-4">Intro to French Gastronomy</h1>
+<p class="text-lg text-gray-600 max-w-3xl">
+        Explore the historical foundations, essential techniques, and regional diversity that define French culinary excellence. This lesson covers the evolution from Haute Cuisine to modern bistronomy.
+      </p>
+</div>
+</header>
+<!-- END: MainHeader -->
+<main class="max-w-5xl mx-auto px-6">
+<!-- BEGIN: MediaSection -->
+<section class="section-spacing" data-purpose="video-player-container">
+<div class="liquid-glass rounded-theme overflow-hidden relative aspect-video group">
+<!-- Placeholder for Video/Audio content -->
+<img alt="Video Player Placeholder" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAC1_o-0sC_jAEpNu0Xky23r7MQECu1UafNqqkhcUZtoxguAbVZnhzMwynC2HtxKolHPP1OcqiAiz4E6n5Q7Mzze7vhPsDBNAJQ5siOULuwVYnR9VL8jxZtVKCklbvxmMamomirb89g5_XUurvtJSgRDc0Gnqzz4srTUMy7CoiJSbV8gZ88y5V0oUgRGYOqGHawPsvg2XJmkBfK0--RfPbwUei3Pdi3cKt3sQR_pwsNzFkqQ1zlbOSvx6N0xjv-W0kDJvhibg_cBLD9"/>
+<!-- Video Controls Overlay -->
+<div class="absolute inset-0 flex items-center justify-center video-overlay opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<button aria-label="Play Lesson" class="bg-brand text-white w-20 h-20 rounded-full flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform">
+<svg class="w-8 h-8 fill-current" viewbox="0 0 24 24">
+<path d="M8 5v14l11-7z"></path>
+</svg>
+</button>
+</div>
+<!-- Bottom Progress Bar -->
+<div class="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-200/50">
+<div class="bg-brand h-full w-1/3"></div>
+</div>
+</div>
+<div class="mt-6 flex justify-between items-center">
+<span class="text-sm font-medium text-gray-500">Duration: 14:22</span>
+<div class="flex space-x-4">
+<button class="text-sm font-semibold text-brand border border-brand px-4 py-2 rounded-theme hover:bg-brand/5 transition-colors">Download Transcript</button>
+<button class="text-sm font-semibold text-brand border border-brand px-4 py-2 rounded-theme hover:bg-brand/5 transition-colors">Audio Only</button>
+</div>
+</div>
+</section>
+<!-- END: MediaSection -->
+<!-- BEGIN: QuizSection -->
+<section class="section-spacing border-t border-gray-100" data-purpose="interactive-quiz" id="quiz-section">
+<div class="max-w-3xl mx-auto">
+<div class="mb-10">
+<span class="text-xs font-bold uppercase tracking-widest text-brand">Knowledge Check</span>
+<h2 class="text-3xl font-bold mt-2">Section 1 Quiz</h2>
+</div>
+<div class="space-y-12">
+<!-- Question 1: Default State -->
+<div class="quiz-item" data-purpose="quiz-question">
+<p class="text-xl font-medium mb-6">Which chef is traditionally credited with the systematization of French "Haute Cuisine"?</p>
+<div class="grid gap-4">
+<button class="w-full text-left p-5 border-2 border-gray-200 rounded-theme hover:border-brand transition-all text-lg min-h-[64px] focus:outline-none focus:ring-2 focus:ring-brand">
+                Paul Bocuse
+              </button>
+<button class="w-full text-left p-5 border-2 border-gray-200 rounded-theme hover:border-brand transition-all text-lg min-h-[64px] focus:outline-none focus:ring-2 focus:ring-brand">
+                Auguste Escoffier
+              </button>
+<button class="w-full text-left p-5 border-2 border-gray-200 rounded-theme hover:border-brand transition-all text-lg min-h-[64px] focus:outline-none focus:ring-2 focus:ring-brand">
+                Marie-Antoine Carême
+              </button>
+</div>
+</div>
+<!-- Question 2: Correct State (Green) -->
+<div class="quiz-item" data-purpose="quiz-question-correct">
+<p class="text-xl font-medium mb-6">What is the "Mother Sauce" that uses a white roux and milk?</p>
+<div class="grid gap-4">
+<button class="w-full text-left p-5 border-2 border-success bg-success/5 text-success-700 rounded-theme text-lg min-h-[64px] flex justify-between items-center" disabled="">
+<span>Béchamel</span>
+<svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="w-full text-left p-5 border-2 border-gray-100 bg-gray-50 text-gray-400 rounded-theme text-lg min-h-[64px]" disabled="">
+                Velouté
+              </button>
+<button class="w-full text-left p-5 border-2 border-gray-100 bg-gray-50 text-gray-400 rounded-theme text-lg min-h-[64px]" disabled="">
+                Hollandaise
+              </button>
+</div>
+<p class="mt-4 text-sm text-success font-medium">Correct. Béchamel is the foundation for many classic dishes like Mornay.</p>
+</div>
+<!-- Question 3: Incorrect State (Yellow) -->
+<div class="quiz-item" data-purpose="quiz-question-incorrect">
+<p class="text-xl font-medium mb-6">In which region did the famous 'Bouillabaisse' originate?</p>
+<div class="grid gap-4">
+<button class="w-full text-left p-5 border-2 border-warning bg-warning/5 text-warning-800 rounded-theme text-lg min-h-[64px] flex justify-between items-center" disabled="">
+<span>Brittany</span>
+<svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="w-full text-left p-5 border-2 border-gray-200 rounded-theme text-lg min-h-[64px]" disabled="">
+                Provence
+              </button>
+<button class="w-full text-left p-5 border-2 border-gray-200 rounded-theme text-lg min-h-[64px]" disabled="">
+                Normandy
+              </button>
+</div>
+<p class="mt-4 text-sm text-warning font-medium">Incorrect. While Brittany is famous for seafood, Bouillabaisse is a signature of Marseille in the Provence region.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- END: QuizSection -->
+<!-- BEGIN: NavigationActions -->
+<section class="section-spacing border-t border-gray-100" data-purpose="page-navigation">
+<div class="flex flex-col sm:flex-row justify-between items-center gap-6">
+<button class="w-full sm:w-auto min-w-[200px] h-16 text-lg font-bold text-gray-500 bg-gray-100 rounded-theme hover:bg-gray-200 transition-colors uppercase tracking-wider">
+          Previous Lesson
+        </button>
+<button class="w-full sm:w-auto min-w-[200px] h-16 text-lg font-bold text-white bg-brand rounded-theme hover:bg-brand/90 transition-transform active:scale-95 shadow-lg shadow-brand/20 uppercase tracking-wider">
+          Mark as Complete
+        </button>
+</div>
+</section>
+<!-- END: NavigationActions -->
+</main>
+<!-- BEGIN: Footer -->
+<footer class="bg-gray-50 border-t border-gray-100 py-16" data-purpose="footer">
+<div class="max-w-5xl mx-auto px-6 text-center">
+<p class="text-gray-400 text-sm">© 2024 Gastronomy Academy. All rights reserved.</p>
+</div>
+</footer>
+<!-- END: Footer -->
+<script data-purpose="accessibility-enhancements">
+    // Script for simple keyboard interaction or state simulation if needed
+    document.querySelectorAll('.quiz-item button:not([disabled])').forEach(button => {
+      button.addEventListener('click', function() {
+        console.log('Option selected:', this.innerText);
+      });
+    });
+  </script>
+</body></html>

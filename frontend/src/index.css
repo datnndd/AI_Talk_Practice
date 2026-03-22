@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3182ed;
+  --color-primary-dark: #2F80ED;
+  --color-zinc-950: #09090b;
+
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cabinet Grotesk", "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  --radius-4xl: 2.5rem;
+  --radius-custom: 8px;
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-white text-zinc-900 selection:bg-primary selection:text-white antialiased;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  }
+}
+
+@layer utilities {
+  .liquid-glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
+  }
+
+  .refraction {
+    @apply border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)];
+  }
+
+  .btn-spring {
+    @apply transition-transform duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)];
+  }
+
+  .btn-spring:hover {
+    @apply scale-[1.05] -translate-y-[2px];
+  }
+
+  .btn-spring:active {
+    @apply scale-[0.95];
+  }
+
+  /* Text balance for headlines */
+  .text-balance {
+    text-wrap: balance;
+  }
+}

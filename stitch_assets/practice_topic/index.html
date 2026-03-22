@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#2F80ED",
+                        success: "#27AE60",
+                        warning: "#F2C94C",
+                        slate: {
+                            50: "#F8FAFC",
+                            100: "#F1F5F9",
+                            200: "#E2E8F0",
+                            400: "#94A3B8",
+                            500: "#64748B",
+                            600: "#475569",
+                            800: "#1E293B",
+                            900: "#0F172A",
+                            950: "#020617"
+                        }
+                    },
+                    fontFamily: {
+                        "headline": ["Public Sans"],
+                        "body": ["Public Sans"],
+                        "label": ["Public Sans"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Public Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen">
+<!-- TopAppBar Shell -->
+<header class="flex justify-between items-center px-6 h-16 w-full fixed top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm font-sans antialiased">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold text-blue-600 dark:text-blue-400">LinguistGo</span>
+<nav class="hidden md:flex gap-6">
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors cursor-pointer active:opacity-70" href="#">Explore</a>
+<a class="text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 pb-1 cursor-pointer active:opacity-70" href="#">My Progress</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors cursor-pointer active:opacity-70" href="#">Community</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-full text-sm focus:ring-2 focus:ring-blue-600/20 w-64" placeholder="Search topics..." type="text"/>
+</div>
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400 cursor-pointer active:opacity-70">account_circle</span>
+</div>
+</header>
+<!-- Layout Wrapper -->
+<div class="flex pt-16 min-h-screen">
+<!-- SideNavBar Shell -->
+<aside class="hidden lg:flex flex-col fixed left-0 top-16 h-[calc(100vh-64px)] p-4 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 font-sans text-sm w-64">
+<div class="mb-8 px-4">
+<p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Categories</p>
+</div>
+<div class="space-y-1">
+<div class="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg px-4 py-2 font-semibold transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined">home</span>
+<span>Home</span>
+</div>
+<div class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-4 py-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined">menu_book</span>
+<span>Library</span>
+</div>
+<div class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-4 py-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined">fitness_center</span>
+<span>Practice</span>
+</div>
+<div class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-4 py-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined">translate</span>
+<span>Vocabulary</span>
+</div>
+<div class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-4 py-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</div>
+</div>
+<div class="mt-auto p-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3 mb-2">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="User profile avatar smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjQMEEOM7KuX9uhKOLcFDWgAl_ETfR9fZRBvUS37qg_7Xmuox7CyQSFgWpczfcv6inPJ2Kf6G_eY-CdK6xXtUqViQdXQwxcJGn8fFMmqTe95gy4VqXqU2JiPAIka4D-TvTZ9cLE6pJQU9KKbZEXz0egcWXoD18f2VlJQ8xKVSiCbqyJ1HDbHJiNi4WwOhR2hWOOVyYnod62y0Mr3B4TIqb9b7XyR6HDW9w4b5YS1tpjaZ2mzzcPASPYzcPharaFvZuMUPNSLsutWA-"/>
+<div>
+<p class="font-bold text-slate-900 dark:text-slate-100">Welcome back</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Level 12 Polyglot</p>
+</div>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-3">
+<div class="bg-success h-full w-[72%] rounded-full"></div>
+</div>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="flex-1 lg:ml-64 p-6 md:p-10 mb-20 lg:mb-0">
+<div class="max-w-6xl mx-auto">
+<header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 mb-2">Choose Your Topic</h1>
+<p class="text-slate-500 dark:text-slate-400 text-lg">Select a scenario to start your immersive AI conversation practice.</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-primary text-white px-6 py-2.5 rounded-full font-semibold shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity">
+                            Quick Start
+                        </button>
+</div>
+</header>
+<!-- Bento 2.0 Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Large Feature Card: Travel -->
+<div class="md:col-span-8 bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 relative overflow-hidden group hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-black/50 transition-all duration-300">
+<div class="relative z-10 flex flex-col h-full">
+<div class="flex justify-between items-start mb-6">
+<div class="p-3 bg-blue-50 dark:bg-blue-900/40 rounded-2xl">
+<span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-3xl">flight_takeoff</span>
+</div>
+<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Intermediate</span>
+</div>
+<h3 class="text-2xl font-bold mb-2">Booking a Boutique Hotel</h3>
+<p class="text-slate-600 dark:text-slate-400 max-w-md mb-8">Practice asking for specific amenities, negotiating room rates, and handling check-in details in a foreign city.</p>
+<div class="mt-auto flex items-center gap-4">
+<div class="flex items-center gap-1.5 text-slate-500 text-sm">
+<span class="material-symbols-outlined text-base">schedule</span>
+<span>8 mins</span>
+</div>
+<div class="flex items-center gap-1.5 text-slate-500 text-sm">
+<span class="material-symbols-outlined text-base">chat</span>
+<span>Travel &amp; Tourism</span>
+</div>
+</div>
+</div>
+<div class="absolute right-0 bottom-0 w-1/3 h-full opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+<img class="object-cover h-full w-full" data-alt="Abstract view of a hotel lobby" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuNFXQvkLWSdutRTpbv7YZ6USLu86fLjTN5Tr7It8cMaEI8zjQd8t-_QKYkl7wiQCnlD4zvmp2Ox12vUTGxUmhGGDqs8U9u18LKGQWbcYE5cExEBrwnIe5BNYmeHi5-7pGUVkFvS-mNkxJvxTtO1I1M9zBEI4NWbCUURoPcDsiAMw-FHJHM_9QxzoxzWFE77SvVmbc6pnI7xM8qMRTK7R7yra8VjXM1YZn1D58K2lE3ROvbTFWsqqGXY6DiKm_cObyip9_1jPzHmp_"/>
+</div>
+</div>
+<!-- Small Card: Business -->
+<div class="md:col-span-4 bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 group hover:border-primary/30 transition-all">
+<div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl w-fit mb-4">
+<span class="material-symbols-outlined text-slate-900 dark:text-slate-100">handshake</span>
+</div>
+<span class="bg-warning/20 text-warning/90 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 inline-block">Advanced</span>
+<h3 class="text-xl font-bold mb-2">Negotiating a Deal</h3>
+<p class="text-slate-500 dark:text-slate-400 text-sm mb-6 leading-relaxed">Master the art of persuasion and professional vocabulary in a high-stakes business meeting.</p>
+<div class="flex items-center justify-between">
+<span class="text-xs font-medium text-slate-400">10 mins</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+<!-- Small Card: Daily Life -->
+<div class="md:col-span-4 bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 group hover:border-primary/30 transition-all">
+<div class="p-3 bg-success/10 rounded-2xl w-fit mb-4">
+<span class="material-symbols-outlined text-success">local_cafe</span>
+</div>
+<span class="bg-success/20 text-success px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 inline-block">Beginner</span>
+<h3 class="text-xl font-bold mb-2">Ordering at a Café</h3>
+<p class="text-slate-500 dark:text-slate-400 text-sm mb-6 leading-relaxed">Casual conversation practice for daily interactions and ordering your favorite drinks.</p>
+<div class="flex items-center justify-between">
+<span class="text-xs font-medium text-slate-400">5 mins</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</div>
+<!-- Medium Card: Current Events -->
+<div class="md:col-span-8 bg-slate-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden group">
+<div class="relative z-10 flex flex-col justify-between h-full">
+<div>
+<div class="flex items-center gap-3 mb-4">
+<div class="w-2 h-2 rounded-full bg-red-500"></div>
+<span class="text-xs font-bold uppercase tracking-widest text-slate-400">Live Topic</span>
+</div>
+<h3 class="text-3xl font-bold mb-4">Climate Change &amp; Future Tech</h3>
+<p class="text-slate-400 max-w-md">Discussing the latest headlines and global trends. This topic updates weekly with real news snippets.</p>
+</div>
+<div class="flex items-center gap-6 mt-8">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-sm font-bold">4.9 Rating</span>
+</div>
+<span class="bg-white/10 hover:bg-white/20 px-6 py-2 rounded-full text-sm font-bold transition-colors cursor-pointer">Start Now</span>
+</div>
+</div>
+<div class="absolute right-0 top-0 w-1/2 h-full opacity-20 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+<img class="object-cover h-full w-full" data-alt="Futuristic digital world map" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqwfzkSz7e9Vu_1rZKGpKP8QFZR3J-XvuJGoqXTWbzehbTMd6Vtq564-HMiBccmKxktrMcr4L_c3jR1XCHijwUdK54wDKBzUr2Mr92syMEcH5R6A6Woj65WO7pqDTAOuEVEWDBgqfCbSOY9Y5tgbipca5disZJSNEHKYt3FIBAWTHzofAcKs4UHT24NEBZRoIxp4wdZeUseb-KFv_SJ0T2NVu3DeMGDKFaAMRJhxsdEIf5IZSqRUpbmJvVsndFDKAPIZqIMcr6xtt8"/>
+</div>
+</div>
+<!-- Card: Social -->
+<div class="md:col-span-6 bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex gap-6 items-center group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+<div class="w-24 h-24 rounded-2xl bg-slate-100 dark:bg-slate-800 flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-4xl text-slate-400">groups</span>
+</div>
+<div>
+<span class="text-xs font-bold text-blue-600 uppercase mb-1 block">Social &amp; Hobbies</span>
+<h3 class="text-xl font-bold mb-1">Join a Board Game Night</h3>
+<p class="text-slate-500 text-sm mb-3">Learn to explain rules and make friends.</p>
+<div class="flex items-center gap-3">
+<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Intermediate</span>
+<span class="text-slate-400 text-xs">7 mins</span>
+</div>
+</div>
+</div>
+<!-- Card: Hobby -->
+<div class="md:col-span-6 bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex gap-6 items-center group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+<div class="w-24 h-24 rounded-2xl bg-slate-100 dark:bg-slate-800 flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-4xl text-slate-400">palette</span>
+</div>
+<div>
+<span class="text-xs font-bold text-blue-600 uppercase mb-1 block">Social &amp; Hobbies</span>
+<h3 class="text-xl font-bold mb-1">Visiting an Art Gallery</h3>
+<p class="text-slate-500 text-sm mb-3">Discuss artistic styles and personal feelings.</p>
+<div class="flex items-center gap-3">
+<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Intermediate</span>
+<span class="text-slate-400 text-xs">9 mins</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- BottomNavBar Shell -->
+<footer class="lg:hidden fixed bottom-0 w-full flex justify-around items-center px-4 py-2 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] rounded-t-2xl font-sans text-[10px] font-medium">
+<div class="flex flex-col items-center justify-center bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 rounded-xl px-4 py-1 active:bg-slate-100 dark:active:bg-slate-800 scale-95 duration-75 cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">school</span>
+<span>Learn</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-4 py-1 active:bg-slate-100 dark:active:bg-slate-800 scale-95 duration-75 cursor-pointer">
+<span class="material-symbols-outlined">auto_stories</span>
+<span>Review</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-4 py-1 active:bg-slate-100 dark:active:bg-slate-800 scale-95 duration-75 cursor-pointer">
+<span class="material-symbols-outlined">search</span>
+<span>Search</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 px-4 py-1 active:bg-slate-100 dark:active:bg-slate-800 scale-95 duration-75 cursor-pointer">
+<span class="material-symbols-outlined">person</span>
+<span>Profile</span>
+</div>
+</footer>
+</body></html>
