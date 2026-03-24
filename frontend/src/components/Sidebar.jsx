@@ -1,9 +1,12 @@
 import { motion } from "framer-motion";
 import { House, GraduationCap, Layout, MessengerLogo, UserCircle, GearSix, Question } from "@phosphor-icons/react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const menuItems = [
     { icon: House, label: "Home", path: "/" },
     { icon: Layout, label: "Dashboard", path: "/dashboard" },
@@ -24,7 +27,7 @@ const Sidebar = () => {
               <motion.div
                 key={item.label}
                 whileHover={{ x: 4 }}
-                onClick={() => i.path !== "#" && navigate(item.path)}
+                onClick={() => item.path !== "#" && navigate(item.path)}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
                   isActive
                     ? "bg-primary text-white shadow-lg shadow-primary/20 font-bold"
@@ -42,28 +45,23 @@ const Sidebar = () => {
       <div className="mt-auto p-4 bg-white rounded-2xl shadow-sm border border-zinc-200/50 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-full -mr-8 -mt-8" />
         <div className="flex items-center gap-3 mb-4 relative z-10">
-          <div className="w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-zinc-100">
-            <img 
-              src="https://picsum.photos/seed/user_marcus/100/100" 
-              alt="User profile" 
-              className="w-full h-full object-cover"
-            />
+          <div className="w-10 h-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-primary/20 flex items-center justify-center text-primary font-bold">
+            {user?.display_name?.charAt(0)?.toUpperCase()}
           </div>
           <div>
-            <p className="text-xs font-bold text-zinc-900">Marcus Aurelius</p>
-            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Level 12 Polyglot</p>
+            <p className="text-xs font-bold text-zinc-900 line-clamp-1">{user?.display_name || "User"}</p>
+            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{user?.level || "Beginner"}</p>
           </div>
         </div>
-        <div className="w-full bg-zinc-100 h-1 rounded-full overflow-hidden relative z-10">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: "72%" }}
-            transition={{ duration: 1, delay: 0.5 }}
-            className="bg-primary h-full rounded-full" 
-          />
-        </div>
-        <p className="text-[9px] text-zinc-400 mt-2 font-mono text-right">72% to Next Level</p>
+        
+        <button 
+          onClick={() => { logout(); navigate("/login"); }}
+          className="w-full relative z-10 mt-2 py-2 text-xs font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors"
+        >
+          Logout
+        </button>
       </div>
+      {/* Removed skill progress bar for now */}
     </aside>
   );
 };

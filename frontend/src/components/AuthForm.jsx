@@ -1,7 +1,33 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { GoogleLogo } from "@phosphor-icons/react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const AuthForm = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+    try {
+      await login(email, password);
+      // Wait a moment for auth state to update before navigation
+      navigate("/topics");
+    } catch (err) {
+      setError(err.response?.data?.detail || "Invalid email or password");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <section className="w-full lg:w-2/5 flex flex-col bg-white relative">
       {/* Mobile Header */}
@@ -38,7 +64,12 @@ const AuthForm = () => {
             </div>
           </div>
 
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-bold border border-red-100">
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1" htmlFor="email">Email Address</label>
               <input 
@@ -48,6 +79,8 @@ const AuthForm = () => {
                 placeholder="name@company.com" 
                 required 
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -62,34 +95,28 @@ const AuthForm = () => {
                 placeholder="••••••••" 
                 required 
                 type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
             
             <motion.button
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-primary text-white font-black py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all btn-spring text-sm uppercase tracking-widest"
+              disabled={isLoading}
+              className={`w-full bg-primary text-white font-black py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all btn-spring text-sm uppercase tracking-widest ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
               type="submit"
             >
-              Sign in to Account
+              {isLoading ? "Signing in..." : "Sign in"}
             </motion.button>
           </form>
 
           <p className="text-center text-xs font-bold text-zinc-400">
             Don't have an account? 
-            <a className="text-primary font-black ml-2 hover:underline" href="#">Start free trial</a>
+            <Link className="text-primary font-black ml-2 hover:underline" to="/register">Create account</Link>
           </p>
         </motion.div>
       </div>
-
-      <footer className="p-10 border-t border-zinc-50">
-        <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-[10px] font-black text-zinc-300 uppercase tracking-widest">
-          <a className="hover:text-zinc-500 transition-colors" href="#">Privacy</a>
-          <a className="hover:text-zinc-500 transition-colors" href="#">Terms</a>
-          <a className="hover:text-zinc-500 transition-colors" href="#">Help</a>
-          <span className="text-zinc-200">© 2024 LingoFlow</span>
-        </div>
-      </footer>
     </section>
   );
 };

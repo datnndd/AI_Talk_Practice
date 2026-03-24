@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
@@ -10,89 +11,75 @@ import {
   Globe, 
   Users, 
   Palette,
-  Lightning
+  Lightning,
+  Question
 } from "@phosphor-icons/react";
+import { api } from "../contexts/AuthContext";
 
 const PracticeTopic = () => {
-  const topics = [
-    {
-      title: "Booking a Boutique Hotel",
-      description: "Practice asking for specific amenities, negotiating room rates, and handling check-in details in a foreign city.",
-      level: "Intermediate",
-      duration: "8 mins",
-      category: "Travel",
-      icon: AirplaneTilt,
-      size: "md:col-span-8",
-      iconBg: "bg-primary/10",
-      iconColor: "text-primary",
-      badgeStyles: "bg-primary/10 text-primary border-primary/20",
-      overlay: () => <AirplaneTilt weight="fill" size={240} className="text-primary" />
-    },
-    {
-      title: "Negotiating a Deal",
-      description: "Master the art of persuasion and professional vocabulary in a high-stakes business meeting.",
-      level: "Advanced",
-      duration: "10 mins",
-      category: "Business",
-      icon: Handshake,
-      size: "md:col-span-4",
-      iconBg: "bg-zinc-100",
-      iconColor: "text-zinc-600",
-      badgeStyles: "bg-amber-100 text-amber-700 border-amber-200"
-    },
-    {
-      title: "Ordering at a Café",
-      description: "Casual conversation practice for daily interactions and ordering your favorite drinks.",
-      level: "Beginner",
-      duration: "5 mins",
-      category: "Daily Life",
-      icon: Coffee,
-      size: "md:col-span-4",
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-600",
-      badgeStyles: "bg-emerald-100 text-emerald-700 border-emerald-200"
-    },
-    {
-      title: "Climate Change & Tech",
-      description: "Discussing the latest headlines and global trends. This topic updates weekly with real news snippets.",
-      level: "Live Topic",
-      duration: "Weekly",
-      category: "Sci-Tech",
-      icon: Globe,
-      size: "md:col-span-8",
-      bg: "bg-zinc-950 text-white",
-      iconBg: "bg-white/10",
-      iconColor: "text-white",
-      textTitle: "text-white",
-      textBody: "text-zinc-400",
-      badgeStyles: "bg-rose-500/20 text-rose-400 border-rose-500/30",
-      overlay: () => <Globe weight="fill" size={240} className="text-white" />
-    },
-    {
-      title: "Board Game Night",
-      description: "Learn to explain rules and make friends. Casual social vocabulary and instructions.",
-      level: "Intermediate",
-      duration: "7 mins",
-      category: "Social",
-      icon: Users,
-      size: "md:col-span-6",
-      iconBg: "bg-indigo-50",
-      iconColor: "text-indigo-600",
-      badgeStyles: "bg-indigo-100 text-indigo-700 border-indigo-200"
-    },
-    {
-      title: "Art Gallery Visit",
-      description: "Discuss artistic styles and personal feelings. Use descriptive adjectives and emotional vocabulary.",
-      level: "Intermediate",
-      duration: "9 mins",
-      category: "Hobbies",
-      icon: Palette,
-      size: "md:col-span-6",
-      iconBg: "bg-pink-50",
-      iconColor: "text-pink-600",
-      badgeStyles: "bg-pink-100 text-pink-700 border-pink-200"
+  const [topics, setTopics] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchScenarios();
+  }, []);
+
+  const fetchScenarios = async () => {
+    try {
+      const response = await api.get("/scenarios");
+      // Map API scenarios to UI format with icons and colors
+      const mappedTopics = response.data.map((scenario, index) => {
+        let icon, iconBg, iconColor, badgeStyles, size, bg;
+        
+        switch (scenario.category) {
+          case "Travel":
+            icon = AirplaneTilt; iconBg = "bg-primary/10"; iconColor = "text-primary"; badgeStyles = "bg-primary/10 text-primary border-primary/20"; size = "md:col-span-8";
+            break;
+          case "Business":
+            icon = Handshake; iconBg = "bg-zinc-100"; iconColor = "text-zinc-600"; badgeStyles = "bg-amber-100 text-amber-700 border-amber-200"; size = "md:col-span-4";
+            break;
+          case "Daily Life":
+            icon = Coffee; iconBg = "bg-emerald-50"; iconColor = "text-emerald-600"; badgeStyles = "bg-emerald-100 text-emerald-700 border-emerald-200"; size = "md:col-span-4";
+            break;
+          case "Sci-Tech":
+            icon = Globe; bg = "bg-zinc-950 text-white"; iconBg = "bg-white/10"; iconColor = "text-white"; badgeStyles = "bg-rose-500/20 text-rose-400 border-rose-500/30"; size = "md:col-span-8";
+            break;
+          case "Social":
+            icon = Users; iconBg = "bg-indigo-50"; iconColor = "text-indigo-600"; badgeStyles = "bg-indigo-100 text-indigo-700 border-indigo-200"; size = "md:col-span-6";
+            break;
+          case "Hobbies":
+            icon = Palette; iconBg = "bg-pink-50"; iconColor = "text-pink-600"; badgeStyles = "bg-pink-100 text-pink-700 border-pink-200"; size = "md:col-span-6";
+            break;
+          default:
+            icon = Question; iconBg = "bg-purple-50"; iconColor = "text-purple-600"; badgeStyles = "bg-purple-100 text-purple-700 border-purple-200"; size = "md:col-span-4";
+        }
+
+        // Just cycle through sizes if we want visual variety
+        if (!size) {
+           const sizes = ["md:col-span-4", "md:col-span-6", "md:col-span-8"];
+           size = sizes[index % 3];
+        }
+
+        return {
+          id: scenario.id,
+          title: scenario.title,
+          description: scenario.description,
+          level: scenario.difficulty.charAt(0).toUpperCase() + scenario.difficulty.slice(1),
+          duration: "10 mins",
+          category: scenario.category,
+          // UI properties
+          icon, iconBg, iconColor, badgeStyles, size, bg,
+          ...(scenario.category === "Travel" && { overlay: () => <AirplaneTilt weight="fill" size={240} className="text-primary" /> }),
+          ...(scenario.category === "Sci-Tech" && { overlay: () => <Globe weight="fill" size={240} className="text-white" /> }),
+        };
+      });
+      setTopics(mappedTopics);
+    } catch (error) {
+      console.error("Failed to fetch scenarios", error);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
 
   return (
     <div className="min-h-[100dvh] bg-zinc-50 flex flex-col">
@@ -130,11 +117,23 @@ const PracticeTopic = () => {
               </motion.div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pb-12">
-              {topics.map((topic, index) => (
-                <TopicCard key={index} card={topic} />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pb-12">
+                {topics.map((topic, index) => (
+                  <TopicCard key={topic.id || index} card={topic} />
+                ))}
+                
+                {topics.length === 0 && (
+                  <div className="col-span-12 text-center py-20 text-zinc-500 font-bold">
+                    No scenarios available right now.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </main>
       </div>
