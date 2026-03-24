@@ -1,0 +1,11 @@
+# Extra dependencies for local model providers
+# Install: pip install -r requirements-local.txt
+
+-r requirements.txt
+
+# Local ASR: faster-whisper (CTranslate2-based Whisper)
+faster-whisper>=1.1.0
+
+# Local TTS: Kokoro (lightweight 82M TTS)
+kokoro>=1.0.0
+soundfile>=0.12.0
