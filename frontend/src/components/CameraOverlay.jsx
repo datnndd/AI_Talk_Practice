@@ -1,31 +1,69 @@
 import { motion } from "framer-motion";
-import { MicrophoneSlash, VideoCameraSlash } from "@phosphor-icons/react";
+import { Microphone, SpeakerHigh, Waveform } from "@phosphor-icons/react";
 
-const CameraOverlay = () => {
+const STATUS_COPY = {
+  recording: "Listening live",
+  processing: "Processing your turn",
+  assistant: "AI is speaking",
+  idle: "Ready for your next turn",
+};
+
+const CameraOverlay = ({ connectionState, recordingState }) => {
+  const isConnected = connectionState === "ready";
+  const statusLabel = STATUS_COPY[recordingState] || STATUS_COPY.idle;
+
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
+      initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="absolute top-6 left-6 w-1/3 aspect-[16/10] rounded-2xl overflow-hidden z-20 border border-white/40 shadow-2xl glass-panel group"
+      className="absolute top-6 left-6 z-20 w-[min(22rem,calc(100%-3rem))] rounded-3xl border border-white/35 bg-zinc-950/70 p-5 text-white shadow-2xl backdrop-blur-xl"
     >
-      <div className="absolute top-3 left-3 bg-rose-500 text-white px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 z-10">
-        <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-        Live
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/55">
+            Voice Channel
+          </p>
+          <p className="mt-2 text-lg font-bold">{statusLabel}</p>
+        </div>
+        <div
+          className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] ${
+            isConnected ? "bg-emerald-400/15 text-emerald-200" : "bg-amber-400/15 text-amber-100"
+          }`}
+        >
+          {isConnected ? "Connected" : "Offline"}
+        </div>
       </div>
-      
-      <img 
-        src="https://picsum.photos/seed/student_webcam/400/250" 
-        alt="Student Webcam" 
-        className="w-full h-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
-      />
-      
-      <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button className="p-2 bg-black/40 backdrop-blur-md text-white rounded-lg hover:bg-black/60 transition-colors">
-          <MicrophoneSlash size={16} />
-        </button>
-        <button className="p-2 bg-black/40 backdrop-blur-md text-white rounded-lg hover:bg-black/60 transition-colors">
-          <VideoCameraSlash size={16} />
-        </button>
+
+      <div className="mt-5 grid grid-cols-3 gap-3">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <Microphone size={18} className="text-primary" weight="fill" />
+          <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.15em] text-white/55">
+            Input
+          </p>
+          <p className="mt-1 text-sm font-semibold">
+            {recordingState === "recording" ? "Hot mic" : "Standby"}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <Waveform size={18} className="text-cyan-300" weight="fill" />
+          <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.15em] text-white/55">
+            Model
+          </p>
+          <p className="mt-1 text-sm font-semibold">
+            {recordingState === "processing" ? "Thinking" : "Streaming"}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <SpeakerHigh size={18} className="text-emerald-300" weight="fill" />
+          <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.15em] text-white/55">
+            Output
+          </p>
+          <p className="mt-1 text-sm font-semibold">
+            {recordingState === "assistant" ? "Playing" : "Queued"}
+          </p>
+        </div>
       </div>
     </motion.div>
   );

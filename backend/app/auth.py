@@ -1,6 +1,4 @@
-"""
-JWT authentication and password hashing utilities.
-"""
+"""JWT authentication and password hashing utilities."""
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -46,6 +44,18 @@ def decode_token(token: str) -> Optional[int]:
         return None
 
 
+async def get_user_for_token(db: AsyncSession, token: str):
+    """Resolve a JWT to a User ORM object, returning None when invalid."""
+    from app.models.user import User
+
+    user_id = decode_token(token)
+    if user_id is None:
+        return None
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    return result.scalar_one_or_none()
+
+
 # ── FastAPI Dependency ──
 
 async def get_current_user(
@@ -53,15 +63,8 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ):
     """Dependency that returns the current User ORM object."""
-    from app.models.user import User
-
-    user_id = decode_token(creds.credentials)
-    if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+    user = await get_user_for_token(db, creds.credentials)
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     return user

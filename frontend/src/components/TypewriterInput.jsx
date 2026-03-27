@@ -1,74 +1,78 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
-import { Sparkle, Microphone, PaperPlaneRight } from "@phosphor-icons/react";
+import { motion } from "framer-motion";
+import {
+  ArrowsClockwise,
+  Microphone,
+  PauseCircle,
+  Sparkle,
+  WarningCircle,
+} from "@phosphor-icons/react";
 
-const TypewriterInput = () => {
-  const [phraseIndex, setPhraseIndex] = useState(0);
-  const phrases = [
-    "Ask me about French cuisine...",
-    "How do I say 'delicious' in French?",
-    "Tell me a joke in French...",
-    "Translate 'I want to travel'..."
-  ];
+const STATUS_COPY = {
+  idle: "Tap the mic when you're ready to speak.",
+  recording: "Listening now. Speak naturally, then stop to send your turn.",
+  processing: "Processing your speech and drafting the assistant reply.",
+  assistant: "The assistant is responding with text and audio.",
+};
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setPhraseIndex((prev) => (prev + 1) % phrases.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, []);
+const TypewriterInput = ({
+  partialTranscript,
+  recordingState,
+  connectionState,
+  onToggleRecording,
+  onReconnect,
+  disabled,
+  error,
+}) => {
+  const isRecording = recordingState === "recording";
+  const transcript = partialTranscript || STATUS_COPY[recordingState] || STATUS_COPY.idle;
 
   return (
     <footer className="p-8 pt-2">
-      <div className="flex flex-col gap-4">
-        <div className="liquid-glass rounded-full flex items-center px-6 py-3 border border-white/40 shadow-xl focus-within:shadow-primary/10 transition-all refraction">
-          <div className="flex items-center gap-2 pr-4 border-r border-zinc-200/50 mr-4">
-            <button className="p-2 text-primary hover:bg-primary/5 rounded-full transition-colors">
-              <Sparkle weight="fill" size={20} />
+      <div className="rounded-[2rem] border border-white/40 bg-white/80 p-5 shadow-xl backdrop-blur-xl">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+              <Sparkle weight="fill" className="text-primary/70" size={12} />
+              Voice-first Practice
+            </div>
+            <p className={`mt-3 min-h-12 text-sm leading-relaxed ${partialTranscript ? "font-semibold text-zinc-950" : "text-zinc-500"}`}>
+              {transcript}
+            </p>
+            {error ? (
+              <div className="mt-3 flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+                <WarningCircle size={18} weight="fill" className="mt-0.5 shrink-0" />
+                <span>{error}</span>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <motion.button
+              whileHover={{ scale: disabled ? 1 : 1.02 }}
+              whileTap={{ scale: disabled ? 1 : 0.98 }}
+              onClick={onToggleRecording}
+              disabled={disabled}
+              className={`flex min-w-40 items-center justify-center gap-3 rounded-full px-5 py-4 text-sm font-bold text-white shadow-lg transition-all ${
+                disabled
+                  ? "cursor-not-allowed bg-zinc-300 shadow-none"
+                  : isRecording
+                    ? "bg-rose-500 shadow-rose-500/25"
+                    : "bg-primary shadow-primary/30"
+              }`}
+            >
+              {isRecording ? <PauseCircle weight="fill" size={22} /> : <Microphone weight="fill" size={22} />}
+              <span>{isRecording ? "Stop Turn" : "Start Speaking"}</span>
+            </motion.button>
+
+            <button
+              onClick={onReconnect}
+              disabled={connectionState === "connecting"}
+              className="flex h-14 w-14 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+              title="Reconnect session"
+            >
+              <ArrowsClockwise size={20} />
             </button>
           </div>
-          
-          <div className="flex-1 relative h-6 overflow-hidden">
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={phraseIndex}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.5, ease: "anticipate" }}
-                className="absolute inset-0 text-sm font-medium text-zinc-400 font-sans"
-              >
-                {phrases[phraseIndex]}
-              </motion.span>
-            </AnimatePresence>
-            <input 
-              type="text" 
-              className="absolute inset-0 bg-transparent border-none focus:ring-0 text-sm font-semibold text-zinc-950 opacity-0 focus:opacity-100 transition-opacity w-full"
-            />
-          </div>
-
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-primary/30 ml-4 btn-spring"
-          >
-            <Microphone weight="fill" size={20} />
-          </motion.button>
-        </div>
-
-        <div className="px-8 flex items-center gap-3">
-          <div className="flex items-center gap-2 text-[9px] font-bold text-zinc-400 uppercase tracking-widest">
-            <Sparkle weight="fill" className="text-primary/60" size={12} />
-            Suggested
-          </div>
-          <motion.div
-            whileHover={{ x: 4 }}
-            className="liquid-glass rounded-xl px-4 py-2 border border-white/30 cursor-pointer hover:bg-white/50 transition-colors shadow-sm refraction"
-          >
-            <p className="text-[11px] italic text-zinc-400 font-medium">
-              "Je voudrais en savoir plus sur les vins de Bordeaux..."
-            </p>
-          </motion.div>
         </div>
       </div>
     </footer>

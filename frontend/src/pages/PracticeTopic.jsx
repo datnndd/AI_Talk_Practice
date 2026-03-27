@@ -16,6 +16,58 @@ import {
 } from "@phosphor-icons/react";
 import { api } from "../contexts/AuthContext";
 
+const CATEGORY_STYLES = {
+  travel: {
+    icon: AirplaneTilt,
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
+    badgeStyles: "bg-primary/10 text-primary border-primary/20",
+    size: "md:col-span-8",
+  },
+  business: {
+    icon: Handshake,
+    iconBg: "bg-zinc-100",
+    iconColor: "text-zinc-600",
+    badgeStyles: "bg-amber-100 text-amber-700 border-amber-200",
+    size: "md:col-span-4",
+  },
+  daily_life: {
+    icon: Coffee,
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-600",
+    badgeStyles: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    size: "md:col-span-4",
+  },
+  academic: {
+    icon: Globe,
+    bg: "bg-zinc-950 text-white",
+    iconBg: "bg-white/10",
+    iconColor: "text-white",
+    badgeStyles: "bg-rose-500/20 text-rose-400 border-rose-500/30",
+    size: "md:col-span-8",
+  },
+  social: {
+    icon: Users,
+    iconBg: "bg-indigo-50",
+    iconColor: "text-indigo-600",
+    badgeStyles: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    size: "md:col-span-6",
+  },
+  hobbies: {
+    icon: Palette,
+    iconBg: "bg-pink-50",
+    iconColor: "text-pink-600",
+    badgeStyles: "bg-pink-100 text-pink-700 border-pink-200",
+    size: "md:col-span-6",
+  },
+};
+
+const formatCategoryLabel = (category) =>
+  category
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
 const PracticeTopic = () => {
   const [topics, setTopics] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,29 +81,14 @@ const PracticeTopic = () => {
       const response = await api.get("/scenarios");
       // Map API scenarios to UI format with icons and colors
       const mappedTopics = response.data.map((scenario, index) => {
-        let icon, iconBg, iconColor, badgeStyles, size, bg;
-        
-        switch (scenario.category) {
-          case "Travel":
-            icon = AirplaneTilt; iconBg = "bg-primary/10"; iconColor = "text-primary"; badgeStyles = "bg-primary/10 text-primary border-primary/20"; size = "md:col-span-8";
-            break;
-          case "Business":
-            icon = Handshake; iconBg = "bg-zinc-100"; iconColor = "text-zinc-600"; badgeStyles = "bg-amber-100 text-amber-700 border-amber-200"; size = "md:col-span-4";
-            break;
-          case "Daily Life":
-            icon = Coffee; iconBg = "bg-emerald-50"; iconColor = "text-emerald-600"; badgeStyles = "bg-emerald-100 text-emerald-700 border-emerald-200"; size = "md:col-span-4";
-            break;
-          case "Sci-Tech":
-            icon = Globe; bg = "bg-zinc-950 text-white"; iconBg = "bg-white/10"; iconColor = "text-white"; badgeStyles = "bg-rose-500/20 text-rose-400 border-rose-500/30"; size = "md:col-span-8";
-            break;
-          case "Social":
-            icon = Users; iconBg = "bg-indigo-50"; iconColor = "text-indigo-600"; badgeStyles = "bg-indigo-100 text-indigo-700 border-indigo-200"; size = "md:col-span-6";
-            break;
-          case "Hobbies":
-            icon = Palette; iconBg = "bg-pink-50"; iconColor = "text-pink-600"; badgeStyles = "bg-pink-100 text-pink-700 border-pink-200"; size = "md:col-span-6";
-            break;
-          default:
-            icon = Question; iconBg = "bg-purple-50"; iconColor = "text-purple-600"; badgeStyles = "bg-purple-100 text-purple-700 border-purple-200"; size = "md:col-span-4";
+        let { icon, iconBg, iconColor, badgeStyles, size, bg } = CATEGORY_STYLES[scenario.category] || {};
+
+        if (!icon) {
+          icon = Question;
+          iconBg = "bg-zinc-100";
+          iconColor = "text-zinc-600";
+          badgeStyles = "bg-zinc-100 text-zinc-700 border-zinc-200";
+          size = "md:col-span-4";
         }
 
         // Just cycle through sizes if we want visual variety
@@ -66,11 +103,11 @@ const PracticeTopic = () => {
           description: scenario.description,
           level: scenario.difficulty.charAt(0).toUpperCase() + scenario.difficulty.slice(1),
           duration: "10 mins",
-          category: scenario.category,
+          category: formatCategoryLabel(scenario.category),
           // UI properties
           icon, iconBg, iconColor, badgeStyles, size, bg,
-          ...(scenario.category === "Travel" && { overlay: () => <AirplaneTilt weight="fill" size={240} className="text-primary" /> }),
-          ...(scenario.category === "Sci-Tech" && { overlay: () => <Globe weight="fill" size={240} className="text-white" /> }),
+          ...(scenario.category === "travel" && { overlay: () => <AirplaneTilt weight="fill" size={240} className="text-primary" /> }),
+          ...(scenario.category === "academic" && { overlay: () => <Globe weight="fill" size={240} className="text-white" /> }),
         };
       });
       setTopics(mappedTopics);

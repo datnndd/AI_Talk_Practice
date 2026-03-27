@@ -6,7 +6,7 @@ const TopicCard = ({ card }) => {
   const Icon = card.icon;
   
   return (
-    <Link to={`/practice/${card.title.toLowerCase().replace(/ /g, '-')}`} className={card.size}>
+    <Link to={`/practice/${card.id}`} className={card.size}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}

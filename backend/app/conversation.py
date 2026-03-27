@@ -9,10 +9,10 @@ Each WebSocket session creates a ConversationSession that manages:
 
 import asyncio
 import logging
-from typing import AsyncGenerator, Callable, Optional
+from typing import Awaitable, Callable, Optional
 
 from app.config import Settings
-from app.services.base import ASRBase, LLMBase, TTSBase, Message, TranscriptType
+from app.services.base import ASRBase, LLMBase, TTSBase, Message, TTSConfig
 from app.services.factory import create_asr, create_llm, create_tts
 
 logger = logging.getLogger(__name__)
@@ -39,6 +39,11 @@ class ConversationSession:
         self._on_llm_chunk: Optional[Callable] = None
         self._on_audio_chunk: Optional[Callable] = None
         self._on_error: Optional[Callable] = None
+        self._on_user_message: Optional[Callable[[str], Awaitable[None]]] = None
+        self._on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None
+        self._system_prompt: Optional[str] = None
+        self._language = config.asr_language
+        self._voice = config.tts_voice
 
     async def initialize(
         self,
@@ -46,12 +51,24 @@ class ConversationSession:
         on_llm_chunk: Callable,
         on_audio_chunk: Callable,
         on_error: Callable,
+        system_prompt: Optional[str] = None,
+        language: Optional[str] = None,
+        voice: Optional[str] = None,
+        on_user_message: Optional[Callable[[str], Awaitable[None]]] = None,
+        on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None,
     ):
         """Initialize services and set up callbacks."""
         self._on_transcript = on_transcript
         self._on_llm_chunk = on_llm_chunk
         self._on_audio_chunk = on_audio_chunk
         self._on_error = on_error
+        self._system_prompt = system_prompt
+        self._on_user_message = on_user_message
+        self._on_assistant_message = on_assistant_message
+        if language:
+            self._language = language
+        if voice:
+            self._voice = voice
 
         try:
             self._asr = create_asr(self._config)
@@ -64,13 +81,27 @@ class ConversationSession:
                 await self._on_error(str(e))
             raise
 
+    def update_config(
+        self,
+        *,
+        language: Optional[str] = None,
+        voice: Optional[str] = None,
+    ) -> tuple[str, str]:
+        """Update the active conversation config for subsequent turns."""
+        if language:
+            self._language = language
+        if voice:
+            self._voice = voice
+        return self._language, self._voice
+
     async def start_recording(self, language: str = "en") -> None:
         """Start recording and ASR processing."""
         if self._is_recording:
             return
 
         try:
-            await self._asr.start_session(language=language)
+            self._language = language or self._language
+            await self._asr.start_session(language=self._language)
             self._is_recording = True
 
             # Start polling for transcripts
@@ -146,6 +177,8 @@ class ConversationSession:
 
         # Add user message to history
         self._messages.append(Message(role="user", content=user_text))
+        if self._on_user_message:
+            await self._on_user_message(user_text)
 
         # Stream LLM response
         full_response = ""
@@ -154,7 +187,10 @@ class ConversationSession:
             """Generator that streams LLM text and collects full response."""
             nonlocal full_response
             try:
-                async for chunk in self._llm.chat_stream(self._messages):
+                async for chunk in self._llm.chat_stream(
+                    self._messages,
+                    system_prompt=self._system_prompt,
+                ):
                     full_response += chunk
 
                     # Notify frontend of LLM chunk
@@ -170,7 +206,14 @@ class ConversationSession:
 
         # Stream LLM text → TTS → audio chunks
         try:
-            async for audio_chunk in self._tts.synthesize_stream(_llm_text_stream()):
+            tts_config = TTSConfig(
+                voice=self._voice,
+                language=self._language,
+            )
+            async for audio_chunk in self._tts.synthesize_stream(
+                _llm_text_stream(),
+                config=tts_config,
+            ):
                 if self._on_audio_chunk:
                     await self._on_audio_chunk(audio_chunk)
         except Exception as e:
@@ -189,6 +232,8 @@ class ConversationSession:
         # Add assistant response to history
         if full_response:
             self._messages.append(Message(role="assistant", content=full_response))
+            if self._on_assistant_message:
+                await self._on_assistant_message(full_response)
 
         logger.info(f"Response pipeline complete (response_len={len(full_response)})")
 
