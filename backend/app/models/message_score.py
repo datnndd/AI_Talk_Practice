@@ -3,8 +3,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import Float, Text, Integer, DateTime, ForeignKey, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Float, Text, Integer, DateTime, ForeignKey, func, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -21,7 +20,7 @@ class MessageScore(Base):
     vocabulary_score: Mapped[float] = mapped_column(Float)       # 1–10
     intonation_score: Mapped[float] = mapped_column(Float)       # 1–10
     overall_score: Mapped[float] = mapped_column(Float)          # average of 5
-    mispronounced_words: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
+    mispronounced_words: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True)
     # Example: [{"word": "restaurant", "user_said": "/res-tau-rant/", "correct_ipa": "/ˈrɛstərɒnt/"}]
     feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     scored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

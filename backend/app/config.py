@@ -17,8 +17,8 @@ class Settings(BaseSettings):
 
     # --- Database ---
     database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/ai_talk_practice",
-        description="Async PostgreSQL connection URL",
+        default="sqlite+aiosqlite:///./ai_talk_practice.db",
+        description="Async database connection URL",
     )
 
     # --- Auth / JWT ---

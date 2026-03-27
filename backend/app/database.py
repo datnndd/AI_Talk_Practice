@@ -12,6 +12,8 @@ engine = create_async_engine(
     settings.database_url,
     echo=False,
     pool_pre_ping=True,
+    # Needed for SQLite to work across multiple threads
+    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
 )
 
 AsyncSessionLocal = async_sessionmaker(

@@ -51,7 +51,13 @@ export const AuthProvider = ({ children }) => {
     const { access_token } = response.data;
     localStorage.setItem("access_token", access_token);
     setToken(access_token);
-    return access_token;
+    
+    // Fetch user immediately to know onboarding status
+    const userRes = await api.get("/auth/me", { 
+      headers: { Authorization: `Bearer ${access_token}` } 
+    });
+    setUser(userRes.data);
+    return userRes.data;
   };
 
   const register = async (userData) => {
@@ -62,6 +68,12 @@ export const AuthProvider = ({ children }) => {
     return access_token;
   };
 
+  const onboard = async (onboardingData) => {
+    const response = await api.put("/auth/me/onboard", onboardingData);
+    setUser(response.data);
+    return response.data;
+  };
+
   const logout = () => {
     localStorage.removeItem("access_token");
     setToken(null);
@@ -70,7 +82,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, login, register, logout, isAuthenticated: !!user, isLoading }}
+      value={{ user, login, register, onboard, logout, isAuthenticated: !!user, isLoading }}
     >
       {children}
     </AuthContext.Provider>

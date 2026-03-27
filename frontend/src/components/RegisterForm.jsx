@@ -2,15 +2,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { EnvelopeSimple, LockSimple, ArrowRight, GoogleLogo, Sparkle } from "@phosphor-icons/react";
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    display_name: "",
-    native_language: "vi",
-    target_language: "en",
-    level: "beginner"
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +26,7 @@ const RegisterForm = () => {
     
     try {
       await register(formData);
-      navigate("/topics");
+      navigate("/onboarding");
     } catch (err) {
       setError(err.response?.data?.detail || "Registration failed. Please try again.");
     } finally {
@@ -38,99 +35,146 @@ const RegisterForm = () => {
   };
 
   return (
-    <section className="w-full lg:w-2/5 flex flex-col bg-white relative">
-      <div className="lg:hidden p-8">
-        <span className="text-2xl font-black tracking-tighter text-primary font-display">LingoFlow</span>
-      </div>
+    <section className="w-full lg:w-5/12 bg-white flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 min-h-[100dvh] overflow-y-auto">
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+        className="max-w-md w-full mx-auto"
+      >
+        <div className="lg:hidden mb-12">
+          <span className="text-3xl font-black tracking-tighter text-zinc-950 font-display italic">LingoFlow</span>
+        </div>
 
-      <div className="flex-1 flex flex-col justify-center px-8 md:px-16 lg:px-20 py-12">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full mx-auto space-y-8"
+        <header className="mb-10 text-left">
+          <h2 className="text-4xl font-black text-zinc-950 mb-3 tracking-tighter leading-none font-display">
+            Create your account
+          </h2>
+          <p className="text-zinc-500 font-medium text-sm">Join the flow and start your journey today.</p>
+        </header>
+
+        {/* Social Auth */}
+        <motion.button 
+          whileHover={{ scale: 1.01, y: -1 }}
+          whileTap={{ scale: 0.98 }}
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 border border-zinc-200 rounded-2xl text-zinc-950 font-black text-xs uppercase tracking-widest hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm"
         >
-          <div className="space-y-3">
-            <h2 className="text-4xl font-black text-zinc-950 tracking-tight font-display">Create Account</h2>
-            <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest">Join LingoFlow to practice speaking.</p>
+          <GoogleLogo weight="bold" size={20} className="text-red-500" />
+          Continue with Google
+        </motion.button>
+
+        <div className="relative my-10">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-zinc-100"></div>
           </div>
+          <div className="relative flex justify-center text-[10px]">
+            <span className="px-6 bg-white text-zinc-400 font-black uppercase tracking-[0.2em]">Register with Email</span>
+          </div>
+        </div>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            {error && (
-              <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-bold border border-red-100">
-                {error}
+        {/* Registration Form */}
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="p-4 bg-rose-50 text-rose-600 rounded-2xl text-xs font-black border border-rose-100 uppercase tracking-widest"
+            >
+              {error}
+            </motion.div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1">Email Address</label>
+            <div className="relative group">
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors">
+                <EnvelopeSimple weight="bold" size={18} />
               </div>
-            )}
-            
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1" htmlFor="display_name">Display Name</label>
               <input 
-                className="w-full px-5 py-3 bg-zinc-50 border-none rounded-2xl focus:ring-2 focus:ring-primary/20 transition-all outline-none text-zinc-950 font-bold text-sm placeholder:text-zinc-300" 
-                id="display_name" name="display_name" placeholder="John Doe" required type="text"
-                value={formData.display_name} onChange={handleChange}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1" htmlFor="email">Email Address</label>
-              <input 
-                className="w-full px-5 py-3 bg-zinc-50 border-none rounded-2xl focus:ring-2 focus:ring-primary/20 transition-all outline-none text-zinc-950 font-bold text-sm placeholder:text-zinc-300" 
-                id="email" name="email" placeholder="name@company.com" required type="email"
+                className="w-full pl-14 pr-6 py-4 bg-zinc-50 border border-transparent rounded-[1.5rem] focus:bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-zinc-950 font-bold text-sm placeholder:text-zinc-300" 
+                id="email" name="email" placeholder="jane@example.com" required type="email"
                 value={formData.email} onChange={handleChange}
               />
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1" htmlFor="password">Password</label>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1">Password</label>
+            <div className="relative group">
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors">
+                <LockSimple weight="bold" size={18} />
+              </div>
               <input 
-                className="w-full px-5 py-3 bg-zinc-50 border-none rounded-2xl focus:ring-2 focus:ring-primary/20 transition-all outline-none text-zinc-950 font-bold text-sm placeholder:text-zinc-300" 
+                className="w-full pl-14 pr-6 py-4 bg-zinc-50 border border-transparent rounded-[1.5rem] focus:bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-zinc-950 font-bold text-sm placeholder:text-zinc-300" 
                 id="password" name="password" placeholder="••••••••" required type="password"
                 value={formData.password} onChange={handleChange}
               />
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1" htmlFor="native_language">Native Language</label>
-                <select 
-                  className="w-full px-5 py-3 bg-zinc-50 border-none rounded-2xl focus:ring-2 focus:ring-primary/20 transition-all outline-none text-zinc-950 font-bold text-sm"
-                  id="native_language" name="native_language" value={formData.native_language} onChange={handleChange}
-                >
-                  <option value="vi">Vietnamese</option>
-                  <option value="en">English</option>
-                  <option value="es">Spanish</option>
-                  <option value="zh">Chinese</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1" htmlFor="level">Skill Level</label>
-                <select 
-                  className="w-full px-5 py-3 bg-zinc-50 border-none rounded-2xl focus:ring-2 focus:ring-primary/20 transition-all outline-none text-zinc-950 font-bold text-sm"
-                  id="level" name="level" value={formData.level} onChange={handleChange}
-                >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-              </div>
-            </div>
+            {formData.password && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="mt-3 px-1"
+              >
+                <div className="flex gap-1.5 h-1">
+                  <div className="flex-1 bg-indigo-500 rounded-full"></div>
+                  <div className="flex-1 bg-indigo-500 rounded-full"></div>
+                  <div className={`flex-1 ${formData.password.length > 8 ? "bg-indigo-500" : "bg-zinc-100"} rounded-full`}></div>
+                  <div className={`flex-1 ${formData.password.length > 12 ? "bg-indigo-500" : "bg-zinc-100"} rounded-full`}></div>
+                </div>
+                <p className="mt-2 text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                  Strength: <span className="text-indigo-600">Dynamic</span>
+                </p>
+              </motion.div>
+            )}
+          </div>
 
+          <div className="pt-4">
             <motion.button
-              whileHover={{ scale: 1.02, y: -2 }}
+              whileHover={{ scale: 1.01, y: -2 }}
               whileTap={{ scale: 0.98 }}
               disabled={isLoading}
-              className={`w-full bg-primary text-white font-black py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all btn-spring text-sm uppercase tracking-widest mt-4 ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
+              className={`w-full bg-indigo-600 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-indigo-500/20 transition-all flex items-center justify-center gap-3 text-xs uppercase tracking-[0.2em] group ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
               type="submit"
             >
-              {isLoading ? "Creating..." : "Sign Up"}
+              {isLoading ? "Creating..." : (
+                <>
+                  Create Account
+                  <ArrowRight weight="bold" size={16} className="group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </motion.button>
-          </form>
+          </div>
+        </form>
 
-          <p className="text-center text-xs font-bold text-zinc-400">
+        <footer className="mt-12 text-center space-y-10">
+          <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest">
             Already have an account? 
-            <Link className="text-primary font-black ml-2 hover:underline" to="/login">Sign in</Link>
+            <Link className="text-indigo-600 font-black ml-2 hover:underline underline-offset-4" to="/login">Sign in</Link>
           </p>
-        </motion.div>
-      </div>
+          
+          <div className="flex justify-center gap-8 border-t border-zinc-100 pt-10">
+            <a className="text-[9px] font-black text-zinc-400 uppercase tracking-widest hover:text-indigo-600 transition-colors" href="#">Privacy Policy</a>
+            <a className="text-[9px] font-black text-zinc-400 uppercase tracking-widest hover:text-indigo-600 transition-colors" href="#">Terms of Service</a>
+          </div>
+        </footer>
+      </motion.div>
+
+      {/* Floating Offer Toast */}
+      <motion.div 
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 1, type: "spring", stiffness: 100, damping: 20 }}
+        className="fixed bottom-8 right-8 hidden md:flex items-center gap-4 bg-white/80 backdrop-blur-xl px-6 py-4 rounded-[2rem] shadow-2xl border border-zinc-100/50 cursor-pointer hover:scale-105 transition-transform"
+      >
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-600">
+          <Sparkle weight="fill" size={20} />
+        </div>
+        <div>
+          <p className="text-[10px] font-black text-zinc-950 uppercase tracking-widest">Get 1 week free</p>
+          <p className="text-[9px] text-zinc-500 font-bold tracking-tight">Claim your starter bonus</p>
+        </div>
+      </motion.div>
     </section>
   );
 };

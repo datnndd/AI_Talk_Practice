@@ -3,8 +3,8 @@ import AuthForm from "../components/AuthForm";
 
 const LoginPage = () => {
   return (
-    <div className="min-h-screen bg-white font-sans antialiased overflow-hidden selection:bg-primary/10 selection:text-primary">
-      <main className="flex min-h-screen">
+    <div className="min-h-[100dvh] bg-white font-sans antialiased overflow-hidden selection:bg-indigo-500/10 selection:text-indigo-600">
+      <main className="flex min-h-[100dvh]">
         <BrandIntro />
         <AuthForm />
       </main>

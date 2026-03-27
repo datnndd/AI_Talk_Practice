@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { GoogleLogo } from "@phosphor-icons/react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { EnvelopeSimple, LockSimple, ArrowRight, GoogleLogo } from "@phosphor-icons/react";
 
 const AuthForm = () => {
   const [email, setEmail] = useState("");
@@ -18,9 +18,12 @@ const AuthForm = () => {
     setError("");
     setIsLoading(true);
     try {
-      await login(email, password);
-      // Wait a moment for auth state to update before navigation
-      navigate("/topics");
+      const userData = await login(email, password);
+      if (userData.is_onboarding_completed) {
+        navigate("/topics");
+      } else {
+        navigate("/onboarding");
+      }
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid email or password");
     } finally {
@@ -29,67 +32,85 @@ const AuthForm = () => {
   };
 
   return (
-    <section className="w-full lg:w-2/5 flex flex-col bg-white relative">
-      {/* Mobile Header */}
-      <div className="lg:hidden p-8">
-        <span className="text-2xl font-black tracking-tighter text-primary font-display">LingoFlow</span>
-      </div>
+    <section className="w-full lg:w-5/12 bg-white flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 min-h-[100dvh] overflow-y-auto">
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+        className="max-w-md w-full mx-auto"
+      >
+        <div className="lg:hidden mb-12">
+          <span className="text-3xl font-black tracking-tighter text-zinc-950 font-display italic">LingoFlow</span>
+        </div>
 
-      <div className="flex-1 flex flex-col justify-center px-8 md:px-16 lg:px-20 py-12">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full mx-auto space-y-10"
+        <header className="mb-10 text-left">
+          <h2 className="text-4xl font-black text-zinc-950 mb-3 tracking-tighter leading-none font-display">
+            Welcome back
+          </h2>
+          <p className="text-zinc-500 font-medium text-sm">Please enter your details to sign in.</p>
+        </header>
+
+        {/* Social Auth */}
+        <motion.button 
+          whileHover={{ scale: 1.01, y: -1 }}
+          whileTap={{ scale: 0.98 }}
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 border border-zinc-200 rounded-2xl text-zinc-950 font-black text-xs uppercase tracking-widest hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm"
         >
-          <div className="space-y-3">
-            <h2 className="text-4xl font-black text-zinc-950 tracking-tight font-display">Welcome back</h2>
-            <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest">Please enter your details to sign in.</p>
+          <GoogleLogo weight="bold" size={20} className="text-red-500" />
+          Continue with Google
+        </motion.button>
+
+        <div className="relative my-10">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-zinc-100"></div>
           </div>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full flex items-center justify-center space-x-3 px-6 py-4 border border-zinc-200 rounded-2xl hover:bg-zinc-50 active:bg-zinc-100 transition-all duration-200 group shadow-sm font-bold text-sm text-zinc-700"
-          >
-            <GoogleLogo size={22} weight="bold" className="text-zinc-900" />
-            <span>Continue with Google</span>
-          </motion.button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-zinc-100"></div>
-            </div>
-            <div className="relative flex justify-center text-[10px] uppercase font-black tracking-[0.3em]">
-              <span className="bg-white px-6 text-zinc-300">or email</span>
-            </div>
+          <div className="relative flex justify-center text-[10px]">
+            <span className="px-6 bg-white text-zinc-400 font-black uppercase tracking-[0.2em]">or sign in with email</span>
           </div>
+        </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-bold border border-red-100">
-                {error}
+        {/* Login Form */}
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="p-4 bg-rose-50 text-rose-600 rounded-2xl text-xs font-black border border-rose-100 uppercase tracking-widest"
+            >
+              {error}
+            </motion.div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1" htmlFor="email">Email Address</label>
+            <div className="relative group">
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors">
+                <EnvelopeSimple weight="bold" size={18} />
               </div>
-            )}
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1" htmlFor="email">Email Address</label>
               <input 
-                className="w-full px-6 py-4 bg-zinc-50 border-none rounded-2xl focus:ring-2 focus:ring-primary/20 transition-all outline-none text-zinc-950 font-bold text-sm placeholder:text-zinc-300" 
+                className="w-full pl-14 pr-6 py-4 bg-zinc-50 border border-transparent rounded-[1.5rem] focus:bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-zinc-950 font-bold text-sm placeholder:text-zinc-300" 
                 id="email" 
                 name="email" 
-                placeholder="name@company.com" 
+                placeholder="jane@example.com" 
                 required 
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center ml-1">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block" htmlFor="password">Password</label>
-                <a className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline" href="#">Forgot password?</a>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block" htmlFor="password">Password</label>
+              <a className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline underline-offset-2" href="#">Forgot?</a>
+            </div>
+            <div className="relative group">
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors">
+                <LockSimple weight="bold" size={18} />
               </div>
               <input 
-                className="w-full px-6 py-4 bg-zinc-50 border-none rounded-2xl focus:ring-2 focus:ring-primary/20 transition-all outline-none text-zinc-950 font-bold text-sm placeholder:text-zinc-300" 
+                className="w-full pl-14 pr-6 py-4 bg-zinc-50 border border-transparent rounded-[1.5rem] focus:bg-white focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-zinc-950 font-bold text-sm placeholder:text-zinc-300" 
                 id="password" 
                 name="password" 
                 placeholder="••••••••" 
@@ -99,24 +120,38 @@ const AuthForm = () => {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            
+          </div>
+
+          <div className="pt-4">
             <motion.button
-              whileHover={{ scale: 1.02, y: -2 }}
+              whileHover={{ scale: 1.01, y: -2 }}
               whileTap={{ scale: 0.98 }}
               disabled={isLoading}
-              className={`w-full bg-primary text-white font-black py-4 rounded-2xl shadow-xl shadow-primary/20 transition-all btn-spring text-sm uppercase tracking-widest ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
+              className={`w-full bg-indigo-600 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-indigo-500/20 transition-all flex items-center justify-center gap-3 text-xs uppercase tracking-[0.2em] group ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
               type="submit"
             >
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isLoading ? "Signing in..." : (
+                <>
+                  Sign In
+                  <ArrowRight weight="bold" size={16} className="group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </motion.button>
-          </form>
+          </div>
+        </form>
 
-          <p className="text-center text-xs font-bold text-zinc-400">
+        <footer className="mt-12 text-center space-y-10">
+          <p className="text-zinc-500 font-bold text-xs uppercase tracking-widest">
             Don't have an account? 
-            <Link className="text-primary font-black ml-2 hover:underline" to="/register">Create account</Link>
+            <Link className="text-indigo-600 font-black ml-2 hover:underline underline-offset-4" to="/register">Create account</Link>
           </p>
-        </motion.div>
-      </div>
+          
+          <div className="flex justify-center gap-8 border-t border-zinc-100 pt-10">
+            <a className="text-[9px] font-black text-zinc-400 uppercase tracking-widest hover:text-indigo-600 transition-colors" href="#">Privacy Policy</a>
+            <a className="text-[9px] font-black text-zinc-400 uppercase tracking-widest hover:text-indigo-600 transition-colors" href="#">Terms of Service</a>
+          </div>
+        </footer>
+      </motion.div>
     </section>
   );
 };

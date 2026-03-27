@@ -6,6 +6,7 @@ import ProfileSettings from "./pages/ProfileSettings";
 import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import OnboardingPage from "./pages/OnboardingPage";
 import AdminScenarios from "./pages/AdminScenarios";
 import PrivateRoute from "./components/PrivateRoute";
 
@@ -18,6 +19,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         
         {/* Protected Routes */}
+        <Route path="/onboarding" element={<PrivateRoute><OnboardingPage /></PrivateRoute>} />
         <Route path="/topics" element={<PrivateRoute><PracticeTopic /></PrivateRoute>} />
         <Route path="/practice/:id" element={<PrivateRoute><PracticeSession /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><ProfileSettings /></PrivateRoute>} />
