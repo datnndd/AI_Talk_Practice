@@ -1,299 +1,145 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { PaperPlaneRight, User, Robot } from "@phosphor-icons/react";
+import { ArrowRight, ArrowArcLeft, Question, X } from "@phosphor-icons/react";
+
+import GoalStep from "../components/onboarding/GoalStep";
+import LevelStep from "../components/onboarding/LevelStep";
+import InterestsStep from "../components/onboarding/InterestsStep";
+import FinalStep from "../components/onboarding/FinalStep";
 
 const OnboardingPage = () => {
   const { onboard } = useAuth();
   const navigate = useNavigate();
-  const messagesEndRef = useRef(null);
 
   const [step, setStep] = useState(0);
-  const [messages, setMessages] = useState([
-    {
-      role: "bot",
-      content: "Xin chào, tôi là AI Talk Practice, còn bạn là ...?",
-    },
-  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [formData, setFormData] = useState({
     display_name: "",
     native_language: "vi",
     avatar: "user1",
     age: "",
-    level: "beginner",
+    level: "intermediate", // Default to recommended
     learning_purpose: "",
     main_challenge: "",
-    favorite_topics: [],
+    favorite_topics: "",
     daily_goal: 15,
   });
 
-  const [inputValue, setInputValue] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const updateData = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const addBotMessage = (text) => {
-    setMessages((prev) => [...prev, { role: "bot", content: text }]);
-  };
-
-  const addUserMessage = (text) => {
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
-  };
-
-  const handleNextStep = async (value, displayValue) => {
-    addUserMessage(displayValue || value);
-    
-    let updatedFormData = { ...formData };
-    
-    // Save to formData based on step
-    switch (step) {
-      case 0:
-        updatedFormData.display_name = value;
-        setTimeout(() => addBotMessage(`Chào ${value}! Ngôn ngữ mẹ đẻ của bạn là gì?`), 500);
-        break;
-      case 1:
-        updatedFormData.native_language = value;
-        setTimeout(() => addBotMessage("Tuyệt vời. Bạn có thể chọn một avatar nhé!"), 500);
-        break;
-      case 2:
-        updatedFormData.avatar = value;
-        setTimeout(() => addBotMessage("Tuổi của bạn là bao nhiêu?"), 500);
-        break;
-      case 3:
-        updatedFormData.age = parseInt(value, 10);
-        setTimeout(() => addBotMessage("Trình độ tiếng Anh hiện tại của bạn là gì?"), 500);
-        break;
-      case 4:
-        updatedFormData.level = value;
-        setTimeout(() => addBotMessage("Tại sao bạn lại muốn học tiếng Anh?"), 500);
-        break;
-      case 5:
-        updatedFormData.learning_purpose = value;
-        setTimeout(() => addBotMessage("Thử thách lớn nhất của bạn khi học là gì?"), 500);
-        break;
-      case 6:
-        updatedFormData.main_challenge = value;
-        setTimeout(() => addBotMessage("Hãy chọn 3 chủ đề bạn yêu thích nhé! (vd: Travel, Culture, Technology)"), 500);
-        break;
-      case 7:
-        // Assume comma separated
-        updatedFormData.favorite_topics = value.split(",").map(s => s.trim()).filter(Boolean).join(", ");
-        setTimeout(() => addBotMessage("Cuối cùng, mục tiêu luyện tập hàng ngày của bạn là bao nhiêu phút?"), 500);
-        break;
-      case 8:
-        updatedFormData.daily_goal = parseInt(value, 10) || 15;
-        setTimeout(() => addBotMessage("Cảm ơn bạn! Đang thiết lập hồ sơ..."), 500);
-        // Finish onboarding
-        finishOnboarding(updatedFormData);
-        break;
-      default:
-        break;
+  const handleNext = async () => {
+    if (step < 3) {
+      setStep(prev => prev + 1);
+    } else {
+      await finishOnboarding();
     }
-    
-    setFormData(updatedFormData);
-    setStep((prev) => prev + 1);
-    setInputValue("");
   };
 
-  const finishOnboarding = async (finalData) => {
+  const handleBack = () => {
+    if (step > 0) setStep(prev => prev - 1);
+  };
+
+  const finishOnboarding = async () => {
     setIsSubmitting(true);
     try {
-      await onboard({
-        display_name: finalData.display_name,
-        native_language: finalData.native_language,
-        avatar: finalData.avatar,
-        age: finalData.age,
-        level: finalData.level,
-        learning_purpose: finalData.learning_purpose,
-        main_challenge: finalData.main_challenge,
-        favorite_topics: finalData.favorite_topics,
-        daily_goal: finalData.daily_goal,
-      });
+      await onboard(formData);
       navigate("/topics");
     } catch (err) {
       console.error(err);
-      addBotMessage("Sorry, có lỗi xảy ra. Vui lòng thử lại sau.");
       setIsSubmitting(false);
+      alert("Something went wrong during onboarding. Please try again.");
     }
   };
 
-  const handleTextSubmit = (e) => {
-    e.preventDefault();
-    if (!inputValue.trim() || isSubmitting) return;
-    handleNextStep(inputValue);
-  };
-
-  // Render input controls based on current step
-  const renderInputControls = () => {
-    if (isSubmitting || step > 8) {
-      return (
-        <div className="flex justify-center p-4">
-          <div className="animate-pulse bg-primary/20 text-primary px-4 py-2 rounded-full text-sm font-bold">
-            Creating your profile...
-          </div>
-        </div>
-      );
-    }
-
+  const isNextDisabled = () => {
     switch (step) {
-      case 0: // Name
-      case 3: // Age
-      case 5: // Purpose
-      case 6: // Challenge
-      case 7: // Topics
-      case 8: // Daily Goal
-        return (
-          <form onSubmit={handleTextSubmit} className="flex gap-2 bg-white p-2 rounded-2xl shadow-sm border border-zinc-100">
-            <input
-              type={step === 3 || step === 8 ? "number" : "text"}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder={
-                step === 0 ? "Nhập tên của bạn..." :
-                step === 3 ? "Tuổi..." :
-                step === 7 ? "Nhập các chủ đề, cách nhau bởi dấu phẩy..." :
-                step === 8 ? "Số phút (vd: 15)..." :
-                "Nhập câu trả lời của bạn..."
-              }
-              className="flex-1 bg-transparent px-4 py-3 outline-none font-medium text-zinc-900 placeholder:text-zinc-400"
-              autoFocus
-            />
-            <button 
-              type="submit" 
-              disabled={!inputValue.trim()}
-              className="bg-primary text-white p-3 rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              <PaperPlaneRight weight="fill" size={20} />
-            </button>
-          </form>
-        );
+      case 0: return !formData.learning_purpose;
+      case 1: return !formData.level;
+      case 2: return formData.favorite_topics.length === 0;
+      case 3: 
+        return !formData.display_name.trim() || !formData.age || !formData.main_challenge.trim();
+      default: return false;
+    }
+  };
 
-      case 1: // Native Language
-        return (
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { id: "vi", label: "Tiếng Việt 🇻🇳" },
-              { id: "en", label: "English 🇺🇸" },
-              { id: "es", label: "Español 🇪🇸" },
-              { id: "zh", label: "Chinese 🇨🇳" },
-            ].map((lang) => (
-              <button
-                key={lang.id}
-                onClick={() => handleNextStep(lang.id, lang.label)}
-                className="bg-white border border-zinc-200 p-4 rounded-2xl font-bold text-zinc-700 hover:border-primary hover:text-primary transition-colors text-sm"
-              >
-                {lang.label}
-              </button>
-            ))}
-          </div>
-        );
-
-      case 2: // Avatar
-        return (
-          <div className="flex gap-4 overflow-x-auto pb-2 px-2 snap-x">
-            {["👨‍💻", "👩‍💻", "🦊", "🐼", "🤖", "👻"].map((emoji, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleNextStep(emoji, `Chọn Avatar ${emoji}`)}
-                className="flex-shrink-0 w-16 h-16 bg-white border border-zinc-200 rounded-full text-3xl flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-all snap-center"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        );
-
-      case 4: // Level
-        return (
-          <div className="flex flex-col gap-3">
-            {[
-              { id: "beginner", label: "Beginner", desc: "Mới bắt đầu học" },
-              { id: "intermediate", label: "Intermediate", desc: "Đã có thể giao tiếp cơ bản" },
-              { id: "advanced", label: "Advanced", desc: "Sử dụng thành thạo" },
-            ].map((lvl) => (
-              <button
-                key={lvl.id}
-                onClick={() => handleNextStep(lvl.id, lvl.label)}
-                className="bg-white border border-zinc-200 p-4 rounded-2xl text-left hover:border-primary hover:shadow-md transition-all group"
-              >
-                <div className="font-bold text-zinc-900 group-hover:text-primary">{lvl.label}</div>
-                <div className="text-xs text-zinc-500 font-medium mt-1">{lvl.desc}</div>
-              </button>
-            ))}
-          </div>
-        );
-        
-      default:
-        return null;
+  // Liquid Swipe Transition
+  const pageVariants = {
+    initial: { opacity: 0, x: 50, filter: "blur(4px)" },
+    animate: { 
+      opacity: 1, 
+      x: 0, 
+      filter: "blur(0px)",
+      transition: { type: "spring", stiffness: 100, damping: 20 }
+    },
+    exit: { 
+      opacity: 0, 
+      x: -50, 
+      filter: "blur(4px)",
+      transition: { type: "spring", stiffness: 100, damping: 20 }
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col font-sans">
-      <header className="bg-white px-6 py-4 border-b border-zinc-100 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-            <Robot weight="fill" size={24} />
+    <div className="min-h-screen bg-background font-body text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed overflow-x-hidden flex flex-col">
+      {/* Navbar */}
+      <header className="bg-[#f9f9fc]/90 dark:bg-slate-950/90 backdrop-blur-md fixed top-0 left-0 w-full z-40 transition-colors duration-300">
+        <nav className="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+          <div className="text-xl font-extrabold text-primary dark:text-blue-400 tracking-tighter font-display">
+            LingoFlow
           </div>
-          <div>
-            <h1 className="font-bold text-zinc-900 text-sm">LingoFlow Onboarding</h1>
-            <p className="text-xs text-zinc-500 font-medium">Bắt đầu hành trình của bạn</p>
+          <div className="flex gap-4">
+            <button className="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors btn-spring">
+              <Question size={24} weight="regular" />
+            </button>
+            <button className="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors btn-spring">
+              <X size={24} weight="regular" />
+            </button>
           </div>
-        </div>
-        <div className="text-xs font-bold text-zinc-400">
-          {Math.min(step + 1, 9)} / 9
-        </div>
+        </nav>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col gap-6 max-w-3xl mx-auto w-full">
-        <AnimatePresence initial={false}>
-          {messages.map((msg, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`flex gap-3 max-w-[85%] md:max-w-[75%] ${
-                  msg.role === "user" ? "flex-row-reverse" : "flex-row"
-                }`}
-              >
-                <div 
-                  className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${
-                    msg.role === "user" ? "bg-zinc-200 text-zinc-600" : "bg-primary text-white"
-                  }`}
-                >
-                  {msg.role === "user" ? <User weight="fill" size={16} /> : <Robot weight="fill" size={16} />}
-                </div>
-                <div
-                  className={`px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed font-medium shadow-sm ${
-                    msg.role === "user"
-                      ? "bg-primary text-white rounded-tr-sm"
-                      : "bg-white text-zinc-800 border border-zinc-100 rounded-tl-sm"
-                  }`}
-                >
-                  {msg.content}
-                </div>
-              </div>
-            </motion.div>
-          ))}
+      {/* Main Content */}
+      <main className="flex-grow pt-24 pb-32 flex flex-col items-center w-full relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="w-full flex justify-center"
+          >
+            {step === 0 && <GoalStep formData={formData} updateData={updateData} />}
+            {step === 1 && <LevelStep formData={formData} updateData={updateData} />}
+            {step === 2 && <InterestsStep formData={formData} updateData={updateData} />}
+            {step === 3 && <FinalStep formData={formData} updateData={updateData} />}
+          </motion.div>
         </AnimatePresence>
-        <div ref={messagesEndRef} className="h-4" />
       </main>
 
-      <footer className="bg-zinc-50/80 backdrop-blur-md p-4 md:p-6 border-t border-zinc-200 sticky bottom-0">
-        <div className="max-w-3xl mx-auto">
-          {renderInputControls()}
-        </div>
+      {/* Footer / Navigation */}
+      <footer className="fixed bottom-0 left-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_-10px_30px_rgba(0,0,0,0.03)] flex justify-between items-center px-8 py-6 mb-safe">
+        <button 
+          onClick={handleBack}
+          disabled={step === 0}
+          className={`px-6 py-3 font-body font-medium text-sm hover:opacity-90 transition-opacity flex items-center gap-2 btn-spring ${step === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-500 dark:text-slate-400'}`}
+        >
+          <ArrowArcLeft size={18} />
+          Back
+        </button>
+        <button 
+          onClick={handleNext}
+          disabled={isNextDisabled() || isSubmitting}
+          className="bg-tertiary-fixed border border-transparent hover:border-[#a16900]/20 text-tertiary disabled:opacity-50 disabled:cursor-not-allowed rounded-xl px-10 py-4 font-bold font-body text-sm shadow-diffusion hover:shadow-lg transition-all btn-spring flex items-center gap-3"
+        >
+          {isSubmitting ? "Processing..." : step === 3 ? "Complete" : "Continue"}
+          {!isSubmitting && <ArrowRight size={20} weight="bold" />}
+        </button>
       </footer>
     </div>
   );

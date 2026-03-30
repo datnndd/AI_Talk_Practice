@@ -3,18 +3,36 @@
 @theme {
   --color-primary: #005ab6;
   --color-primary-container: #1672df;
+  --color-on-primary-container: #fefcff;
+  --color-primary-fixed: #d7e3ff;
+  --color-on-primary-fixed: #001b3f;
+  --color-on-primary-fixed-variant: #00458e;
+  --color-primary-fixed-dim: #abc7ff;
+  
   --color-secondary: #006d37;
   --color-secondary-container: #7bf8a1;
+  --color-on-secondary-container: #007239;
+  
   --color-tertiary: #805200;
   --color-tertiary-fixed: #ffddb4;
-  --color-foreground: #1a1c1e;
+  --color-on-tertiary-fixed: #291800;
+  
+  --color-surface: #f9f9fc;
+  --color-on-surface: #1a1c1e;
+  --color-surface-variant: #e2e2e5;
+  --color-on-surface-variant: #414753;
   --color-surface-container: #eeeef0;
   --color-surface-container-low: #f3f3f6;
   --color-surface-container-lowest: #ffffff;
+  
+  --color-outline: #727785;
+  --color-outline-variant: #c1c6d5;
+  
+  --color-foreground: #1a1c1e;
   --color-zinc-950: #09090b;
 
-  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Manrope", "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   --radius-4xl: 2.5rem;
@@ -35,6 +53,7 @@
     100% { background-position: 200% 0; }
   }
 }
+
 
 @layer base {
   body {
