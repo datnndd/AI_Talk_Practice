@@ -1,40 +1,63 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #3182ed;
-  --color-primary-dark: #2F80ED;
+  --color-primary: #005ab6;
+  --color-primary-container: #1672df;
+  --color-secondary: #006d37;
+  --color-secondary-container: #7bf8a1;
+  --color-tertiary: #805200;
+  --color-tertiary-fixed: #ffddb4;
+  --color-foreground: #1a1c1e;
+  --color-surface-container: #eeeef0;
+  --color-surface-container-low: #f3f3f6;
+  --color-surface-container-lowest: #ffffff;
   --color-zinc-950: #09090b;
 
-  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Cabinet Grotesk", "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   --radius-4xl: 2.5rem;
+  --radius-3xl: 1.5rem;
   --radius-custom: 8px;
 
   --animate-float: float 6s ease-in-out infinite;
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-shimmer: shimmer 2.5s linear infinite;
 
   @keyframes float {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
   }
 }
 
 @layer base {
   body {
-    @apply bg-white text-zinc-900 selection:bg-primary selection:text-white antialiased;
+    @apply bg-[#f9fafb] text-zinc-900 selection:bg-primary/20 selection:text-primary antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight text-balance;
   }
 }
 
 @layer utilities {
   .liquid-glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)];
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)];
   }
 
   .refraction {
     @apply border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)];
+  }
+
+  .shadow-diffusion {
+    @apply shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)];
   }
 
   .btn-spring {

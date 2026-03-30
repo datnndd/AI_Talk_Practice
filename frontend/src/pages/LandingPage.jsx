@@ -7,7 +7,7 @@ import Footer from "../components/Footer";
 
 const LandingPage = () => {
   return (
-    <div className="min-h-[100dvh] bg-white">
+    <div className="min-h-[100dvh] bg-[#f9fafb]">
       <Navbar />
       <Hero />
       <BentoGrid />

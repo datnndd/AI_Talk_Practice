@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LingoFlow - Speak Fluently with AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-fixed-variant": "#005228",
+              "outline": "#727785",
+              "on-tertiary": "#ffffff",
+              "secondary-fixed-dim": "#61de8a",
+              "surface-dim": "#dadadc",
+              "secondary-container": "#7bf8a1",
+              "on-secondary-fixed": "#00210c",
+              "background": "#f9f9fc",
+              "primary-fixed-dim": "#abc7ff",
+              "on-secondary": "#ffffff",
+              "inverse-surface": "#2f3133",
+              "on-error": "#ffffff",
+              "surface-container": "#eeeef0",
+              "on-primary-fixed-variant": "#00458e",
+              "on-surface-variant": "#414753",
+              "surface": "#f9f9fc",
+              "inverse-primary": "#abc7ff",
+              "tertiary-fixed-dim": "#ffb955",
+              "primary": "#005ab6",
+              "tertiary-container": "#a16900",
+              "inverse-on-surface": "#f0f0f3",
+              "primary-fixed": "#d7e3ff",
+              "on-surface": "#1a1c1e",
+              "surface-container-low": "#f3f3f6",
+              "error-container": "#ffdad6",
+              "secondary-fixed": "#7efba4",
+              "surface-container-high": "#e8e8ea",
+              "on-tertiary-fixed-variant": "#633f00",
+              "on-error-container": "#93000a",
+              "surface-variant": "#e2e2e5",
+              "surface-container-highest": "#e2e2e5",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ffffff",
+              "secondary": "#006d37",
+              "on-secondary-container": "#007239",
+              "surface-bright": "#f9f9fc",
+              "tertiary-fixed": "#ffddb4",
+              "on-primary-fixed": "#001b3f",
+              "on-background": "#1a1c1e",
+              "on-primary-container": "#fefcff",
+              "surface-tint": "#005cba",
+              "primary-container": "#1672df",
+              "on-tertiary-fixed": "#291800",
+              "tertiary": "#805200",
+              "on-tertiary-container": "#fffbff",
+              "error": "#ba1a1a",
+              "outline-variant": "#c1c6d5"
+            },
+            fontFamily: {
+              "headline": ["Manrope", "sans-serif"],
+              "body": ["Inter", "sans-serif"],
+              "label": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .editorial-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 1.5rem;
+      }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body antialiased">
+<!-- Top Navigation Shell -->
+<nav class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md shadow-sm dark:shadow-none">
+<div class="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
+<div class="text-xl font-bold tracking-tighter text-blue-600 dark:text-blue-400 font-headline">LingoFlow</div>
+<div class="hidden md:flex items-center space-x-8 font-headline tracking-tight text-sm font-semibold">
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-500 transition-colors" href="#">Methodology</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-500 transition-colors" href="#">Features</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-500 transition-colors" href="#">Pricing</a>
+</div>
+<div class="flex items-center space-x-4">
+<button class="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all duration-200 rounded-lg">Log In</button>
+<button class="px-5 py-2.5 bg-primary text-on-primary text-sm font-bold rounded-xl scale-95 active:scale-90 transition-transform">Get Started</button>
+</div>
+</div>
+<div class="bg-slate-100 dark:bg-slate-800 h-[1px] w-full"></div>
+</nav>
+<main class="pt-24">
+<!-- Hero Section: The Editorial Z-Pattern -->
+<section class="max-w-7xl mx-auto px-6 py-20 md:py-32">
+<div class="flex flex-col md:flex-row items-center gap-16">
+<div class="w-full md:w-1/2 space-y-8">
+<div class="inline-flex items-center px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full text-xs font-bold tracking-widest uppercase">
+                        Next-Gen Learning
+                    </div>
+<h1 class="font-headline text-5xl md:text-7xl font-extrabold tracking-tighter text-on-surface leading-[1.1]">
+                        Speak Fluently <br/><span class="text-primary">with AI.</span>
+</h1>
+<p class="text-lg md:text-xl text-on-surface-variant max-w-lg leading-relaxed">
+                        Real-time speaking practice and personalized learning paths designed for your unique professional and personal goals.
+                    </p>
+<div class="flex flex-col sm:flex-row gap-4 pt-4">
+<button class="px-8 py-4 bg-tertiary-fixed text-tertiary-container font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all scale-100 active:scale-95 flex items-center justify-center gap-2">
+                            Start Free Trial
+                            <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<button class="px-8 py-4 bg-surface-container-high text-on-surface font-semibold text-lg rounded-xl hover:bg-surface-variant transition-colors">
+                            Watch Demo
+                        </button>
+</div>
+</div>
+<div class="w-full md:w-1/2 relative">
+<!-- AI Conversation Preview Card -->
+<div class="bg-surface-container-lowest p-6 md:p-8 rounded-[2rem] shadow-2xl relative z-10 border border-outline-variant/20">
+<div class="flex items-center gap-4 mb-8">
+<div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="robot_2">robot_2</span>
+</div>
+<div>
+<h3 class="font-bold text-on-surface">Lingo AI Tutor</h3>
+<p class="text-xs text-secondary font-semibold flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary"></span> Online &amp; Listening
+                                </p>
+</div>
+</div>
+<div class="space-y-6">
+<div class="flex justify-start">
+<div class="max-w-[80%] bg-surface-container-low p-4 rounded-2xl rounded-tl-none">
+<p class="text-sm font-medium">Bonjour! How would you describe your weekend plans in French?</p>
+</div>
+</div>
+<div class="flex justify-end">
+<div class="max-w-[80%] bg-primary text-on-primary p-4 rounded-2xl rounded-tr-none shadow-md">
+<p class="text-sm font-medium">Je vais aller au parc avec mes amis ce samedi.</p>
+</div>
+</div>
+<div class="flex justify-start">
+<div class="max-w-[80%] bg-surface-container-low p-4 rounded-2xl rounded-tl-none">
+<p class="text-sm font-medium">Perfect! Your pronunciation of "samedi" was spot on. Shall we try a more complex sentence?</p>
+<div class="mt-2 flex gap-2">
+<span class="px-2 py-1 bg-secondary-container/50 text-on-secondary-container text-[10px] font-bold rounded">+10 Fluency</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-outline-variant/10 flex items-center justify-between">
+<div class="flex gap-2">
+<button class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="mic">mic</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="translate">translate</span>
+</button>
+</div>
+<div class="flex -space-x-2">
+<img class="w-8 h-8 rounded-full border-2 border-white object-cover" data-alt="portrait of a young smiling professional woman with neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDaLsARN-Gpqfl4Dg2UM-eQlir5ax21FiM6FF9LyPsRvkr5zk0_f7JNDJq0NXQF4ThodTYs7IGzhFP9ih5jJboTGYVUA2n3DjN-WwM15pELZ-ifQjjbBpESXogISm7g8ZX5YV-UpD92tLhxVTx90hpQUIeY49pycpAA10L8BKNil5aB9gmbN3SVdiiGLNpi3QWF9Kx8-kJb0VtBIqgjKpXBRN8Dm3R5ZN_fIH-jXpGf2sSVobu9XUY_98muUqEyPAxofHS4fWIqRjQc"/>
+<div class="w-8 h-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold">+30</div>
+</div>
+</div>
+</div>
+<!-- Decorative background blur -->
+<div class="absolute -top-10 -right-10 w-64 h-64 bg-primary/10 blur-[100px] rounded-full z-0"></div>
+<div class="absolute -bottom-10 -left-10 w-64 h-64 bg-secondary/10 blur-[100px] rounded-full z-0"></div>
+</div>
+</div>
+</section>
+<!-- Bento Grid: Features Section -->
+<section class="bg-surface-container-low py-32">
+<div class="max-w-7xl mx-auto px-6">
+<div class="mb-20 space-y-4">
+<span class="font-label font-bold text-primary uppercase tracking-[0.2em] text-xs">Capabilities</span>
+<h2 class="font-headline text-4xl md:text-5xl font-bold tracking-tight text-on-surface max-w-2xl">
+                        Designed for Depth, <br/>Built for Speed.
+                    </h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Real-time Conversations -->
+<div class="md:col-span-7 bg-surface-container-lowest p-10 rounded-[2rem] flex flex-col justify-between hover:translate-y-[-4px] transition-transform duration-300">
+<div class="space-y-6">
+<div class="w-14 h-14 rounded-2xl bg-primary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="forum">forum</span>
+</div>
+<div class="space-y-2">
+<h3 class="text-2xl font-bold font-headline">Real-time conversations</h3>
+<p class="text-on-surface-variant leading-relaxed">Engage in natural, unscripted dialogues with an AI that adapts to your pace and vocabulary level instantly.</p>
+</div>
+</div>
+<div class="mt-12 h-40 bg-slate-50 rounded-xl overflow-hidden relative">
+<img class="absolute inset-0 w-full h-full object-cover opacity-20" data-alt="team meeting in a bright modern office with focus on creative brainstorming session" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6yVzHTMMD4AFYSyS9lALCJl0n6ISVHjzgigZFQT8gmxFF-WCwlAU2mcsDlSbtIRqSTx5zBlUyJdNXV2eQaWm1Q5HbXl0KPtGp_bQjNEwzCFwUQUjeUfGJzQsR8ltLJeP7FhESZoSPocLNOTeNPP9P_1TgiPzm7KitE5p-IwmG1fJyJ-4aSWgLg8LlJACDA_2YPHj4LUkzOCjEOVsrklPwrjoWW8UTJ_rf429sG3TIUgNVXHUnppEHb0kxnoYbPoZJpyY6wb3Nu8-p"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="px-4 py-2 bg-white/80 backdrop-blur shadow-sm rounded-full text-xs font-bold text-primary">Live Feedback Enabled</span>
+</div>
+</div>
+</div>
+<!-- Personalized Curriculum -->
+<div class="md:col-span-5 bg-primary p-10 rounded-[2rem] text-on-primary flex flex-col justify-between overflow-hidden relative group">
+<div class="z-10 space-y-6">
+<div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-3xl" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div class="space-y-2">
+<h3 class="text-2xl font-bold font-headline">Personalized curriculum</h3>
+<p class="text-primary-fixed/80 leading-relaxed">No generic lessons. Our AI crafts paths based on your industry, hobbies, and growth areas.</p>
+</div>
+</div>
+<div class="z-10 mt-8 flex items-center gap-2 font-bold text-sm">
+                            Learn More <span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="absolute -bottom-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform"></div>
+</div>
+<!-- Gamified Progress -->
+<div class="md:col-span-5 bg-surface-container-lowest p-10 rounded-[2rem] flex flex-col justify-between hover:translate-y-[-4px] transition-transform duration-300">
+<div class="space-y-6">
+<div class="w-14 h-14 rounded-2xl bg-secondary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-3xl" data-icon="trending_up">trending_up</span>
+</div>
+<div class="space-y-2">
+<h3 class="text-2xl font-bold font-headline">Gamified progress</h3>
+<p class="text-on-surface-variant leading-relaxed">Earn streaks, unlock achievements, and visualize your fluency growth with data-driven insights.</p>
+</div>
+</div>
+<div class="mt-8 flex items-end gap-1 h-12">
+<div class="flex-1 bg-secondary rounded-t-lg h-[40%]"></div>
+<div class="flex-1 bg-secondary rounded-t-lg h-[60%]"></div>
+<div class="flex-1 bg-secondary rounded-t-lg h-[50%]"></div>
+<div class="flex-1 bg-secondary rounded-t-lg h-[80%]"></div>
+<div class="flex-1 bg-secondary rounded-t-lg h-[100%]"></div>
+</div>
+</div>
+<!-- 30+ Languages -->
+<div class="md:col-span-7 bg-surface-container-highest p-10 rounded-[2rem] flex flex-col md:flex-row items-center gap-8 hover:translate-y-[-4px] transition-transform duration-300">
+<div class="space-y-6 flex-1">
+<div class="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-on-surface text-3xl" data-icon="public">public</span>
+</div>
+<div class="space-y-2">
+<h3 class="text-2xl font-bold font-headline">30+ languages</h3>
+<p class="text-on-surface-variant leading-relaxed">From Spanish and Mandarin to specialized business English, master the world's most spoken tongues.</p>
+</div>
+</div>
+<div class="flex-1 grid grid-cols-3 gap-3 w-full">
+<div class="aspect-square bg-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-sm">FR</div>
+<div class="aspect-square bg-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-sm">DE</div>
+<div class="aspect-square bg-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-sm">JP</div>
+<div class="aspect-square bg-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-sm">ES</div>
+<div class="aspect-square bg-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-sm">CN</div>
+<div class="aspect-square bg-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-sm">IT</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Testimonial Section -->
+<section class="py-32 bg-surface">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-20 space-y-4">
+<h2 class="font-headline text-4xl font-bold tracking-tight text-on-surface">Trusted by Global Learners</h2>
+<p class="text-on-surface-variant text-lg">See how LingoFlow is transforming lives across the globe.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Testimonial 1 -->
+<div class="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant/10 shadow-sm flex flex-col justify-between">
+<div class="space-y-4">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="format_quote">format_quote</span>
+<p class="text-lg leading-relaxed text-on-surface font-medium italic">"The AI feels surprisingly human. I used to be terrified of speaking, but now I look forward to my daily 15-minute French chats."</p>
+</div>
+<div class="mt-8 flex items-center gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="headshot of a middle-aged man with kind eyes and a friendly professional smile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqnvFx3_4U-13hccrHWOSOyNBRwHp-PJEPmfSOBgYLfkqhHaCad07DxDUVG_VUa5N6Skbpw8R9tl7zV4weqpaJ4GAxwS5j7IVuRIKK4G3kuHYfF6NQocTIv54kBrf_vQ8BouVDMMo0maaSUGsUIxb2bA1TjOUmIiXHHTBiXbqUVCr0bAfhXb9sZX5mH6F8RZXNPAkXsMd7LeSeAZ9BH3JM5glQm4fX0txiE0Shxvmpbx4fazAssxY49JLajYC2WQOtd8CilBpYgRe7"/>
+<div>
+<p class="font-bold text-on-surface">Marcus Chen</p>
+<p class="text-sm text-on-surface-variant">Marketing Director, Singapore</p>
+</div>
+</div>
+</div>
+<!-- Testimonial 2 -->
+<div class="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant/10 shadow-sm flex flex-col justify-between">
+<div class="space-y-4">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="format_quote">format_quote</span>
+<p class="text-lg leading-relaxed text-on-surface font-medium italic">"LingoFlow's business-specific tracks helped me land my dream job in Berlin. The pronunciation feedback is unmatched."</p>
+</div>
+<div class="mt-8 flex items-center gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="portrait of a young woman with a confident expression in a soft-lit indoor setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRNUHz-zn0jr2KPGXFehQa1YKow_Qx7QZdt64yPtv1ZP2vdrmRqEUOjztiRdTCRTbGcnHgvAolQ4lRnlfxGWv7aK22oumlG8Q8WZcJDYmYa2PC5Lh8dv_dRemnuQo0Tu639VBKR8H_rQ2byEdBpN53G9PdQaxNhIOpZWlNVQXo1uGxGl8RVchpybnSHG8SGLOZ1JbPLMY8NDXclfUjAPNa7Ed0P2W9SFsrtGpdceASVQ9UA5EngzN1EE8_bYtwimGLRlShihgaY6De"/>
+<div>
+<p class="font-bold text-on-surface">Elena Rodriguez</p>
+<p class="text-sm text-on-surface-variant">Software Engineer, Brazil</p>
+</div>
+</div>
+</div>
+<!-- Testimonial 3 -->
+<div class="bg-surface-container-lowest p-8 rounded-3xl border border-outline-variant/10 shadow-sm flex flex-col justify-between">
+<div class="space-y-4">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="format_quote">format_quote</span>
+<p class="text-lg leading-relaxed text-on-surface font-medium italic">"I've tried every app out there. This is the only one that actually forces you to speak rather than just tapping buttons."</p>
+</div>
+<div class="mt-8 flex items-center gap-4">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="professional male portrait with stylish glasses and modern attire in bright studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBkZg8JV-kx2roGa_vdV0pxOMy9X71UrJtFtk0YSy9JqmFounmKfndIoUKvi0NnMHTS3dNVDPxs9HH-2AJmaofc7tcAJc-pzn9JesSi3VuH54ndWB5DfFcWknf7La6b8wO27HVvJk0jBtBxA5W_70hlW94bBpaX4BP6nh9VnVVffewEV7UHZn4bM7KSuMZst7rk0rbe3VFPRs4dgbxEKiLNhTq0GbaRrz7mtDJgV9gnYOwb0DdEdkbem-z4MQgfTYuotsL-qhMSsJ3s"/>
+<div>
+<p class="font-bold text-on-surface">Julian v. Berg</p>
+<p class="text-sm text-on-surface-variant">PhD Researcher, Netherlands</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Final CTA Section -->
+<section class="max-w-7xl mx-auto px-6 py-24">
+<div class="bg-primary rounded-[3rem] p-12 md:p-24 text-center space-y-10 relative overflow-hidden">
+<!-- Background visual elements -->
+<div class="absolute top-0 right-0 w-96 h-96 bg-white/5 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-0 left-0 w-96 h-96 bg-secondary/20 blur-[120px] rounded-full"></div>
+<div class="relative z-10 space-y-6">
+<h2 class="font-headline text-4xl md:text-6xl font-bold text-on-primary tracking-tight">Begin Your 14-Day Journey</h2>
+<p class="text-primary-fixed/90 text-xl max-w-2xl mx-auto font-medium">Join 500,000+ learners who are breaking language barriers every single day. No credit card required to start.</p>
+</div>
+<div class="relative z-10 flex flex-col sm:flex-row items-center justify-center gap-6">
+<button class="px-12 py-5 bg-tertiary-fixed text-tertiary-container font-black text-xl rounded-2xl shadow-2xl hover:bg-tertiary-fixed-dim transition-colors scale-100 active:scale-95">
+                        Start Free Trial
+                    </button>
+<div class="flex items-center gap-2 text-on-primary/80 font-semibold">
+<span class="material-symbols-outlined" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+                        Cancel anytime
+                    </div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-slate-50 dark:bg-slate-950 w-full py-12 border-t border-slate-200 dark:border-slate-800">
+<div class="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto space-y-8 md:space-y-0">
+<div class="space-y-4 text-center md:text-left">
+<div class="text-lg font-black text-slate-900 dark:text-white font-headline tracking-tighter">LingoFlow</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs max-w-xs leading-relaxed">The world's most advanced AI speaking companion for lifelong learners.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-8 font-inter text-xs tracking-wide font-semibold">
+<a class="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors opacity-80 hover:opacity-100" href="#">Help Center</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors opacity-80 hover:opacity-100" href="#">Contact</a>
+</div>
+<div class="text-slate-500 dark:text-slate-400 text-xs font-inter opacity-60">
+                © 2024 LingoFlow Inc. All rights reserved.
+            </div>
+</div>
+</footer>
+</body></html>
