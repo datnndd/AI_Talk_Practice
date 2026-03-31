@@ -6,10 +6,10 @@ from typing import Optional
 from sqlalchemy import Float, Text, Integer, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.db.base_class import Base, TimestampMixin
 
 
-class SessionScore(Base):
+class SessionScore(Base, TimestampMixin):
     __tablename__ = "session_scores"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -22,7 +22,7 @@ class SessionScore(Base):
     relevance_score: Mapped[float] = mapped_column(Float)   # evaluated separately at session end
     overall_score: Mapped[float] = mapped_column(Float)
     feedback_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    scored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # (scored_at replaced by created_at via TimestampMixin)
 
     # Relationships
     session = relationship("Session", back_populates="score")

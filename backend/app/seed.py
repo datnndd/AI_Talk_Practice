@@ -6,7 +6,8 @@ Run: python -m app.seed
 import asyncio
 
 from sqlalchemy import select
-from app.database import engine, Base, AsyncSessionLocal
+from app.db.session import engine, AsyncSessionLocal
+from app.db.base_class import Base
 from app.models.scenario import Scenario
 
 DEFAULT_SCENARIOS = [

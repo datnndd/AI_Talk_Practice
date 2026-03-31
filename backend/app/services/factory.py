@@ -7,7 +7,7 @@ To add a new provider:
 """
 
 import logging
-from app.config import Settings
+from app.core.config import Settings
 from app.services.base import ASRBase, LLMBase, TTSBase
 
 logger = logging.getLogger(__name__)

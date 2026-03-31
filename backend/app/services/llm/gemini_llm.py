@@ -10,7 +10,7 @@ from typing import AsyncGenerator, Optional
 
 from openai import AsyncOpenAI
 
-from app.config import Settings
+from app.core.config import Settings
 from app.services.base import LLMBase, Message
 
 logger = logging.getLogger(__name__)

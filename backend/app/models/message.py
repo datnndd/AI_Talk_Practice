@@ -6,10 +6,10 @@ from typing import Optional
 from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.db.base_class import Base, TimestampMixin
 
 
-class Message(Base):
+class Message(Base, TimestampMixin):
     __tablename__ = "messages"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -18,7 +18,7 @@ class Message(Base):
     content: Mapped[str] = mapped_column(Text)
     audio_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     order_index: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # (created_at and updated_at provided by TimestampMixin)
 
     # Relationships
     session = relationship("Session", back_populates="messages")

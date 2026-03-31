@@ -6,9 +6,10 @@ import pytest_asyncio
 from fastapi import WebSocketDisconnect
 from sqlalchemy import delete, select
 
-import app.conversation as conversation_module
+import app.services.conversation as conversation_module
 import app.main as main_module
-from app.auth import create_access_token, hash_password
+import app.api.v1.ws as ws_module
+from app.core.security import create_access_token, hash_password
 from app.models.message import Message
 from app.models.scenario import Scenario
 from app.models.session import Session
@@ -154,7 +155,7 @@ def realtime_stubs(monkeypatch):
         llm_instances.append(instance)
         return instance
 
-    monkeypatch.setattr(main_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
     monkeypatch.setattr(conversation_module, "create_asr", lambda config: StubASR(config))
     monkeypatch.setattr(conversation_module, "create_llm", create_llm)
     monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
@@ -181,7 +182,7 @@ async def test_session_start_and_turn_persist_messages(test_user, test_scenario,
         ]
     )
 
-    await main_module.websocket_conversation(websocket)
+    await ws_module.websocket_conversation(websocket)
 
     assert websocket.accepted is True
     assert websocket.sent[0]["type"] == "session_started"
@@ -226,7 +227,7 @@ async def test_session_start_rejects_invalid_token(test_scenario, realtime_stubs
         ]
     )
 
-    await main_module.websocket_conversation(websocket)
+    await ws_module.websocket_conversation(websocket)
 
     assert websocket.sent == [{"type": "error", "message": "Invalid token"}]
     assert websocket.closed is True
@@ -249,7 +250,7 @@ async def test_session_start_rejects_missing_scenario(test_user, realtime_stubs)
         ]
     )
 
-    await main_module.websocket_conversation(websocket)
+    await ws_module.websocket_conversation(websocket)
 
     assert websocket.sent == [{"type": "error", "message": "Scenario not found"}]
     assert websocket.closed is True
@@ -272,7 +273,7 @@ async def test_disconnect_without_user_turn_marks_session_abandoned(test_user, t
         ]
     )
 
-    await main_module.websocket_conversation(websocket)
+    await ws_module.websocket_conversation(websocket)
 
     assert websocket.sent[0]["type"] == "session_started"
 

@@ -15,8 +15,9 @@ postgresql.JSONB = JSON
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 
 from app.main import app
-from app.database import Base, get_db
-from app.auth import hash_password
+from app.db.base_class import Base
+from app.db.session import get_db
+from app.core.security import hash_password
 from app.models.user import User
 
 # Use in-memory SQLite with StaticPool to keep connection open across sessions in tests
@@ -26,7 +27,7 @@ engine = create_async_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = async_sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=AsyncSession
+    autocommit=False, autoflush=False, bind=engine, class_=AsyncSession, expire_on_commit=False
 )
 
 

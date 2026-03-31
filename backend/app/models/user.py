@@ -5,10 +5,10 @@ from datetime import datetime
 from sqlalchemy import String, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.db.base_class import Base, TimestampMixin
 
 
-class User(Base):
+class User(Base, TimestampMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -28,8 +28,6 @@ class User(Base):
     daily_goal: Mapped[int] = mapped_column(nullable=True)
     is_onboarding_completed: Mapped[bool] = mapped_column(default=False)
     
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
     sessions = relationship("Session", back_populates="user", lazy="selectin")

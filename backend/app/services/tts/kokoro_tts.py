@@ -12,7 +12,7 @@ from typing import AsyncGenerator, Optional
 
 import numpy as np
 
-from app.config import Settings
+from app.core.config import Settings
 from app.services.base import TTSBase, TTSConfig
 
 logger = logging.getLogger(__name__)

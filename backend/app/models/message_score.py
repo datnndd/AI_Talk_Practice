@@ -6,10 +6,10 @@ from typing import Any, Optional
 from sqlalchemy import Float, Text, Integer, DateTime, ForeignKey, func, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.db.base_class import Base, TimestampMixin
 
 
-class MessageScore(Base):
+class MessageScore(Base, TimestampMixin):
     __tablename__ = "message_scores"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -23,7 +23,7 @@ class MessageScore(Base):
     mispronounced_words: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True)
     # Example: [{"word": "restaurant", "user_said": "/res-tau-rant/", "correct_ipa": "/ˈrɛstərɒnt/"}]
     feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    scored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # (scored_at replaced by created_at via TimestampMixin)
 
     # Relationships
     message = relationship("Message", back_populates="score")

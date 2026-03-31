@@ -14,7 +14,7 @@ from typing import Optional
 
 import numpy as np
 
-from app.config import Settings
+from app.core.config import Settings
 from app.services.base import ASRBase, TranscriptEvent, TranscriptType
 
 logger = logging.getLogger(__name__)

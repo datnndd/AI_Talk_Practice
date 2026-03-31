@@ -6,10 +6,10 @@ from typing import Optional
 from sqlalchemy import String, Integer, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.db.base_class import Base, TimestampMixin
 
 
-class Session(Base):
+class Session(Base, TimestampMixin):
     __tablename__ = "sessions"
 
     id: Mapped[int] = mapped_column(primary_key=True)

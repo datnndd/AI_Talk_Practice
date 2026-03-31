@@ -1,0 +1,29 @@
+"""
+Database configuration with async SQLAlchemy.
+"""
+
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+
+from app.core.config import settings
+
+engine = create_async_engine(
+    settings.database_url,
+    echo=False,
+    pool_pre_ping=True,
+    # Needed for SQLite to work across multiple threads
+    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
+)
+
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+async def get_db():
+    """Dependency for FastAPI route injection."""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()

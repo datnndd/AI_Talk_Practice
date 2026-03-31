@@ -115,7 +115,7 @@ async def test_get_me_unauthorized(client):
 async def test_onboard_success(client, db_session):
     """Test completing user onboarding."""
     # Create user manually
-    from app.auth import hash_password
+    from app.core.security import hash_password
     user = User(
         email="onboard@example.com",
         password_hash=hash_password("password123"),
