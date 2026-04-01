@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Student Dashboard - Bento 2.0</title>
+<!-- BEGIN: External Resources -->
+<!-- Lexend Font for UI -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- JetBrains Mono for Numbers -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- END: External Resources -->
+<!-- BEGIN: Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '#3182ed',
+            emerald: '#27AE60',
+            vibrantYellow: '#F5A623',
+            surface: '#F9FAFB',
+          },
+          fontFamily: {
+            sans: ['Lexend', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'monospace'],
+            geist: ['Inter', 'Lexend', 'sans-serif'], // Fallback for Geist look
+          },
+          borderRadius: {
+            'bento': '2.5rem',
+          },
+          boxShadow: {
+            'diffusion': '0 10px 40px -10px rgba(0, 0, 0, 0.05), 0 2px 20px -5px rgba(0, 0, 0, 0.02)',
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'float': 'float 6s ease-in-out infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-10px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- END: Tailwind Configuration -->
+<!-- BEGIN: Custom Styles -->
+<style data-purpose="bento-layout">
+    body {
+      background-color: #F9FAFB;
+      font-family: 'Lexend', sans-serif;
+    }
+    .bento-card {
+      background: #FFFFFF;
+      border: 1px solid rgba(226, 232, 240, 0.5); /* border-slate-200/50 */
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    }
+    .bento-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.08);
+    }
+    .number-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Circular Progress SVG Adjustment */
+    .progress-ring-circle {
+      transition: stroke-dashoffset 0.8s ease-in-out;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+  </style>
+<style data-purpose="motion-effects">
+    /* High motion intensity classes */
+    .breathing-pulse {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.5; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+      100% { transform: scale(0.95); opacity: 0.5; }
+    }
+    .list-item-enter {
+      animation: slide-in 0.5s ease-out forwards;
+    }
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+<!-- END: Custom Styles -->
+</head>
+<body class="antialiased text-slate-900 min-h-screen p-6 md:p-12">
+<!-- BEGIN: Dashboard Container -->
+<main class="max-w-7xl mx-auto space-y-8">
+<!-- BEGIN: Header Section -->
+<header class="flex justify-between items-end mb-10 px-4">
+<div data-purpose="greeting">
+<h1 class="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 font-geist">
+          Good afternoon, <span class="text-brand">Elara</span>
+</h1>
+<p class="text-slate-500 mt-2 font-medium">Ready for your daily linguistic challenge?</p>
+</div>
+<div class="hidden md:block">
+<div class="flex -space-x-2">
+<img alt="Profile" class="w-10 h-10 rounded-full border-2 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmjg20XKZktrO00PydPzITuaQJjhWfVOCFFQBn-fpG9NEOBuzKJahJX2A-1z_945gAeLlBY_DX-vodcwed9odACmedcT8--7hVAi1RydU7lNdrb2qfPNF1sSJ_3WBkJT0Y9Irej0_HBgOB2s8kGYPBpGRxKaQjutDgeYFMomz-BKFDEn7WfPTU2VS7CVHxEVA67W_jPzi3CdI9CniUJBR1W17PlyArhAUI13bYQOzvJ2Wbo-JGQ74OkZzbZQryh0bgqNoXKFy6DUqi"/>
+<div class="w-10 h-10 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold">+2</div>
+</div>
+</div>
+</header>
+<!-- END: Header Section -->
+<!-- BEGIN: Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-[160px]">
+<!-- BEGIN: Circular Progress Card (Span 4x2) -->
+<section class="md:col-span-4 md:row-span-2 bento-card rounded-bento p-8 flex flex-col items-center justify-center shadow-diffusion relative overflow-hidden" data-purpose="progress-card">
+<div class="absolute top-0 left-0 w-full h-1 bg-emerald/10"></div>
+<div class="relative w-48 h-48">
+<svg class="w-full h-full" viewbox="0 0 100 100">
+<!-- Background circle -->
+<circle class="text-slate-100" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-width="8"></circle>
+<!-- Progress circle -->
+<circle class="text-emerald progress-ring-circle" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="37.68" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="text-4xl font-bold number-mono">85%</span>
+<span class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Weekly</span>
+</div>
+</div>
+<h3 class="mt-6 font-bold text-lg">Goal Status</h3>
+<p class="text-slate-500 text-sm">Almost there! 3 more lessons left.</p>
+</section>
+<!-- END: Circular Progress Card -->
+<!-- BEGIN: Streak Card (Span 4x1) -->
+<section class="md:col-span-4 md:row-span-1 bento-card rounded-bento p-6 flex items-center justify-between shadow-diffusion group" data-purpose="streak-card">
+<div>
+<p class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Current Streak</p>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="text-5xl font-bold number-mono">12</span>
+<span class="text-slate-600 font-medium">days</span>
+</div>
+</div>
+<div class="relative">
+<!-- Live Status Pulse -->
+<div class="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center relative">
+<div class="absolute inset-0 rounded-full bg-orange-400 breathing-pulse opacity-20"></div>
+<svg class="w-8 h-8 text-orange-500" fill="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 2c-.5 0-1 .4-1 .9v1.1c-3.1.4-5.5 2.8-5.9 5.9H4c-.6 0-1 .4-1 1s.4 1 1 1h1.1c.4 3.1 2.8 5.5 5.9 5.9v1.1c0 .6.4 1 1 1s1-.4 1-1v-1.1c3.1-.4 5.5-2.8 5.9-5.9H20c.6 0 1-.4 1-1s-.4-1-1-1h-1.1c-.4-3.1-2.8-5.5-5.9-5.9V2.9c0-.5-.4-.9-1-.9z"></path>
+</svg>
+</div>
+<span class="absolute -top-1 -right-1 flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+</span>
+</div>
+</section>
+<!-- END: Streak Card -->
+<!-- BEGIN: AI Practice CTA (Span 4x1) -->
+<section class="md:col-span-4 md:row-span-1 bento-card rounded-bento p-6 bg-brand/5 shadow-diffusion flex items-center justify-between" data-purpose="ai-cta">
+<div class="flex flex-col gap-1">
+<span class="text-brand font-bold text-sm tracking-wide">AI TUTOR LIVE</span>
+<button class="bg-vibrantYellow hover:bg-[#E09612] text-white px-5 py-2.5 rounded-2xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-vibrantYellow/20">
+            Practice Speaking Now
+          </button>
+</div>
+<div class="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+<svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</section>
+<!-- END: AI Practice CTA -->
+<!-- BEGIN: Recommended Lessons (Span 8x2) -->
+<section class="md:col-span-8 md:row-span-2 bento-card rounded-bento p-8 shadow-diffusion overflow-hidden flex flex-col" data-purpose="recommended-lessons">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-xl font-bold flex items-center gap-2">
+            The Intelligent List
+            <span class="bg-slate-100 text-[10px] py-1 px-2 rounded-full text-slate-500 font-mono">AUTO-SORTING</span>
+</h2>
+<button class="text-brand text-sm font-semibold hover:underline">View Roadmap</button>
+</div>
+<div class="space-y-4 flex-grow overflow-y-auto pr-2 custom-scrollbar" id="lesson-stack">
+<!-- Lesson Card 1 -->
+<div class="flex items-center p-4 bg-slate-50/50 rounded-3xl border border-slate-100 hover:border-brand/30 transition-colors cursor-pointer group list-item-enter">
+<div class="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-2xl shadow-sm mr-4">☕</div>
+<div class="flex-grow">
+<h4 class="font-bold text-slate-800">Cafe Conversations</h4>
+<p class="text-xs text-slate-500 font-medium">Intermediate • 8 mins</p>
+</div>
+<div class="flex items-center gap-4">
+<span class="number-mono text-sm font-bold text-emerald">+45 XP</span>
+<div class="w-8 h-8 rounded-full flex items-center justify-center bg-white group-hover:bg-brand group-hover:text-white transition-colors">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+<!-- Lesson Card 2 -->
+<div class="flex items-center p-4 bg-slate-50/50 rounded-3xl border border-slate-100 hover:border-brand/30 transition-colors cursor-pointer group list-item-enter" style="animation-delay: 0.1s">
+<div class="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-2xl shadow-sm mr-4">✈️</div>
+<div class="flex-grow">
+<h4 class="font-bold text-slate-800">Airport Logistics</h4>
+<p class="text-xs text-slate-500 font-medium">Beginner • 12 mins</p>
+</div>
+<div class="flex items-center gap-4">
+<span class="number-mono text-sm font-bold text-emerald">+30 XP</span>
+<div class="w-8 h-8 rounded-full flex items-center justify-center bg-white group-hover:bg-brand group-hover:text-white transition-colors">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+<!-- Lesson Card 3 -->
+<div class="flex items-center p-4 bg-slate-50/50 rounded-3xl border border-slate-100 hover:border-brand/30 transition-colors cursor-pointer group list-item-enter" style="animation-delay: 0.2s">
+<div class="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-2xl shadow-sm mr-4">💼</div>
+<div class="flex-grow">
+<h4 class="font-bold text-slate-800">Business Etiquette</h4>
+<p class="text-xs text-slate-500 font-medium">Advanced • 15 mins</p>
+</div>
+<div class="flex items-center gap-4">
+<span class="number-mono text-sm font-bold text-emerald">+60 XP</span>
+<div class="w-8 h-8 rounded-full flex items-center justify-center bg-white group-hover:bg-brand group-hover:text-white transition-colors">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- END: Recommended Lessons -->
+</div>
+<!-- END: Bento Grid -->
+</main>
+<!-- END: Dashboard Container -->
+<!-- BEGIN: Interactive Logic -->
+<script data-purpose="intelligent-list-loop">
+    /**
+     * Simulates an auto-sorting "intelligent" list loop
+     * by occasionally cycling the order of items.
+     */
+    function rotateLessons() {
+      const container = document.getElementById('lesson-stack');
+      const children = Array.from(container.children);
+      
+      if (children.length > 1) {
+        // Simple logic to move top item to bottom with animation
+        const first = children[0];
+        first.style.opacity = '0';
+        first.style.transform = 'translateY(-10px)';
+        
+        setTimeout(() => {
+          container.appendChild(first);
+          setTimeout(() => {
+            first.style.opacity = '1';
+            first.style.transform = 'translateY(0)';
+          }, 50);
+        }, 500);
+      }
+    }
+
+    // Set an interval for the "intelligent" sort simulation
+    // Motion Intensity 6: We keep the rotation subtle but present
+    setInterval(rotateLessons, 8000);
+  </script>
+<script data-purpose="ui-interactions">
+    // Add hover sound effects or micro-interactions could go here
+    document.querySelectorAll('.bento-card').forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        // Logic for subtle hover state enhancements
+      });
+    });
+  </script>
+<!-- END: Interactive Logic -->
+</body></html>
