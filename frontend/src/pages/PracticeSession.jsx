@@ -334,7 +334,8 @@ const PracticeSession = () => {
       closeSocket(true);
       void teardownAudioPipeline();
     };
-  }, [connectSocket, scenario, scenarioError]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenario, scenarioError]); // connectSocket is a useEffectEvent — must NOT be in deps
 
   useEffect(() => {
     if (!sessionStartAtRef.current) {

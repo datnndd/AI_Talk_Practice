@@ -1,1 +1,4 @@
 .env
+venv/
+ai_talk_practice.db
+SPEAKING_FLOW_ANALYSIS.md

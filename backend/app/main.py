@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 # Load .env before importing config
 load_dotenv()
 
-from app.api.router import api_router
+from app.api.router import api_router, ws_router
 from app.core.config import settings
 from app.core.exceptions import setup_exception_handlers
 from app.db.session import engine
@@ -73,6 +73,9 @@ app.add_middleware(
 
 # Register routers
 app.include_router(api_router, prefix="/api")
+# WebSocket router is mounted at root level (no /api prefix)
+# so the WS endpoint lives at ws://host/ws/conversation
+app.include_router(ws_router)
 
 
 # ─── Health Check ───────────────────────────────────────────────────────────
