@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import get_current_user, get_db
 from app.models.user import User
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse
-from app.schemas.user import UserResponse, OnboardingRequest
+from app.schemas.serializers import serialize_user
+from app.schemas.user import OnboardingRequest, UserRead
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -23,11 +24,11 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     token = await AuthService.login(db, body)
     return TokenResponse(access_token=token)
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=UserRead)
 async def me(user: User = Depends(get_current_user)):
-    return user
+    return serialize_user(user)
 
-@router.put("/me/onboard", response_model=UserResponse)
+@router.put("/me/onboard", response_model=UserRead)
 async def onboard(body: OnboardingRequest, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     updated_user = await AuthService.onboard(db, user, body)
-    return updated_user
+    return serialize_user(updated_user)

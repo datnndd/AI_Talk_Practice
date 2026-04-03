@@ -1,32 +1,26 @@
-"""
-WebSocket realtime endpoint router.
-"""
+"""WebSocket realtime endpoint router."""
+
+from __future__ import annotations
 
 import base64
 import json
 import logging
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.core.config import settings
+from app.core.exceptions import AppError
 from app.core.security import decode_token
 from app.db.session import AsyncSessionLocal
-from app.models.message import Message
-from app.models.session import Session
-from app.services.scenario_service import ScenarioService
+from app.schemas.session import SessionCreate
 from app.services.auth_service import AuthService
 from app.services.conversation import ConversationSession
+from app.services.session_service import SessionService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-def _duration_seconds(started_at: datetime, ended_at: datetime) -> int:
-    """Compute a non-negative session duration in seconds."""
-    if started_at.tzinfo is None:
-        started_at = started_at.replace(tzinfo=timezone.utc)
-    return max(0, int((ended_at - started_at).total_seconds()))
 
 @router.websocket("/ws/conversation")
 async def websocket_conversation(websocket: WebSocket):
@@ -35,8 +29,7 @@ async def websocket_conversation(websocket: WebSocket):
 
     async with AsyncSessionLocal() as db:
         conversation: ConversationSession | None = None
-        session_record: Session | None = None
-        next_order_index = 1
+        session_id: int | None = None
         finalized_user_messages = 0
 
         async def send_json_safe(data: dict):
@@ -44,50 +37,43 @@ async def websocket_conversation(websocket: WebSocket):
                 state = getattr(websocket, "client_state", None)
                 if state is None or getattr(state, "name", "CONNECTED") == "CONNECTED":
                     await websocket.send_json(data)
-            except Exception as e:
-                logger.error(f"Error sending WebSocket message: {e}")
+            except Exception:
+                logger.exception("Error sending WebSocket message")
 
         async def on_transcript(text: str, transcript_type: str):
-            await send_json_safe({
-                "type": f"transcript_{transcript_type}",
-                "text": text,
-            })
+            await send_json_safe({"type": f"transcript_{transcript_type}", "text": text})
 
         async def on_llm_chunk(text: str, is_done: bool):
-            if is_done:
-                await send_json_safe({"type": "llm_done", "text": text})
-            else:
-                await send_json_safe({"type": "llm_chunk", "text": text})
+            await send_json_safe({"type": "llm_done" if is_done else "llm_chunk", "text": text})
 
         async def on_audio_chunk(audio_bytes: bytes | None):
             if audio_bytes is None:
                 await send_json_safe({"type": "audio_done"})
-            else:
-                audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
-                await send_json_safe({"type": "audio_chunk", "data": audio_b64})
+                return
+            audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
+            await send_json_safe({"type": "audio_chunk", "data": audio_b64})
 
         async def on_error(message: str):
             await send_json_safe({"type": "error", "message": message})
 
         async def persist_message(role: str, content: str):
-            nonlocal next_order_index, finalized_user_messages
-            if not session_record or not content.strip():
+            nonlocal finalized_user_messages
+            if not session_id or not content.strip():
                 return
             try:
-                msg = Message(
-                    session_id=session_record.id,
-                    role=role,
-                    content=content.strip(),
-                    order_index=next_order_index,
+                await SessionService.add_message(
+                    db,
+                    session_id=session_id,
+                    user_id=active_user_id,
+                    payload=SessionServiceMessageFactory.create(role=role, content=content.strip()),
                 )
-                db.add(msg)
-                next_order_index += 1
                 if role == "user":
                     finalized_user_messages += 1
-                await db.commit()
-            except Exception as e:
-                logger.error(f"Failed to persist message: {e}")
+            except Exception:
+                logger.exception("Failed to persist websocket message")
                 await db.rollback()
+
+        active_user_id: int | None = None
 
         try:
             while True:
@@ -108,13 +94,12 @@ async def websocket_conversation(websocket: WebSocket):
                             await send_json_safe({"type": "error", "message": "Session already started"})
                             continue
 
-                        token = msg.get("token", "")
+                        token = msg.get("token")
                         scenario_id = msg.get("scenario_id")
-                        active_language = msg.get("language", settings.asr_language)
-                        active_voice = msg.get("voice", settings.tts_voice)
-
                         if not token or scenario_id is None:
-                            await send_json_safe({"type": "error", "message": "session_start requires token and scenario_id"})
+                            await send_json_safe(
+                                {"type": "error", "message": "session_start requires token and scenario_id"}
+                            )
                             await websocket.close()
                             return
 
@@ -123,28 +108,36 @@ async def websocket_conversation(websocket: WebSocket):
                             await send_json_safe({"type": "error", "message": "Invalid token"})
                             await websocket.close()
                             return
-                            
+
                         user = await AuthService.get_user_by_id(db, user_id)
                         if user is None:
                             await send_json_safe({"type": "error", "message": "User not found"})
                             await websocket.close()
                             return
 
-                        try:
-                            scenario = await ScenarioService.get_by_id(db, scenario_id)
-                        except HTTPException as e:
-                            await send_json_safe({"type": "error", "message": e.detail})
-                            await websocket.close()
-                            return
-
-                        session_record = Session(
+                        active_user_id = user.id
+                        session = await SessionService.start_session(
+                            db,
                             user_id=user.id,
-                            scenario_id=scenario.id,
-                            status="active",
+                            payload=SessionCreate(
+                                scenario_id=scenario_id,
+                                variation_id=msg.get("variation_id"),
+                                variation_seed=msg.get("variation_seed"),
+                                variation_parameters=msg.get("variation_parameters") or {},
+                                prefer_pregenerated=msg.get("prefer_pregenerated", True),
+                                create_variation_if_missing=msg.get("create_variation_if_missing", True),
+                                mode=msg.get("mode"),
+                                metadata=msg.get("metadata") or {},
+                                target_skills=msg.get("target_skills"),
+                            ),
                         )
-                        db.add(session_record)
-                        await db.commit()
-                        await db.refresh(session_record)
+                        session_id = session.id
+
+                        system_prompt = (
+                            session.variation.system_prompt_override
+                            if session.variation and session.variation.system_prompt_override
+                            else session.scenario.ai_system_prompt
+                        )
 
                         conversation = ConversationSession(settings)
                         await conversation.initialize(
@@ -152,24 +145,31 @@ async def websocket_conversation(websocket: WebSocket):
                             on_llm_chunk=on_llm_chunk,
                             on_audio_chunk=on_audio_chunk,
                             on_error=on_error,
-                            system_prompt=scenario.ai_system_prompt,
-                            language=active_language,
-                            voice=active_voice,
+                            system_prompt=system_prompt,
+                            language=msg.get("language", settings.asr_language),
+                            voice=msg.get("voice", settings.tts_voice),
                             on_user_message=lambda text: persist_message("user", text),
                             on_assistant_message=lambda text: persist_message("assistant", text),
                         )
 
-                        await send_json_safe({
-                            "type": "session_started",
-                            "session_id": session_record.id,
-                            "scenario_id": scenario.id,
-                            "language": active_language,
-                            "voice": active_voice,
-                        })
+                        await send_json_safe(
+                            {
+                                "type": "session_started",
+                                "session_id": session.id,
+                                "scenario_id": session.scenario_id,
+                                "variation_id": session.variation_id,
+                                "variation_seed": session.session_metadata.get("variation_seed"),
+                                "mode": session.session_metadata.get("mode"),
+                                "language": msg.get("language", settings.asr_language),
+                                "voice": msg.get("voice", settings.tts_voice),
+                            }
+                        )
                         continue
 
                     if conversation is None:
-                        await send_json_safe({"type": "error", "message": "session_start is required before other events"})
+                        await send_json_safe(
+                            {"type": "error", "message": "session_start is required before other events"}
+                        )
                         continue
 
                     if msg_type == "config":
@@ -177,60 +177,52 @@ async def websocket_conversation(websocket: WebSocket):
                             language=msg.get("language"),
                             voice=msg.get("voice"),
                         )
-                        await send_json_safe({
-                            "type": "config_updated",
-                            "language": active_language,
-                            "voice": active_voice,
-                        })
-
+                        await send_json_safe(
+                            {"type": "config_updated", "language": active_language, "voice": active_voice}
+                        )
                     elif msg_type == "start_recording":
                         await conversation.start_recording(language=msg.get("language"))
                         await send_json_safe({"type": "recording_started"})
-
                     elif msg_type == "stop_recording":
                         await conversation.stop_recording()
-
                     elif msg_type == "audio_chunk":
                         audio_b64 = msg.get("data", "")
-                        if audio_b64:
-                            try:
-                                audio_bytes = base64.b64decode(audio_b64)
-                                await conversation.feed_audio(audio_bytes)
-                            except Exception:
-                                await send_json_safe({"type": "error", "message": "Invalid audio data"})
-
+                        if not audio_b64:
+                            continue
+                        try:
+                            await conversation.feed_audio(base64.b64decode(audio_b64))
+                        except Exception:
+                            await send_json_safe({"type": "error", "message": "Invalid audio data"})
                     else:
                         await send_json_safe({"type": "error", "message": f"Unknown message type: {msg_type}"})
-
-                except HTTPException as e:
-                    await send_json_safe({"type": "error", "message": e.detail})
-                except Exception as e:
-                    logger.error(f"Error processing message {msg_type}: {e}", exc_info=True)
-                    await send_json_safe({"type": "error", "message": "Generic processing error"})
-
+                except AppError as exc:
+                    await send_json_safe({"type": "error", "message": exc.detail})
+                except Exception as exc:
+                    logger.exception("Error processing websocket event type=%s", msg_type)
+                    await send_json_safe({"type": "error", "message": str(exc) if settings.is_debug else "Processing error"})
         except WebSocketDisconnect:
             logger.info("WebSocket disconnected")
-        except Exception as e:
-            logger.error(f"Critical WebSocket error: {e}", exc_info=True)
         finally:
-            if conversation:
+            if conversation is not None:
                 try:
                     await conversation.close()
-                except Exception as e:
-                    logger.error(f"Error closing conversation: {e}")
+                except Exception:
+                    logger.exception("Error closing conversation")
 
-            if session_record:
+            if session_id is not None:
                 try:
-                    ended_at = datetime.now(timezone.utc)
-                    session_record.ended_at = ended_at
-                    if finalized_user_messages > 0:
-                        session_record.status = "completed"
-                        session_record.duration_seconds = _duration_seconds(session_record.started_at, ended_at)
-                    else:
-                        session_record.status = "abandoned"
-                        session_record.duration_seconds = None
-                    await db.commit()
-                except Exception as e:
-                    logger.error(f"Error finalizing session record: {e}")
+                    await SessionService.finalize_after_ws_disconnect(
+                        db,
+                        session_id=session_id,
+                        finalized_user_messages=finalized_user_messages,
+                    )
+                except Exception:
+                    logger.exception("Error finalizing websocket session id=%s", session_id)
 
             logger.info("Session cleaned up")
+
+
+class SessionServiceMessageFactory:
+    @staticmethod
+    def create(*, role: str, content: str) -> MessageCreate:
+        return MessageCreate(role=role, content=content)

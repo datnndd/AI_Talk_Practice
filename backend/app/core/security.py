@@ -22,7 +22,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 # ── JWT ──
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 def create_access_token(user_id: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)

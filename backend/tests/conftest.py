@@ -77,3 +77,67 @@ async def test_user(db_session):
     await db_session.refresh(user)
     return user
 
+
+@pytest_asyncio.fixture
+async def test_scenario(db_session):
+    """Seed a test scenario."""
+    from app.models.scenario import Scenario
+    scenario = Scenario(
+        title="Airport Check-in",
+        description="A simple airport check-in scenario.",
+        ai_system_prompt="You are a helpful airline agent.",
+        category="travel",
+        difficulty="medium",
+        mode="roleplay",
+        learning_objectives=["order food", "ask about specials"],
+        target_skills=["pronunciation", "vocabulary"],
+        tags=["airport", "travel"]
+    )
+    db_session.add(scenario)
+    await db_session.flush()
+    await db_session.refresh(scenario)
+    return scenario
+
+
+@pytest_asyncio.fixture
+async def test_variation(db_session, test_scenario):
+    """Seed a test variation."""
+    from app.models.scenario import ScenarioVariation
+    from app.services.variation_service import VariationService
+    params = {"proficiency": "B1", "formality": "formal"}
+    seed = VariationService.build_variation_seed(
+        scenario_id=test_scenario.id,
+        parameters=params,
+        mode="roleplay"
+    )
+    variation = ScenarioVariation(
+        scenario_id=test_scenario.id,
+        variation_seed=seed,
+        parameters=params,
+        system_prompt_override="Variation prompt override.",
+        is_pregenerated=True,
+        is_approved=True
+    )
+    db_session.add(variation)
+    await db_session.flush()
+    await db_session.refresh(variation)
+    return variation
+
+
+@pytest_asyncio.fixture
+async def test_session(db_session, test_user, test_scenario, test_variation):
+    """Seed a test session."""
+    from app.models.session import Session
+    session = Session(
+        user_id=test_user.id,
+        scenario_id=test_scenario.id,
+        variation_id=test_variation.id,
+        status="active",
+        target_skills=test_scenario.target_skills,
+        session_metadata={"mode": "roleplay", "variation_seed": test_variation.variation_seed}
+    )
+    db_session.add(session)
+    await db_session.flush()
+    await db_session.refresh(session)
+    return session
+
