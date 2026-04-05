@@ -5,36 +5,43 @@ Import order matters for Alembic autogenerate — Base must be imported before
 any model so all table definitions are registered on the metadata.
 """
 
-from app.models.user import User
-from app.models.scenario import Scenario, ScenarioPromptHistory, ScenarioVariation
-from app.models.session import Session
-from app.models.message import Message
-from app.models.correction import Correction
-from app.models.message_score import MessageScore
-from app.models.session_score import SessionScore
+# Users
+from app.modules.users.models.user import User
+from app.modules.users.models.subscription import Subscription
 
-from app.models.subscription import Subscription
-from app.models.achievement import Achievement
-from app.models.user_achievement import UserAchievement
-from app.models.phoneme_error import PhonemeError
-from app.models.word_error import WordError
-from app.models.daily_stat import DailyStat
+# Scenarios
+from app.modules.scenarios.models import Scenario, ScenarioVariation, ScenarioPromptHistory
 
+# Sessions
+from app.modules.sessions.models import (
+    Session,
+    Message,
+    Correction,
+    MessageScore,
+    SessionScore,
+    PhonemeError,
+    WordError,
+)
+
+# Gamification
+from app.modules.gamification.models.achievement import Achievement
+from app.modules.gamification.models.user_achievement import UserAchievement
+from app.modules.gamification.models.daily_stat import DailyStat
 
 __all__ = [
     "User",
+    "Subscription",
     "Scenario",
-    "ScenarioPromptHistory",
     "ScenarioVariation",
+    "ScenarioPromptHistory",
     "Session",
     "Message",
     "Correction",
     "MessageScore",
     "SessionScore",
-    "Subscription",
-    "Achievement",
-    "UserAchievement",
     "PhonemeError",
     "WordError",
+    "Achievement",
+    "UserAchievement",
     "DailyStat",
 ]

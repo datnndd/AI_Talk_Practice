@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from app.models.correction import Correction
-from app.models.message import Message
-from app.models.message_score import MessageScore
-from app.models.scenario import Scenario, ScenarioPromptHistory, ScenarioVariation
-from app.models.session import Session
-from app.models.session_score import SessionScore
-from app.models.user import User
-from app.schemas.admin_scenario import (
+from app.modules.sessions.models.correction import Correction
+from app.modules.sessions.models.message import Message
+from app.modules.sessions.models.message_score import MessageScore
+from app.modules.scenarios.models import Scenario, ScenarioPromptHistory, ScenarioVariation
+from app.modules.sessions.models.session import Session
+from app.modules.sessions.models.session_score import SessionScore
+from app.modules.users.models.user import User
+from app.modules.scenarios.schemas import (
     PromptHistoryRead,
     PromptQualityAssessment,
     ScenarioAdminRead,
     ScenarioVariationAdminRead,
 )
-from app.schemas.scenario import ScenarioRead, ScenarioVariationRead
-from app.schemas.session import (
+from app.modules.scenarios.schemas import ScenarioRead, ScenarioVariationRead
+from app.modules.sessions.schemas import (
     CorrectionRead,
     MessageRead,
     MessageScoreRead,
@@ -22,7 +22,7 @@ from app.schemas.session import (
     SessionRead,
     SessionScoreRead,
 )
-from app.schemas.user import UserRead
+from app.modules.users.schemas import UserRead
 
 
 def user_is_admin(user: User) -> bool:

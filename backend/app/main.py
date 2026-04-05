@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 # Load .env before importing config
 load_dotenv()
 
+# Register fully all models before routers or repositories trigger mapper initialization
+import app.models  # noqa: F401
+
 from app.api.router import api_router, ws_router
 from app.core.config import settings
 from app.core.exceptions import setup_exception_handlers
@@ -29,7 +32,6 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Create tables
-    import app.models  # noqa: F401
     # async with engine.begin() as conn:
     #     await conn.run_sync(Base.metadata.create_all)
     # logger.info("Database tables verified")

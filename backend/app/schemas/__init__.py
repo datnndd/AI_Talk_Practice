@@ -1,14 +1,14 @@
 """Pydantic schemas for API request/response validation."""
 
-from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
-from app.schemas.scenario import (
+from app.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
+from app.modules.scenarios.schemas import (
     ScenarioCreate,
     ScenarioRead,
     ScenarioUpdate,
     ScenarioVariationCreate,
     ScenarioVariationRead,
 )
-from app.schemas.session import (
+from app.modules.sessions.schemas import (
     CorrectionCreate,
     CorrectionRead,
     MessageCreate,
@@ -21,7 +21,7 @@ from app.schemas.session import (
     SessionRead,
     SessionScoreRead,
 )
-from app.schemas.user import OnboardingRequest, UserRead
+from app.modules.users.schemas import OnboardingRequest, UserRead
 
 __all__ = [
     "CorrectionCreate",
