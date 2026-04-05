@@ -23,7 +23,16 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': ['error', {
+        varsIgnorePattern: '^[A-Z_]|^(motion|AnimatePresence|Icon)$',
+        argsIgnorePattern: '^Icon$',
+      }],
+    },
+  },
+  {
+    files: ['src/features/auth/context/*.jsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 ])

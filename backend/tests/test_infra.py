@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy import select
-from app.models.user import User
+from app.modules.users.models.user import User
 
 @pytest.mark.asyncio
 async def test_db_session(db_session):

@@ -4,7 +4,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models.user import User
-from app.modules.users.schemas import OnboardingRequest
+from app.modules.users.schemas.user import OnboardingRequest
 from app.core.exceptions import BadRequestError
 
 logger = logging.getLogger(__name__)

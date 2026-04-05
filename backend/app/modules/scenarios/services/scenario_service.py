@@ -5,9 +5,9 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictError, NotFoundError
-from app.modules.scenarios.models import Scenario, ScenarioVariation
+from app.modules.scenarios.models.scenario import Scenario, ScenarioVariation
 from app.modules.scenarios.repository import ScenarioRepository
-from app.modules.scenarios.schemas import (
+from app.modules.scenarios.schemas.scenario import (
     ScenarioCreate,
     ScenarioUpdate,
     ScenarioVariationCreate,

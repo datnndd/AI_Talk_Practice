@@ -11,7 +11,7 @@ from app.modules.sessions.models.message import Message
 from app.modules.sessions.models.session import Session
 from app.modules.scenarios.repository import ScenarioRepository
 from app.modules.sessions.repository import SessionRepository
-from app.modules.sessions.schemas import MessageCreate, SessionCreate, SessionFinishRequest
+from app.modules.sessions.schemas.session import MessageCreate, SessionCreate, SessionFinishRequest
 from app.modules.scenarios.services.variation_service import VariationService
 
 logger = logging.getLogger(__name__)

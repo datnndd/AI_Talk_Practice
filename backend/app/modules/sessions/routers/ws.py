@@ -12,8 +12,8 @@ from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.security import decode_token
 from app.db.session import AsyncSessionLocal
-from app.modules.sessions.schemas import SessionCreate
-from app.modules.auth.service import AuthService
+from app.modules.sessions.schemas.session import SessionCreate
+from app.modules.auth.services.auth_service import AuthService
 from app.modules.sessions.services.conversation import ConversationSession
 from app.modules.sessions.services.session import SessionService
 

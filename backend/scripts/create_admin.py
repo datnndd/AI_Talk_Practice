@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.db.session import AsyncSessionLocal
-from app.models.user import User
+from app.modules.users.models.user import User
 from app.core.security import hash_password
 from sqlalchemy import select
 

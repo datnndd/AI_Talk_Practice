@@ -1,6 +1,6 @@
 import pytest
 import pytest_asyncio
-from app.models.scenario import Scenario
+from app.modules.scenarios.models.scenario import Scenario
 
 @pytest_asyncio.fixture
 async def multiple_scenarios(db_session):

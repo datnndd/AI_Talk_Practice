@@ -6,14 +6,17 @@ from fastapi import APIRouter, Depends, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, get_current_user
-from app.modules.auth.schemas import (
+from app.modules.auth.schemas.auth import (
     RegisterRequest, LoginRequest, TokenResponse, TokenRefreshResponse,
     RefreshRequest, GoogleLoginRequest, ForgotPasswordRequest,
     ResetPasswordRequest, VerifyEmailRequest
 )
-from app.modules.users.schemas import UserRead
+from app.modules.users.schemas.user import OnboardingRequest
+from app.modules.users.schemas.user import UserRead
 from app.modules.users.models.user import User
-from app.modules.auth.services import AuthService
+from app.modules.users.serializers import serialize_user
+from app.modules.users.services.user_service import UserService
+from app.modules.auth.services.auth_service import AuthService
 from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -21,7 +24,18 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.get("/me", response_model=UserRead)
 async def get_me(user: User = Depends(get_current_user)):
     """Get the current authenticated user's profile."""
-    return user
+    return serialize_user(user)
+
+
+@router.put("/me/onboard", response_model=UserRead)
+async def onboard_me(
+    body: OnboardingRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Backward-compatible onboarding endpoint kept for older frontend clients."""
+    updated_user = await UserService.onboard_or_update(db, user, body)
+    return serialize_user(updated_user)
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")

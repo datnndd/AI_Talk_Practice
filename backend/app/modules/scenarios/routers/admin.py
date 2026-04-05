@@ -22,7 +22,11 @@ from app.modules.scenarios.schemas import (
     SuggestSkillsResponse,
     VariationListResponse,
 )
-from app.schemas.serializers import serialize_admin_prompt_history, serialize_admin_scenario, serialize_admin_variation
+from app.modules.scenarios.serializers import (
+    serialize_admin_prompt_history,
+    serialize_admin_scenario,
+    serialize_admin_variation,
+)
 from app.modules.scenarios.services.admin_scenario_service import AdminScenarioService
 
 router = APIRouter(prefix="/admin", tags=["admin"])

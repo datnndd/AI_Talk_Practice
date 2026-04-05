@@ -19,7 +19,7 @@ from dashscope.audio.qwen_tts_realtime import (
 )
 
 from app.core.config import Settings
-from app.services.base import TTSBase, TTSConfig
+from app.infra.contracts import TTSBase, TTSConfig
 
 logger = logging.getLogger(__name__)
 

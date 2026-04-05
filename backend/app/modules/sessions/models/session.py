@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from app.modules.sessions.models.correction import Correction
     from app.modules.sessions.models.message import Message
     from app.modules.sessions.models.message_score import MessageScore
-    from app.modules.scenarios.models import Scenario, ScenarioVariation
+    from app.modules.scenarios.models.scenario import Scenario, ScenarioVariation
     from app.modules.sessions.models.session_score import SessionScore
     from app.modules.users.models.user import User
 

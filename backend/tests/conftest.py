@@ -18,8 +18,8 @@ from app.main import app
 from app.db.base_class import Base
 from app.db.session import get_db
 from app.core.security import hash_password
-from app.models.user import User
-from app.models.subscription import Subscription
+from app.modules.users.models.user import User
+from app.modules.users.models.subscription import Subscription
 
 # Use in-memory SQLite with StaticPool to keep connection open across sessions in tests
 engine = create_async_engine(
@@ -147,7 +147,7 @@ async def test_admin_user(db_session):
 @pytest_asyncio.fixture
 async def test_scenario(db_session):
     """Seed a test scenario."""
-    from app.models.scenario import Scenario
+    from app.modules.scenarios.models.scenario import Scenario
     scenario = Scenario(
         title="Airport Check-in",
         description="A simple airport check-in scenario.",
@@ -168,8 +168,8 @@ async def test_scenario(db_session):
 @pytest_asyncio.fixture
 async def test_variation(db_session, test_scenario):
     """Seed a test variation."""
-    from app.models.scenario import ScenarioVariation
-    from app.services.variation_service import VariationService
+    from app.modules.scenarios.models.scenario import ScenarioVariation
+    from app.modules.scenarios.services.variation_service import VariationService
     params = {"proficiency": "B1", "formality": "formal"}
     seed = VariationService.build_variation_seed(
         scenario_id=test_scenario.id,
@@ -193,7 +193,7 @@ async def test_variation(db_session, test_scenario):
 @pytest_asyncio.fixture
 async def test_session(db_session, test_user, test_scenario, test_variation):
     """Seed a test session."""
-    from app.models.session import Session
+    from app.modules.sessions.models.session import Session
     session = Session(
         user_id=test_user.id,
         scenario_id=test_scenario.id,
@@ -206,4 +206,3 @@ async def test_session(db_session, test_user, test_scenario, test_variation):
     await db_session.flush()
     await db_session.refresh(session)
     return session
-

@@ -1,10 +1,9 @@
 import asyncio
-from app.db.session import async_session
-from app.models.user import User
-from app.repositories.user_repository import UserRepository
+from app.db.session import AsyncSessionLocal
+from app.modules.users.repository import UserRepository
 
 async def test_insert():
-    async with async_session() as db:
+    async with AsyncSessionLocal() as db:
         try:
             # Create a test email
             test_email = "test_insert_bug@example.com"

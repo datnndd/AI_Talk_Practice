@@ -16,10 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.db.session import AsyncSessionLocal
-from app.modules.scenarios.models import Scenario, ScenarioVariation
+from app.modules.scenarios.models.scenario import Scenario, ScenarioVariation
 from app.modules.sessions.models.session import Session
 from app.modules.scenarios.repository import ScenarioRepository
-from app.modules.scenarios.schemas import (
+from app.modules.scenarios.schemas.admin_scenario import (
     BulkScenarioActionRequest,
     GenerateVariationsRequest,
     GenerationTaskRead,
@@ -29,7 +29,7 @@ from app.modules.scenarios.schemas import (
     ScenarioVariationAdminCreate,
     ScenarioVariationAdminUpdate,
 )
-from app.services.base import Message
+from app.infra.contracts import Message
 from app.infra.factory import create_llm
 from app.modules.scenarios.services.variation_service import VariationService
 

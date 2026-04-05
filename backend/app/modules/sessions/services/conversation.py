@@ -12,7 +12,7 @@ import logging
 from typing import Awaitable, Callable, Optional
 
 from app.core.config import Settings
-from app.services.base import ASRBase, LLMBase, TTSBase, Message, TTSConfig
+from app.infra.contracts import ASRBase, LLMBase, Message, TTSBase, TTSConfig
 from app.infra.factory import create_asr, create_llm, create_tts
 
 logger = logging.getLogger(__name__)

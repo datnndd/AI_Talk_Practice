@@ -9,9 +9,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.modules.scenarios.models import Scenario, ScenarioVariation
+from app.modules.scenarios.models.scenario import Scenario, ScenarioVariation
 from app.modules.scenarios.repository import ScenarioRepository
-from app.modules.sessions.schemas import SessionCreate
+from app.modules.sessions.schemas.session import SessionCreate
 
 logger = logging.getLogger(__name__)
 

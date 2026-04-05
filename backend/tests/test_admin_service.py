@@ -1,6 +1,6 @@
 import pytest
-from app.services.admin_scenario_service import AdminScenarioService
-from app.schemas.admin_scenario import PromptQualityAssessment
+from app.modules.scenarios.services.admin_scenario_service import AdminScenarioService
+from app.modules.scenarios.schemas.admin_scenario import PromptQualityAssessment
 
 def test_assess_prompt_quality_high_quality():
     """Test assess_prompt_quality with a high-quality prompt."""
@@ -43,7 +43,7 @@ def test_assess_prompt_quality_low_quality():
 
 def test_heuristic_variation_blueprints():
     """Test _heuristic_variation_blueprints generates expected structure."""
-    from app.models.scenario import Scenario
+    from app.modules.scenarios.models.scenario import Scenario
     
     scenario = Scenario(
         id=1,

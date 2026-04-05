@@ -1,7 +1,7 @@
 import pytest
 
 from app.core.security import create_access_token, hash_password
-from app.models.user import User
+from app.modules.users.models.user import User
 
 
 async def _create_admin_user(db_session):

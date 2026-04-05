@@ -102,7 +102,7 @@ TTS_VOICE=Cherry
 Example:
 ```python
 # app/services/asr/my_custom_asr.py
-from app.services.base import ASRBase, TranscriptEvent
+from app.infra.contracts import ASRBase, TranscriptEvent
 
 class MyCustomASR(ASRBase):
     async def start_session(self, language, sample_rate):

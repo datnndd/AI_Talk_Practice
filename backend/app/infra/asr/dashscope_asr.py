@@ -20,7 +20,7 @@ from dashscope.audio.qwen_omni import (
 from dashscope.audio.qwen_omni.omni_realtime import TranscriptionParams
 
 from app.core.config import Settings
-from app.services.base import ASRBase, TranscriptEvent, TranscriptType
+from app.infra.contracts import ASRBase, TranscriptEvent, TranscriptType
 
 logger = logging.getLogger(__name__)
 

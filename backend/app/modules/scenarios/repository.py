@@ -6,7 +6,7 @@ from sqlalchemy import Select, String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.scenarios.models import Scenario, ScenarioPromptHistory, ScenarioVariation
+from app.modules.scenarios.models.scenario import Scenario, ScenarioPromptHistory, ScenarioVariation
 from app.modules.sessions.models.session import Session
 
 

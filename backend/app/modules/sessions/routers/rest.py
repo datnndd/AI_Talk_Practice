@@ -7,8 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user, get_db
 from app.modules.users.models.user import User
-from app.schemas.serializers import serialize_message, serialize_session, serialize_session_list_item
-from app.modules.sessions.schemas import (
+from app.modules.sessions.serializers import (
+    serialize_message,
+    serialize_session,
+    serialize_session_list_item,
+)
+from app.modules.sessions.schemas.session import (
     MessageCreate,
     MessageRead,
     SessionCreate,

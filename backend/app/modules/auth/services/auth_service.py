@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.modules.users.models.user import User
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.repository import UserRepository
-from app.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse, TokenRefreshResponse
+from app.modules.auth.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, TokenRefreshResponse
 from app.infra.email import send_verification_email, send_password_reset_email
 
 logger = logging.getLogger(__name__)

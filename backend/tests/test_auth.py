@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from app.models.user import User
+from app.modules.users.models.user import User
 from app.core.security import create_access_token, create_refresh_token
 
 @pytest.mark.asyncio

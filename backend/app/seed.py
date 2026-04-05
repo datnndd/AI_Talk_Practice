@@ -8,7 +8,7 @@ import asyncio
 from sqlalchemy import select
 from app.db.session import engine, AsyncSessionLocal
 from app.db.base_class import Base
-from app.modules.scenarios.models import Scenario
+from app.modules.scenarios.models.scenario import Scenario
 from app.modules.users.models.user import User
 
 DEFAULT_SCENARIOS = [
@@ -110,7 +110,7 @@ ADMIN_USER = {
 
 async def seed():
     # Import all models to register them
-    import app.models  # noqa: F401
+    import app.db.models  # noqa: F401
     from app.core.security import hash_password
 
     async with engine.begin() as conn:

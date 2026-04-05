@@ -6,15 +6,15 @@ import pytest_asyncio
 from fastapi import WebSocketDisconnect
 from sqlalchemy import delete, select
 
-import app.services.conversation as conversation_module
+import app.modules.sessions.services.conversation as conversation_module
 import app.main as main_module
 import app.api.v1.ws as ws_module
 from app.core.security import create_access_token, hash_password
-from app.models.message import Message
-from app.models.scenario import Scenario
-from app.models.session import Session
-from app.models.user import User
-from app.services.base import TranscriptEvent, TranscriptType
+from app.infra.contracts import TranscriptEvent, TranscriptType
+from app.modules.sessions.models.message import Message
+from app.modules.scenarios.models.scenario import Scenario
+from app.modules.sessions.models.session import Session
+from app.modules.users.models.user import User
 from conftest import TestingSessionLocal
 
 

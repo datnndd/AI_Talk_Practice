@@ -1,6 +1,6 @@
 import pytest
-from app.services.variation_service import VariationService
-from app.schemas.session import SessionCreate
+from app.modules.scenarios.services.variation_service import VariationService
+from app.modules.sessions.schemas.session import SessionCreate
 from app.core.config import settings
 
 @pytest.mark.asyncio

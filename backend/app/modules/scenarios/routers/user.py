@@ -14,7 +14,7 @@ from app.modules.scenarios.schemas import (
     ScenarioVariationCreate,
     ScenarioVariationRead,
 )
-from app.schemas.serializers import serialize_scenario, serialize_variation
+from app.modules.scenarios.serializers import serialize_scenario, serialize_variation
 from app.modules.scenarios.services.scenario_service import ScenarioService
 
 router = APIRouter(prefix="/scenarios", tags=["scenarios"])

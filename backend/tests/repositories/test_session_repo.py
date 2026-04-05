@@ -1,6 +1,6 @@
 import pytest
-from app.models.message import Message
-from app.repositories.session_repository import SessionRepository
+from app.modules.sessions.models.message import Message
+from app.modules.sessions.repository import SessionRepository
 
 @pytest.mark.asyncio
 async def test_create_session(db_session, test_user, test_scenario):
