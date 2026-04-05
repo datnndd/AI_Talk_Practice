@@ -44,6 +44,7 @@ class OnboardingRequest(BaseModel):
 class UserRead(ORMModel):
     id: int
     email: str
+    is_admin: bool = False
     display_name: str | None = None
     avatar: str | None = None
     age: int | None = None

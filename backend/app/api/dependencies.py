@@ -4,10 +4,11 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.core.security import decode_token, security
 from app.db.session import get_db
 from app.models.user import User
+from app.schemas.serializers import user_is_admin
 from app.services.auth_service import AuthService
 
 
@@ -26,4 +27,12 @@ async def get_current_user(
     if user is None:
         raise UnauthorizedError("Invalid token")
 
+    return user
+
+
+async def require_admin_user(
+    user: User = Depends(get_current_user),
+) -> User:
+    if not user_is_admin(user):
+        raise ForbiddenError("Admin access is required")
     return user

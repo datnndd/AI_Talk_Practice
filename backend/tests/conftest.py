@@ -62,6 +62,40 @@ async def client(db_session):
 
 
 @pytest_asyncio.fixture
+async def admin_client(db_session, test_admin_user):
+    """Provide an AsyncClient authenticated as an admin."""
+    from app.core.security import create_access_token
+
+    async def override_get_db():
+        yield db_session
+
+    token = create_access_token(user_id=test_admin_user.id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=headers) as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def test_client(db_session, test_user):
+    """Provide an AsyncClient authenticated as a regular user."""
+    from app.core.security import create_access_token
+
+    async def override_get_db():
+        yield db_session
+
+    token = create_access_token(user_id=test_user.id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=headers) as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
 async def test_user(db_session):
     """Seed a test user in the database."""
     user = User(
@@ -70,7 +104,26 @@ async def test_user(db_session):
         display_name="Test User",
         native_language="vi",
         target_language="en",
-        level="beginner"
+        level="beginner",
+        preferences={"is_admin": False}
+    )
+    db_session.add(user)
+    await db_session.flush()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def test_admin_user(db_session):
+    """Seed a test admin user in the database."""
+    user = User(
+        email="admin@example.com",
+        password_hash=hash_password("admin123"),
+        display_name="Admin User",
+        native_language="en",
+        target_language="vi",
+        level="advanced",
+        preferences={"is_admin": True}
     )
     db_session.add(user)
     await db_session.flush()

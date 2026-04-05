@@ -62,9 +62,21 @@ setup_exception_handlers(app)
 
 
 # CORS configuration
+# NOTE: allow_credentials=True requires explicit origins — wildcard "*" is rejected by browsers
+_cors_origins = settings.cors_origins
+if "*" in _cors_origins:
+    # In development, include common localhost ports explicitly
+    _cors_origins = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

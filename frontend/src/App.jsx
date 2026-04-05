@@ -26,7 +26,7 @@ function App() {
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         
         {/* Admin Routes */}
-        <Route path="/admin/scenarios" element={<PrivateRoute><AdminScenarios /></PrivateRoute>} />
+        <Route path="/admin/scenarios" element={<PrivateRoute requireAdmin><AdminScenarios /></PrivateRoute>} />
       </Routes>
     </Router>
   );

@@ -73,6 +73,8 @@ class Scenario(Base, TimestampMixin):
 
     # ── Admin ─────────────────────────────────────────────────────────────────
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    is_pre_generated: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    pre_gen_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="8")
     created_by: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -93,6 +95,14 @@ class Scenario(Base, TimestampMixin):
         lazy="select",
         passive_deletes=True,
     )
+    prompt_history: Mapped[list["ScenarioPromptHistory"]] = relationship(
+        "ScenarioPromptHistory",
+        back_populates="scenario",
+        lazy="select",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="ScenarioPromptHistory.created_at.desc()",
+    )
 
     # ── Indexes ───────────────────────────────────────────────────────────────
     __table_args__ = (
@@ -105,6 +115,7 @@ class Scenario(Base, TimestampMixin):
             "mode IN ('conversation','roleplay','debate','interview','presentation')",
             name="ck_scenarios_mode",
         ),
+        CheckConstraint("pre_gen_count >= 0", name="ck_scenarios_pre_gen_count_non_negative"),
     )
 
     def __repr__(self) -> str:
@@ -145,12 +156,15 @@ class ScenarioVariation(Base, TimestampMixin):
     variation_seed: Mapped[str] = mapped_column(String(64), nullable=False)
 
     # ── Generated content ─────────────────────────────────────────────────────
+    variation_name: Mapped[str] = mapped_column(String(160), nullable=False, server_default="Untitled variation")
     # JSONB: {"proficiency": "B1", "formality": "casual", "topic_twist": "..."}
     parameters: Mapped[Any] = mapped_column(JSONB, nullable=False, server_default="{}")
     # Full system prompt override for this variation (if None, use Scenario.ai_system_prompt)
     system_prompt_override: Mapped[Optional[str]] = mapped_column(Text)
     # Short teaser shown in the UI: "You're a nervous first-timer at customs"
     sample_prompt: Mapped[Optional[str]] = mapped_column(String(500))
+    # JSON conversation preview used by admins before approving the variation.
+    sample_conversation: Mapped[Optional[Any]] = mapped_column(JSONB, server_default="[]")
 
     # ── Provenance ────────────────────────────────────────────────────────────
     is_pregenerated: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
@@ -164,6 +178,7 @@ class ScenarioVariation(Base, TimestampMixin):
     last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     # ── Quality flag ─────────────────────────────────────────────────────────
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     is_approved: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
 
     # ── Relationships ─────────────────────────────────────────────────────────
@@ -181,6 +196,7 @@ class ScenarioVariation(Base, TimestampMixin):
         UniqueConstraint("scenario_id", "variation_seed", name="uq_scenario_variation_seed"),
         Index("ix_scenario_variations_scenario_id", "scenario_id"),
         Index("ix_scenario_variations_pregenerated", "scenario_id", "is_pregenerated", "is_approved"),
+        Index("ix_scenario_variations_active", "scenario_id", "is_active"),
         Index("ix_scenario_variations_parameters_gin", "parameters", postgresql_using="gin"),
     )
 
@@ -189,3 +205,28 @@ class ScenarioVariation(Base, TimestampMixin):
             f"<ScenarioVariation id={self.id} scenario_id={self.scenario_id} "
             f"seed={self.variation_seed!r}>"
         )
+
+
+class ScenarioPromptHistory(Base, TimestampMixin):
+    """Tracks prompt revisions for admin auditing and rollback support."""
+
+    __tablename__ = "scenario_prompt_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    scenario_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("scenarios.id", ondelete="CASCADE"), nullable=False
+    )
+    previous_prompt: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    new_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    change_note: Mapped[Optional[str]] = mapped_column(String(255))
+    quality_score: Mapped[Optional[int]] = mapped_column(Integer)
+    changed_by: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    scenario: Mapped["Scenario"] = relationship("Scenario", back_populates="prompt_history", lazy="select")
+    changer: Mapped[Optional["User"]] = relationship("User", foreign_keys=[changed_by], lazy="select")
+
+    __table_args__ = (
+        Index("ix_scenario_prompt_history_scenario", "scenario_id", "created_at"),
+    )
