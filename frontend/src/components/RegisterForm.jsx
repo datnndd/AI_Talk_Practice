@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { EnvelopeSimple, LockSimple, ArrowRight, GoogleLogo, Sparkle } from "@phosphor-icons/react";
+import { useGoogleLogin } from "@react-oauth/google";
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -12,8 +13,30 @@ const RegisterForm = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const { register } = useAuth();
+  const { register, googleLogin } = useAuth();
   const navigate = useNavigate();
+
+  const handleGoogleSuccess = async (tokenResponse) => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const userData = await googleLogin(tokenResponse.access_token);
+      if (userData.is_onboarding_completed) {
+        navigate("/topics");
+      } else {
+        navigate("/onboarding");
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || "Google registration failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signInWithGoogle = useGoogleLogin({
+    onSuccess: handleGoogleSuccess,
+    onError: () => setError("Google registration failed"),
+  });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -25,8 +48,12 @@ const RegisterForm = () => {
     setIsLoading(true);
     
     try {
-      await register(formData);
-      navigate("/onboarding");
+      const userData = await register(formData);
+      if (userData.is_onboarding_completed) {
+        navigate("/topics");
+      } else {
+        navigate("/onboarding");
+      }
     } catch (err) {
       setError(err.response?.data?.detail || "Registration failed. Please try again.");
     } finally {
@@ -57,10 +84,12 @@ const RegisterForm = () => {
         <motion.button 
           whileHover={{ scale: 1.01, y: -1 }}
           whileTap={{ scale: 0.98 }}
+          onClick={() => signInWithGoogle()}
+          disabled={isLoading}
           className="w-full flex items-center justify-center gap-3 px-6 py-4 border border-zinc-200 rounded-2xl text-zinc-950 font-black text-xs uppercase tracking-widest hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm"
         >
           <GoogleLogo weight="bold" size={20} className="text-red-500" />
-          Continue with Google
+          {isLoading ? "Connecting..." : "Continue with Google"}
         </motion.button>
 
         <div className="relative my-10">

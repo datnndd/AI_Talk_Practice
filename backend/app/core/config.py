@@ -25,6 +25,17 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(default="change-me-in-production", description="JWT signing secret")
     jwt_algorithm: str = Field(default="HS256", description="JWT algorithm")
     jwt_expire_minutes: int = Field(default=1440, description="JWT token expiry in minutes (default 24h)")
+    jwt_refresh_expire_minutes: int = Field(default=10080, description="JWT refresh token expiry in minutes (default 7d)")
+
+    # --- OAuth ---
+    google_client_id: Optional[str] = Field(default=None, description="Google OAuth Client ID")
+
+    # --- SMTP / Email ---
+    smtp_server: Optional[str] = Field(default=None, description="SMTP server address")
+    smtp_port: int = Field(default=587, description="SMTP port")
+    smtp_user: Optional[str] = Field(default=None, description="SMTP username")
+    smtp_password: Optional[str] = Field(default=None, description="SMTP password")
+    smtp_from_email: Optional[str] = Field(default="noreply@aitalkpractice.com", description="Sender email address")
 
     # --- API Keys ---
     dashscope_api_key: Optional[str] = Field(default=None, description="DashScope API key")

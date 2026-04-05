@@ -19,6 +19,7 @@ from app.db.base_class import Base
 from app.db.session import get_db
 from app.core.security import hash_password
 from app.models.user import User
+from app.models.subscription import Subscription
 
 # Use in-memory SQLite with StaticPool to keep connection open across sessions in tests
 engine = create_async_engine(
@@ -109,6 +110,12 @@ async def test_user(db_session):
     )
     db_session.add(user)
     await db_session.flush()
+    
+    # Add subscription
+    sub = Subscription(user_id=user.id, tier="FREE", status="active")
+    db_session.add(sub)
+    await db_session.commit()
+    
     await db_session.refresh(user)
     return user
 
@@ -127,6 +134,12 @@ async def test_admin_user(db_session):
     )
     db_session.add(user)
     await db_session.flush()
+    
+    # Add subscription
+    sub = Subscription(user_id=user.id, tier="PRO", status="active")
+    db_session.add(sub)
+    await db_session.commit()
+    
     await db_session.refresh(user)
     return user
 

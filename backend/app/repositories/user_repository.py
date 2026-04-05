@@ -21,6 +21,11 @@ class UserRepository:
         result = await db.execute(cls._active_query().where(User.email == email))
         return result.scalar_one_or_none()
 
+    @classmethod
+    async def get_active_by_google_id(cls, db: AsyncSession, google_id: str) -> User | None:
+        result = await db.execute(cls._active_query().where(User.google_id == google_id))
+        return result.scalar_one_or_none()
+
     @staticmethod
     async def create(db: AsyncSession, **values: object) -> User:
         user = User(**values)

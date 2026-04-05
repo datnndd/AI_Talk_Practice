@@ -1,10 +1,8 @@
 import axios from "axios";
-import { createContext, useContext, useState, useEffect } from "react";
-
-const ApiContext = createContext();
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 export const api = axios.create({
-  baseURL: "http://localhost:8000/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -19,6 +17,34 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Interceptor to handle token refresh on 401
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (refreshToken) {
+        try {
+          const response = await axios.post(`${api.defaults.baseURL}/auth/refresh`, {
+            refresh_token: refreshToken,
+          });
+          const { access_token } = response.data;
+          localStorage.setItem("access_token", access_token);
+          originalRequest.headers.Authorization = `Bearer ${access_token}`;
+          return api(originalRequest);
+        } catch (refreshError) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          window.location.href = "/login";
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -26,15 +52,14 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem("access_token"));
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (token) {
-      fetchUser();
-    } else {
-      setIsLoading(false);
-    }
-  }, [token]);
+  const logout = useCallback(() => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    setToken(null);
+    setUser(null);
+  }, []);
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
       const response = await api.get("/auth/me");
       setUser(response.data);
@@ -44,28 +69,43 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [logout]);
+
+  useEffect(() => {
+    if (token) {
+      fetchUser();
+    } else {
+      setIsLoading(false);
+    }
+  }, [token, fetchUser]);
 
   const login = async (email, password) => {
     const response = await api.post("/auth/login", { email, password });
-    const { access_token } = response.data;
+    const { access_token, refresh_token } = response.data;
     localStorage.setItem("access_token", access_token);
+    localStorage.setItem("refresh_token", refresh_token);
     setToken(access_token);
     
-    // Fetch user immediately to know onboarding status
-    const userRes = await api.get("/auth/me", { 
-      headers: { Authorization: `Bearer ${access_token}` } 
-    });
-    setUser(userRes.data);
-    return userRes.data;
+    // Auth context will fetch user automatically via useEffect [token]
+    return response.data;
+  };
+
+  const googleLogin = async (idToken) => {
+    const response = await api.post("/auth/google", { id_token: idToken });
+    const { access_token, refresh_token } = response.data;
+    localStorage.setItem("access_token", access_token);
+    localStorage.setItem("refresh_token", refresh_token);
+    setToken(access_token);
+    return response.data;
   };
 
   const register = async (userData) => {
     const response = await api.post("/auth/register", userData);
-    const { access_token } = response.data;
+    const { access_token, refresh_token } = response.data;
     localStorage.setItem("access_token", access_token);
+    localStorage.setItem("refresh_token", refresh_token);
     setToken(access_token);
-    return access_token;
+    return response.data;
   };
 
   const onboard = async (onboardingData) => {
@@ -74,15 +114,9 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  const logout = () => {
-    localStorage.removeItem("access_token");
-    setToken(null);
-    setUser(null);
-  };
-
   return (
     <AuthContext.Provider
-      value={{ user, login, register, onboard, logout, isAuthenticated: !!user, isLoading }}
+      value={{ user, login, googleLogin, register, onboard, logout, isAuthenticated: !!user, isLoading }}
     >
       {children}
     </AuthContext.Provider>

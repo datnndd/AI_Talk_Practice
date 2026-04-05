@@ -22,7 +22,10 @@ class User(Base, TimestampMixin):
 
     # Auth
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    auth_provider: Mapped[str] = mapped_column(String(20), server_default="local")
+    google_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True)
+    is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     # Profile
     display_name: Mapped[Optional[str]] = mapped_column(String(100))
@@ -46,7 +49,7 @@ class User(Base, TimestampMixin):
     learning_purpose: Mapped[Optional[Any]] = mapped_column(JSONB)
     main_challenge: Mapped[Optional[str]] = mapped_column(String(500))
     daily_goal: Mapped[Optional[int]] = mapped_column(SmallInteger)
-    is_onboarding_completed: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    is_onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     # Extension
     preferences: Mapped[Optional[Any]] = mapped_column(JSONB, server_default="{}")
@@ -58,7 +61,7 @@ class User(Base, TimestampMixin):
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="user", lazy="select", cascade="all, delete-orphan")
     daily_stats: Mapped[list["DailyStat"]] = relationship("DailyStat", back_populates="user")
     achievements: Mapped[list["UserAchievement"]] = relationship("UserAchievement", back_populates="user")
-    subscription: Mapped[Optional["Subscription"]] = relationship("Subscription", back_populates="user", uselist=False)
+    subscription: Mapped[Optional["Subscription"]] = relationship("Subscription", back_populates="user", uselist=False, lazy="selectin")
 
     __table_args__ = (
         Index("ix_users_email_active", "email", postgresql_where="deleted_at IS NULL"),

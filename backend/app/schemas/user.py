@@ -6,6 +6,15 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+class SubscriptionRead(BaseModel):
+    tier: str
+    status: str
+    expires_at: datetime | None = None
+    features: dict[str, Any] | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,5 +66,6 @@ class UserRead(ORMModel):
     daily_goal: int | None = None
     is_onboarding_completed: bool
     preferences: dict[str, Any] | None = None
+    subscription: SubscriptionRead | None = None
     created_at: datetime
     updated_at: datetime

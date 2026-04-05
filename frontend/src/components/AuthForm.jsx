@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { EnvelopeSimple, LockSimple, ArrowRight, GoogleLogo } from "@phosphor-icons/react";
+import { useGoogleLogin } from "@react-oauth/google";
 
 const AuthForm = () => {
   const [email, setEmail] = useState("");
@@ -10,8 +11,40 @@ const AuthForm = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
+
+  const handleGoogleSuccess = async (tokenResponse) => {
+    setIsLoading(true);
+    setError("");
+    try {
+      // The tokenResponse contains an access_token that we can exchange or use.
+      // But usually we want the id_token if we used the implicit flow or code if we use the auth code flow.
+      // @react-oauth/google's useGoogleLogin by default returns an access_token.
+      // However, our backend /auth/google expects an id_token or similar.
+      // For simplicity and standard practice with @react-oauth/google, we can use the credential from GoogleLogin component 
+      // OR use fetch to get user info if only access_token is provided.
+      // Let's assume we want to use the standard GoogleLogin component or useGoogleLogin with the right flow.
+      
+      // If using useGoogleLogin (implicit flow), we get an access_token.
+      // We'll send it to the backend which will verify it with Google's tokeninfo API.
+      const userData = await googleLogin(tokenResponse.access_token);
+      if (userData.is_onboarding_completed) {
+        navigate("/topics");
+      } else {
+        navigate("/onboarding");
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || "Google authentication failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signInWithGoogle = useGoogleLogin({
+    onSuccess: handleGoogleSuccess,
+    onError: () => setError("Google login failed"),
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,10 +87,12 @@ const AuthForm = () => {
         <motion.button 
           whileHover={{ scale: 1.01, y: -1 }}
           whileTap={{ scale: 0.98 }}
+          onClick={() => signInWithGoogle()}
+          disabled={isLoading}
           className="w-full flex items-center justify-center gap-3 px-6 py-4 border border-zinc-200 rounded-2xl text-zinc-950 font-black text-xs uppercase tracking-widest hover:bg-zinc-50 hover:border-zinc-300 transition-all shadow-sm"
         >
           <GoogleLogo weight="bold" size={20} className="text-red-500" />
-          Continue with Google
+          {isLoading ? "Connecting..." : "Continue with Google"}
         </motion.button>
 
         <div className="relative my-10">

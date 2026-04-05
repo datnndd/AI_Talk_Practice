@@ -9,6 +9,7 @@ from app.core.security import decode_token, security
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.serializers import user_is_admin
+from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 
 
@@ -19,13 +20,15 @@ async def get_current_user(
     """Dependency that returns the current User ORM object."""
     if creds is None:
         raise UnauthorizedError("Not authenticated")
-    user_id = decode_token(creds.credentials)
+    
+    # decode_token already checks for the 'access' type by default
+    user_id = decode_token(creds.credentials, expected_type="access")
     if user_id is None:
-        raise UnauthorizedError("Invalid token")
+        raise UnauthorizedError("Invalid or expired access token")
 
-    user = await AuthService.get_user_by_id(db, user_id)
+    user = await UserRepository.get_active_by_id(db, user_id)
     if user is None:
-        raise UnauthorizedError("Invalid token")
+        raise UnauthorizedError("User not found")
 
     return user
 

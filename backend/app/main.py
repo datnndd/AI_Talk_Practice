@@ -30,9 +30,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Startup: Create tables
     import app.models  # noqa: F401
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("Database tables verified")
+    # async with engine.begin() as conn:
+    #     await conn.run_sync(Base.metadata.create_all)
+    # logger.info("Database tables verified")
     
     logger.info("=" * 60)
     logger.info("AI Talk Practice - Realtime Conversation API")
@@ -50,12 +50,19 @@ async def lifespan(app: FastAPI):
 
 # ─── FastAPI App ────────────────────────────────────────────────────────────
 
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+from app.core.rate_limit import limiter
+
 app = FastAPI(
     title="AI Talk Practice - Realtime Conversation API",
     description="Realtime AI conversation backend: ASR → LLM → TTS pipeline via WebSocket",
     version="1.0.0",
     lifespan=lifespan,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Exception handlers
 setup_exception_handlers(app)

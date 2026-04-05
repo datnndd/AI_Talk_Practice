@@ -33,6 +33,10 @@ if [ "$1" == "--local" ]; then
     pip install -r requirements-local.txt --quiet
 fi
 
+# Run migrations
+echo "🛠️  Checking and applying database migrations..."
+alembic upgrade head
+
 # Start server
 echo ""
 echo "🚀 Starting AI Talk Practice Backend..."

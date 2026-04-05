@@ -48,6 +48,7 @@ def serialize_user(user: User) -> UserRead:
             "daily_goal": user.daily_goal,
             "is_onboarding_completed": user.is_onboarding_completed,
             "preferences": user.preferences or {},
+            "subscription": user.subscription,  # SQLAlchemy relationship
             "created_at": user.created_at,
             "updated_at": user.updated_at,
         }
