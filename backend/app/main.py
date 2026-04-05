@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Register fully all models before routers or repositories trigger mapper initialization
-import app.models  # noqa: F401
+import app.db.models  # noqa: F401
 
 from app.api.router import api_router, ws_router
 from app.core.config import settings

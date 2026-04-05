@@ -1,7 +1,18 @@
 import { motion } from "framer-motion";
-import { MapPin, PencilSimple, ShareNetwork } from "@phosphor-icons/react";
+import { Crown, PencilSimple, Target } from "@phosphor-icons/react";
+
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { getSubscriptionLabel } from "@/features/auth/utils/subscription";
 
 const ProfileHeader = () => {
+  const { user, isSubscribed } = useAuth();
+  const displayName = user?.display_name || user?.email?.split("@")[0] || "Learner";
+  const subtitle = [
+    user?.level?.toUpperCase?.(),
+    user?.native_language?.toUpperCase?.(),
+    user?.target_language?.toUpperCase?.(),
+  ].filter(Boolean).join(" | ");
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -9,12 +20,8 @@ const ProfileHeader = () => {
       className="md:col-span-8 bg-white border border-zinc-200 rounded-[2.5rem] p-8 shadow-sm flex flex-col md:flex-row items-center gap-8 group hover:shadow-xl transition-all duration-300"
     >
       <div className="relative">
-        <div className="w-32 h-32 rounded-3xl overflow-hidden shadow-2xl relative z-10">
-          <img 
-            src="https://picsum.photos/seed/elara_vance/300/300" 
-            alt="Elara Vance" 
-            className="w-full h-full object-cover transition-transform group-hover:scale-110"
-          />
+        <div className="w-32 h-32 rounded-3xl overflow-hidden shadow-2xl relative z-10 bg-primary/10 flex items-center justify-center text-4xl font-black text-primary">
+          {displayName.charAt(0).toUpperCase()}
         </div>
         <motion.div 
           initial={{ scale: 0 }}
@@ -22,15 +29,15 @@ const ProfileHeader = () => {
           transition={{ delay: 0.3 }}
           className="absolute -bottom-2 -right-2 bg-primary text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg z-20 border-2 border-white"
         >
-          Pro
+          {getSubscriptionLabel(user?.subscription)}
         </motion.div>
       </div>
 
       <div className="text-center md:text-left flex-1">
-        <h2 className="text-3xl font-black text-zinc-950 font-display">Elara Vance</h2>
+        <h2 className="text-3xl font-black text-zinc-950 font-display">{displayName}</h2>
         <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-zinc-400 font-bold uppercase tracking-widest text-[10px]">
-          <MapPin size={14} weight="bold" className="text-primary" />
-          <span>Paris, France</span>
+          <Target size={14} weight="bold" className="text-primary" />
+          <span>{subtitle || "Complete your profile to personalize practice."}</span>
         </div>
         
         <div className="mt-8 flex flex-wrap gap-3 justify-center md:justify-start">
@@ -47,8 +54,8 @@ const ProfileHeader = () => {
             whileTap={{ scale: 0.95 }}
             className="bg-zinc-100 text-zinc-900 px-6 py-2.5 rounded-2xl font-bold text-xs hover:bg-zinc-200 transition-colors flex items-center gap-2"
           >
-            <ShareNetwork weight="bold" size={16} />
-            Share Profile
+            <Crown weight="bold" size={16} />
+            {isSubscribed ? "Subscription Active" : "Free Plan"}
           </motion.button>
         </div>
       </div>

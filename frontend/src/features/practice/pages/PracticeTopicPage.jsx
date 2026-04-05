@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import Sidebar from "@/shared/components/navigation/Sidebar";
 import TopBar from "@/shared/components/navigation/TopBar";
 import MobileNav from "@/shared/components/navigation/MobileNav";
 import TopicCard from "@/features/practice/components/TopicCard";
+import { useAuth } from "@/features/auth/context/AuthContext";
 import { 
   AirplaneTilt, 
   Handshake, 
@@ -69,14 +71,11 @@ const formatCategoryLabel = (category) =>
     .join(" ");
 
 const PracticeTopic = () => {
+  const { isSubscribed } = useAuth();
   const [topics, setTopics] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchScenarios();
-  }, []);
-
-  const fetchScenarios = async () => {
+  const fetchScenarios = useCallback(async () => {
     try {
       const scenarios = await practiceApi.listScenarios();
       // Map API scenarios to UI format with icons and colors
@@ -104,6 +103,7 @@ const PracticeTopic = () => {
           level: scenario.difficulty.charAt(0).toUpperCase() + scenario.difficulty.slice(1),
           duration: "10 mins",
           category: formatCategoryLabel(scenario.category),
+          isLocked: !isSubscribed,
           // UI properties
           icon, iconBg, iconColor, badgeStyles, size, bg,
           ...(scenario.category === "travel" && { overlay: () => <AirplaneTilt weight="fill" size={240} className="text-primary" /> }),
@@ -116,7 +116,11 @@ const PracticeTopic = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isSubscribed]);
+
+  useEffect(() => {
+    void fetchScenarios();
+  }, [fetchScenarios]);
 
   return (
     <div className="min-h-[100dvh] bg-zinc-50 flex flex-col">
@@ -137,7 +141,9 @@ const PracticeTopic = () => {
                   Choose Your Topic
                 </h1>
                 <p className="text-zinc-500 text-lg font-medium">
-                  Select a scenario to start your immersive AI conversation practice.
+                  {isSubscribed
+                    ? "Select a scenario to start your immersive AI conversation practice."
+                    : "Browse subscriber-only scenarios and upgrade when you are ready to start live AI practice."}
                 </p>
               </motion.div>
               
@@ -147,12 +153,29 @@ const PracticeTopic = () => {
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="flex gap-2"
               >
-                <button className="bg-primary text-white px-6 py-2.5 rounded-full font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all inline-flex items-center gap-2">
+                <Link
+                  to={isSubscribed ? "/topics" : "/subscription"}
+                  className="bg-primary text-white px-6 py-2.5 rounded-full font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all inline-flex items-center gap-2"
+                >
                   <Lightning weight="fill" />
-                  Quick Start
-                </button>
+                  {isSubscribed ? "Quick Start" : "Upgrade to Practice"}
+                </Link>
               </motion.div>
             </header>
+
+            {!isSubscribed && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="mb-8 rounded-[1.75rem] border border-amber-200 bg-amber-50 px-6 py-5"
+              >
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-700">Free plan</p>
+                <p className="mt-2 text-sm font-medium leading-7 text-amber-900">
+                  Topic browsing is available on Free. Live conversation sessions are currently reserved for active subscribers.
+                </p>
+              </motion.div>
+            )}
 
             {isLoading ? (
               <div className="flex justify-center items-center py-20">

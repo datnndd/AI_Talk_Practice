@@ -1,13 +1,16 @@
 import { motion } from "framer-motion";
-import { GraduationCap, BookOpen, MagnifyingGlass, User, Layout } from "@phosphor-icons/react";
+import { GraduationCap, User, Layout, Crown } from "@phosphor-icons/react";
 import { Link, useLocation } from "react-router-dom";
+
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 const MobileNav = () => {
   const location = useLocation();
+  const { isSubscribed } = useAuth();
   const tabs = [
     { icon: Layout, label: "Dashboard", path: "/dashboard" },
     { icon: GraduationCap, label: "Topics", path: "/topics" },
-    { icon: User, label: "Profile", path: "/profile" },
+    { icon: isSubscribed ? User : Crown, label: isSubscribed ? "Profile" : "Upgrade", path: isSubscribed ? "/profile" : "/subscription" },
   ];
 
   return (

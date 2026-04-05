@@ -1,9 +1,18 @@
 import { motion } from "framer-motion";
-import { MagnifyingGlass, UserCircle, Translate } from "@phosphor-icons/react";
-import { useNavigate, Link } from "react-router-dom";
+import { MagnifyingGlass, UserCircle, Translate, Crown } from "@phosphor-icons/react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 const TopBar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isSubscribed, subscriptionTier } = useAuth();
+  const navItems = [
+    { label: "Explore", path: "/topics" },
+    { label: "My Progress", path: "/dashboard" },
+    { label: isSubscribed ? "Subscription" : "Upgrade", path: "/subscription" },
+  ];
 
   return (
     <header className="flex justify-between items-center px-6 h-16 w-full fixed top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-200/50">
@@ -19,23 +28,38 @@ const TopBar = () => {
         </div>
         
         <nav className="hidden md:flex gap-8">
-          {["Explore", "My Progress", "Community"].map((item) => (
-            <a 
-              key={item}
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+
+            return (
+              <Link
+                key={item.label}
+                to={item.path}
               className={`text-sm font-bold tracking-tight cursor-pointer transition-colors ${
-                item === "My Progress" 
+                isActive
                   ? "text-primary border-b-2 border-primary pb-1" 
                   : "text-zinc-500 hover:text-zinc-900"
               }`}
-              href="#"
             >
-              {item}
-            </a>
-          ))}
+              {item.label}
+            </Link>
+            );
+          })}
         </nav>
       </div>
 
       <div className="flex items-center gap-4">
+        <Link
+          to="/subscription"
+          className={`hidden md:inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] transition-colors ${
+            isSubscribed
+              ? "bg-zinc-950 text-white"
+              : "bg-primary/10 text-primary"
+          }`}
+        >
+          <Crown weight="fill" size={14} />
+          {isSubscribed ? subscriptionTier : "Free"}
+        </Link>
         <div className="relative hidden sm:block">
           <MagnifyingGlass 
             size={18} 

@@ -12,6 +12,7 @@ const PracticeSessionPage = lazy(() => import("@/features/practice/pages/Practic
 const ProfileSettingsPage = lazy(() => import("@/features/profile/pages/ProfileSettingsPage"));
 const DashboardPage = lazy(() => import("@/features/dashboard/pages/DashboardPage"));
 const AdminScenariosPage = lazy(() => import("@/features/admin-scenarios/pages/AdminScenariosPage"));
+const SubscriptionPage = lazy(() => import("@/features/subscription/pages/SubscriptionPage"));
 
 const RouteFallback = () => (
   <div className="flex min-h-[100dvh] items-center justify-center bg-zinc-50">
@@ -36,9 +37,10 @@ function App() {
         {/* Protected Routes */}
         <Route path="/onboarding" element={<PrivateRoute>{withSuspense(<OnboardingPage />)}</PrivateRoute>} />
         <Route path="/topics" element={<PrivateRoute>{withSuspense(<PracticeTopicPage />)}</PrivateRoute>} />
-        <Route path="/practice/:id" element={<PrivateRoute>{withSuspense(<PracticeSessionPage />)}</PrivateRoute>} />
+        <Route path="/practice/:id" element={<PrivateRoute requireSubscription>{withSuspense(<PracticeSessionPage />)}</PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute>{withSuspense(<ProfileSettingsPage />)}</PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute>{withSuspense(<DashboardPage />)}</PrivateRoute>} />
+        <Route path="/subscription" element={<PrivateRoute>{withSuspense(<SubscriptionPage />)}</PrivateRoute>} />
         
         {/* Admin Routes */}
         <Route path="/admin/scenarios" element={<PrivateRoute requireAdmin>{withSuspense(<AdminScenariosPage />)}</PrivateRoute>} />

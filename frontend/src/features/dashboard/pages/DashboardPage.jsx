@@ -6,8 +6,12 @@ import ProgressCircle from "@/features/dashboard/components/ProgressCircle";
 import StreakCard from "@/features/dashboard/components/StreakCard";
 import LessonStack from "@/features/dashboard/components/LessonStack";
 import QuickPracticeCard from "@/features/dashboard/components/QuickPracticeCard";
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 const Dashboard = () => {
+  const { user, isSubscribed, subscriptionTier } = useAuth();
+  const displayName = user?.display_name || user?.email?.split("@")[0] || "Learner";
+
   return (
     <div className="min-h-[100dvh] bg-zinc-50 flex font-sans antialiased text-zinc-900 overflow-hidden">
       <Sidebar />
@@ -23,9 +27,13 @@ const Dashboard = () => {
                 animate={{ opacity: 1, x: 0 }}
               >
                 <h1 className="text-4xl md:text-5xl font-black tracking-tight text-zinc-950 font-display">
-                  Good afternoon, <span className="text-primary italic">Elara</span>
+                  Good afternoon, <span className="text-primary italic">{displayName}</span>
                 </h1>
-                <p className="text-zinc-500 mt-3 font-bold uppercase tracking-widest text-xs">Ready for your daily linguistic challenge?</p>
+                <p className="text-zinc-500 mt-3 font-bold uppercase tracking-widest text-xs">
+                  {isSubscribed
+                    ? `Subscriber mode enabled. ${subscriptionTier} practice is unlocked.`
+                    : "Free mode enabled. Browse topics and upgrade to start live AI practice."}
+                </p>
               </motion.div>
               
               <div className="hidden md:flex -space-x-3 items-center">

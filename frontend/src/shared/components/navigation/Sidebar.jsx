@@ -1,18 +1,22 @@
 import { motion } from "framer-motion";
-import { House, GraduationCap, Layout, MessengerLogo, UserCircle, GearSix, Question } from "@phosphor-icons/react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { House, GraduationCap, Layout, Crown, UserCircle } from "@phosphor-icons/react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isSubscribed, subscriptionTier } = useAuth();
   const menuItems = [
     { icon: House, label: "Home", path: "/" },
     { icon: Layout, label: "Dashboard", path: "/dashboard" },
     { icon: GraduationCap, label: "Topics", path: "/topics" },
-    { icon: MessengerLogo, label: "Practice", path: "/practice/cafe-conversations" },
     { icon: UserCircle, label: "Profile", path: "/profile" },
+    {
+      icon: Crown,
+      label: isSubscribed ? `${subscriptionTier} Plan` : "Upgrade",
+      path: "/subscription",
+    },
   ];
 
   return (
@@ -50,7 +54,9 @@ const Sidebar = () => {
           </div>
           <div>
             <p className="text-xs font-bold text-zinc-900 line-clamp-1">{user?.display_name || "User"}</p>
-            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{user?.level || "Beginner"}</p>
+            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+              {isSubscribed ? `${subscriptionTier} member` : "Free plan"}
+            </p>
           </div>
         </div>
         

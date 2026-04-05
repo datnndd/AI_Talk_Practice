@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { httpClient } from "@/shared/api/httpClient";
+import {
+  canAccessSubscriptionFeatures,
+  getUserAccessLevel,
+  normalizeSubscription,
+} from "@/features/auth/utils/subscription";
 
 export const AuthContext = createContext();
 
@@ -68,9 +73,31 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const subscription = normalizeSubscription(user?.subscription);
+  const isSubscribed = canAccessSubscriptionFeatures(user);
+  const accessLevel = getUserAccessLevel(user);
+  const hasFeature = (featureKey) =>
+    Boolean(user?.is_admin) || Boolean(subscription.features?.[featureKey]) || isSubscribed;
+
   return (
     <AuthContext.Provider
-      value={{ user, login, googleLogin, register, onboard, logout, isAuthenticated: !!user, isLoading }}
+      value={{
+        user,
+        login,
+        googleLogin,
+        register,
+        onboard,
+        logout,
+        refreshUser: fetchUser,
+        isAuthenticated: !!user,
+        isLoading,
+        subscription,
+        subscriptionTier: subscription.tier,
+        hasActiveSubscription: subscription.isActive,
+        isSubscribed,
+        accessLevel,
+        hasFeature,
+      }}
     >
       {children}
     </AuthContext.Provider>
