@@ -145,6 +145,30 @@ async def test_admin_user(db_session):
 
 
 @pytest_asyncio.fixture
+async def test_google_user(db_session):
+    """Seed a Google-auth user without a password."""
+    user = User(
+        email="google@example.com",
+        password_hash=None,
+        auth_provider="google",
+        display_name="Google User",
+        native_language="vi",
+        target_language="en",
+        level="intermediate",
+        preferences={"is_admin": False},
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    sub = Subscription(user_id=user.id, tier="FREE", status="active")
+    db_session.add(sub)
+    await db_session.commit()
+
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
 async def test_scenario(db_session):
     """Seed a test scenario."""
     from app.modules.scenarios.models.scenario import Scenario

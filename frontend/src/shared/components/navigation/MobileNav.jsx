@@ -14,7 +14,7 @@ const MobileNav = () => {
   ];
 
   return (
-    <footer className="lg:hidden fixed bottom-0 w-full flex justify-around items-center px-4 py-3 z-50 bg-white/90 backdrop-blur-xl border-t border-zinc-200/50 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] rounded-t-3xl">
+    <footer className="lg:hidden fixed bottom-0 w-full flex justify-around items-center px-4 py-3 z-50 border-t border-[var(--panel-border)] bg-[var(--nav-bg)] backdrop-blur-xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)] rounded-t-3xl">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = location.pathname === tab.path;
@@ -25,7 +25,7 @@ const MobileNav = () => {
               className={`flex flex-col items-center justify-center gap-1 px-4 py-1.5 rounded-2xl cursor-pointer transition-all ${
                 isActive
                   ? "bg-primary/10 text-primary font-bold"
-                  : "text-zinc-500 hover:bg-zinc-100"
+                  : "text-[var(--nav-muted)] hover:bg-[var(--chip-neutral-bg)]"
               }`}
             >
               <Icon weight={isActive ? "fill" : "regular"} size={22} />

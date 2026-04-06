@@ -127,6 +127,7 @@ export const httpClient = {
   },
   get: (path, config = {}) => request({ method: "GET", path, params: config.params, headers: config.headers }),
   post: (path, data, config = {}) => request({ method: "POST", path, data, params: config.params, headers: config.headers }),
+  patch: (path, data, config = {}) => request({ method: "PATCH", path, data, params: config.params, headers: config.headers }),
   put: (path, data, config = {}) => request({ method: "PUT", path, data, params: config.params, headers: config.headers }),
   delete: (path, config = {}) => request({ method: "DELETE", path, params: config.params, headers: config.headers }),
 };

@@ -28,12 +28,8 @@ const AuthForm = () => {
       
       // If using useGoogleLogin (implicit flow), we get an access_token.
       // We'll send it to the backend which will verify it with Google's tokeninfo API.
-      const userData = await googleLogin(tokenResponse.access_token);
-      if (userData.is_onboarding_completed) {
-        navigate("/topics");
-      } else {
-        navigate("/onboarding");
-      }
+      await googleLogin(tokenResponse.access_token);
+      navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.detail || "Google authentication failed");
     } finally {

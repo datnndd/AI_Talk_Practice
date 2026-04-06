@@ -14,6 +14,8 @@ def serialize_user(user: User) -> UserRead:
         {
             "id": user.id,
             "email": user.email,
+            "auth_provider": user.auth_provider,
+            "has_password": bool(user.password_hash),
             "is_admin": user_is_admin(user),
             "display_name": user.display_name,
             "avatar": user.avatar,

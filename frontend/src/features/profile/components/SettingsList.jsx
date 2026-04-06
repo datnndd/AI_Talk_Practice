@@ -1,70 +1,88 @@
 import { motion } from "framer-motion";
-import { Bell, Lock, Shield, CaretRight } from "@phosphor-icons/react";
-import { useState } from "react";
+import { CaretRight, Lock, ShieldCheck, UserCircleGear } from "@phosphor-icons/react";
 
-const SettingItem = ({ icon: Icon, color, label, sublabel, type = "link" }) => {
-  const [active, setActive] = useState(true);
+import { useAuth } from "@/features/auth/context/AuthContext";
+
+const AccountRow = ({ icon: Icon, label, value, tone = "neutral", helper }) => {
+  const toneClass =
+    tone === "good"
+      ? "bg-emerald-500/12 text-emerald-600"
+      : tone === "warn"
+        ? "bg-amber-500/12 text-amber-600"
+        : "app-chip-neutral";
 
   return (
-    <div className="flex items-center justify-between p-4 hover:bg-zinc-50 rounded-3xl transition-all cursor-pointer group">
+    <div className="app-panel-soft flex items-center justify-between rounded-[1.4rem] p-4">
       <div className="flex items-center gap-4">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 ${color}`}>
-          <Icon weight="bold" size={24} />
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Icon weight="bold" size={20} />
         </div>
         <div>
-          <p className="font-bold text-zinc-950 text-sm">{label}</p>
-          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{sublabel}</p>
+          <p className="text-sm font-black text-[var(--page-fg)]">{label}</p>
+          <p className="app-text-muted text-xs">{helper}</p>
         </div>
       </div>
-      
-      {type === "toggle" ? (
-        <div 
-          onClick={() => setActive(!active)}
-          className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 relative ${active ? 'bg-primary' : 'bg-zinc-200'}`}
-        >
-          <motion.div 
-            animate={{ x: active ? 24 : 0 }}
-            className="w-4 h-4 bg-white rounded-full shadow-sm"
-          />
-        </div>
-      ) : (
-        <CaretRight weight="bold" className="text-zinc-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-      )}
+
+      <div className="flex items-center gap-3">
+        <span className={`rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] ${toneClass}`}>{value}</span>
+        <CaretRight weight="bold" className="app-text-subtle" />
+      </div>
     </div>
   );
 };
 
 const SettingsList = () => {
+  const { user } = useAuth();
+  const isGoogleAccount = user?.auth_provider === "google";
+
   return (
-    <motion.div
+    <motion.section
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
-      className="md:col-span-7 bg-white border border-zinc-200 rounded-[2.5rem] p-8 shadow-sm hover:shadow-xl transition-all duration-300"
+      className="app-panel rounded-[2rem] p-8"
     >
-      <h3 className="font-bold text-lg text-zinc-950 font-display mb-8">Account Settings</h3>
-      <div className="space-y-4">
-        <SettingItem 
-          icon={Bell} 
-          color="bg-blue-50 text-blue-600" 
-          label="Notifications" 
-          sublabel="Alerts & Sounds" 
-          type="toggle"
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="app-text-subtle text-[10px] font-black uppercase tracking-[0.22em]">Account Controls</p>
+          <h3 className="mt-2 text-2xl font-black text-[var(--page-fg)]">Security & Access Snapshot</h3>
+        </div>
+        <p className="app-text-muted max-w-xl text-sm leading-6">
+          This section gives you a quick operational view of how the account is configured right now.
+        </p>
+      </div>
+
+      <div className="mt-8 space-y-4">
+        <AccountRow
+          icon={UserCircleGear}
+          label="Sign-in Method"
+          value={isGoogleAccount ? "Google" : "Email"}
+          helper={isGoogleAccount ? "This account was created through Google sign-in." : "This account uses email and password."}
         />
-        <SettingItem 
-          icon={Lock} 
-          color="bg-purple-50 text-purple-600" 
-          label="Privacy" 
-          sublabel="Visibility" 
+        <AccountRow
+          icon={Lock}
+          label="Password Status"
+          value={user?.has_password ? "Configured" : "Missing"}
+          tone={user?.has_password ? "good" : "warn"}
+          helper={
+            user?.has_password
+              ? "You can change the password from the profile editor."
+              : "Set a password in the editor to add a direct sign-in fallback."
+          }
         />
-        <SettingItem 
-          icon={Shield} 
-          color="bg-rose-50 text-rose-600" 
-          label="Security" 
-          sublabel="Password & 2FA" 
+        <AccountRow
+          icon={ShieldCheck}
+          label="Profile Readiness"
+          value={user?.is_onboarding_completed ? "Ready" : "Needs setup"}
+          tone={user?.is_onboarding_completed ? "good" : "warn"}
+          helper={
+            user?.is_onboarding_completed
+              ? "Your personalization profile is complete."
+              : "Complete the profile editor to improve coaching quality."
+          }
         />
       </div>
-    </motion.div>
+    </motion.section>
   );
 };
 

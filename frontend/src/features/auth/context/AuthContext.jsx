@@ -73,6 +73,17 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const updateProfile = async (profileData) => {
+    const response = await httpClient.patch("/users/me", profileData);
+    setUser(response.data);
+    return response.data;
+  };
+
+  const changePassword = async (passwordData) => {
+    const response = await httpClient.post("/users/me/change-password", passwordData);
+    return response.data;
+  };
+
   const subscription = normalizeSubscription(user?.subscription);
   const isSubscribed = canAccessSubscriptionFeatures(user);
   const accessLevel = getUserAccessLevel(user);
@@ -87,6 +98,8 @@ export const AuthProvider = ({ children }) => {
         googleLogin,
         register,
         onboard,
+        updateProfile,
+        changePassword,
         logout,
         refreshUser: fetchUser,
         isAuthenticated: !!user,

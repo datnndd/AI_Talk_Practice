@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ShieldCheck } from "@phosphor-icons/react";
+import { ArrowUpRight, Crown, ShieldCheck } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -17,46 +17,50 @@ const SubscriptionCard = () => {
     : null;
 
   return (
-    <motion.div
+    <motion.section
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="md:col-span-5 relative overflow-hidden bg-gradient-to-br from-primary to-indigo-600 rounded-[2.5rem] p-8 shadow-2xl text-white group"
+      className="overflow-hidden rounded-[2rem] border border-primary/15 bg-[linear-gradient(145deg,rgba(0,90,182,0.12),rgba(14,165,233,0.08)_58%,rgba(255,255,255,0.02))] p-7 shadow-[0_24px_60px_-32px_rgba(0,90,182,0.34)]"
     >
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-24 -mt-24 blur-3xl group-hover:bg-white/20 transition-all duration-700" />
-      
-      <div className="relative z-10 h-full flex flex-col">
-        <div className="flex justify-between items-start">
-          <div>
-            <span className="bg-white/20 border border-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4 inline-block">Subscription</span>
-            <h3 className="text-3xl font-black font-display tracking-tight">
-              {isSubscribed ? `${label} Plan` : "Free Plan"}
-            </h3>
-          </div>
-          <ShieldCheck weight="fill" size={48} className="text-white/40 group-hover:text-white/60 transition-colors" />
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary/80">Plan Status</p>
+          <h3 className="mt-2 text-3xl font-black tracking-tight text-[var(--page-fg)]">
+            {isSubscribed ? `${label} Plan` : "Free Plan"}
+          </h3>
         </div>
-        
-        <p className="mt-4 text-white/70 font-bold text-xs uppercase tracking-widest">
-          {hasActiveSubscription
-            ? expiresAt
-              ? `Active until ${expiresAt}`
-              : "Subscription active"
-            : "You are on the free plan"}
-        </p>
-        
-        <div className="mt-12 flex-1 flex flex-col justify-end">
-          <Link to="/subscription">
-            <motion.span
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              className="inline-flex bg-amber-400 text-zinc-900 w-full md:w-fit px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-amber-900/40 btn-spring"
-            >
-              {isSubscribed ? "View Plan Details" : "Upgrade Access"}
-            </motion.span>
-          </Link>
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/60 text-primary shadow-sm">
+          {isSubscribed ? <ShieldCheck weight="fill" size={24} /> : <Crown weight="fill" size={24} />}
         </div>
       </div>
-    </motion.div>
+
+      <p className="app-text-muted mt-4 text-sm leading-6">
+        {hasActiveSubscription
+          ? expiresAt
+            ? `Access is active through ${expiresAt}.`
+            : "Your plan is active and ready for premium speaking sessions."
+          : "You are currently on the free plan. Upgrade to unlock premium topics and advanced coaching."}
+      </p>
+
+      <div className="mt-6 grid gap-3">
+        <div className="app-panel-soft rounded-[1.35rem] p-4">
+          <p className="app-text-subtle text-[10px] font-black uppercase tracking-[0.22em]">Access level</p>
+          <p className="mt-2 text-lg font-black text-[var(--page-fg)]">{isSubscribed ? "Premium coaching unlocked" : "Core practice unlocked"}</p>
+        </div>
+      </div>
+
+      <Link to="/subscription" className="mt-6 block">
+        <motion.span
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-primary/20"
+        >
+          {isSubscribed ? "Manage plan" : "Upgrade access"}
+          <ArrowUpRight weight="bold" size={16} />
+        </motion.span>
+      </Link>
+    </motion.section>
   );
 };
 

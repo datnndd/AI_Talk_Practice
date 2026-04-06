@@ -1,5 +1,53 @@
 @import "tailwindcss";
 
+:root {
+  --page-bg: #f5f7fb;
+  --page-fg: #101828;
+  --page-muted: #667085;
+  --page-subtle: #98a2b3;
+  --page-glow-1: rgba(0, 90, 182, 0.16);
+  --page-glow-2: rgba(22, 114, 223, 0.12);
+  --panel-bg: rgba(255, 255, 255, 0.88);
+  --panel-alt: rgba(247, 249, 252, 0.92);
+  --panel-border: rgba(15, 23, 42, 0.08);
+  --panel-shadow: 0 24px 60px -32px rgba(15, 23, 42, 0.28);
+  --nav-bg: rgba(255, 255, 255, 0.78);
+  --nav-text: #101828;
+  --nav-muted: #667085;
+  --chip-bg: rgba(0, 90, 182, 0.1);
+  --chip-text: #005ab6;
+  --chip-neutral-bg: rgba(15, 23, 42, 0.06);
+  --chip-neutral-text: #334155;
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --success-text: #047857;
+  --warning-bg: rgba(245, 158, 11, 0.14);
+  --warning-text: #b45309;
+}
+
+[data-theme="dark"] {
+  --page-bg: #07111f;
+  --page-fg: #edf2f7;
+  --page-muted: #a0aec0;
+  --page-subtle: #718096;
+  --page-glow-1: rgba(32, 123, 255, 0.18);
+  --page-glow-2: rgba(14, 165, 233, 0.12);
+  --panel-bg: rgba(10, 18, 31, 0.82);
+  --panel-alt: rgba(15, 23, 42, 0.88);
+  --panel-border: rgba(148, 163, 184, 0.16);
+  --panel-shadow: 0 30px 80px -40px rgba(2, 6, 23, 0.95);
+  --nav-bg: rgba(7, 17, 31, 0.78);
+  --nav-text: #edf2f7;
+  --nav-muted: #cbd5e1;
+  --chip-bg: rgba(96, 165, 250, 0.18);
+  --chip-text: #bfdbfe;
+  --chip-neutral-bg: rgba(148, 163, 184, 0.12);
+  --chip-neutral-text: #e2e8f0;
+  --success-bg: rgba(16, 185, 129, 0.16);
+  --success-text: #6ee7b7;
+  --warning-bg: rgba(245, 158, 11, 0.18);
+  --warning-text: #fbbf24;
+}
+
 @theme {
   --color-primary: #005ab6;
   --color-primary-container: #1672df;
@@ -57,7 +105,9 @@
 
 @layer base {
   body {
-    @apply bg-[#f9fafb] text-zinc-900 selection:bg-primary/20 selection:text-primary antialiased;
+    background-color: var(--page-bg);
+    color: var(--page-fg);
+    @apply selection:bg-primary/20 selection:text-primary antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
   }
 
@@ -67,6 +117,42 @@
 }
 
 @layer utilities {
+  .app-page-shell {
+    background:
+      radial-gradient(circle at top left, var(--page-glow-1), transparent 28%),
+      radial-gradient(circle at bottom right, var(--page-glow-2), transparent 34%),
+      var(--page-bg);
+  }
+
+  .app-panel {
+    background-color: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--panel-shadow);
+  }
+
+  .app-panel-soft {
+    background-color: var(--panel-alt);
+    border: 1px solid var(--panel-border);
+  }
+
+  .app-text-muted {
+    color: var(--page-muted);
+  }
+
+  .app-text-subtle {
+    color: var(--page-subtle);
+  }
+
+  .app-chip {
+    background-color: var(--chip-bg);
+    color: var(--chip-text);
+  }
+
+  .app-chip-neutral {
+    background-color: var(--chip-neutral-bg);
+    color: var(--chip-neutral-text);
+  }
+
   .liquid-glass {
     @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)];
   }

@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import PrivateRoute from "@/features/auth/components/PrivateRoute";
+import PublicRoute from "@/features/auth/components/PublicRoute";
 
 const LandingPage = lazy(() => import("@/features/landing/pages/LandingPage"));
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
@@ -31,8 +32,8 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={withSuspense(<LandingPage />)} />
-        <Route path="/login" element={withSuspense(<LoginPage />)} />
-        <Route path="/register" element={withSuspense(<RegisterPage />)} />
+        <Route path="/login" element={<PublicRoute>{withSuspense(<LoginPage />)}</PublicRoute>} />
+        <Route path="/register" element={<PublicRoute>{withSuspense(<RegisterPage />)}</PublicRoute>} />
         
         {/* Protected Routes */}
         <Route path="/onboarding" element={<PrivateRoute>{withSuspense(<OnboardingPage />)}</PrivateRoute>} />

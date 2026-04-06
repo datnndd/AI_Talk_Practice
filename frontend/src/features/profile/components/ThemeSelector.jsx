@@ -1,52 +1,80 @@
 import { motion } from "framer-motion";
-import { Sun, Moon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { Moon, Sun } from "@phosphor-icons/react";
 
-const ThemeSelector = () => {
-  const [theme, setTheme] = useState("light");
+import { useTheme } from "@/shared/context/ThemeContext";
+
+const ThemeOption = ({ icon: Icon, title, description, value, theme, onSelect }) => {
+  const isActive = theme === value;
 
   return (
-    <motion.div
+    <motion.button
+      whileHover={{ scale: 1.01, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={() => onSelect(value)}
+      className={`rounded-[1.5rem] border p-4 text-left transition-all ${
+        isActive
+          ? "border-primary bg-primary/8 shadow-[0_20px_40px_-28px_rgba(0,90,182,0.42)]"
+          : "border-[var(--panel-border)] bg-white/30 hover:bg-white/45"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-black text-[var(--page-fg)]">{title}</p>
+          <p className="app-text-muted mt-1 text-sm leading-6">{description}</p>
+        </div>
+        <div
+          className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
+            isActive ? "bg-primary text-white" : "bg-[var(--chip-neutral-bg)] text-[var(--chip-neutral-text)]"
+          }`}
+        >
+          <Icon size={18} weight={isActive ? "fill" : "bold"} />
+        </div>
+      </div>
+    </motion.button>
+  );
+};
+
+const ThemeSelector = () => {
+  const { theme, setTheme, isDark } = useTheme();
+
+  return (
+    <motion.section
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.5 }}
-      className="md:col-span-6 bg-white border border-zinc-200 rounded-[2.5rem] p-8 shadow-sm flex flex-col justify-between hover:shadow-xl transition-all duration-300"
+      transition={{ delay: 0.15 }}
+      className="app-panel rounded-[2rem] p-7"
     >
-      <div>
-        <h3 className="font-bold text-lg text-zinc-950 font-display mb-2">Appearance</h3>
-        <p className="text-xs text-zinc-400 font-bold uppercase tracking-widest">Choose your theme</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="app-text-subtle text-[10px] font-black uppercase tracking-[0.22em]">Appearance</p>
+          <h3 className="mt-2 text-2xl font-black text-[var(--page-fg)]">Theme Mode</h3>
+        </div>
+        <div className="app-chip-neutral rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em]">
+          {isDark ? "Dark active" : "Light active"}
+        </div>
       </div>
-      
-      <div className="grid grid-cols-2 gap-4 mt-8">
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setTheme("light")}
-          className={`flex items-center justify-center gap-3 p-5 rounded-3xl border-2 transition-all ${
-            theme === "light" 
-              ? "border-primary bg-primary/5 text-primary" 
-              : "border-transparent bg-zinc-50 text-zinc-400 hover:bg-zinc-100"
-          }`}
-        >
-          <Sun weight={theme === "light" ? "fill" : "bold"} size={24} />
-          <span className="font-black text-xs uppercase tracking-widest">Light</span>
-        </motion.button>
-        
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setTheme("dark")}
-          className={`flex items-center justify-center gap-3 p-5 rounded-3xl border-2 transition-all ${
-            theme === "dark" 
-              ? "border-primary bg-primary/5 text-primary" 
-              : "border-transparent bg-zinc-50 text-zinc-400 hover:bg-zinc-100"
-          }`}
-        >
-          <Moon weight={theme === "dark" ? "fill" : "bold"} size={24} />
-          <span className="font-black text-xs uppercase tracking-widest">Dark</span>
-        </motion.button>
+
+      <div className="mt-6 rounded-[1.6rem] border border-[var(--panel-border)] bg-[linear-gradient(145deg,rgba(255,255,255,0.48),rgba(148,163,184,0.06))] p-4">
+        <div className="grid gap-4">
+          <ThemeOption
+            icon={Sun}
+            title="Light"
+            description="Bright workspace with crisp cards and high daytime readability."
+            value="light"
+            theme={theme}
+            onSelect={setTheme}
+          />
+          <ThemeOption
+            icon={Moon}
+            title="Dark"
+            description="Low-glare evening mode with deeper panels and softer contrast."
+            value="dark"
+            theme={theme}
+            onSelect={setTheme}
+          />
+        </div>
       </div>
-    </motion.div>
+    </motion.section>
   );
 };
 

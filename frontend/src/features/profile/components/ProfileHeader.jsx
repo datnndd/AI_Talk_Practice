@@ -1,65 +1,129 @@
 import { motion } from "framer-motion";
-import { Crown, PencilSimple, Target } from "@phosphor-icons/react";
+import { Crown, PencilSimple, Sparkle, Target } from "@phosphor-icons/react";
 
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { getSubscriptionLabel } from "@/features/auth/utils/subscription";
 
-const ProfileHeader = () => {
+const isImageAvatar = (avatar) =>
+  typeof avatar === "string" &&
+  (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("data:") || avatar.startsWith("/"));
+
+const ProfileHeader = ({ isEditing = false, onEditProfile }) => {
   const { user, isSubscribed } = useAuth();
   const displayName = user?.display_name || user?.email?.split("@")[0] || "Learner";
   const subtitle = [
     user?.level?.toUpperCase?.(),
     user?.native_language?.toUpperCase?.(),
     user?.target_language?.toUpperCase?.(),
-  ].filter(Boolean).join(" | ");
+  ]
+    .filter(Boolean)
+    .join(" | ");
+  const authLabel = user?.auth_provider === "google" ? "Google Sign-in" : "Email Sign-in";
+  const passwordLabel = user?.has_password ? "Password ready" : "Password not set";
 
   return (
-    <motion.div
+    <motion.section
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="md:col-span-8 bg-white border border-zinc-200 rounded-[2.5rem] p-8 shadow-sm flex flex-col md:flex-row items-center gap-8 group hover:shadow-xl transition-all duration-300"
+      className="app-panel relative overflow-hidden rounded-[2rem] p-8"
     >
-      <div className="relative">
-        <div className="w-32 h-32 rounded-3xl overflow-hidden shadow-2xl relative z-10 bg-primary/10 flex items-center justify-center text-4xl font-black text-primary">
-          {displayName.charAt(0).toUpperCase()}
-        </div>
-        <motion.div 
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="absolute -bottom-2 -right-2 bg-primary text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg z-20 border-2 border-white"
-        >
-          {getSubscriptionLabel(user?.subscription)}
-        </motion.div>
-      </div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[linear-gradient(135deg,rgba(0,90,182,0.18),rgba(14,165,233,0.08)_55%,transparent)]" />
 
-      <div className="text-center md:text-left flex-1">
-        <h2 className="text-3xl font-black text-zinc-950 font-display">{displayName}</h2>
-        <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-zinc-400 font-bold uppercase tracking-widest text-[10px]">
-          <Target size={14} weight="bold" className="text-primary" />
-          <span>{subtitle || "Complete your profile to personalize practice."}</span>
+      <div className="relative flex flex-col gap-8 xl:flex-row xl:items-end">
+        <div className="flex flex-1 flex-col gap-6">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center">
+            <div className="relative">
+              <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-[2rem] bg-primary/10 text-4xl font-black text-primary shadow-[0_20px_40px_-24px_rgba(0,90,182,0.55)] ring-1 ring-white/60">
+                {isImageAvatar(user?.avatar) ? (
+                  <img src={user.avatar} alt={displayName} className="h-full w-full object-cover" />
+                ) : (
+                  displayName.charAt(0).toUpperCase()
+                )}
+              </div>
+              <div className="app-chip absolute -bottom-2 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em]">
+                <Sparkle weight="fill" size={12} />
+                {getSubscriptionLabel(user?.subscription)}
+              </div>
+            </div>
+
+            <div className="flex-1">
+              <p className="app-text-subtle text-[10px] font-black uppercase tracking-[0.24em]">
+                Profile Command Center
+              </p>
+              <h2 className="mt-3 font-display text-4xl font-black tracking-tight text-[var(--page-fg)]">
+                {displayName}
+              </h2>
+              <div className="app-text-muted mt-3 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em]">
+                <Target size={14} weight="bold" className="text-primary" />
+                <span>{subtitle || "Complete your profile to personalize practice."}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <span className="app-chip rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em]">
+              {authLabel}
+            </span>
+            <span className="app-chip-neutral rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em]">
+              {passwordLabel}
+            </span>
+            <span
+              className={`rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] ${
+                isSubscribed ? "bg-emerald-500/12 text-emerald-600" : "bg-amber-500/12 text-amber-600"
+              }`}
+            >
+              {isSubscribed ? "Subscription active" : "Free plan"}
+            </span>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="app-panel-soft rounded-[1.5rem] p-4">
+              <p className="app-text-subtle text-[10px] font-black uppercase tracking-[0.2em]">
+                Practice Identity
+              </p>
+              <p className="mt-2 text-lg font-black text-[var(--page-fg)]">
+                {user?.target_language?.toUpperCase?.() || "EN"} speaking track
+              </p>
+              <p className="app-text-muted mt-2 text-sm leading-6">
+                Your settings shape tone, topic selection, and live coaching feedback across sessions.
+              </p>
+            </div>
+
+            <div className="app-panel-soft rounded-[1.5rem] p-4">
+              <p className="app-text-subtle text-[10px] font-black uppercase tracking-[0.2em]">Contact</p>
+              <p className="mt-2 break-all text-lg font-black text-[var(--page-fg)]">{user?.email}</p>
+              <p className="app-text-muted mt-2 text-sm leading-6">
+                Keep this account current before changing voice, goals, and security options.
+              </p>
+            </div>
+          </div>
         </div>
-        
-        <div className="mt-8 flex flex-wrap gap-3 justify-center md:justify-start">
+
+        <div className="flex flex-col gap-3 xl:min-w-[220px]">
           <motion.button
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-primary text-white px-6 py-2.5 rounded-2xl font-bold text-xs shadow-lg shadow-primary/20 flex items-center gap-2 btn-spring"
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onEditProfile}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-primary/20"
           >
             <PencilSimple weight="bold" size={16} />
-            Edit Profile
+            {isEditing ? "Close Editor" : "Edit Profile"}
           </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-zinc-100 text-zinc-900 px-6 py-2.5 rounded-2xl font-bold text-xs hover:bg-zinc-200 transition-colors flex items-center gap-2"
-          >
-            <Crown weight="bold" size={16} />
-            {isSubscribed ? "Subscription Active" : "Free Plan"}
-          </motion.button>
+
+          <div className="app-panel-soft rounded-[1.5rem] p-4">
+            <div className="flex items-center gap-2 text-[var(--page-fg)]">
+              <Crown weight="fill" size={18} className="text-primary" />
+              <span className="text-sm font-black">Membership</span>
+            </div>
+            <p className="app-text-muted mt-2 text-sm leading-6">
+              {isSubscribed
+                ? "Your current plan keeps premium speaking sessions and advanced practice unlocked."
+                : "Upgrade to unlock premium speaking sessions and deeper coaching controls."}
+            </p>
+          </div>
         </div>
       </div>
-    </motion.div>
+    </motion.section>
   );
 };
 
