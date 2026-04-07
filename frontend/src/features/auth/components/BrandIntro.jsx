@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Sparkle, ShieldCheck, Users, Robot } from "@phosphor-icons/react";
+import { BrandMark } from "@/shared/components/navigation";
 
 const BrandIntro = () => {
   return (
@@ -18,11 +19,8 @@ const BrandIntro = () => {
           transition={{ type: "spring", stiffness: 100, damping: 20 }}
           className="mb-12"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-              <Robot weight="fill" size={24} />
-            </div>
-            <span className="text-3xl font-black tracking-tighter text-white font-display uppercase italic">LingoFlow</span>
+          <div className="[&_p:last-child]:text-white [&_p:first-child]:text-indigo-300">
+            <BrandMark eyebrow="Immersive Speaking Studio" />
           </div>
         </motion.div>
 

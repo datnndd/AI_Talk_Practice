@@ -9,6 +9,10 @@ registered on Base.metadata before the ORM is used.
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 
+# Payments
+from app.modules.payments.models.payment_transaction import PaymentTransaction
+from app.modules.payments.models.payment_webhook_event import PaymentWebhookEvent
+
 # Scenarios
 from app.modules.scenarios.models.scenario import (
     Scenario,
@@ -36,6 +40,8 @@ __all__ = [
     "DailyStat",
     "Message",
     "MessageScore",
+    "PaymentTransaction",
+    "PaymentWebhookEvent",
     "PhonemeError",
     "Scenario",
     "ScenarioPromptHistory",

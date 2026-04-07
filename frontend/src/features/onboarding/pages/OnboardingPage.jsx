@@ -1,17 +1,19 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
-import { ArrowRight, ArrowArcLeft, Question, X } from "@phosphor-icons/react";
+import { ArrowRight, ArrowArcLeft } from "@phosphor-icons/react";
 
 import GoalStep from "@/features/onboarding/components/GoalStep";
 import LevelStep from "@/features/onboarding/components/LevelStep";
 import InterestsStep from "@/features/onboarding/components/InterestsStep";
 import FinalStep from "@/features/onboarding/components/FinalStep";
+import { FlowHeader } from "@/shared/components/navigation";
 
 const OnboardingPage = () => {
   const { onboard } = useAuth();
   const navigate = useNavigate();
+  const totalSteps = 4;
 
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,25 +88,9 @@ const OnboardingPage = () => {
 
   return (
     <div className="min-h-screen bg-background font-body text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed overflow-x-hidden flex flex-col">
-      {/* Navbar */}
-      <header className="bg-[#f9f9fc]/90 dark:bg-slate-950/90 backdrop-blur-md fixed top-0 left-0 w-full z-40 transition-colors duration-300">
-        <nav className="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
-          <div className="text-xl font-extrabold text-primary dark:text-blue-400 tracking-tighter font-display">
-            LingoFlow
-          </div>
-          <div className="flex gap-4">
-            <button className="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors btn-spring">
-              <Question size={24} weight="regular" />
-            </button>
-            <button className="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors btn-spring">
-              <X size={24} weight="regular" />
-            </button>
-          </div>
-        </nav>
-      </header>
+      <FlowHeader currentStep={step + 1} totalSteps={totalSteps} onExit={() => navigate("/dashboard")} />
 
-      {/* Main Content */}
-      <main className="flex-grow pt-24 pb-32 flex flex-col items-center w-full relative">
+      <main className="relative flex w-full flex-grow flex-col items-center pb-32 pt-[116px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
@@ -122,7 +108,6 @@ const OnboardingPage = () => {
         </AnimatePresence>
       </main>
 
-      {/* Footer / Navigation */}
       <footer className="fixed bottom-0 left-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_-10px_30px_rgba(0,0,0,0.03)] flex justify-between items-center px-8 py-6 mb-safe">
         <button 
           onClick={handleBack}

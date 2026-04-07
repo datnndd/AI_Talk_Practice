@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { EnvelopeSimple, LockSimple, ArrowRight, GoogleLogo, Sparkle } from "@phosphor-icons/react";
 import { useGoogleLogin } from "@react-oauth/google";
+import { BrandMark } from "@/shared/components/navigation";
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -69,8 +70,8 @@ const RegisterForm = () => {
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
         className="max-w-md w-full mx-auto"
       >
-        <div className="lg:hidden mb-12">
-          <span className="text-3xl font-black tracking-tighter text-zinc-950 font-display italic">LingoFlow</span>
+        <div className="mb-12 lg:hidden">
+          <BrandMark />
         </div>
 
         <header className="mb-10 text-left">

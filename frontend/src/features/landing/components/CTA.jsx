@@ -3,7 +3,7 @@ import { CheckCircle } from "@phosphor-icons/react";
 
 const CTA = () => {
   return (
-    <section className="py-32" id="cta">
+    <section className="py-32 scroll-mt-32" id="pricing">
       <div className="max-w-7xl mx-auto px-6">
         <motion.div
            initial={{ opacity: 0, y: 40 }}

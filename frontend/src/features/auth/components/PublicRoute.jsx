@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 
 const PublicRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -14,7 +14,7 @@ const PublicRoute = ({ children }) => {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={user?.is_admin ? "/admin/scenarios" : "/dashboard"} replace />;
   }
 
   return children;

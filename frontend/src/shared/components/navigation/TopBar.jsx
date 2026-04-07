@@ -1,101 +1,94 @@
 import { motion } from "framer-motion";
-import { MagnifyingGlass, UserCircle, Translate, Crown, Sun, Moon } from "@phosphor-icons/react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { Crown, Moon, Sparkle, Sun, UserCircle } from "@phosphor-icons/react";
+import { Link, useLocation } from "react-router-dom";
 
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { useTheme } from "@/shared/context/ThemeContext";
+import BrandMark from "./BrandMark";
+import { formatPlanLabel, isRouteActive, learnerNavItems } from "./navigationData";
 
 const TopBar = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-  const { isSubscribed, subscriptionTier } = useAuth();
+  const { user, isSubscribed, subscriptionTier } = useAuth();
   const { isDark, toggleTheme } = useTheme();
-  
-  const navItems = [
-    { label: "Explore", path: "/topics" },
-    { label: "My Progress", path: "/dashboard" },
-    { label: isSubscribed ? "Subscription" : "Upgrade", path: "/subscription" },
-  ];
+  const planLabel = formatPlanLabel(isSubscribed, subscriptionTier);
 
   return (
-    <header className="flex justify-between items-center px-6 h-16 w-full fixed top-0 z-50 backdrop-blur-md border-b border-[var(--panel-border)] bg-[var(--nav-bg)]">
-      <div className="flex items-center gap-8">
-        <div 
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 cursor-pointer group"
-        >
-          <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white transition-transform group-hover:scale-110">
-            <Translate weight="fill" size={20} />
-          </div>
-          <span className="text-lg font-bold font-display tracking-tight text-[var(--nav-text)]">LingoAI</span>
-        </div>
-        
-        <nav className="hidden md:flex gap-8">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+    <header className="fixed inset-x-0 top-0 z-50">
+      <div className="mx-auto max-w-[1600px] px-4 pt-4 md:px-6">
+        <div className="flex h-[72px] items-center justify-between rounded-[28px] border border-[var(--panel-border)] bg-[var(--nav-bg)] px-4 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.28)] backdrop-blur-xl md:px-5">
+          <div className="flex min-w-0 items-center gap-6">
+            <BrandMark eyebrow="Learner Workspace" />
 
-            return (
+            <nav className="hidden items-center gap-2 xl:flex">
+              {learnerNavItems.map((item) => {
+                const isActive = isRouteActive(location.pathname, item.path);
+
+                return (
+                  <Link
+                    key={item.label}
+                    to={item.path}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] transition ${
+                      isActive
+                        ? "bg-primary text-white shadow-lg shadow-primary/20"
+                        : "text-[var(--nav-muted)] hover:bg-[var(--chip-neutral-bg)] hover:text-[var(--nav-text)]"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-2 md:gap-3">
+            {user?.is_admin ? (
               <Link
-                key={item.label}
-                to={item.path}
-              className={`text-sm font-bold tracking-tight cursor-pointer transition-colors ${
-                isActive
-                  ? "text-primary border-b-2 border-primary pb-1" 
-                  : "text-[var(--nav-muted)] hover:text-[var(--nav-text)]"
+                to="/admin/scenarios"
+                className="hidden items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-primary transition hover:-translate-y-0.5 md:inline-flex"
+              >
+                <Sparkle size={14} weight="fill" />
+                Studio
+              </Link>
+            ) : null}
+
+            <Link
+              to="/subscription"
+              className={`hidden items-center gap-2 rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] transition md:inline-flex ${
+                isSubscribed ? "bg-zinc-950 text-white" : "bg-primary/10 text-primary"
               }`}
             >
-              {item.label}
+              <Crown weight="fill" size={14} />
+              {planLabel}
             </Link>
-            );
-          })}
-        </nav>
-      </div>
 
-      <div className="flex items-center gap-4">
-        <Link
-          to="/subscription"
-          className={`hidden md:inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] transition-colors ${
-            isSubscribed
-              ? "bg-zinc-950 text-white"
-              : "bg-primary/10 text-primary"
-          }`}
-        >
-          <Crown weight="fill" size={14} />
-          {isSubscribed ? subscriptionTier : "Free"}
-        </Link>
-        <div className="relative hidden sm:block">
-          <MagnifyingGlass 
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle"
-          />
-          <input 
-            className="pl-10 pr-4 py-2 app-panel-soft rounded-xl text-xs font-medium focus:ring-2 focus:ring-primary/20 w-64 transition-all text-[var(--page-fg)]" 
-            placeholder="Search topics..." 
-            type="text"
-          />
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={toggleTheme}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--panel-border)] text-[var(--nav-muted)] transition hover:-translate-y-0.5 hover:text-primary"
+              aria-label="Toggle theme"
+            >
+              {isDark ? <Sun size={20} weight="bold" /> : <Moon size={20} weight="bold" />}
+            </motion.button>
+
+            <Link to="/profile" className="inline-flex items-center gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 transition hover:-translate-y-0.5">
+              <UserCircle size={26} className="text-primary" weight="duotone" />
+              <div className="hidden text-left md:block">
+                <p className="max-w-[11rem] truncate text-xs font-bold text-[var(--nav-text)]">
+                  {user?.display_name || user?.email?.split("@")[0] || "Learner"}
+                </p>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--nav-muted)]">
+                  {planLabel} mode
+                </p>
+              </div>
+            </Link>
+          </div>
         </div>
-        
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={toggleTheme}
-          className="cursor-pointer text-[var(--nav-muted)] hover:text-primary transition-colors flex items-center justify-center"
-        >
-          {isDark ? <Sun size={24} weight="bold" /> : <Moon size={24} weight="bold" />}
-        </motion.button>
-
-        <Link to="/profile">
-          <motion.div
-            whileHover={{ scale: 1.1 }}
-            className="cursor-pointer text-[var(--nav-muted)] hover:text-primary transition-colors"
-          >
-            <UserCircle size={28} />
-          </motion.div>
-        </Link>
       </div>
     </header>
   );
 };
 
 export default TopBar;
-

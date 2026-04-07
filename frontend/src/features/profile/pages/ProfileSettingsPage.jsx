@@ -7,8 +7,6 @@ import ProfileEditorCard from "@/features/profile/components/ProfileEditorCard";
 import ProfileHeader from "@/features/profile/components/ProfileHeader";
 import SettingsList from "@/features/profile/components/SettingsList";
 import SubscriptionCard from "@/features/profile/components/SubscriptionCard";
-import MobileNav from "@/shared/components/navigation/MobileNav";
-import TopBar from "@/shared/components/navigation/TopBar";
 
 const ProfileSettings = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -27,10 +25,8 @@ const ProfileSettings = () => {
   }, [notice]);
 
   return (
-    <div className="app-page-shell min-h-[100dvh] flex flex-col font-sans antialiased text-[var(--page-fg)]">
-      <TopBar />
-
-      <main className="mx-auto flex-1 w-full max-w-[1320px] px-5 pb-28 pt-24 md:px-6 md:pb-12">
+    <>
+      <div className="mx-auto w-full max-w-[1320px]">
         <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -86,7 +82,7 @@ const ProfileSettings = () => {
             ))}
           </div>
         </footer>
-      </main>
+      </div>
 
       {notice ? (
         <motion.div
@@ -110,9 +106,7 @@ const ProfileSettings = () => {
           }}
         />
       ) : null}
-
-      <MobileNav />
-    </div>
+    </>
   );
 };
 

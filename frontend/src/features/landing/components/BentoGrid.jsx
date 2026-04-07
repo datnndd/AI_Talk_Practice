@@ -3,7 +3,7 @@ import { ChatCircleDots, Sparkle, ChartBar, Globe } from "@phosphor-icons/react"
 
 const BentoGrid = () => {
   return (
-    <section className="py-32 bg-[#f9fafb]" id="features">
+    <section className="py-32 bg-[#f9fafb] scroll-mt-32" id="features">
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-20 space-y-4">
           <span className="font-sans font-black text-primary uppercase tracking-[0.3em] text-[10px]">Capabilities</span>

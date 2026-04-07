@@ -4,6 +4,15 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { EnvelopeSimple, LockSimple, ArrowRight, GoogleLogo } from "@phosphor-icons/react";
 import { useGoogleLogin } from "@react-oauth/google";
+import { BrandMark } from "@/shared/components/navigation";
+
+const resolvePostLoginPath = (user) => {
+  if (user?.is_admin) {
+    return "/admin/scenarios";
+  }
+
+  return user?.is_onboarding_completed ? "/topics" : "/onboarding";
+};
 
 const AuthForm = () => {
   const [email, setEmail] = useState("");
@@ -11,7 +20,7 @@ const AuthForm = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login, googleLogin } = useAuth();
+  const { login, googleLogin, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const handleGoogleSuccess = async (tokenResponse) => {
@@ -29,7 +38,8 @@ const AuthForm = () => {
       // If using useGoogleLogin (implicit flow), we get an access_token.
       // We'll send it to the backend which will verify it with Google's tokeninfo API.
       await googleLogin(tokenResponse.access_token);
-      navigate("/dashboard");
+      const user = await refreshUser();
+      navigate(resolvePostLoginPath(user), { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || "Google authentication failed");
     } finally {
@@ -47,12 +57,9 @@ const AuthForm = () => {
     setError("");
     setIsLoading(true);
     try {
-      const userData = await login(email, password);
-      if (userData.is_onboarding_completed) {
-        navigate("/topics");
-      } else {
-        navigate("/onboarding");
-      }
+      await login(email, password);
+      const user = await refreshUser();
+      navigate(resolvePostLoginPath(user), { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || "Invalid email or password");
     } finally {
@@ -68,8 +75,8 @@ const AuthForm = () => {
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
         className="max-w-md w-full mx-auto"
       >
-        <div className="lg:hidden mb-12">
-          <span className="text-3xl font-black tracking-tighter text-zinc-950 font-display italic">LingoFlow</span>
+        <div className="mb-12 lg:hidden">
+          <BrandMark />
         </div>
 
         <header className="mb-10 text-left">

@@ -8,10 +8,12 @@ import {
 } from "@phosphor-icons/react";
 
 const STATUS_COPY = {
+  closed: "Tap the mic to connect to the live conversation session.",
   idle: "Tap the mic when you're ready to speak.",
   recording: "Listening now. Speak naturally, then stop to send your turn.",
   processing: "Processing your speech and drafting the assistant reply.",
   assistant: "The assistant is responding with text and audio.",
+  connecting: "Connecting your live conversation session.",
 };
 
 const TypewriterInput = ({
@@ -25,6 +27,14 @@ const TypewriterInput = ({
 }) => {
   const isRecording = recordingState === "recording";
   const transcript = partialTranscript || STATUS_COPY[recordingState] || STATUS_COPY.idle;
+  const buttonLabel =
+    connectionState === "ready"
+      ? isRecording
+        ? "Stop Turn"
+        : "Start Speaking"
+      : connectionState === "connecting"
+        ? "Connecting..."
+        : "Connect Session";
 
   return (
     <footer className="p-8 pt-2">
@@ -61,7 +71,7 @@ const TypewriterInput = ({
               }`}
             >
               {isRecording ? <PauseCircle weight="fill" size={22} /> : <Microphone weight="fill" size={22} />}
-              <span>{isRecording ? "Stop Turn" : "Start Speaking"}</span>
+              <span>{buttonLabel}</span>
             </motion.button>
 
             <button

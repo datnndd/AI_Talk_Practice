@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
+import { AppLayout } from "@/app/layouts";
 import PrivateRoute from "@/features/auth/components/PrivateRoute";
 import PublicRoute from "@/features/auth/components/PublicRoute";
 
@@ -27,6 +28,8 @@ const withSuspense = (element) => (
   </Suspense>
 );
 
+const withAppLayout = (element, options = {}) => withSuspense(<AppLayout {...options}>{element}</AppLayout>);
+
 function App() {
   return (
     <Router>
@@ -37,11 +40,11 @@ function App() {
         
         {/* Protected Routes */}
         <Route path="/onboarding" element={<PrivateRoute>{withSuspense(<OnboardingPage />)}</PrivateRoute>} />
-        <Route path="/topics" element={<PrivateRoute>{withSuspense(<PracticeTopicPage />)}</PrivateRoute>} />
+        <Route path="/topics" element={<PrivateRoute>{withAppLayout(<PracticeTopicPage />)}</PrivateRoute>} />
         <Route path="/practice/:id" element={<PrivateRoute requireSubscription>{withSuspense(<PracticeSessionPage />)}</PrivateRoute>} />
-        <Route path="/profile" element={<PrivateRoute>{withSuspense(<ProfileSettingsPage />)}</PrivateRoute>} />
-        <Route path="/dashboard" element={<PrivateRoute>{withSuspense(<DashboardPage />)}</PrivateRoute>} />
-        <Route path="/subscription" element={<PrivateRoute>{withSuspense(<SubscriptionPage />)}</PrivateRoute>} />
+        <Route path="/profile" element={<PrivateRoute>{withAppLayout(<ProfileSettingsPage />)}</PrivateRoute>} />
+        <Route path="/dashboard" element={<PrivateRoute>{withAppLayout(<DashboardPage />)}</PrivateRoute>} />
+        <Route path="/subscription" element={<PrivateRoute>{withAppLayout(<SubscriptionPage />)}</PrivateRoute>} />
         
         {/* Admin Routes */}
         <Route path="/admin/scenarios" element={<PrivateRoute requireAdmin>{withSuspense(<AdminScenariosPage />)}</PrivateRoute>} />

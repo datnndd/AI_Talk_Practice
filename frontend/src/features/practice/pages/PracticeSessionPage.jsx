@@ -1,9 +1,10 @@
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, WarningCircle } from "@phosphor-icons/react";
 import { useNavigate, useParams } from "react-router-dom";
 import ChatWindow from "@/features/practice/components/ChatWindow";
 import MetricsSidebar from "@/features/practice/components/MetricsSidebar";
 import TypewriterInput from "@/features/practice/components/TypewriterInput";
+import { SessionHeader } from "@/shared/components/navigation";
 import {
   arrayBufferToBase64,
   base64ToArrayBuffer,
@@ -27,7 +28,7 @@ const PracticeSession = () => {
   const [messages, setMessages] = useState([]);
   const [partialTranscript, setPartialTranscript] = useState("");
   const [assistantDraft, setAssistantDraft] = useState("");
-  const [connectionState, setConnectionState] = useState("connecting");
+  const [connectionState, setConnectionState] = useState("closed");
   const [recordingState, setRecordingState] = useState("idle");
   const [sessionId, setSessionId] = useState(null);
   const [sessionError, setSessionError] = useState("");
@@ -149,7 +150,7 @@ const PracticeSession = () => {
     silentGainRef.current = silentGain;
   };
 
-  const queuePlaybackChunk = async (audioBase64) => {
+  const queuePlaybackChunk = useCallback(async (audioBase64) => {
     const audioContext = await ensureAudioContext();
     const float32 = pcm16ToFloat32(base64ToArrayBuffer(audioBase64));
     const buffer = audioContext.createBuffer(1, float32.length, 24000);
@@ -162,9 +163,9 @@ const PracticeSession = () => {
     const startAt = Math.max(audioContext.currentTime, playbackCursorRef.current);
     source.start(startAt);
     playbackCursorRef.current = startAt + buffer.duration;
-  };
+  }, []);
 
-  const handleSocketMessage = useEffectEvent(async (event) => {
+  const handleSocketMessage = useCallback(async (event) => {
     let payload;
 
     try {
@@ -217,16 +218,14 @@ const PracticeSession = () => {
       case "error":
         setSessionError(payload.message || "Unexpected realtime error.");
         setRecordingState("idle");
-        if (connectionState !== "ready") {
-          setConnectionState("error");
-        }
+        setConnectionState((current) => (current === "ready" ? current : "error"));
         break;
       default:
         break;
     }
-  });
+  }, [queuePlaybackChunk]);
 
-  const connectSocket = useEffectEvent((resetConversation = true) => {
+  const connectSocket = useCallback((resetConversation = true) => {
     const token = window.localStorage.getItem("access_token");
     if (!token) {
       setSessionError("Missing access token. Please sign in again.");
@@ -284,7 +283,7 @@ const PracticeSession = () => {
       setConnectionState((current) => (current === "error" ? current : "closed"));
       setRecordingState("idle");
     };
-  });
+  }, [handleSocketMessage, scenarioId]);
 
   useEffect(() => {
     if (!Number.isFinite(scenarioId)) {
@@ -324,18 +323,10 @@ const PracticeSession = () => {
     };
   }, [scenarioId]);
 
-  useEffect(() => {
-    if (!scenario || scenarioError) {
-      return undefined;
-    }
-
-    connectSocket(true);
-
-    return () => {
-      closeSocket(true);
-      void teardownAudioPipeline();
-    };
-  }, [scenario, scenarioError]);
+  useEffect(() => () => {
+    closeSocket(true);
+    void teardownAudioPipeline();
+  }, []);
 
   useEffect(() => {
     if (reconnectRequest === 0) {
@@ -343,7 +334,7 @@ const PracticeSession = () => {
     }
 
     connectSocket(true);
-  }, [reconnectRequest]);
+  }, [connectSocket, reconnectRequest]);
 
   useEffect(() => {
     if (!sessionStartAtRef.current) {
@@ -359,7 +350,10 @@ const PracticeSession = () => {
 
   const handleToggleRecording = async () => {
     if (connectionState !== "ready" || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      setSessionError("The conversation socket is not ready yet.");
+      if (connectionState !== "connecting") {
+        setSessionError("");
+        connectSocket(messages.length === 0 && !sessionId);
+      }
       return;
     }
 
@@ -436,42 +430,51 @@ const PracticeSession = () => {
     );
   }
 
-  const isMicDisabled = connectionState !== "ready" || recordingState === "processing" || recordingState === "assistant";
+  const isMicDisabled = connectionState === "connecting" || recordingState === "processing" || recordingState === "assistant";
 
   return (
-    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_top_left,_rgba(49,130,237,0.18),_transparent_30%),linear-gradient(135deg,_#eff6ff_0%,_#ffffff_48%,_#ecfeff_100%)] p-6 font-sans antialiased md:p-10">
-      <main className="mx-auto grid h-[calc(100dvh-48px)] w-full max-w-[1440px] grid-cols-1 gap-8 lg:grid-cols-12">
-        <div className="relative flex h-full flex-col gap-6 lg:col-span-8">
-          <ChatWindow
-            scenario={scenario}
-            messages={messages}
-            partialTranscript={partialTranscript}
-            assistantDraft={assistantDraft}
-            connectionState={connectionState}
-            recordingState={recordingState}
-          />
-          <TypewriterInput
-            partialTranscript={partialTranscript}
-            recordingState={recordingState}
-            connectionState={connectionState}
-            onToggleRecording={handleToggleRecording}
-            onReconnect={handleReconnect}
-            disabled={isMicDisabled}
-            error={sessionError}
-          />
-        </div>
-
-        <MetricsSidebar
-          scenario={scenario}
-          durationSeconds={durationSeconds}
-          sessionId={sessionId}
-          turnCount={messages.filter((message) => message.role === "user").length}
+    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_top_left,_rgba(49,130,237,0.18),_transparent_30%),linear-gradient(135deg,_#eff6ff_0%,_#ffffff_48%,_#ecfeff_100%)] p-4 font-sans antialiased md:p-6">
+      <div className="mx-auto flex h-[calc(100dvh-2rem)] max-w-[1440px] flex-col gap-4 md:h-[calc(100dvh-3rem)] md:gap-6">
+        <SessionHeader
+          scenarioTitle={scenario.title}
           connectionState={connectionState}
-          recordingState={recordingState}
-          onReconnect={handleReconnect}
-          onEndSession={handleEndSession}
+          onBack={() => navigate("/topics")}
+          onExit={handleEndSession}
         />
-      </main>
+
+        <main className="grid min-h-0 flex-1 grid-cols-1 gap-8 lg:grid-cols-12">
+          <div className="relative flex min-h-0 flex-col gap-6 lg:col-span-8">
+            <ChatWindow
+              scenario={scenario}
+              messages={messages}
+              partialTranscript={partialTranscript}
+              assistantDraft={assistantDraft}
+              connectionState={connectionState}
+              recordingState={recordingState}
+            />
+            <TypewriterInput
+              partialTranscript={partialTranscript}
+              recordingState={recordingState}
+              connectionState={connectionState}
+              onToggleRecording={handleToggleRecording}
+              onReconnect={handleReconnect}
+              disabled={isMicDisabled}
+              error={sessionError}
+            />
+          </div>
+
+          <MetricsSidebar
+            scenario={scenario}
+            durationSeconds={durationSeconds}
+            sessionId={sessionId}
+            turnCount={messages.filter((message) => message.role === "user").length}
+            connectionState={connectionState}
+            recordingState={recordingState}
+            onReconnect={handleReconnect}
+            onEndSession={handleEndSession}
+          />
+        </main>
+      </div>
     </div>
   );
 };

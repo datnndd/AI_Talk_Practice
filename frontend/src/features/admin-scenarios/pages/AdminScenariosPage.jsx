@@ -5,6 +5,7 @@ import PromptQualityBadge from "@/features/admin-scenarios/components/PromptQual
 import ScenarioEditorModal from "@/features/admin-scenarios/components/ScenarioEditorModal";
 import VariationPanel from "@/features/admin-scenarios/components/VariationPanel";
 import { adminApi } from "@/features/admin-scenarios/api/adminScenariosApi";
+import { useTheme } from "@/shared/context/ThemeContext";
 
 const DEFAULT_FILTERS = {
   search: "",
@@ -17,7 +18,7 @@ const DEFAULT_FILTERS = {
 };
 
 const AdminScenarios = () => {
-  const [theme, setTheme] = useState(() => localStorage.getItem("admin-theme") || "light");
+  const { theme, toggleTheme } = useTheme();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [scenarios, setScenarios] = useState([]);
   const [total, setTotal] = useState(0);
@@ -96,10 +97,6 @@ const AdminScenarios = () => {
       setIsLoadingScenarios(false);
     }
   }, [filters]);
-
-  useEffect(() => {
-    localStorage.setItem("admin-theme", theme);
-  }, [theme]);
 
   useEffect(() => {
     void loadScenarios();
@@ -293,7 +290,7 @@ const AdminScenarios = () => {
   return (
     <AdminShell
       theme={theme}
-      onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+      onToggleTheme={toggleTheme}
       title="Scenario Admin Panel"
       subtitle="Manage reusable speaking scenarios, prompt history, and the hybrid pre-generation workflow for teachers and content operators."
     >

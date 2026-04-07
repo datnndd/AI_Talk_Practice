@@ -104,11 +104,22 @@
 
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 7rem;
+  }
+
   body {
     background-color: var(--page-bg);
     color: var(--page-fg);
     @apply selection:bg-primary/20 selection:text-primary antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  }
+
+  a,
+  button,
+  input {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
 
   h1, h2, h3, h4, h5, h6 {

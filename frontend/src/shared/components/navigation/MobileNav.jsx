@@ -1,39 +1,36 @@
 import { motion } from "framer-motion";
-import { GraduationCap, User, Layout, Crown } from "@phosphor-icons/react";
 import { Link, useLocation } from "react-router-dom";
 
-import { useAuth } from "@/features/auth/context/AuthContext";
+import { isRouteActive, learnerTabItems } from "./navigationData";
 
 const MobileNav = () => {
   const location = useLocation();
-  const { isSubscribed } = useAuth();
-  const tabs = [
-    { icon: Layout, label: "Dashboard", path: "/dashboard" },
-    { icon: GraduationCap, label: "Topics", path: "/topics" },
-    { icon: isSubscribed ? User : Crown, label: isSubscribed ? "Profile" : "Upgrade", path: isSubscribed ? "/profile" : "/subscription" },
-  ];
 
   return (
-    <footer className="lg:hidden fixed bottom-0 w-full flex justify-around items-center px-4 py-3 z-50 border-t border-[var(--panel-border)] bg-[var(--nav-bg)] backdrop-blur-xl shadow-[0_-4px_12px_rgba(0,0,0,0.05)] rounded-t-3xl">
-      {tabs.map((tab) => {
-        const Icon = tab.icon;
-        const isActive = location.pathname === tab.path;
-        return (
-          <Link key={tab.label} to={tab.path}>
-            <motion.div
-              whileTap={{ scale: 0.9 }}
-              className={`flex flex-col items-center justify-center gap-1 px-4 py-1.5 rounded-2xl cursor-pointer transition-all ${
-                isActive
-                  ? "bg-primary/10 text-primary font-bold"
-                  : "text-[var(--nav-muted)] hover:bg-[var(--chip-neutral-bg)]"
-              }`}
-            >
-              <Icon weight={isActive ? "fill" : "regular"} size={22} />
-              <span className="text-[10px] uppercase tracking-widest font-bold">{tab.label}</span>
-            </motion.div>
-          </Link>
-        );
-      })}
+    <footer className="fixed inset-x-0 bottom-0 z-50 lg:hidden">
+      <div className="mx-auto max-w-2xl px-4 pb-4">
+        <div className="flex items-center justify-around rounded-[28px] border border-[var(--panel-border)] bg-[var(--nav-bg)] px-3 py-3 shadow-[0_-10px_32px_-22px_rgba(15,23,42,0.28)] backdrop-blur-xl">
+          {learnerTabItems.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = isRouteActive(location.pathname, tab.path);
+            return (
+              <Link key={tab.label} to={tab.path} aria-current={isActive ? "page" : undefined}>
+                <motion.div
+                  whileTap={{ scale: 0.9 }}
+                  className={`flex min-w-[72px] flex-col items-center justify-center gap-1 rounded-2xl px-4 py-2 cursor-pointer transition-all ${
+                    isActive
+                      ? "bg-primary text-white shadow-lg shadow-primary/20"
+                      : "text-[var(--nav-muted)] hover:bg-[var(--chip-neutral-bg)]"
+                  }`}
+                >
+                  <Icon weight={isActive ? "fill" : "regular"} size={22} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.18em]">{tab.label}</span>
+                </motion.div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
     </footer>
   );
 };

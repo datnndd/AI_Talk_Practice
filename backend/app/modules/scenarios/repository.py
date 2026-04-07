@@ -12,6 +12,20 @@ from app.modules.sessions.models.session import Session
 
 class ScenarioRepository:
     @staticmethod
+    def _truthy(column):
+        return or_(
+            column.is_(True),
+            func.lower(cast(column, String)).in_(("true", "1", "t", "yes", "y", "on")),
+        )
+
+    @staticmethod
+    def _falsy(column):
+        return or_(
+            column.is_(False),
+            func.lower(cast(column, String)).in_(("false", "0", "f", "no", "n", "off")),
+        )
+
+    @staticmethod
     def _scenario_query(*, include_deleted: bool = False) -> Select[tuple[Scenario]]:
         stmt = select(Scenario)
         if not include_deleted:
@@ -32,7 +46,7 @@ class ScenarioRepository:
         if include_variations:
             stmt = stmt.options(selectinload(Scenario.variations))
         if is_active is not None:
-            stmt = stmt.where(Scenario.is_active.is_(is_active))
+            stmt = stmt.where(cls._truthy(Scenario.is_active) if is_active else cls._falsy(Scenario.is_active))
         if category:
             stmt = stmt.where(Scenario.category == category)
         if difficulty:
@@ -219,7 +233,7 @@ class ScenarioRepository:
     ) -> list[ScenarioVariation]:
         stmt = select(ScenarioVariation).where(ScenarioVariation.scenario_id == scenario_id)
         if not include_inactive:
-            stmt = stmt.where(ScenarioVariation.is_active.is_(True))
+            stmt = stmt.where(ScenarioRepository._truthy(ScenarioVariation.is_active))
         if search:
             token = f"%{search.lower()}%"
             stmt = stmt.where(
@@ -247,8 +261,8 @@ class ScenarioRepository:
             select(ScenarioVariation)
             .where(
                 ScenarioVariation.scenario_id == scenario_id,
-                ScenarioVariation.is_pregenerated.is_(True),
-                ScenarioVariation.is_approved.is_(True),
+                ScenarioRepository._truthy(ScenarioVariation.is_pregenerated),
+                ScenarioRepository._truthy(ScenarioVariation.is_approved),
             )
             .order_by(
                 ScenarioVariation.usage_count.asc(),

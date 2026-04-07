@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import Sidebar from "@/shared/components/navigation/Sidebar";
-import TopBar from "@/shared/components/navigation/TopBar";
-import MobileNav from "@/shared/components/navigation/MobileNav";
 import TopicCard from "@/features/practice/components/TopicCard";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { 
@@ -123,82 +120,71 @@ const PracticeTopic = () => {
   }, [fetchScenarios]);
 
   return (
-    <div className="min-h-[100dvh] bg-zinc-50 flex flex-col">
-      <TopBar />
-      
-      <div className="flex flex-1 pt-16">
-        <Sidebar />
-        
-        <main className="flex-1 lg:ml-64 p-6 md:p-10 mb-24 lg:mb-0 overflow-y-auto">
-          <div className="max-w-6xl mx-auto">
-            <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <h1 className="text-4xl font-black tracking-tight text-zinc-950 mb-2 font-display">
-                  Choose Your Topic
-                </h1>
-                <p className="text-zinc-500 text-lg font-medium">
-                  {isSubscribed
-                    ? "Select a scenario to start your immersive AI conversation practice."
-                    : "Browse subscriber-only scenarios and upgrade when you are ready to start live AI practice."}
-                </p>
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="flex gap-2"
-              >
-                <Link
-                  to={isSubscribed ? "/topics" : "/subscription"}
-                  className="bg-primary text-white px-6 py-2.5 rounded-full font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all inline-flex items-center gap-2"
-                >
-                  <Lightning weight="fill" />
-                  {isSubscribed ? "Quick Start" : "Upgrade to Practice"}
-                </Link>
-              </motion.div>
-            </header>
+    <div className="mx-auto max-w-6xl">
+      <header className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Scenario Library</p>
+          <h1 className="mb-2 mt-4 text-4xl font-black tracking-tight text-zinc-950 font-display">
+            Choose Your Topic
+          </h1>
+          <p className="text-lg font-medium text-zinc-500">
+            {isSubscribed
+              ? "Select a scenario to start your immersive AI conversation practice."
+              : "Browse subscriber-only scenarios and upgrade when you are ready to start live AI practice."}
+          </p>
+        </motion.div>
 
-            {!isSubscribed && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                className="mb-8 rounded-[1.75rem] border border-amber-200 bg-amber-50 px-6 py-5"
-              >
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-700">Free plan</p>
-                <p className="mt-2 text-sm font-medium leading-7 text-amber-900">
-                  Topic browsing is available on Free. Live conversation sessions are currently reserved for active subscribers.
-                </p>
-              </motion.div>
-            )}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="flex gap-2"
+        >
+          <Link
+            to={isSubscribed ? "/topics" : "/subscription"}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-white shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+          >
+            <Lightning weight="fill" />
+            {isSubscribed ? "Quick Start" : "Upgrade to Practice"}
+          </Link>
+        </motion.div>
+      </header>
 
-            {isLoading ? (
-              <div className="flex justify-center items-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pb-12">
-                {topics.map((topic, index) => (
-                  <TopicCard key={topic.id || index} card={topic} />
-                ))}
-                
-                {topics.length === 0 && (
-                  <div className="col-span-12 text-center py-20 text-zinc-500 font-bold">
-                    No scenarios available right now.
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </main>
-      </div>
-      
-      <MobileNav />
+      {!isSubscribed && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-8 rounded-[1.75rem] border border-amber-200 bg-amber-50 px-6 py-5"
+        >
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-700">Free plan</p>
+          <p className="mt-2 text-sm font-medium leading-7 text-amber-900">
+            Topic browsing is available on Free. Live conversation sessions are currently reserved for active subscribers.
+          </p>
+        </motion.div>
+      )}
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 pb-12 md:grid-cols-12">
+          {topics.map((topic, index) => (
+            <TopicCard key={topic.id || index} card={topic} />
+          ))}
+
+          {topics.length === 0 && (
+            <div className="col-span-12 py-20 text-center font-bold text-zinc-500">
+              No scenarios available right now.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
