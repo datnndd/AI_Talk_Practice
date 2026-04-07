@@ -1,6 +1,4 @@
 import pytest
-from unittest.mock import patch, MagicMock
-from app.modules.users.models.user import User
 from app.core.security import create_access_token, create_refresh_token
 
 @pytest.mark.asyncio
@@ -8,28 +6,41 @@ async def test_register_success_with_subscription(client):
     """Test registration and ensure FREE subscription is created."""
     email = "new_user@example.com"
     response = await client.post(
-        "/api/v1/auth/register",
+        "/api/auth/register",
         json={"email": email, "password": "password123"}
     )
     assert response.status_code == 201
     data = response.json()
     assert "access_token" in data
     assert "refresh_token" in data
-    assert data["user"]["email"] == email
-    assert data["user"]["subscription"]["tier"] == "FREE"
+
+    me_response = await client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {data['access_token']}"},
+    )
+    assert me_response.status_code == 200
+    me_data = me_response.json()
+    assert me_data["email"] == email
+    assert me_data["subscription"]["tier"] == "FREE"
 
 @pytest.mark.asyncio
 async def test_login_success_with_tokens(client, test_user):
     """Test login returns both access and refresh tokens."""
     response = await client.post(
-        "/api/v1/auth/login",
+        "/api/auth/login",
         json={"email": "test@example.com", "password": "password123"}
     )
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
     assert "refresh_token" in data
-    assert data["user"]["subscription"]["tier"] == "FREE"
+
+    me_response = await client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {data['access_token']}"},
+    )
+    assert me_response.status_code == 200
+    assert me_response.json()["subscription"]["tier"] == "FREE"
 
 @pytest.mark.asyncio
 async def test_refresh_token_success(client, test_user):
@@ -37,20 +48,20 @@ async def test_refresh_token_success(client, test_user):
     refresh_token = create_refresh_token(user_id=test_user.id)
     
     response = await client.post(
-        "/api/v1/auth/refresh",
+        "/api/auth/refresh",
         json={"refresh_token": refresh_token}
     )
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
-    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
 
 @pytest.mark.asyncio
 async def test_get_me_profile_and_subscription(client, test_user):
     """Test /me endpoint returns user profile and subscription info."""
     token = create_access_token(user_id=test_user.id)
     response = await client.get(
-        "/api/v1/auth/me",
+        "/api/auth/me",
         headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 200
@@ -68,7 +79,7 @@ async def test_update_profile_success(client, test_user):
         "native_language": "en"
     }
     response = await client.patch(
-        "/api/v1/users/me",
+        "/api/users/me",
         json=update_data,
         headers={"Authorization": f"Bearer {token}"}
     )
@@ -84,7 +95,7 @@ async def test_google_login_simulation(client):
     # Since we can't easily mock the dependency within the test client here without more setup,
     # we verify the route exists and handles invalid tokens.
     response = await client.post(
-        "/api/v1/auth/google",
+        "/api/auth/google",
         json={"id_token": "invalid_mock_token"}
     )
     # Should fail verification
@@ -94,11 +105,11 @@ async def test_google_login_simulation(client):
 async def test_forgot_password_flow_log(client, test_user):
     """Test forgot password endpoint (Check console for mock email)."""
     response = await client.post(
-        "/api/v1/auth/forgot-password",
+        "/api/auth/forgot-password",
         json={"email": "test@example.com"}
     )
-    assert response.status_code == 200
-    assert response.json()["message"] == "Password reset email sent"
+    assert response.status_code == 202
+    assert response.json()["message"] == "If that email exists, a reset link has been sent"
 
 @pytest.mark.asyncio
 async def test_rate_limiting_trigger(client):
@@ -109,7 +120,7 @@ async def test_rate_limiting_trigger(client):
     """
     for _ in range(10): # Limiter is 5 per minute in code
         response = await client.post(
-            "/api/v1/auth/login",
+            "/api/auth/login",
             json={"email": "limit@example.com", "password": "wrong"}
         )
         if response.status_code == 429:

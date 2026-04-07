@@ -1,9 +1,11 @@
 import {
   BookOpenText,
   Crown,
+  CreditCard,
   HouseLine,
   Sparkle,
   SquaresFour,
+  UserList,
   UserCircle,
 } from "@phosphor-icons/react";
 
@@ -30,6 +32,12 @@ export const learnerTabItems = [
 export const adminNavItems = [
   { label: "Scenarios", anchor: "#scenario-library", icon: SquaresFour },
   { label: "Queue", anchor: "#generation-queue", icon: Sparkle },
+];
+
+export const adminWorkspaceNavItems = [
+  { label: "Users", path: "/admin/users", icon: UserList },
+  { label: "Scenarios", path: "/admin/scenarios", icon: SquaresFour },
+  { label: "Payments", path: "/admin/payments", icon: CreditCard },
 ];
 
 export const formatPlanLabel = (isSubscribed, subscriptionTier) => {

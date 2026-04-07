@@ -5,13 +5,19 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { useTheme } from "@/shared/context/ThemeContext";
 import BrandMark from "./BrandMark";
-import { formatPlanLabel, isRouteActive, learnerNavItems } from "./navigationData";
+import {
+  adminWorkspaceNavItems,
+  formatPlanLabel,
+  isRouteActive,
+  learnerNavItems,
+} from "./navigationData";
 
 const TopBar = () => {
   const location = useLocation();
   const { user, isSubscribed, subscriptionTier } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const planLabel = formatPlanLabel(isSubscribed, subscriptionTier);
+  const isAdmin = Boolean(user?.is_admin);
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
@@ -40,17 +46,59 @@ const TopBar = () => {
                 );
               })}
             </nav>
+
+            {isAdmin ? (
+              <div className="hidden items-center gap-2 2xl:flex">
+                <span className="ml-2 rounded-full border border-primary/15 bg-primary/6 px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+                  Admin
+                </span>
+                {adminWorkspaceNavItems.map((item) => {
+                  const isActive = isRouteActive(location.pathname, item.path);
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] transition ${
+                        isActive
+                          ? "bg-zinc-950 text-white shadow-lg shadow-zinc-950/15"
+                          : "text-[var(--nav-muted)] hover:bg-[var(--chip-neutral-bg)] hover:text-[var(--nav-text)]"
+                      }`}
+                    >
+                      <Icon size={14} weight={isActive ? "fill" : "regular"} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
-            {user?.is_admin ? (
-              <Link
-                to="/admin/scenarios"
-                className="hidden items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-primary transition hover:-translate-y-0.5 md:inline-flex"
-              >
-                <Sparkle size={14} weight="fill" />
-                Studio
-              </Link>
+            {isAdmin ? (
+              <div className="hidden items-center gap-2 md:flex 2xl:hidden">
+                {adminWorkspaceNavItems.map((item) => {
+                  const isActive = isRouteActive(location.pathname, item.path);
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] transition ${
+                        isActive
+                          ? "bg-primary text-white shadow-lg shadow-primary/20"
+                          : "border border-primary/20 bg-primary/8 text-primary hover:-translate-y-0.5"
+                      }`}
+                    >
+                      <Icon size={14} weight={isActive ? "fill" : "regular"} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
             ) : null}
 
             <Link
@@ -80,7 +128,7 @@ const TopBar = () => {
                   {user?.display_name || user?.email?.split("@")[0] || "Learner"}
                 </p>
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--nav-muted)]">
-                  {planLabel} mode
+                  {isAdmin ? "Admin access" : `${planLabel} mode`}
                 </p>
               </div>
             </Link>

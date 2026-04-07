@@ -46,18 +46,8 @@ class Settings(BaseSettings):
 
     # --- Payment / Billing ---
     frontend_url: str = Field(default="http://localhost:5173", description="Public frontend base URL")
-    backend_public_url: str = Field(default="http://localhost:8000", description="Public backend base URL")
     payment_pro_duration_days: int = Field(default=30, description="Subscription duration in days after a successful payment")
     payment_pro_amount_usd_cents: int = Field(default=9900, description="Stripe price for PRO plan in cents")
-    payment_pro_amount_vnd: int = Field(default=199000, description="VNPay price for PRO plan in VND")
-    vnpay_tmn_code: Optional[str] = Field(default=None, description="VNPay merchant terminal code")
-    vnpay_hash_secret: Optional[str] = Field(default=None, description="VNPay HMAC secret")
-    vnpay_payment_url: str = Field(
-        default="https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
-        description="VNPay payment URL",
-    )
-    vnpay_return_path: str = Field(default="/api/payments/vnpay/return", description="Backend return path for VNPay")
-    vnpay_ipn_path: str = Field(default="/api/payments/vnpay/ipn", description="Backend IPN path for VNPay")
 
     # --- LLM Configuration ---
     llm_model: str = Field(default="gemini-2.5-flash", description="LLM model name")

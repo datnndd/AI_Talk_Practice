@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import hashlib
-import hmac
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -20,8 +18,6 @@ from app.modules.users.models.user import User
 
 logger = logging.getLogger(__name__)
 
-VN_TZ = timezone(timedelta(hours=7))
-
 PLAN_CONFIG = {
     "PRO": {
         "features": {
@@ -35,41 +31,12 @@ PLAN_CONFIG = {
 
 class PaymentService:
     @staticmethod
-    def _build_query_string(params: dict[str, Any]) -> str:
-        items = sorted(
-            (key, value)
-            for key, value in params.items()
-            if value is not None and value != ""
-        )
-        return "&".join(
-            f"{quote(str(key), safe='')}={quote(str(value), safe='')}"
-            for key, value in items
-        )
-
-    @classmethod
-    def _sign_vnpay_params(cls, params: dict[str, Any]) -> str:
-        signing_params = {
-            key: value
-            for key, value in params.items()
-            if key not in {"vnp_SecureHash", "vnp_SecureHashType"} and value is not None and value != ""
-        }
-        query = cls._build_query_string(signing_params)
-        return hmac.new(
-            (settings.vnpay_hash_secret or "").encode("utf-8"),
-            query.encode("utf-8"),
-            hashlib.sha512,
-        ).hexdigest()
-
-    @staticmethod
     def _payment_amount_for(provider: str, plan: str) -> tuple[int, str]:
         if plan not in PLAN_CONFIG:
             raise BadRequestError(f"Unsupported subscription plan: {plan}")
-
-        if provider == "stripe":
-            return settings.payment_pro_amount_usd_cents, "USD"
-        if provider == "vnpay":
-            return settings.payment_pro_amount_vnd, "VND"
-        raise BadRequestError(f"Unsupported payment provider: {provider}")
+        if provider != "stripe":
+            raise BadRequestError(f"Unsupported payment provider: {provider}")
+        return settings.payment_pro_amount_usd_cents, "USD"
 
     @staticmethod
     def _subscription_duration_days() -> int:
@@ -88,18 +55,10 @@ class PaymentService:
         return f"{settings.frontend_url.rstrip('/')}/subscription?{urlencode(query)}"
 
     @staticmethod
-    def _normalize_client_ip(client_ip: str | None) -> str:
-        if not client_ip:
-            return "127.0.0.1"
-        if "," in client_ip:
-            return client_ip.split(",")[0].strip()
-        return client_ip.strip() or "127.0.0.1"
-
-    @staticmethod
     def _load_stripe():
         try:
             import stripe  # type: ignore
-        except ImportError as exc:  # pragma: no cover - depends on environment
+        except ImportError as exc:  # pragma: no cover
             raise RuntimeError("Stripe SDK is not installed. Add `stripe` to backend dependencies.") from exc
 
         if not settings.stripe_secret_key:
@@ -165,7 +124,7 @@ class PaymentService:
         return subscription
 
     @classmethod
-    async def _mark_payment_paid(
+    async def mark_payment_paid(
         cls,
         db: AsyncSession,
         *,
@@ -194,7 +153,7 @@ class PaymentService:
         return payment
 
     @staticmethod
-    async def _mark_payment_failed(
+    async def mark_payment_failed(
         db: AsyncSession,
         *,
         payment: PaymentTransaction,
@@ -269,50 +228,6 @@ class PaymentService:
         }
 
     @classmethod
-    def _create_vnpay_payment_url(
-        cls,
-        *,
-        payment: PaymentTransaction,
-        body: PaymentCheckoutRequest,
-        client_ip: str,
-    ) -> dict[str, Any]:
-        if not settings.vnpay_tmn_code or not settings.vnpay_hash_secret:
-            raise RuntimeError("VNPay is not configured. Missing VNPAY_TMN_CODE or VNPAY_HASH_SECRET.")
-
-        now = datetime.now(VN_TZ)
-        expires_at = now + timedelta(minutes=15)
-        params: dict[str, Any] = {
-            "vnp_Version": "2.1.0",
-            "vnp_Command": "pay",
-            "vnp_TmnCode": settings.vnpay_tmn_code,
-            "vnp_Amount": payment.amount * 100,
-            "vnp_CurrCode": "VND",
-            "vnp_TxnRef": payment.order_code,
-            "vnp_OrderInfo": f"Upgrade AI Talk Practice {payment.plan}",
-            "vnp_OrderType": "other",
-            "vnp_Locale": body.locale or "vn",
-            "vnp_ReturnUrl": f"{settings.backend_public_url.rstrip('/')}{settings.vnpay_return_path}",
-            "vnp_IpAddr": cls._normalize_client_ip(client_ip),
-            "vnp_CreateDate": now.strftime("%Y%m%d%H%M%S"),
-            "vnp_ExpireDate": expires_at.strftime("%Y%m%d%H%M%S"),
-        }
-        if body.bank_code:
-            params["vnp_BankCode"] = body.bank_code
-
-        secure_hash = cls._sign_vnpay_params(params)
-        query = cls._build_query_string(params)
-        checkout_url = f"{settings.vnpay_payment_url}?{query}&vnp_SecureHash={secure_hash}"
-
-        return {
-            "checkout_url": checkout_url,
-            "external_checkout_id": payment.order_code,
-            "provider_payload": {
-                "request": params,
-            },
-            "expires_at": expires_at.astimezone(timezone.utc),
-        }
-
-    @classmethod
     async def create_checkout(
         cls,
         db: AsyncSession,
@@ -321,6 +236,7 @@ class PaymentService:
         body: PaymentCheckoutRequest,
         client_ip: str | None,
     ) -> PaymentTransaction:
+        del client_ip
         provider = body.provider.lower()
         plan = body.plan.upper()
         amount, currency = cls._payment_amount_for(provider, plan)
@@ -338,14 +254,7 @@ class PaymentService:
         db.add(payment)
         await db.flush()
 
-        if provider == "stripe":
-            checkout = await cls._create_stripe_checkout_session(payment=payment, user=user)
-        else:
-            checkout = cls._create_vnpay_payment_url(
-                payment=payment,
-                body=body,
-                client_ip=client_ip or "127.0.0.1",
-            )
+        checkout = await cls._create_stripe_checkout_session(payment=payment, user=user)
 
         payment.payment_url = checkout["checkout_url"]
         payment.external_checkout_id = checkout.get("external_checkout_id")
@@ -361,75 +270,6 @@ class PaymentService:
             payment.order_code,
         )
         return payment
-
-    @classmethod
-    async def process_vnpay_response(
-        cls,
-        db: AsyncSession,
-        *,
-        query_params: dict[str, Any],
-    ) -> tuple[PaymentTransaction | None, bool, str]:
-        secure_hash = query_params.get("vnp_SecureHash")
-        if not secure_hash:
-            return None, False, "97"
-
-        expected_hash = cls._sign_vnpay_params(query_params)
-        if not hmac.compare_digest(secure_hash, expected_hash):
-            return None, False, "97"
-
-        order_code = str(query_params.get("vnp_TxnRef") or "")
-        if not order_code:
-            return None, False, "99"
-
-        payment = await cls._get_payment_by_order_code(db, order_code)
-        if payment is None:
-            return None, False, "01"
-
-        returned_amount = int(str(query_params.get("vnp_Amount") or "0"))
-        if returned_amount != payment.amount * 100:
-            await cls._mark_payment_failed(
-                db,
-                payment=payment,
-                reason="VNPay amount mismatch",
-                provider_payload=query_params,
-            )
-            await db.commit()
-            return payment, False, "04"
-
-        response_code = str(query_params.get("vnp_ResponseCode") or "")
-        transaction_status = str(query_params.get("vnp_TransactionStatus") or response_code)
-        if response_code == "00" and transaction_status == "00":
-            paid_at_raw = str(query_params.get("vnp_PayDate") or "")
-            try:
-                paid_at = (
-                    datetime.strptime(paid_at_raw, "%Y%m%d%H%M%S")
-                    .replace(tzinfo=VN_TZ)
-                    .astimezone(timezone.utc)
-                    if paid_at_raw
-                    else datetime.now(timezone.utc)
-                )
-            except ValueError:
-                paid_at = datetime.now(timezone.utc)
-
-            await cls._mark_payment_paid(
-                db,
-                payment=payment,
-                external_transaction_id=str(query_params.get("vnp_TransactionNo") or ""),
-                provider_payload=query_params,
-                paid_at=paid_at,
-            )
-            await db.commit()
-            return payment, True, "00"
-
-        await cls._mark_payment_failed(
-            db,
-            payment=payment,
-            reason=f"VNPay payment failed with response code {response_code or 'unknown'}",
-            provider_payload=query_params,
-            status="cancelled" if response_code in {"24"} else "failed",
-        )
-        await db.commit()
-        return payment, False, response_code or "99"
 
     @classmethod
     def _construct_stripe_event(cls, payload: bytes, signature: str):
@@ -498,14 +338,14 @@ class PaymentService:
             currency = str(session_payload.get("currency") or "").upper()
             payment_status = str(session_payload.get("payment_status") or "")
             if amount_total != payment.amount or currency != payment.currency:
-                await cls._mark_payment_failed(
+                await cls.mark_payment_failed(
                     db,
                     payment=payment,
                     reason="Stripe amount or currency mismatch",
                     provider_payload=session_payload,
                 )
             elif payment_status == "paid":
-                await cls._mark_payment_paid(
+                await cls.mark_payment_paid(
                     db,
                     payment=payment,
                     external_transaction_id=str(session_payload.get("payment_intent") or ""),
@@ -513,7 +353,7 @@ class PaymentService:
                     paid_at=datetime.now(timezone.utc),
                 )
             else:
-                await cls._mark_payment_failed(
+                await cls.mark_payment_failed(
                     db,
                     payment=payment,
                     reason=f"Stripe payment status is `{payment_status}`",
@@ -522,7 +362,7 @@ class PaymentService:
 
         elif event_type in {"checkout.session.expired", "checkout.session.async_payment_failed"}:
             if payment is not None:
-                await cls._mark_payment_failed(
+                await cls.mark_payment_failed(
                     db,
                     payment=payment,
                     reason=f"Stripe event `{event_type}` received",

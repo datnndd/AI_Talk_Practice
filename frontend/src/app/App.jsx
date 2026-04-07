@@ -13,7 +13,9 @@ const PracticeTopicPage = lazy(() => import("@/features/practice/pages/PracticeT
 const PracticeSessionPage = lazy(() => import("@/features/practice/pages/PracticeSessionPage"));
 const ProfileSettingsPage = lazy(() => import("@/features/profile/pages/ProfileSettingsPage"));
 const DashboardPage = lazy(() => import("@/features/dashboard/pages/DashboardPage"));
+const AdminUsersPage = lazy(() => import("@/features/admin-users/pages/AdminUsersPage"));
 const AdminScenariosPage = lazy(() => import("@/features/admin-scenarios/pages/AdminScenariosPage"));
+const AdminPaymentsPage = lazy(() => import("@/features/admin-payments/pages/AdminPaymentsPage"));
 const SubscriptionPage = lazy(() => import("@/features/subscription/pages/SubscriptionPage"));
 
 const RouteFallback = () => (
@@ -47,7 +49,9 @@ function App() {
         <Route path="/subscription" element={<PrivateRoute>{withAppLayout(<SubscriptionPage />)}</PrivateRoute>} />
         
         {/* Admin Routes */}
+        <Route path="/admin/users" element={<PrivateRoute requireAdmin>{withSuspense(<AdminUsersPage />)}</PrivateRoute>} />
         <Route path="/admin/scenarios" element={<PrivateRoute requireAdmin>{withSuspense(<AdminScenariosPage />)}</PrivateRoute>} />
+        <Route path="/admin/payments" element={<PrivateRoute requireAdmin>{withSuspense(<AdminPaymentsPage />)}</PrivateRoute>} />
       </Routes>
     </Router>
   );

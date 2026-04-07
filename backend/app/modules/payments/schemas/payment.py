@@ -7,10 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class PaymentCheckoutRequest(BaseModel):
-    provider: Literal["stripe", "vnpay"]
+    provider: Literal["stripe"]
     plan: Literal["PRO"] = "PRO"
-    bank_code: str | None = Field(default=None, max_length=20)
-    locale: Literal["vn", "en"] | None = "vn"
 
 
 class PaymentCheckoutResponse(BaseModel):

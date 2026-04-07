@@ -6,6 +6,7 @@ export { default as SessionHeader } from "./SessionHeader";
 export { default as TopBar } from "./TopBar";
 
 export {
+  adminWorkspaceNavItems,
   formatPlanLabel,
   isRouteActive,
   learnerNavItems,

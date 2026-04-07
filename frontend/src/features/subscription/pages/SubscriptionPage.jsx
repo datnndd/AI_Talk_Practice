@@ -6,7 +6,6 @@ import {
   Crown,
   Lightning,
   Sparkle,
-  Wallet,
 } from "@phosphor-icons/react";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -34,14 +33,6 @@ const paymentOptions = [
     description: "Pay by international credit/debit card with Stripe Checkout.",
     amountLabel: "$99.00 / 30 days",
     icon: CreditCard,
-  },
-  {
-    provider: "vnpay",
-    title: "VNPay",
-    badge: "Vietnam local",
-    description: "Pay through Vietnamese banking methods using VNPay redirect checkout.",
-    amountLabel: "199,000 VND / 30 days",
-    icon: Wallet,
   },
 ];
 
@@ -90,9 +81,7 @@ const SubscriptionPage = () => {
     try {
       setActionError("");
       setSubmittingProvider(provider);
-      const payload = provider === "vnpay"
-        ? { provider, plan: "PRO", locale: "vn" }
-        : { provider, plan: "PRO" };
+      const payload = { provider, plan: "PRO" };
       const checkout = await createCheckoutSession(payload);
       window.location.assign(checkout.checkout_url);
     } catch (error) {
@@ -133,8 +122,8 @@ const SubscriptionPage = () => {
               {isSubscribed ? "Your subscription is active." : "Free plan detected."}
             </h1>
             <p className="mt-3 max-w-xl text-sm font-medium leading-7 text-zinc-500">
-              Choose Stripe or VNPay to pay online and upgrade immediately.
-              The backend verifies each callback before activating premium speaking access.
+              Use Stripe Checkout to pay online and upgrade immediately.
+              The backend verifies each Stripe callback before activating premium speaking access.
             </p>
           </div>
 

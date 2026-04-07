@@ -1,16 +1,19 @@
-import { Moon, Sun, Sparkle, SquaresFour, SignOut } from "@phosphor-icons/react";
+import { CreditCard, Moon, Sun, Sparkle, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { BrandMark } from "@/shared/components/navigation";
 
-const navItems = [
+const defaultNavItems = [
+  { label: "Users", icon: UserList, to: "/admin/users" },
   { label: "Scenario Library", icon: SquaresFour, anchor: "#scenario-library" },
   { label: "Generation Queue", icon: Sparkle, anchor: "#generation-queue" },
+  { label: "Payments", icon: CreditCard, to: "/admin/payments" },
 ];
 
-const AdminShell = ({ title, subtitle, theme, onToggleTheme, children }) => {
+const AdminShell = ({ title, subtitle, theme, onToggleTheme, navItems = defaultNavItems, children }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
 
   const initials = useMemo(() => {
@@ -30,12 +33,21 @@ const AdminShell = ({ title, subtitle, theme, onToggleTheme, children }) => {
             <div className="space-y-1">
               {navItems.map((item) => {
                 const ItemIcon = item.icon;
+                const className = `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  item.to && location.pathname === item.to
+                    ? "bg-primary/10 text-primary dark:bg-primary/15 dark:text-white"
+                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+                }`;
+                if (item.to) {
+                  return (
+                    <Link key={item.label} to={item.to} className={className}>
+                      <ItemIcon size={18} />
+                      {item.label}
+                    </Link>
+                  );
+                }
                 return (
-                  <a
-                    key={item.label}
-                    href={item.anchor}
-                    className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-                  >
+                  <a key={item.label} href={item.anchor} className={className}>
                     <ItemIcon size={18} />
                     {item.label}
                   </a>
@@ -101,12 +113,21 @@ const AdminShell = ({ title, subtitle, theme, onToggleTheme, children }) => {
                 <div className="mt-4 flex flex-wrap gap-2 lg:hidden">
                   {navItems.map((item) => {
                     const ItemIcon = item.icon;
+                    const className = `inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] transition ${
+                      item.to && location.pathname === item.to
+                        ? "border-primary/30 bg-primary/10 text-primary dark:border-primary/30 dark:bg-primary/15 dark:text-white"
+                        : "border-zinc-200 bg-white text-zinc-600 hover:text-primary dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                    }`;
+                    if (item.to) {
+                      return (
+                        <Link key={item.label} to={item.to} className={className}>
+                          <ItemIcon size={14} />
+                          {item.label}
+                        </Link>
+                      );
+                    }
                     return (
-                      <a
-                        key={item.label}
-                        href={item.anchor}
-                        className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-600 transition hover:text-primary dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                      >
+                      <a key={item.label} href={item.anchor} className={className}>
                         <ItemIcon size={14} />
                         {item.label}
                       </a>
