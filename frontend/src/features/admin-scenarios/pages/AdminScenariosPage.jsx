@@ -17,6 +17,42 @@ const DEFAULT_FILTERS = {
   page_size: 12,
 };
 
+const metadataString = (metadata, keys) => {
+  if (!metadata || typeof metadata !== "object") {
+    return "";
+  }
+
+  for (const key of keys) {
+    const value = metadata[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return "";
+};
+
+const metadataList = (metadata, keys) => {
+  if (!metadata || typeof metadata !== "object") {
+    return [];
+  }
+
+  for (const key of keys) {
+    const value = metadata[key];
+    if (Array.isArray(value)) {
+      const items = value
+        .filter((item) => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (items.length > 0) {
+        return items;
+      }
+    }
+  }
+
+  return [];
+};
+
 const AdminScenarios = () => {
   const { theme, toggleTheme } = useTheme();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -565,6 +601,16 @@ const AdminScenarios = () => {
               )}
               {!isLoadingDetail && selectedScenario && (
                 <>
+                  {(() => {
+                    const metadata = selectedScenario.metadata || {};
+                    const lessonTopic = metadataString(metadata, ["topic", "conversation_topic"]);
+                    const assignedTask = metadataString(metadata, ["assigned_task", "task", "user_goal", "goal"]);
+                    const persona = metadataString(metadata, ["persona", "partner_persona"]);
+                    const endCondition = metadataString(metadata, ["end_condition", "completion_signal", "wrap_up_cue"]);
+                    const evaluationFocus = metadataList(metadata, ["evaluation_focus", "success_criteria", "rubric"]);
+
+                    return (
+                      <>
                   <h3 className="mt-1 font-display text-3xl font-black tracking-tight">{selectedScenario.title}</h3>
                   <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">{selectedScenario.description}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -595,9 +641,63 @@ const AdminScenarios = () => {
                       </p>
                     </div>
                   </div>
+                  <div className="mt-5 rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                      Lesson Setup
+                    </p>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <div className="rounded-[20px] bg-white px-4 py-3 dark:bg-zinc-900">
+                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                          Topic
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                          {lessonTopic || "Uses scenario title"}
+                        </p>
+                      </div>
+                      <div className="rounded-[20px] bg-white px-4 py-3 dark:bg-zinc-900">
+                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                          Partner Persona
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                          {persona || "Friendly speaking partner"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 rounded-[20px] bg-white px-4 py-3 dark:bg-zinc-900">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                        Assigned Task
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
+                        {assignedTask || "Uses scenario description as the learner task."}
+                      </p>
+                    </div>
+                    <div className="mt-3 rounded-[20px] bg-white px-4 py-3 dark:bg-zinc-900">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                        End Condition
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
+                        {endCondition || "Lesson ends when the learner covers the objectives clearly enough."}
+                      </p>
+                    </div>
+                    {evaluationFocus.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {evaluationFocus.map((item) => (
+                          <span
+                            key={item}
+                            className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                          >
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="mt-5">
                     <PromptQualityBadge quality={selectedScenario.latest_prompt_quality} />
                   </div>
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </div>

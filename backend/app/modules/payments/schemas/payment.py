@@ -23,3 +23,18 @@ class PaymentCheckoutResponse(BaseModel):
     expires_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaymentStatusResponse(BaseModel):
+    payment_id: int
+    order_code: str
+    provider: str
+    plan: str
+    amount: int
+    currency: str
+    status: str
+    paid_at: datetime | None = None
+    expires_at: datetime | None = None
+    failure_reason: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)

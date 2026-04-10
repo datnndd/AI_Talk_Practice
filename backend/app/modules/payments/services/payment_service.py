@@ -74,6 +74,19 @@ class PaymentService:
         )
         return result.scalar_one_or_none()
 
+    @classmethod
+    async def get_payment_for_user(
+        cls,
+        db: AsyncSession,
+        *,
+        user: User,
+        order_code: str,
+    ) -> PaymentTransaction:
+        payment = await cls._get_payment_by_order_code(db, order_code)
+        if payment is None or payment.user_id != user.id:
+            raise NotFoundError("Payment transaction not found.")
+        return payment
+
     @staticmethod
     async def _get_payment_by_checkout_id(db: AsyncSession, checkout_id: str) -> PaymentTransaction | None:
         result = await db.execute(

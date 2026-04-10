@@ -11,6 +11,7 @@ from typing import AsyncGenerator
 class TranscriptType(str, Enum):
     PARTIAL = "partial"
     FINAL = "final"
+    SPEECH_END = "speech_end"
 
 
 @dataclass

@@ -110,3 +110,36 @@ async def test_stripe_webhook_marks_payment_paid_and_upgrades_subscription(clien
     ).scalar_one()
     assert subscription.tier == "PRO"
     assert subscription.status == "active"
+
+
+@pytest.mark.asyncio
+async def test_get_payment_status_returns_only_current_user_payment(client, db_session, test_user):
+    token = create_access_token(user_id=test_user.id)
+
+    payment = PaymentTransaction(
+        user_id=test_user.id,
+        provider="stripe",
+        plan="PRO",
+        amount=settings.payment_pro_amount_usd_cents,
+        currency="USD",
+        status="paid",
+        order_code="ORDERSTATUS001",
+        external_checkout_id="cs_status_123",
+        external_transaction_id="pi_status_123",
+        provider_payload={},
+        paid_at=datetime(2026, 4, 7, tzinfo=timezone.utc),
+        expires_at=datetime(2026, 5, 7, tzinfo=timezone.utc),
+    )
+    db_session.add(payment)
+    await db_session.commit()
+
+    response = await client.get(
+        f"/api/payments/transactions/{payment.order_code}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["order_code"] == payment.order_code
+    assert data["status"] == "paid"
+    assert data["plan"] == "PRO"

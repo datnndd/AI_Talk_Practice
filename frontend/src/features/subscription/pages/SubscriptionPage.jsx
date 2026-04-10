@@ -11,7 +11,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { getSubscriptionLabel } from "@/features/auth/utils/subscription";
-import { createCheckoutSession } from "@/features/subscription/api/paymentsApi";
+import { createCheckoutSession, getCheckoutStatus } from "@/features/subscription/api/paymentsApi";
 
 const subscriberBenefits = [
   "Unlimited live AI speaking practice sessions",
@@ -45,12 +45,64 @@ const SubscriptionPage = () => {
   const paymentStatus = searchParams.get("payment");
   const paymentProvider = searchParams.get("provider");
   const paymentCode = searchParams.get("code");
+  const paymentOrderCode = searchParams.get("order_code");
+  const [isSyncingPayment, setIsSyncingPayment] = useState(false);
 
   useEffect(() => {
-    if (paymentStatus === "success") {
-      refreshUser();
+    if (paymentStatus !== "success" || !paymentOrderCode) {
+      return undefined;
     }
-  }, [paymentStatus, refreshUser]);
+
+    let isCancelled = false;
+    let timeoutId;
+
+    const syncPaymentStatus = async () => {
+      setIsSyncingPayment(true);
+
+      try {
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          const payment = await getCheckoutStatus(paymentOrderCode);
+
+          if (isCancelled) {
+            return;
+          }
+
+          if (payment.status === "paid") {
+            await refreshUser();
+            return;
+          }
+
+          if (payment.status === "failed" || payment.status === "expired") {
+            setActionError(payment.failure_reason || "Payment was not completed successfully.");
+            return;
+          }
+
+          await new Promise((resolve) => {
+            timeoutId = window.setTimeout(resolve, 1500);
+          });
+        }
+
+        await refreshUser();
+      } catch (error) {
+        if (!isCancelled) {
+          setActionError(error?.response?.data?.detail || "Unable to confirm payment status yet.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsSyncingPayment(false);
+        }
+      }
+    };
+
+    syncPaymentStatus();
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [paymentOrderCode, paymentStatus, refreshUser]);
 
   const paymentMessage = useMemo(() => {
     if (!paymentStatus) {
@@ -60,7 +112,9 @@ const SubscriptionPage = () => {
     if (paymentStatus === "success") {
       return {
         tone: "success",
-        text: `Payment via ${paymentProvider?.toUpperCase() || "gateway"} completed. Your subscription has been refreshed.`,
+        text: isSyncingPayment
+          ? `Payment via ${paymentProvider?.toUpperCase() || "gateway"} completed. Syncing your Pro access now...`
+          : `Payment via ${paymentProvider?.toUpperCase() || "gateway"} completed. Your subscription has been refreshed.`,
       };
     }
 
@@ -75,7 +129,7 @@ const SubscriptionPage = () => {
       tone: "error",
       text: `Payment failed${paymentCode ? ` with code ${paymentCode}` : ""}. Please verify the gateway response and retry.`,
     };
-  }, [paymentCode, paymentProvider, paymentStatus]);
+  }, [isSyncingPayment, paymentCode, paymentProvider, paymentStatus]);
 
   const handleCheckout = async (provider) => {
     try {

@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 class AuthService:
     @staticmethod
+    async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
+        return await UserRepository.get_active_by_id(db, user_id)
+
+    @staticmethod
     def _create_token_response(user_id: int) -> TokenResponse:
         return TokenResponse(
             access_token=create_access_token(user_id),

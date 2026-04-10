@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user, get_db
-from app.modules.payments.schemas.payment import PaymentCheckoutRequest, PaymentCheckoutResponse
+from app.modules.payments.schemas.payment import (
+    PaymentCheckoutRequest,
+    PaymentCheckoutResponse,
+    PaymentStatusResponse,
+)
 from app.modules.payments.services.payment_service import PaymentService
 from app.modules.users.models.user import User
 
@@ -37,6 +41,31 @@ async def create_checkout(
     )
 
 
+@router.get("/transactions/{order_code}", response_model=PaymentStatusResponse)
+async def get_payment_status(
+    order_code: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    payment = await PaymentService.get_payment_for_user(
+        db,
+        user=user,
+        order_code=order_code,
+    )
+    return PaymentStatusResponse(
+        payment_id=payment.id,
+        order_code=payment.order_code,
+        provider=payment.provider,
+        plan=payment.plan,
+        amount=payment.amount,
+        currency=payment.currency,
+        status=payment.status,
+        paid_at=payment.paid_at,
+        expires_at=payment.expires_at,
+        failure_reason=payment.failure_reason,
+    )
+
+
 @router.post("/stripe/webhook")
 async def stripe_webhook(
     request: Request,
@@ -49,4 +78,3 @@ async def stripe_webhook(
         payload=payload,
         signature=signature,
     )
-

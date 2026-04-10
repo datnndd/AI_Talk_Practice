@@ -13,6 +13,10 @@ export const adminUsersApi = {
     const { data } = await httpClient.put(`/admin/users/${userId}`, payload);
     return data;
   },
+  updateSubscription: async (userId, payload) => {
+    const { data } = await httpClient.put(`/admin/users/${userId}/subscription`, payload);
+    return data;
+  },
   toggleAdmin: async (userId) => {
     const { data } = await httpClient.post(`/admin/users/${userId}/toggle-admin`);
     return data;

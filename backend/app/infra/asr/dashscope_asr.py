@@ -31,12 +31,14 @@ class _ASRCallback(OmniRealtimeCallback):
     def __init__(self, transcript_queue: asyncio.Queue, loop: asyncio.AbstractEventLoop):
         self._queue = transcript_queue
         self._loop = loop
+        self._closed_event = threading.Event()
 
     def on_open(self):
         logger.info("DashScope ASR: connection opened")
 
     def on_close(self, code, msg):
         logger.info(f"DashScope ASR: connection closed (code={code}, msg={msg})")
+        self._closed_event.set()
 
     def on_event(self, response):
         event_type = response.get("type", "")
@@ -64,10 +66,18 @@ class _ASRCallback(OmniRealtimeCallback):
 
         elif event_type == "input_audio_buffer.speech_stopped":
             logger.debug("DashScope ASR: speech stopped")
+            event = TranscriptEvent(
+                text="",
+                type=TranscriptType.SPEECH_END,
+            )
+            self._loop.call_soon_threadsafe(self._queue.put_nowait, event)
 
         elif event_type == "error":
             error_msg = response.get("error", {}).get("message", "Unknown error")
             logger.error(f"DashScope ASR error: {error_msg}")
+
+    def wait_for_close(self, timeout: float = 5.0):
+        self._closed_event.wait(timeout=timeout)
 
 
 class DashScopeASR(ASRBase):
@@ -78,6 +88,7 @@ class DashScopeASR(ASRBase):
         self._conversation: Optional[OmniRealtimeConversation] = None
         self._transcript_queue: asyncio.Queue[TranscriptEvent] = asyncio.Queue()
         self._connected = False
+        self._callback: Optional[_ASRCallback] = None
 
         # Set API key
         if config.dashscope_api_key:
@@ -92,6 +103,7 @@ class DashScopeASR(ASRBase):
         self._transcript_queue = asyncio.Queue()
 
         callback = _ASRCallback(self._transcript_queue, loop)
+        self._callback = callback
 
         self._conversation = OmniRealtimeConversation(
             model=self._config.asr_model,
@@ -149,8 +161,21 @@ class DashScopeASR(ASRBase):
             )
         except Exception as e:
             logger.error(f"Error ending ASR session: {e}")
+        finally:
+            if self._callback:
+                await asyncio.get_event_loop().run_in_executor(
+                    None, self._callback.wait_for_close, 5.0
+                )
+            try:
+                await asyncio.get_event_loop().run_in_executor(
+                    None, self._conversation.close
+                )
+            except Exception as e:
+                logger.debug(f"DashScope ASR close ignored: {e}")
 
         self._connected = False
+        self._conversation = None
+        self._callback = None
 
         # Return last transcript if available
         last = None
@@ -166,6 +191,7 @@ class DashScopeASR(ASRBase):
                     None, self._conversation.close
                 )
             except Exception as e:
-                logger.error(f"Error closing ASR connection: {e}")
+                logger.debug(f"DashScope ASR close ignored: {e}")
             self._conversation = None
             self._connected = False
+            self._callback = None

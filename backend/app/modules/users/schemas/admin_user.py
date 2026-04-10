@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.modules.users.schemas.user import SubscriptionRead, UserRead
+from app.modules.users.schemas.user import UserRead
 
 
 def _normalize_string_list(value: Any) -> Any:
@@ -73,3 +73,7 @@ class AdminUserUpdateRequest(BaseModel):
         if not self.model_fields_set:
             raise ValueError("At least one user field must be provided")
         return self
+
+
+class AdminUserSubscriptionUpdateRequest(BaseModel):
+    tier: Literal["FREE", "PRO", "ENTERPRISE"]

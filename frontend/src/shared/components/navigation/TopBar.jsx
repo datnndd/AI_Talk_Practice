@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { Crown, Moon, Sparkle, Sun, UserCircle } from "@phosphor-icons/react";
-import { Link, useLocation } from "react-router-dom";
+import { Crown, Moon, SignOut, Sun, UserCircle } from "@phosphor-icons/react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { useTheme } from "@/shared/context/ThemeContext";
@@ -14,10 +14,16 @@ import {
 
 const TopBar = () => {
   const location = useLocation();
-  const { user, isSubscribed, subscriptionTier } = useAuth();
+  const navigate = useNavigate();
+  const { user, isSubscribed, subscriptionTier, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const planLabel = formatPlanLabel(isSubscribed, subscriptionTier);
   const isAdmin = Boolean(user?.is_admin);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <header className="fixed inset-x-0 top-0 z-50">
@@ -119,6 +125,20 @@ const TopBar = () => {
               aria-label="Toggle theme"
             >
               {isDark ? <Sun size={20} weight="bold" /> : <Moon size={20} weight="bold" />}
+            </motion.button>
+
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={handleLogout}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 text-[var(--nav-text)] transition hover:-translate-y-0.5 hover:border-rose-300 hover:text-rose-500 md:px-4"
+              aria-label="Logout"
+            >
+              <SignOut size={18} weight="bold" />
+              <span className="hidden text-[10px] font-black uppercase tracking-[0.18em] md:inline">
+                Logout
+              </span>
             </motion.button>
 
             <Link to="/profile" className="inline-flex items-center gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel-bg)] px-3 py-2 transition hover:-translate-y-0.5">

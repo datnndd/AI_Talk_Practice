@@ -51,8 +51,8 @@ class OpenAILLM(LLMBase):
                 model=self._model,
                 messages=api_messages,
                 stream=True,
-                temperature=0.7,
-                max_tokens=512,
+                temperature=self._config.llm_temperature,
+                max_tokens=self._config.llm_max_tokens,
             )
 
             async for chunk in stream:

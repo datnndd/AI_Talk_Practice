@@ -8,6 +8,7 @@ from app.modules.users.models.user import User
 from app.modules.users.schemas.admin_user import (
     AdminUserListResponse,
     AdminUserRead,
+    AdminUserSubscriptionUpdateRequest,
     AdminUserUpdateRequest,
 )
 from app.modules.users.serializers import serialize_admin_user
@@ -72,6 +73,17 @@ async def toggle_admin_user_access(
     actor: User = Depends(require_admin_user),
 ):
     user = await AdminUserService.toggle_admin_access(db, actor=actor, user_id=user_id)
+    return serialize_admin_user(user)
+
+
+@router.put("/{user_id}/subscription", response_model=AdminUserRead)
+async def update_admin_user_subscription(
+    user_id: int,
+    body: AdminUserSubscriptionUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin_user),
+):
+    user = await AdminUserService.update_subscription(db, user_id=user_id, body=body)
     return serialize_admin_user(user)
 
 

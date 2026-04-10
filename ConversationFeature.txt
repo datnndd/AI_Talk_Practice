@@ -1,0 +1,242 @@
+CHỨC NĂNG HỘI THOẠI VÀ GỢI Ý DỰA TRÊN LLM
+1. Mục tiêu hệ thống
+
+Chức năng này được xây dựng nhằm cung cấp trải nghiệm luyện nói tiếng Anh thông qua hội thoại với AI, có định hướng và hỗ trợ theo ngữ cảnh. Hệ thống cần đạt các mục tiêu sau:
+
+Tạo hội thoại dựa trên tình huống (scenario) và trình độ người dùng
+Điều hướng hội thoại theo các mục tiêu học tập cụ thể (learning objectives)
+Cung cấp gợi ý (hint) khi người dùng cần hỗ trợ
+Đảm bảo hội thoại tự nhiên nhưng vẫn bám sát nội dung bài học
+Tối ưu chi phí và độ trễ khi sử dụng LLM
+2. Tổng quan kiến trúc
+
+Hệ thống bao gồm hai lớp chính:
+
+2.1. Lesson Generation Layer
+Sử dụng LLM để tạo cấu trúc bài học (lesson package)
+Thực hiện một lần khi người dùng bắt đầu bài học
+2.2. Runtime Conversation Layer
+Điều phối hội thoại theo lesson đã tạo
+Sinh phản hồi AI và gợi ý theo thời gian thực
+3. Quy trình hoạt động
+3.1. Khởi tạo bài học
+
+Người dùng lựa chọn:
+
+Tình huống (scenario)
+Trình độ (level)
+
+Backend gửi yêu cầu đến LLM để tạo lesson package.
+
+3.2. Sinh lesson package
+
+LLM tạo ra một cấu trúc bài học bao gồm:
+
+Danh sách mục tiêu hội thoại (objectives)
+Câu hỏi chính cho mỗi mục tiêu
+Các câu hỏi follow-up
+Nội dung gợi ý (hint seed)
+3.3. Điều phối hội thoại
+
+Hệ thống sử dụng lesson package để:
+
+Đưa ra câu hỏi đầu tiên
+Theo dõi tiến trình người dùng
+Xác định khi nào chuyển sang objective tiếp theo
+3.4. Xử lý gợi ý
+
+Khi người dùng yêu cầu gợi ý:
+
+Backend gửi thông tin ngữ cảnh đến LLM
+LLM trả về nội dung gợi ý theo định dạng chuẩn
+4. Thiết kế Lesson Package
+4.1. Định nghĩa
+
+Lesson package là dữ liệu cấu trúc do LLM sinh ra, đại diện cho một bài học hoàn chỉnh.
+
+4.2. Schema đề xuất
+{
+  "lesson_id": "string",
+  "scenario": "string",
+  "level": "string",
+  "persona": "string",
+  "objectives": [
+    {
+      "objective_id": "string",
+      "goal": "string",
+      "main_question": "string",
+      "follow_up_questions": ["string"],
+      "expected_points": ["string"],
+      "hint_seed": {
+        "focus": "string",
+        "grammar": ["string"],
+        "max_length": "string"
+      }
+    }
+  ]
+}
+4.3. Nguyên tắc thiết kế
+Mỗi objective tương ứng với một kỹ năng cụ thể
+Câu hỏi phải phù hợp với trình độ người học
+Nội dung phải bám sát scenario
+5. Điều phối hội thoại (Dialogue Management)
+5.1. Trạng thái hội thoại
+
+Hệ thống cần lưu:
+
+Objective hiện tại
+Lịch sử hội thoại
+Trạng thái hoàn thành của từng objective
+5.2. Logic điều phối
+
+Khi người dùng trả lời:
+
+Kiểm tra xem đã đáp ứng objective chưa
+Nếu chưa, sử dụng follow-up question
+Nếu đã đủ, chuyển sang objective tiếp theo
+5.3. Phương pháp đánh giá
+
+Giai đoạn đầu:
+
+Rule-based (từ khóa, độ dài câu)
+
+Giai đoạn nâng cao:
+
+Sử dụng LLM để đánh giá semantic
+6. Thiết kế hệ thống gợi ý (Hint System)
+6.1. Mục tiêu
+Giúp người dùng hiểu câu hỏi
+Định hướng cách trả lời
+Cung cấp ví dụ phù hợp với trình độ
+6.2. Input cho LLM
+{
+  "current_question": "string",
+  "objective": "string",
+  "user_level": "string",
+  "user_last_answer": "string",
+  "expected_points": ["string"]
+}
+6.3. Output chuẩn
+{
+  "analysis_vi": "string",
+  "answer_strategy_vi": "string",
+  "keywords": ["string"],
+  "sample_answer": "string",
+  "sample_answer_easy": "string"
+}
+6.4. Yêu cầu
+Nội dung phù hợp với trình độ
+Ngắn gọn, rõ ràng
+Không trả lời thay người dùng hoàn toàn
+7. Tích hợp LLM
+7.1. Lesson Generation Prompt
+
+LLM cần được cung cấp:
+
+Scenario
+Level
+Danh sách mục tiêu học
+
+Yêu cầu:
+
+Trả về JSON đúng schema
+Không sinh nội dung ngoài phạm vi
+7.2. Hint Generation Prompt
+
+LLM cần:
+
+Ngữ cảnh hội thoại
+Mục tiêu hiện tại
+Trình độ người dùng
+
+Yêu cầu:
+
+Trả về đúng format
+Không lan man
+Không vượt quá độ dài quy định
+8. Tối ưu hiệu năng
+8.1. Giảm số lần gọi LLM
+Sinh lesson package một lần khi bắt đầu
+Không gọi lại nếu cùng scenario và level
+8.2. Caching
+Cache lesson theo (scenario, level)
+Cache hint nếu cùng input
+8.3. Fallback
+
+Trong trường hợp LLM lỗi:
+
+Sử dụng câu hỏi mặc định
+Sử dụng hint cứng
+9. Thiết kế API
+9.1. Tạo bài học
+
+POST /lessons/generate
+
+Input:
+
+{
+  "scenario_id": "string",
+  "user_level": "string"
+}
+
+Output:
+
+{
+  "lesson_id": "string",
+  "objectives": []
+}
+9.2. Lấy câu hỏi tiếp theo
+
+POST /lessons/next-question
+
+Input:
+
+{
+  "lesson_id": "string",
+  "current_objective_id": "string",
+  "user_answer": "string"
+}
+
+Output:
+
+{
+  "status": "continue | next_objective",
+  "next_question": "string"
+}
+9.3. Lấy gợi ý
+
+POST /lessons/hint
+
+Input:
+
+{
+  "lesson_id": "string",
+  "objective_id": "string",
+  "current_question": "string",
+  "user_level": "string",
+  "user_last_answer": "string"
+}
+
+Output:
+
+{
+  "analysis_vi": "string",
+  "answer_strategy_vi": "string",
+  "sample_answer": "string",
+  "keywords": []
+}
+10. Mở rộng trong tương lai
+Cá nhân hóa theo lịch sử học
+Gợi ý dựa trên lỗi sai của người dùng
+Chấm điểm câu trả lời
+Điều chỉnh độ khó theo thời gian thực
+11. Kết luận
+
+Giải pháp sử dụng LLM để sinh cấu trúc bài học kết hợp với hệ thống điều phối hội thoại và cơ chế gợi ý giúp:
+
+Đảm bảo tính tự nhiên trong giao tiếp
+Giữ được định hướng học tập rõ ràng
+Tối ưu trải nghiệm người dùng
+Dễ mở rộng và bảo trì
+
+Đây là hướng tiếp cận phù hợp để xây dựng một hệ thống luyện nói tiếng Anh thông minh và có khả năng phát triển lâu dài.

@@ -20,11 +20,32 @@ from app.db.base_class import Base
 
 # ─── Logging ────────────────────────────────────────────────────────────────
 
+
+class SuppressDashScopeWebSocketNoise(logging.Filter):
+    """Hide noisy websocket-client shutdown logs emitted during normal DashScope teardown."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        if "Connection to remote host was lost" not in message:
+            return True
+        if "websocket closed due to Connection to remote host was lost" in message:
+            return False
+        if "error from callback" in message:
+            return False
+        if message.strip() in {
+            "Connection to remote host was lost.",
+            "Connection to remote host was lost. - goodbye",
+        }:
+            return False
+        return True
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
+logging.getLogger("websocket").addFilter(SuppressDashScopeWebSocketNoise())
 logger = logging.getLogger(__name__)
 
 # ─── Lifespan ──────────────────────────────────────────────────────────────

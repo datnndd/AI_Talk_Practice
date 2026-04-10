@@ -4,15 +4,16 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.pool import StaticPool
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.types import JSON
 
 # Monkeypatch JSONB to JSON for SQLite compatibility in tests
 postgresql.JSONB = JSON
 
+TEST_DATABASE_PATH = "/tmp/ai_talk_practice_test.db"
+
 # Set DATABASE_URL in environment before importing app.main to avoid PostgreSQL connection attempt
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{TEST_DATABASE_PATH}"
 
 from app.main import app
 from app.db.base_class import Base
@@ -21,11 +22,9 @@ from app.core.security import hash_password
 from app.modules.users.models.user import User
 from app.modules.users.models.subscription import Subscription
 
-# Use in-memory SQLite with StaticPool to keep connection open across sessions in tests
 engine = create_async_engine(
     os.environ["DATABASE_URL"],
     connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
 )
 TestingSessionLocal = async_sessionmaker(
     autocommit=False, autoflush=False, bind=engine, class_=AsyncSession, expire_on_commit=False
@@ -35,11 +34,18 @@ TestingSessionLocal = async_sessionmaker(
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def setup_database():
     """Create the database tables for the test session."""
+    await engine.dispose()
+    if os.path.exists(TEST_DATABASE_PATH):
+        os.remove(TEST_DATABASE_PATH)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
+    await engine.dispose()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+    if os.path.exists(TEST_DATABASE_PATH):
+        os.remove(TEST_DATABASE_PATH)
 
 
 @pytest_asyncio.fixture

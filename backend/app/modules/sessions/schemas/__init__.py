@@ -11,6 +11,13 @@ from .session import (
     SessionListItem,
     SessionRead,
 )
+from .lesson import (
+    LessonGenerateRequest,
+    LessonHintRead,
+    LessonHintRequest,
+    LessonNextQuestionRequest,
+    LessonStateRead,
+)
 
 __all__ = [
     "CorrectionCreate",
@@ -24,4 +31,9 @@ __all__ = [
     "SessionFinishRequest",
     "SessionListItem",
     "SessionRead",
+    "LessonGenerateRequest",
+    "LessonHintRead",
+    "LessonHintRequest",
+    "LessonNextQuestionRequest",
+    "LessonStateRead",
 ]

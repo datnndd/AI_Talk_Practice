@@ -79,6 +79,20 @@ async def test_admin_can_toggle_admin_access(admin_client, test_user):
 
 
 @pytest.mark.asyncio
+async def test_admin_can_update_user_subscription_plan(admin_client, test_user):
+    response = await admin_client.put(
+        f"/api/admin/users/{test_user.id}/subscription",
+        json={"tier": "PRO"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["subscription"]["tier"] == "PRO"
+    assert data["subscription"]["status"] == "active"
+    assert data["subscription"]["expires_at"] is not None
+
+
+@pytest.mark.asyncio
 async def test_admin_can_deactivate_and_restore_user(admin_client, test_user):
     deactivate_response = await admin_client.post(f"/api/admin/users/{test_user.id}/deactivate")
     assert deactivate_response.status_code == 200

@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     payment_pro_amount_usd_cents: int = Field(default=9900, description="Stripe price for PRO plan in cents")
 
     # --- LLM Configuration ---
-    llm_model: str = Field(default="gemini-2.5-flash", description="LLM model name")
+    llm_model: str = Field(default="gemini-3.1-flash-lite-preview", description="LLM model name")
     llm_base_url: str = Field(
         default="https://generativelanguage.googleapis.com/v1beta/openai/",
         description="LLM OpenAI-compatible base URL",
@@ -63,6 +63,12 @@ class Settings(BaseSettings):
             "Correct major errors gently. Encourage the user to speak more."
         ),
         description="System prompt for the LLM",
+    )
+    llm_temperature: float = Field(default=0.3, description="Sampling temperature for LLM generation")
+    llm_max_tokens: int = Field(default=160, description="Maximum tokens generated per assistant turn")
+    llm_history_message_limit: int = Field(
+        default=6,
+        description="How many recent conversation messages to send to the LLM",
     )
 
     # --- ASR Configuration ---

@@ -166,6 +166,24 @@ class SessionService:
         return session
 
     @staticmethod
+    async def merge_session_metadata(
+        db: AsyncSession,
+        *,
+        session_id: int,
+        user_id: int,
+        metadata: dict[str, Any],
+    ) -> Session:
+        session = await SessionRepository.get_by_id_for_user(db, session_id, user_id, full=True)
+        if session is None:
+            raise NotFoundError("Session not found")
+
+        merged_metadata = dict(session.session_metadata or {})
+        merged_metadata.update(metadata)
+        session.session_metadata = merged_metadata
+        await db.commit()
+        return await SessionService.get_by_id(db, session.id, user_id)
+
+    @staticmethod
     async def _finalize_session(
         db: AsyncSession,
         *,

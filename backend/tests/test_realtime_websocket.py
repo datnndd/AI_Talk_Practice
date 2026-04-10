@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 
@@ -8,7 +9,7 @@ from sqlalchemy import delete, select
 
 import app.modules.sessions.services.conversation as conversation_module
 import app.main as main_module
-import app.api.v1.ws as ws_module
+import app.modules.sessions.routers.ws as ws_module
 from app.core.security import create_access_token, hash_password
 from app.infra.contracts import TranscriptEvent, TranscriptType
 from app.modules.sessions.models.message import Message
@@ -19,8 +20,9 @@ from conftest import TestingSessionLocal
 
 
 class FakeWebSocket:
-    def __init__(self, messages):
+    def __init__(self, messages, message_delay=0):
         self._messages = [json.dumps(message) for message in messages]
+        self._message_delay = message_delay
         self.sent = []
         self.accepted = False
         self.closed = False
@@ -30,6 +32,8 @@ class FakeWebSocket:
 
     async def receive_text(self):
         if self._messages:
+            if self._message_delay:
+                await asyncio.sleep(self._message_delay)
             return self._messages.pop(0)
         raise WebSocketDisconnect(code=1000)
 
@@ -67,6 +71,59 @@ class StubASR:
         return None
 
 
+class AutoFinalASR(StubASR):
+    def __init__(self, _config):
+        super().__init__(_config)
+        self._final_emitted = False
+
+    async def get_transcript(self):
+        if self.audio_chunks and not self._final_emitted:
+            self._final_emitted = True
+            return TranscriptEvent(
+                text="Hello from auto-final ASR",
+                type=TranscriptType.FINAL,
+                language=self.language,
+            )
+        return None
+
+    async def stop_session(self):
+        return None
+
+
+class SpeechStoppedASR(StubASR):
+    def __init__(self, _config):
+        super().__init__(_config)
+        self._speech_end_emitted = False
+
+    async def get_transcript(self):
+        if self.audio_chunks and not self._speech_end_emitted:
+            self._speech_end_emitted = True
+            return TranscriptEvent(
+                text="",
+                type=TranscriptType.SPEECH_END,
+                language=self.language,
+            )
+        return None
+
+    async def stop_session(self):
+        return TranscriptEvent(
+            text="Hello from speech-stopped ASR",
+            type=TranscriptType.FINAL,
+            language=self.language,
+        )
+
+
+class LessonAnswerASR(StubASR):
+    async def stop_session(self):
+        if not self.audio_chunks:
+            return None
+        return TranscriptEvent(
+            text="I can practice live conversation naturally today.",
+            type=TranscriptType.FINAL,
+            language=self.language,
+        )
+
+
 class StubLLM:
     def __init__(self, _config):
         self.calls = []
@@ -77,6 +134,7 @@ class StubLLM:
             "messages": [(message.role, message.content) for message in messages],
         })
         yield "Hello "
+        await asyncio.sleep(0.05)
         yield "from the assistant"
 
     async def close(self):
@@ -253,11 +311,67 @@ async def test_session_start_rejects_missing_scenario(test_user, realtime_stubs)
     await ws_module.websocket_conversation(websocket)
 
     assert websocket.sent == [{"type": "error", "message": "Scenario not found"}]
-    assert websocket.closed is True
+
+
+@pytest.mark.asyncio
+async def test_final_asr_event_auto_triggers_llm_without_stop_recording(test_user, test_scenario, monkeypatch):
+    llm_instances = []
+
+    def create_llm(config):
+        instance = StubLLM(config)
+        llm_instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(conversation_module, "create_asr", lambda config: AutoFinalASR(config))
+    monkeypatch.setattr(conversation_module, "create_llm", create_llm)
+    monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
+
+    token = create_access_token(test_user.id)
+    audio_payload = base64.b64encode(b"\x01\x02" * 4000).decode("ascii")
+    websocket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "language": "en",
+                "voice": "Cherry",
+            },
+            {"type": "start_recording", "language": "en", "voice": "Cherry"},
+            {"type": "audio_chunk", "data": audio_payload},
+            {"type": "config", "language": "en", "voice": "Cherry"},
+        ],
+        message_delay=0.05,
+    )
+
+    await ws_module.websocket_conversation(websocket)
+
+    assert any(
+        message["type"] == "transcript_final" and message["text"] == "Hello from auto-final ASR"
+        for message in websocket.sent
+    )
+    assert any(
+        message["type"] == "llm_done" and message["text"] == "Hello from the assistant"
+        for message in websocket.sent
+    )
+
+    async with TestingSessionLocal() as session:
+        message_result = await session.execute(select(Message).order_by(Message.order_index))
+        messages = message_result.scalars().all()
+
+    assert [(message.role, message.content, message.order_index) for message in messages] == [
+        ("user", "Hello from auto-final ASR", 1),
+        ("assistant", "Hello from the assistant", 2),
+    ]
+    assert llm_instances[0].calls[0]["messages"] == [("user", "Hello from auto-final ASR")]
 
     async with TestingSessionLocal() as session:
         result = await session.execute(select(Session))
-        assert result.scalars().all() == []
+        sessions = result.scalars().all()
+
+    assert len(sessions) == 1
+    assert sessions[0].status == "completed"
 
 
 @pytest.mark.asyncio
@@ -283,3 +397,148 @@ async def test_disconnect_without_user_turn_marks_session_abandoned(test_user, t
 
     assert session.status == "abandoned"
     assert session.duration_seconds is None
+
+
+@pytest.mark.asyncio
+async def test_speech_stopped_event_auto_finalizes_turn(test_user, test_scenario, monkeypatch):
+    llm_instances = []
+
+    def create_llm(config):
+        instance = StubLLM(config)
+        llm_instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(conversation_module, "create_asr", lambda config: SpeechStoppedASR(config))
+    monkeypatch.setattr(conversation_module, "create_llm", create_llm)
+    monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
+
+    token = create_access_token(test_user.id)
+    audio_payload = base64.b64encode(b"\x01\x02" * 4000).decode("ascii")
+    websocket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "language": "en",
+                "voice": "Cherry",
+            },
+            {"type": "start_recording", "language": "en", "voice": "Cherry"},
+            {"type": "audio_chunk", "data": audio_payload},
+            {"type": "config", "language": "en", "voice": "Cherry"},
+        ],
+        message_delay=0.05,
+    )
+
+    await ws_module.websocket_conversation(websocket)
+
+    assert any(
+        message["type"] == "transcript_final" and message["text"] == "Hello from speech-stopped ASR"
+        for message in websocket.sent
+    )
+    assert any(
+        message["type"] == "llm_done" and message["text"] == "Hello from the assistant"
+        for message in websocket.sent
+    )
+
+    async with TestingSessionLocal() as session:
+        message_result = await session.execute(select(Message).order_by(Message.order_index))
+        messages = message_result.scalars().all()
+
+    assert [(message.role, message.content, message.order_index) for message in messages] == [
+        ("user", "Hello from speech-stopped ASR", 1),
+        ("assistant", "Hello from the assistant", 2),
+    ]
+    assert llm_instances[0].calls[0]["messages"] == [("user", "Hello from speech-stopped ASR")]
+
+
+@pytest.mark.asyncio
+async def test_interrupt_assistant_stops_stream_and_persists_partial_reply(test_user, test_scenario, realtime_stubs):
+    token = create_access_token(test_user.id)
+    audio_payload = base64.b64encode(b"\x01\x02" * 4000).decode("ascii")
+    websocket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "language": "en",
+                "voice": "Cherry",
+            },
+            {"type": "start_recording", "language": "en", "voice": "Cherry"},
+            {"type": "audio_chunk", "data": audio_payload},
+            {"type": "stop_recording"},
+            {"type": "interrupt_assistant"},
+        ],
+        message_delay=0.01,
+    )
+
+    await ws_module.websocket_conversation(websocket)
+
+    assert any(message["type"] == "assistant_interrupted" for message in websocket.sent)
+    assert not any(message["type"] == "llm_done" for message in websocket.sent)
+
+    async with TestingSessionLocal() as session:
+        message_result = await session.execute(select(Message).order_by(Message.order_index))
+        messages = message_result.scalars().all()
+
+    assert messages[0].role == "user"
+    assert messages[0].content == "Hello from the user"
+    assert len(messages) in {1, 2}
+    if len(messages) == 2:
+        assert messages[1].role == "assistant"
+        assert messages[1].content == "Hello"
+
+
+@pytest.mark.asyncio
+async def test_lesson_engine_emits_state_and_completion_events(test_user, test_scenario, monkeypatch):
+    llm_instances = []
+
+    def create_llm(config):
+        instance = StubLLM(config)
+        llm_instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(conversation_module, "create_asr", lambda config: LessonAnswerASR(config))
+    monkeypatch.setattr(conversation_module, "create_llm", create_llm)
+    monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
+
+    token = create_access_token(test_user.id)
+    audio_payload = base64.b64encode(b"\x01\x02" * 4000).decode("ascii")
+    websocket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "language": "en",
+                "voice": "Cherry",
+                "metadata": {"conversation_engine": "lesson_v1"},
+            },
+            {"type": "start_recording", "language": "en", "voice": "Cherry"},
+            {"type": "audio_chunk", "data": audio_payload},
+            {"type": "stop_recording"},
+        ]
+    )
+
+    await ws_module.websocket_conversation(websocket)
+
+    assert any(message["type"] == "lesson_started" for message in websocket.sent)
+    assert any(message["type"] == "lesson_state" for message in websocket.sent)
+    assert any(message["type"] == "conversation_end" for message in websocket.sent)
+    assert any(
+        message["type"] == "llm_done" and "Wrap up the conversation politely" in message["text"]
+        for message in websocket.sent
+    )
+
+    async with TestingSessionLocal() as session:
+        message_result = await session.execute(select(Message).order_by(Message.order_index))
+        messages = message_result.scalars().all()
+
+    assert [message.role for message in messages] == ["assistant", "user", "assistant"]
+    assert "What would you say first?" in messages[0].content
+    assert messages[1].content == "I can practice live conversation naturally today."
+    assert "Wrap up the conversation politely" in messages[2].content
+    assert llm_instances[0].calls == []

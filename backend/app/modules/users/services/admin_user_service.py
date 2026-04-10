@@ -1,17 +1,36 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError, NotFoundError
+from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 from app.modules.users.repository import UserRepository
-from app.modules.users.schemas.admin_user import AdminUserUpdateRequest
+from app.modules.users.schemas.admin_user import (
+    AdminUserSubscriptionUpdateRequest,
+    AdminUserUpdateRequest,
+)
 from app.modules.users.serializers import user_is_admin
 
 logger = logging.getLogger(__name__)
+
+PLAN_FEATURES = {
+    "FREE": {},
+    "PRO": {
+        "live_ai_practice": True,
+        "advanced_scenarios": True,
+        "premium_tutor": True,
+    },
+    "ENTERPRISE": {
+        "live_ai_practice": True,
+        "advanced_scenarios": True,
+        "premium_tutor": True,
+        "enterprise_support": True,
+    },
+}
 
 
 class AdminUserService:
@@ -82,6 +101,46 @@ class AdminUserService:
         await db.commit()
         await db.refresh(user)
         logger.info("Admin id=%s toggled admin access for user id=%s", actor.id, user.id)
+        return user
+
+    @staticmethod
+    async def update_subscription(
+        db: AsyncSession,
+        *,
+        user_id: int,
+        body: AdminUserSubscriptionUpdateRequest,
+    ) -> User:
+        user = await AdminUserService.get_user(db, user_id)
+        tier = body.tier.upper()
+
+        if tier not in PLAN_FEATURES:
+            raise BadRequestError(f"Unsupported subscription tier: {tier}")
+
+        subscription = user.subscription
+        if subscription is None:
+            subscription = Subscription(user_id=user.id)
+            db.add(subscription)
+
+        subscription.tier = tier
+        subscription.status = "active"
+        subscription.features = PLAN_FEATURES[tier]
+
+        now = datetime.now(timezone.utc)
+        if tier == "FREE":
+            subscription.expires_at = None
+        elif tier == "PRO":
+            current_expiry = (
+                subscription.expires_at
+                if subscription.expires_at and subscription.expires_at > now
+                else now
+            )
+            subscription.expires_at = current_expiry + timedelta(days=30)
+        else:
+            subscription.expires_at = None
+
+        await db.commit()
+        await db.refresh(user)
+        logger.info("Admin updated subscription tier=%s for user id=%s", tier, user.id)
         return user
 
     @staticmethod

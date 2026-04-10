@@ -50,6 +50,12 @@ const LEVEL_OPTIONS = [
   { value: "C2", label: "C2" },
 ];
 
+const PLAN_OPTIONS = [
+  { value: "FREE", label: "Free" },
+  { value: "PRO", label: "Pro" },
+  { value: "ENTERPRISE", label: "Enterprise" },
+];
+
 const toCommaSeparated = (value) => {
   if (Array.isArray(value)) {
     return value.join(", ");
@@ -124,6 +130,7 @@ const AdminUsersPage = () => {
   const [total, setTotal] = useState(0);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState("FREE");
   const [formData, setFormData] = useState(() => toFormState(null));
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
@@ -189,9 +196,14 @@ const AdminUsersPage = () => {
     setFormData(toFormState(selectedUser));
   }, [selectedUser]);
 
+  useEffect(() => {
+    setSelectedPlan(getPlanBadge(selectedUser));
+  }, [selectedUser]);
+
   const currentPayload = useMemo(() => buildUpdatePayload(formData), [formData]);
   const baselinePayload = useMemo(() => buildUpdatePayload(toFormState(selectedUser)), [selectedUser]);
   const hasFormChanges = JSON.stringify(currentPayload) !== JSON.stringify(baselinePayload);
+  const hasPlanChange = selectedPlan !== getPlanBadge(selectedUser);
   const isSelfSelected = selectedUser?.id === currentUser?.id;
   const totalPages = Math.max(1, Math.ceil(total / filters.page_size));
 
@@ -591,6 +603,53 @@ const AdminUsersPage = () => {
             <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Admin Actions</p>
               <div className="mt-4 grid gap-3">
+                <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                        Subscription Plan
+                      </p>
+                      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        Apply a plan change directly from admin controls.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                      <select
+                        value={selectedPlan}
+                        onChange={(event) => setSelectedPlan(event.target.value)}
+                        disabled={!selectedUserId || isRunningAction}
+                        className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
+                      >
+                        {PLAN_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        disabled={!selectedUserId || isRunningAction || !hasPlanChange}
+                        onClick={() => {
+                          void runAction(
+                            (userId) => adminUsersApi.updateSubscription(userId, { tier: selectedPlan }),
+                            `Subscription updated to ${selectedPlan}.`,
+                          );
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-black text-primary transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary/20 dark:bg-primary/15 dark:text-white"
+                      >
+                        <CrownSimple size={16} weight="fill" />
+                        Update Plan
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Current plan: <span className="font-semibold">{getPlanBadge(selectedUser)}</span>
+                    </p>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   disabled={!selectedUserId || isRunningAction || isSelfSelected}

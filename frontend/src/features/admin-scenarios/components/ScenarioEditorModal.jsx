@@ -12,6 +12,75 @@ const parseListInput = (value = "") =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const STRUCTURED_METADATA_KEYS = [
+  "topic",
+  "conversation_topic",
+  "assigned_task",
+  "task",
+  "user_goal",
+  "goal",
+  "persona",
+  "partner_persona",
+  "evaluation_focus",
+  "success_criteria",
+  "rubric",
+  "suggested_responses",
+  "stuck_help",
+  "response_hints",
+  "end_condition",
+  "completion_signal",
+  "wrap_up_cue",
+  "target_turns",
+];
+
+const stripStructuredMetadata = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter(([key]) => !STRUCTURED_METADATA_KEYS.includes(key)),
+  );
+};
+
+const metadataString = (metadata, keys) => {
+  if (!metadata || typeof metadata !== "object") {
+    return "";
+  }
+
+  for (const key of keys) {
+    const value = metadata[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return "";
+};
+
+const metadataList = (metadata, keys) => {
+  if (!metadata || typeof metadata !== "object") {
+    return [];
+  }
+
+  for (const key of keys) {
+    const value = metadata[key];
+    if (Array.isArray(value)) {
+      const items = value
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter(Boolean);
+      if (items.length > 0) {
+        return items;
+      }
+    }
+    if (typeof value === "string" && value.trim()) {
+      return parseListInput(value);
+    }
+  }
+
+  return [];
+};
+
 const PROMPT_STARTER = `You are the speaking partner for this practice scenario.
 
 Stay in character throughout the interaction.
@@ -35,7 +104,14 @@ const createInitialState = (scenario) => ({
   learning_objectives: prettyList(scenario?.learning_objectives),
   target_skills: prettyList(scenario?.target_skills),
   tags: prettyList(scenario?.tags),
-  metadata: prettyJson(scenario?.metadata, {}),
+  topic: metadataString(scenario?.metadata, ["topic", "conversation_topic"]),
+  assigned_task: metadataString(scenario?.metadata, ["assigned_task", "task", "user_goal", "goal"]),
+  persona: metadataString(scenario?.metadata, ["persona", "partner_persona"]),
+  evaluation_focus: prettyList(metadataList(scenario?.metadata, ["evaluation_focus", "success_criteria", "rubric"])),
+  suggested_responses: prettyList(metadataList(scenario?.metadata, ["suggested_responses", "stuck_help", "response_hints"])),
+  end_condition: metadataString(scenario?.metadata, ["end_condition", "completion_signal", "wrap_up_cue"]),
+  target_turns: scenario?.metadata?.target_turns ? String(scenario.metadata.target_turns) : "",
+  metadata: prettyJson(stripStructuredMetadata(scenario?.metadata), {}),
 });
 
 const ScenarioEditorModal = ({
@@ -54,12 +130,17 @@ const ScenarioEditorModal = ({
   const objectiveCount = useMemo(() => parseListInput(form.learning_objectives).length, [form.learning_objectives]);
   const skillCount = useMemo(() => parseListInput(form.target_skills).length, [form.target_skills]);
   const tagCount = useMemo(() => parseListInput(form.tags).length, [form.tags]);
+  const evaluationFocusCount = useMemo(() => parseListInput(form.evaluation_focus).length, [form.evaluation_focus]);
+  const responseHintCount = useMemo(() => parseListInput(form.suggested_responses).length, [form.suggested_responses]);
   const promptLength = form.ai_system_prompt.trim().length;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     try {
+      const metadata = JSON.parse(form.metadata || "{}");
+      const evaluationFocus = parseListInput(form.evaluation_focus);
+      const suggestedResponses = parseListInput(form.suggested_responses);
       const payload = {
         ...form,
         estimated_duration_minutes: Number(form.estimated_duration_minutes),
@@ -67,8 +148,24 @@ const ScenarioEditorModal = ({
         learning_objectives: parseListInput(form.learning_objectives),
         target_skills: parseListInput(form.target_skills),
         tags: parseListInput(form.tags),
-        metadata: JSON.parse(form.metadata || "{}"),
+        metadata: {
+          ...metadata,
+          ...(form.topic.trim() ? { topic: form.topic.trim() } : {}),
+          ...(form.assigned_task.trim() ? { assigned_task: form.assigned_task.trim() } : {}),
+          ...(form.persona.trim() ? { persona: form.persona.trim() } : {}),
+          ...(evaluationFocus.length > 0 ? { evaluation_focus: evaluationFocus } : {}),
+          ...(suggestedResponses.length > 0 ? { suggested_responses: suggestedResponses } : {}),
+          ...(form.end_condition.trim() ? { end_condition: form.end_condition.trim() } : {}),
+          ...(form.target_turns.trim() ? { target_turns: Number(form.target_turns) } : {}),
+        },
       };
+      delete payload.topic;
+      delete payload.assigned_task;
+      delete payload.persona;
+      delete payload.evaluation_focus;
+      delete payload.suggested_responses;
+      delete payload.end_condition;
+      delete payload.target_turns;
       setJsonError("");
       await onSubmit(payload);
     } catch (error) {
@@ -284,6 +381,98 @@ const ScenarioEditorModal = ({
               </section>
 
               <section className="rounded-[28px] border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Lesson Conversation</p>
+                  <h3 className="mt-1 font-display text-2xl font-black tracking-tight">Guide the new lesson engine</h3>
+                  <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                    These fields shape the structured lesson flow used in the new guided conversation experience. They replace the need to hand-edit metadata JSON for common lesson behavior.
+                  </p>
+                </div>
+
+                <div className="mt-5 grid gap-5 xl:grid-cols-2">
+                  <label className="block space-y-2">
+                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+                      Lesson Topic
+                    </span>
+                    <input
+                      value={form.topic}
+                      onChange={(event) => updateField("topic", event.target.value)}
+                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      placeholder="Hotel check-in problem solving"
+                    />
+                  </label>
+
+                  <label className="block space-y-2">
+                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+                      Conversation Partner
+                    </span>
+                    <input
+                      value={form.persona}
+                      onChange={(event) => updateField("persona", event.target.value)}
+                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      placeholder="Friendly hotel front desk agent"
+                    />
+                  </label>
+
+                  <label className="block space-y-2 xl:col-span-2">
+                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+                      Assigned Task
+                    </span>
+                    <textarea
+                      value={form.assigned_task}
+                      onChange={(event) => updateField("assigned_task", event.target.value)}
+                      rows={3}
+                      className="w-full rounded-[24px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      placeholder="Explain the reservation problem, confirm your booking details, and ask for a solution."
+                    />
+                  </label>
+
+                  <ListEditorField
+                    label="Evaluation Focus"
+                    value={form.evaluation_focus}
+                    onChange={(value) => updateField("evaluation_focus", value)}
+                    helperText="What the lesson should check for across the conversation."
+                    placeholder={"Explain the issue clearly\nConfirm key details\nAsk for a practical solution"}
+                  />
+
+                  <ListEditorField
+                    label="Suggested Responses"
+                    value={form.suggested_responses}
+                    onChange={(value) => updateField("suggested_responses", value)}
+                    helperText="Short starter lines shown when the learner is stuck."
+                    placeholder={"I have a reservation under...\nThere seems to be a problem with...\nCould you help me solve this?"}
+                  />
+
+                  <label className="block space-y-2">
+                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+                      End Condition
+                    </span>
+                    <input
+                      value={form.end_condition}
+                      onChange={(event) => updateField("end_condition", event.target.value)}
+                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      placeholder="End once the learner explains the issue and confirms the next step."
+                    />
+                  </label>
+
+                  <label className="block space-y-2">
+                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+                      Target User Turns
+                    </span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={form.target_turns}
+                      onChange={(event) => updateField("target_turns", event.target.value)}
+                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      placeholder="6"
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className="rounded-[28px] border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">AI Prompt</p>
@@ -369,11 +558,11 @@ const ScenarioEditorModal = ({
                 {showAdvanced && (
                   <div className="mt-5">
                     <JsonEditorField
-                      label="Metadata"
+                      label="Advanced Metadata"
                       value={form.metadata}
                       onChange={(value) => updateField("metadata", value)}
-                      placeholder='{"persona":"front desk","vocabulary_focus":"booking issues"}'
-                      helperText="Advanced extension bag for personas, vocabulary themes, routing hints, or future flags."
+                      placeholder='{"vocabulary_focus":"booking issues","lesson_flags":{"beta":true}}'
+                      helperText="Optional extension bag for custom flags or niche scenario settings. Common lesson fields are edited above."
                     />
                   </div>
                 )}
@@ -399,6 +588,8 @@ const ScenarioEditorModal = ({
                   ["Objectives", objectiveCount],
                   ["Skills", skillCount],
                   ["Tags", tagCount],
+                  ["Eval focus", evaluationFocusCount],
+                  ["Help lines", responseHintCount],
                   ["Prompt chars", promptLength],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-900">

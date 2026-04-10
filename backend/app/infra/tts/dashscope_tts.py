@@ -31,12 +31,16 @@ class _TTSCallback(QwenTtsRealtimeCallback):
         self._queue = audio_queue
         self._loop = loop
         self._done_event = threading.Event()
+        self._sentinel_emitted = False
 
     def on_open(self) -> None:
         logger.info("DashScope TTS: connection opened")
 
     def on_close(self, close_status_code, close_msg) -> None:
         logger.info(f"DashScope TTS: connection closed (code={close_status_code})")
+        if not self._sentinel_emitted:
+            self._sentinel_emitted = True
+            self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
         self._done_event.set()
 
     def on_event(self, response: dict) -> None:
@@ -54,13 +58,17 @@ class _TTSCallback(QwenTtsRealtimeCallback):
         elif event_type == "session.finished":
             logger.debug("DashScope TTS: session finished")
             # Signal end of audio with None sentinel
-            self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
+            if not self._sentinel_emitted:
+                self._sentinel_emitted = True
+                self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
             self._done_event.set()
 
         elif event_type == "error":
             error_msg = response.get("error", {}).get("message", "Unknown error")
             logger.error(f"DashScope TTS error: {error_msg}")
-            self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
+            if not self._sentinel_emitted:
+                self._sentinel_emitted = True
+                self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
             self._done_event.set()
 
     def wait_for_done(self, timeout: float = 30.0):
@@ -143,6 +151,11 @@ class DashScopeTTS(TTSBase):
                     await send_task
                 except asyncio.CancelledError:
                     pass
+            await loop.run_in_executor(None, callback.wait_for_done, 5.0)
+            try:
+                await loop.run_in_executor(None, tts_client.close)
+            except Exception as e:
+                logger.debug(f"DashScope TTS close ignored: {e}")
 
     async def synthesize(
         self,
