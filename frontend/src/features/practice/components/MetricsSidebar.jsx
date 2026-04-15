@@ -70,7 +70,6 @@ const CoverageGroup = ({ title, items, tone = "sky", emptyCopy }) => {
 };
 
 const MetricsSidebar = ({
-  scenario,
   durationSeconds,
   sessionId,
   turnCount,
@@ -82,17 +81,17 @@ const MetricsSidebar = ({
 }) => {
   const [mobileTab, setMobileTab] = useState("progress");
   const statusClassName = STATUS_STYLES[connectionState] || STATUS_STYLES.closed;
-  const scenarioObjectives = useMemo(
-    () => formatScenarioList(scenario?.learning_objectives),
-    [scenario?.learning_objectives],
+  const lessonGoals = useMemo(
+    () => formatScenarioList(lessonState?.lesson_goals),
+    [lessonState?.lesson_goals],
   );
   const currentGoal = lessonState?.current_objective?.goal || "";
   const objectives = useMemo(() => {
-    if (scenarioObjectives.length > 0) {
-      return scenarioObjectives;
+    if (lessonGoals.length > 0) {
+      return lessonGoals;
     }
     return currentGoal ? [currentGoal] : [];
-  }, [currentGoal, scenarioObjectives]);
+  }, [currentGoal, lessonGoals]);
 
   const completedCount = lessonState?.progress?.completed || 0;
   const activeIndex = lessonState?.should_end
@@ -131,12 +130,12 @@ const MetricsSidebar = ({
       </div>
 
       <div className={`${showProgressSection ? "block" : "hidden"} space-y-5 lg:block`}>
-        <SectionCard title="Lesson Progress">
+        <SectionCard title="Conversation Goals">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-lg font-black text-zinc-950">
                 {lessonState?.progress
-                  ? `${lessonState.progress.completed}/${lessonState.progress.total} objectives`
+                  ? `${lessonState.progress.completed}/${lessonState.progress.total} goals`
                   : "Waiting"}
               </p>
               <p className="mt-1 text-sm text-zinc-500">
@@ -186,14 +185,14 @@ const MetricsSidebar = ({
                     <div>
                       <p className="text-sm font-semibold leading-relaxed text-zinc-900">{objective}</p>
                       <p className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">
-                        {isCompleted ? "Completed" : isActive ? "Current objective" : "Upcoming"}
+                        {isCompleted ? "Completed" : isActive ? "Current goal" : "Upcoming"}
                       </p>
                     </div>
                   </div>
                 </div>
               );
             }) : (
-              <p className="text-sm text-zinc-500">Objectives will appear once the lesson is loaded.</p>
+              <p className="text-sm text-zinc-500">Goals will appear once the conversation is ready.</p>
             )}
           </div>
         </SectionCard>
@@ -236,7 +235,7 @@ const MetricsSidebar = ({
             {lessonState?.current_objective ? (
               <p className="mt-3 text-sm leading-relaxed text-zinc-600">
                 {lessonState.current_objective.remaining_follow_ups} follow-up
-                {lessonState.current_objective.remaining_follow_ups === 1 ? "" : "s"} left for this objective.
+                {lessonState.current_objective.remaining_follow_ups === 1 ? "" : "s"} left for this goal.
               </p>
             ) : null}
             {lessonState?.end_reason ? (

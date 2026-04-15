@@ -141,6 +141,39 @@ class StubLLM:
         return None
 
 
+class LessonPlanLLM:
+    def __init__(self, _config):
+        self.calls = []
+
+    async def chat_stream(self, messages, system_prompt=None):
+        self.calls.append({
+            "system_prompt": system_prompt,
+            "messages": [(message.role, message.content) for message in messages],
+        })
+        yield json.dumps({
+            "opening_message": "Welcome. Could you introduce yourself and the role you are practicing for?",
+            "goals": [
+                {
+                    "goal": "Introduce background",
+                    "question": "What background should I know about?",
+                    "success_criteria": ["target role", "relevant experience"],
+                    "follow_up_questions": ["Which experience is most relevant?"],
+                    "vocabulary": ["target role", "relevant experience"],
+                },
+                {
+                    "goal": "Explain one achievement",
+                    "question": "Tell me about one achievement.",
+                    "success_criteria": ["project", "result"],
+                    "follow_up_questions": ["What was your result?"],
+                    "vocabulary": ["project", "result"],
+                },
+            ],
+        })
+
+    async def close(self):
+        return None
+
+
 class StubTTS:
     def __init__(self, _config):
         self.configs = []
@@ -492,15 +525,22 @@ async def test_interrupt_assistant_stops_stream_and_persists_partial_reply(test_
 
 
 @pytest.mark.asyncio
-async def test_lesson_engine_emits_state_and_completion_events(test_user, test_scenario, monkeypatch):
+async def test_lesson_engine_emits_state_and_structured_reply_events(test_user, test_scenario, monkeypatch):
     llm_instances = []
+    planning_llm_instances = []
 
     def create_llm(config):
         instance = StubLLM(config)
         llm_instances.append(instance)
         return instance
 
+    def create_planning_llm(config):
+        instance = LessonPlanLLM(config)
+        planning_llm_instances.append(instance)
+        return instance
+
     monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(ws_module, "create_llm", create_planning_llm)
     monkeypatch.setattr(conversation_module, "create_asr", lambda config: LessonAnswerASR(config))
     monkeypatch.setattr(conversation_module, "create_llm", create_llm)
     monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
@@ -527,9 +567,8 @@ async def test_lesson_engine_emits_state_and_completion_events(test_user, test_s
 
     assert any(message["type"] == "lesson_started" for message in websocket.sent)
     assert any(message["type"] == "lesson_state" for message in websocket.sent)
-    assert any(message["type"] == "conversation_end" for message in websocket.sent)
     assert any(
-        message["type"] == "llm_done" and "Wrap up the conversation politely" in message["text"]
+        message["type"] == "llm_done" and "Which experience is most relevant?" in message["text"]
         for message in websocket.sent
     )
 
@@ -538,7 +577,8 @@ async def test_lesson_engine_emits_state_and_completion_events(test_user, test_s
         messages = message_result.scalars().all()
 
     assert [message.role for message in messages] == ["assistant", "user", "assistant"]
-    assert "What would you say first?" in messages[0].content
+    assert "could you introduce yourself" in messages[0].content.lower()
     assert messages[1].content == "I can practice live conversation naturally today."
-    assert "Wrap up the conversation politely" in messages[2].content
+    assert messages[2].content == "Which experience is most relevant?"
+    assert planning_llm_instances[0].calls
     assert llm_instances[0].calls == []

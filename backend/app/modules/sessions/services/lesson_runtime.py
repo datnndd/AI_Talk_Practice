@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.core.exceptions import BadRequestError
+from app.infra.contracts import LLMBase, Message
 from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.schemas.lesson import (
     LessonHintRead,
@@ -16,6 +17,11 @@ from app.modules.sessions.schemas.lesson import (
     LessonProgressState,
     LessonProgressSummary,
     LessonStateRead,
+)
+from app.modules.sessions.services.lesson_prompts import (
+    LESSON_PLAN_SYSTEM_PROMPT,
+    build_lesson_plan_user_prompt,
+    parse_lesson_plan_response,
 )
 
 STOPWORDS = {
@@ -138,13 +144,13 @@ def _build_objective_questions(
     expected_points: list[str],
 ) -> tuple[str, list[str]]:
     if index == 0:
-        main_question = f"{assigned_task} What would you say first?"
+        main_question = f"{assigned_task} I will start the conversation: what would you say first?"
     else:
         main_question = f"Now focus on {goal.lower()}. How would you continue the conversation?"
 
     follow_ups = []
     for point in expected_points[:2]:
-        follow_ups.append(f"Can you also mention {point.lower()}?")
+        follow_ups.append(f"Could you add a concrete detail about {point.lower()}?")
     follow_ups.append(f"How would you say that naturally in this {topic.lower()} situation?")
     return main_question, follow_ups[:3]
 
@@ -174,7 +180,198 @@ class LessonAdvanceResult:
     state: LessonStateRead
 
 
+@dataclass(frozen=True)
+class ObjectiveBlueprint:
+    goal: str
+    expected_points: list[str]
+    main_question: str
+    follow_up_questions: list[str]
+    vocabulary: list[str]
+
+
+def _level_band(level: str | None) -> str:
+    normalized = (level or "").lower()
+    if normalized in {"beginner", "easy", "a1", "a2"}:
+        return "beginner"
+    if normalized in {"advanced", "hard", "c1", "c2"}:
+        return "advanced"
+    return "intermediate"
+
+
+def _objective_count_for_level(level: str | None, available: int) -> int:
+    band = _level_band(level)
+    desired = {"beginner": 2, "intermediate": 3, "advanced": 4}[band]
+    return max(1, min(desired, available))
+
+
+def _fallback_expected_points(goal: str) -> list[str]:
+    points = _goal_points(goal)
+    if points and _normalize_text(points[0]) != _normalize_text(goal):
+        return points[:3]
+    tokens = _keyword_tokens(goal)
+    if len(tokens) >= 3:
+        return [" ".join(tokens[:3])]
+    return [goal.strip() or "a specific detail"]
+
+
+def _context_keywords(*values: str, limit: int = 4) -> list[str]:
+    text = " ".join(value for value in values if value)
+    tokens = _keyword_tokens(text)
+    keywords: list[str] = []
+    for index, token in enumerate(tokens):
+        if token in keywords:
+            continue
+        next_token = tokens[index + 1] if index + 1 < len(tokens) else ""
+        if next_token and next_token not in STOPWORDS and next_token != token:
+            phrase = f"{token} {next_token}"
+        else:
+            phrase = token
+        if phrase not in keywords:
+            keywords.append(phrase)
+        if len(keywords) >= limit:
+            break
+    return keywords
+
+
+def _fallback_goal_context(
+    *,
+    goal: str,
+    scenario: Scenario,
+    topic: str,
+    assigned_task: str,
+) -> tuple[str, list[str]]:
+    normalized_goal = _normalize_text(goal)
+    context_points = _context_keywords(
+        topic,
+        assigned_task,
+        scenario.description or "",
+        scenario.ai_system_prompt or "",
+        limit=4,
+    )
+
+    if "vocabulary" in normalized_goal or "word" in normalized_goal or "phrase" in normalized_goal:
+        return (
+            f"Use precise phrases for {topic}",
+            context_points or [topic],
+        )
+
+    return goal, _fallback_expected_points(goal)
+
+
+def _fallback_blueprints(
+    *,
+    scenario: Scenario,
+    topic: str,
+    assigned_task: str,
+    level: str | None,
+) -> list[ObjectiveBlueprint]:
+    goals = _normalize_list(scenario.learning_objectives) or [scenario.description or scenario.title]
+    count = _objective_count_for_level(level, len(goals))
+    blueprints: list[ObjectiveBlueprint] = []
+    for index, goal in enumerate(goals[:count]):
+        resolved_goal, expected_points = _fallback_goal_context(
+            goal=goal,
+            scenario=scenario,
+            topic=topic,
+            assigned_task=assigned_task,
+        )
+        main_question, follow_ups = _build_objective_questions(
+            index=index,
+            goal=resolved_goal,
+            topic=topic,
+            assigned_task=assigned_task,
+            expected_points=expected_points,
+        )
+        blueprints.append(
+            ObjectiveBlueprint(
+                goal=resolved_goal,
+                expected_points=expected_points,
+                main_question=main_question,
+                follow_up_questions=follow_ups,
+                vocabulary=expected_points,
+            )
+        )
+    return blueprints
+
+
+def _normalize_string_list(value: Any, *, limit: int = 4) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()][:limit]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
+
+
+def _question_for_missing_point(current: LessonObjective, missing_point: str) -> str:
+    point = missing_point.lower()
+    goal = current.goal.lower()
+    examples = ", ".join(current.hint_seed.grammar.split(", ")[:2]) if current.hint_seed.grammar else point
+    return (
+        f"Could you add one concrete detail about {point}? "
+        f"For example, use a phrase like {examples} while you answer about {goal}."
+    )
+
+
+def _build_completion_message(
+    *,
+    package: LessonPackage,
+    state: LessonProgressState,
+    matched_points: list[str],
+    missing_points: list[str],
+) -> str:
+    achieved = [
+        objective.goal
+        for objective in package.objectives
+        if objective.objective_id in state.completed_objective_ids
+    ]
+    remaining = [
+        objective.goal
+        for objective in package.objectives
+        if objective.objective_id not in state.completed_objective_ids
+    ]
+    strengths = matched_points[:2] or ["clear participation", "staying on topic"]
+    improvements = missing_points[:2] or remaining[:2] or ["add more specific examples", "use more precise vocabulary"]
+
+    achieved_text = "; ".join(achieved) if achieved else "the main conversation task"
+    strengths_text = "; ".join(strengths)
+    improvements_text = "; ".join(improvements)
+    return (
+        "Session summary: "
+        f"Goals achieved: {achieved_text}. "
+        f"Strengths: {strengths_text}. "
+        f"Improve next: {improvements_text}. "
+        f"Overall: you completed this {package.scenario.lower()} practice round at {package.level} level."
+    )
+
+
+def _sample_answer_for_objective(current: LessonObjective, keywords: list[str], *, easy: bool = False) -> str:
+    primary = (keywords[0] if keywords else current.goal).lower()
+    secondary = (keywords[1] if len(keywords) > 1 else primary).lower()
+    if easy:
+        return f"I want to mention {primary}."
+    return f"I would mention {primary}, then add a specific detail about {secondary}."
+
+
 class LessonRuntimeService:
+    @classmethod
+    async def ensure_session_lesson_dynamic(
+        cls,
+        *,
+        scenario: Scenario,
+        session_metadata: dict[str, Any] | None,
+        level: str | None,
+        llm: LLMBase | None = None,
+        regenerate: bool = False,
+    ) -> tuple[LessonPackage, LessonProgressState, dict[str, Any]]:
+        existing_metadata = dict(session_metadata or {})
+        if not regenerate and cls.has_lesson(existing_metadata):
+            return cls.deserialize_lesson_metadata(existing_metadata)
+
+        package = await cls.create_lesson_package_dynamic(scenario=scenario, level=level, llm=llm)
+        state = cls.initial_state(package)
+        hints: dict[str, Any] = {}
+        return package, state, hints
+
     @classmethod
     def ensure_session_lesson(
         cls,
@@ -193,41 +390,139 @@ class LessonRuntimeService:
         hints: dict[str, Any] = {}
         return package, state, hints
 
+    @classmethod
+    async def create_lesson_package_dynamic(
+        cls,
+        *,
+        scenario: Scenario,
+        level: str | None,
+        llm: LLMBase | None,
+    ) -> LessonPackage:
+        if llm is None:
+            return cls.create_lesson_package(scenario=scenario, level=level)
+
+        prompt = build_lesson_plan_user_prompt(scenario=scenario, level=level)
+        response_text = ""
+        try:
+            chunks: list[str] = []
+            async for chunk in llm.chat_stream(
+                [Message(role="user", content=prompt)],
+                system_prompt=LESSON_PLAN_SYSTEM_PROMPT,
+            ):
+                chunks.append(chunk)
+            response_text = "".join(chunks)
+        except Exception:
+            return cls.create_lesson_package(scenario=scenario, level=level)
+
+        plan = parse_lesson_plan_response(response_text)
+        if not plan:
+            return cls.create_lesson_package(scenario=scenario, level=level)
+        return cls.create_lesson_package_from_plan(scenario=scenario, level=level, plan=plan)
+
     @staticmethod
     def create_lesson_package(
         *,
         scenario: Scenario,
         level: str | None,
     ) -> LessonPackage:
-        objectives_source = _normalize_list(scenario.learning_objectives)
-        if not objectives_source:
-            objectives_source = [scenario.description or scenario.title]
-
         topic = _title_case_topic(scenario)
         assigned_task = _assigned_task(scenario)
         resolved_level = (level or "intermediate").strip()
+        blueprints = _fallback_blueprints(
+            scenario=scenario,
+            level=resolved_level,
+            topic=topic,
+            assigned_task=assigned_task,
+        )
+        return LessonRuntimeService._package_from_blueprints(
+            scenario=scenario,
+            topic=topic,
+            level=resolved_level,
+            blueprints=blueprints,
+        )
+
+    @staticmethod
+    def create_lesson_package_from_plan(
+        *,
+        scenario: Scenario,
+        level: str | None,
+        plan: dict[str, Any],
+    ) -> LessonPackage:
+        topic = _title_case_topic(scenario)
+        assigned_task = _assigned_task(scenario)
+        resolved_level = (level or "intermediate").strip()
+        goals = plan.get("goals")
+        if not isinstance(goals, list):
+            return LessonRuntimeService.create_lesson_package(scenario=scenario, level=resolved_level)
+
+        opening = str(plan.get("opening_message") or "").strip()
+        blueprints: list[ObjectiveBlueprint] = []
+        goal_limit = _objective_count_for_level(resolved_level, len(goals))
+        for index, item in enumerate(goals[:goal_limit]):
+            if not isinstance(item, dict):
+                continue
+            goal = str(item.get("goal") or "").strip()
+            if not goal:
+                continue
+            expected_points = _normalize_string_list(
+                item.get("success_criteria") or item.get("expected_points"),
+                limit=4,
+            ) or _fallback_expected_points(goal)
+            vocabulary = _normalize_string_list(item.get("vocabulary"), limit=6) or expected_points
+            follow_ups = _normalize_string_list(item.get("follow_up_questions"), limit=3)
+            question = str(item.get("question") or item.get("main_question") or "").strip()
+            main_question = opening if index == 0 and opening else question
+            if not main_question:
+                main_question, default_follow_ups = _build_objective_questions(
+                    index=index,
+                    goal=goal,
+                    topic=topic,
+                    assigned_task=assigned_task,
+                    expected_points=expected_points,
+                )
+                follow_ups = follow_ups or default_follow_ups
+            blueprints.append(
+                ObjectiveBlueprint(
+                    goal=goal,
+                    expected_points=expected_points,
+                    main_question=main_question,
+                    follow_up_questions=follow_ups,
+                    vocabulary=vocabulary,
+                )
+            )
+
+        if not blueprints:
+            return LessonRuntimeService.create_lesson_package(scenario=scenario, level=resolved_level)
+
+        return LessonRuntimeService._package_from_blueprints(
+            scenario=scenario,
+            topic=topic,
+            level=resolved_level,
+            blueprints=blueprints,
+        )
+
+    @staticmethod
+    def _package_from_blueprints(
+        *,
+        scenario: Scenario,
+        topic: str,
+        level: str,
+        blueprints: list[ObjectiveBlueprint],
+    ) -> LessonPackage:
         objectives: list[LessonObjective] = []
 
-        for index, goal in enumerate(objectives_source[:4]):
-            expected_points = _goal_points(goal)
-            main_question, follow_ups = _build_objective_questions(
-                index=index,
-                goal=goal,
-                topic=topic,
-                assigned_task=assigned_task,
-                expected_points=expected_points,
-            )
+        for index, blueprint in enumerate(blueprints):
             objectives.append(
                 LessonObjective(
                     objective_id=f"obj_{index + 1}",
-                    goal=goal,
-                    main_question=main_question,
-                    follow_up_questions=follow_ups,
-                    expected_points=expected_points,
+                    goal=blueprint.goal,
+                    main_question=blueprint.main_question,
+                    follow_up_questions=blueprint.follow_up_questions,
+                    expected_points=blueprint.expected_points,
                     hint_seed=LessonHintSeed(
-                        focus=goal,
-                        grammar="Use short spoken English sentences and answer directly.",
-                        max_length=2 if resolved_level.lower() in {"beginner", "easy", "a1", "a2"} else 4,
+                        focus=blueprint.goal,
+                        grammar=", ".join(blueprint.vocabulary),
+                        max_length=2 if level.lower() in {"beginner", "easy", "a1", "a2"} else 4,
                     ),
                 )
             )
@@ -236,7 +531,7 @@ class LessonRuntimeService:
             lesson_id=str(uuid.uuid4()),
             scenario_id=scenario.id,
             scenario=topic,
-            level=resolved_level,
+            level=level,
             persona=_persona(scenario),
             objectives=objectives,
         )
@@ -302,7 +597,10 @@ class LessonRuntimeService:
             total=total,
             percent=int((completed / total) * 100) if total else 100,
         )
-        suggested = [f"I would mention {point.lower()}." for point in (missing_points or current.expected_points[:2])][:3]
+        suggested = [
+            _sample_answer_for_objective(current, [point], easy=True)
+            for point in (missing_points or current.expected_points[:2])
+        ][:3]
 
         return LessonStateRead(
             lesson_id=package.lesson_id,
@@ -311,6 +609,7 @@ class LessonRuntimeService:
             topic=_title_case_topic(scenario),
             assigned_task=_assigned_task(scenario),
             persona=package.persona,
+            lesson_goals=[objective.goal for objective in objectives],
             status=state.status,
             current_question=state.last_question or current.main_question,
             current_objective=LessonObjectiveState(
@@ -393,8 +692,11 @@ class LessonRuntimeService:
                 state.status = "completed"
                 state.should_end = True
                 state.end_reason = "all_objectives_completed"
-                state.completion_message = (
-                    f"You covered the main goals for {package.scenario.lower()}. Wrap up the conversation politely."
+                state.completion_message = _build_completion_message(
+                    package=package,
+                    state=state,
+                    matched_points=matched,
+                    missing_points=missing,
                 )
                 state.last_question = state.completion_message
                 return LessonAdvanceResult(
@@ -422,12 +724,12 @@ class LessonRuntimeService:
                 ),
             )
 
-        if missing:
-            next_question = f"Good start. Can you also mention {missing[0].lower()}?"
-        elif follow_up_index < len(current.follow_up_questions):
+        if follow_up_index < len(current.follow_up_questions):
             next_question = current.follow_up_questions[follow_up_index]
+        elif missing:
+            next_question = _question_for_missing_point(current, missing[0])
         else:
-            next_question = f"Add one more clear detail about {current.goal.lower()}."
+            next_question = f"Could you add one more real example about {current.goal.lower()}?"
 
         state.follow_up_index_by_objective[objective_id] = follow_up_index + 1
         state.last_question = next_question
@@ -454,32 +756,57 @@ class LessonRuntimeService:
         cached: bool = False,
     ) -> LessonHintRead:
         current = package.objectives[state.current_objective_index]
+        objective_id = current.objective_id
+        follow_up_index = state.follow_up_index_by_objective.get(objective_id, 0)
         answer = (user_last_answer or "").strip()
-        matched, missing = cls._match_expected_points(answer, current.expected_points) if answer else ([], list(current.expected_points))
+        matched, missing = (
+            cls._match_expected_points(answer, current.expected_points)
+            if answer
+            else ([], list(current.expected_points))
+        )
         keywords = missing or current.expected_points[:3]
         max_length = current.hint_seed.max_length
         keyword_phrase = ", ".join(item.lower() for item in keywords[:3])
 
-        if answer:
+        matched_count = len(matched)
+        total_points = len(current.expected_points)
+
+        if not answer:
             analysis = (
-                f"Ban da noi duoc {len(matched)}/{len(current.expected_points)} y chinh. "
-                f"Can bo sung: {', '.join(item.lower() for item in missing[:3]) or 'mot chi tiet cu the hon'}."
+                "Ban chua tra loi ro y chinh. "
+                "Hay noi 1-2 cau ngan, di thang vao muc tieu hien tai."
+            )
+        elif matched_count == total_points:
+            analysis = (
+                f"Ban da de cap day du {total_points}/{total_points} y chinh. "
+                "Hay mo rong them mot chut de cau tra loi co chieu sau hon."
+            )
+        elif matched_count > 0:
+            matched_desc = ", ".join(item.lower() for item in matched[:3])
+            missing_desc = ", ".join(item.lower() for item in missing[:3])
+            analysis = (
+                f"Tot! Ban da de cap: {matched_desc}. "
+                f"Can bo sung them: {missing_desc}."
             )
         else:
-            analysis = "Ban chua tra loi ro y chinh. Hay noi 1-2 cau ngan, di thang vao muc tieu hien tai."
+            analysis = (
+                f"Ban chua de cap y chinh nao. "
+                f"Hay tap trung vao: {keyword_phrase or current.goal.lower()}."
+            )
+
+        # Adjust advice based on how many follow-ups have already been used
+        if follow_up_index == 0:
+            strategy_prefix = f"Tra loi toi da {max_length} cau."
+        else:
+            strategy_prefix = f"Lan nay hay thu dung cac tu khoa sau va tra loi trong {max_length} cau."
 
         answer_strategy = (
-            f"Tra loi toi da {max_length} cau. Noi truc tiep ve {current.goal.lower()}, "
+            f"{strategy_prefix} Noi truc tiep ve {current.goal.lower()}, "
             f"sau do chen cac tu khoa: {keyword_phrase or current.goal.lower()}."
         )
-        sample_answer = (
-            f"In this situation, I would focus on {current.goal.lower()}. "
-            f"I would mention {keyword_phrase or current.goal.lower()} clearly."
-        )
-        sample_answer_easy = (
-            f"I would talk about {current.goal.lower()}. "
-            f"I would say {keyword_phrase or current.goal.lower()}."
-        )
+
+        sample_answer = _sample_answer_for_objective(current, keywords, easy=False)
+        sample_answer_easy = _sample_answer_for_objective(current, keywords, easy=True)
 
         return LessonHintRead(
             lesson_id=package.lesson_id,
@@ -494,6 +821,7 @@ class LessonRuntimeService:
                 "matched_points": matched,
                 "missing_points": missing,
                 "focus": current.hint_seed.focus,
+                "follow_up_index": follow_up_index,
             },
         )
 
@@ -504,8 +832,11 @@ class LessonRuntimeService:
         objective_id: str,
         answer: str | None,
         payload: LessonHintRead,
+        follow_up_index: int = 0,
     ) -> dict[str, Any]:
-        key = f"{objective_id}:{_normalize_text(answer or '')}"
+        # Include follow_up_index in the key so hints are refreshed as the
+        # conversation progresses, even if the answer text is similar.
+        key = f"{objective_id}:{follow_up_index}:{_normalize_text(answer or '')}"
         updated = dict(hints)
         updated[key] = payload.model_dump()
         return updated
@@ -516,8 +847,9 @@ class LessonRuntimeService:
         hints: dict[str, Any],
         objective_id: str,
         answer: str | None,
+        follow_up_index: int = 0,
     ) -> LessonHintRead | None:
-        key = f"{objective_id}:{_normalize_text(answer or '')}"
+        key = f"{objective_id}:{follow_up_index}:{_normalize_text(answer or '')}"
         cached = hints.get(key)
         if not cached:
             return None

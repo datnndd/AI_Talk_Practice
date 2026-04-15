@@ -26,23 +26,23 @@ export const getLessonStatusCopy = ({ lessonState, recordingState, connectionSta
   }
 
   if (connectionState === "closed") {
-    return "Reconnect to continue the guided lesson.";
+    return "Reconnect to continue this conversation.";
   }
 
   if (lessonState.should_end) {
-    return lessonState.completion_message || "The lesson goals are complete. You can close the conversation now.";
+    return lessonState.completion_message || "The conversation goals are complete. You can close the session now.";
   }
 
   if (recordingState === "recording") {
-    return "Answer the current lesson question naturally in your own words.";
+    return "Answer the current question naturally in your own words.";
   }
 
   if (recordingState === "processing") {
-    return "Reviewing your answer and choosing the next guided question.";
+    return "Reviewing your answer and choosing the next question.";
   }
 
   if (recordingState === "assistant") {
-    return "The coach is guiding you to the next step.";
+    return "Your conversation partner is moving to the next step.";
   }
 
   return lessonState.current_question || "";

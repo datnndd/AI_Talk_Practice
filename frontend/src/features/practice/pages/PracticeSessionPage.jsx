@@ -60,6 +60,7 @@ const PracticeSession = () => {
   const suppressAssistantStreamRef = useRef(false);
   const assistantDraftRef = useRef("");
   const lessonStateRef = useRef(null);
+  const hasAutoConnectedRef = useRef(false);
 
   const buildMessage = (role, content) => {
     messageIdRef.current += 1;
@@ -495,6 +496,15 @@ const PracticeSession = () => {
   }, [lessonState]);
 
   useEffect(() => {
+    if (!scenario || scenarioError || hasAutoConnectedRef.current || connectionState !== "closed") {
+      return;
+    }
+
+    hasAutoConnectedRef.current = true;
+    connectSocket(true);
+  }, [connectSocket, connectionState, scenario, scenarioError]);
+
+  useEffect(() => {
     if (connectionState !== "ready" || !autoStartRecordingRef.current) {
       return;
     }
@@ -652,7 +662,7 @@ const PracticeSession = () => {
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-                  Guided Lesson Progress
+                  Conversation Goals
                 </p>
                 <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600">
                   {lessonState?.progress
@@ -670,9 +680,9 @@ const PracticeSession = () => {
 
             <div className="grid gap-3 md:grid-cols-3 xl:min-w-[520px]">
               <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">Current Objective</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">Current Goal</p>
                 <p className="mt-1 text-sm font-semibold text-zinc-900">
-                  {lessonState?.current_objective?.goal || "Loading objective"}
+                  {lessonState?.current_objective?.goal || "Loading goal"}
                 </p>
               </div>
               <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
@@ -712,11 +722,11 @@ const PracticeSession = () => {
               onReconnect={handleReconnect}
               disabled={isMicDisabled}
               error={sessionError}
-              suggestions={lessonState?.suggested_responses?.length ? lessonState.suggested_responses : conversationGuidance.suggestedResponses}
+              suggestions={lessonState ? lessonState.suggested_responses || [] : conversationGuidance.suggestedResponses}
               completion={lessonState ? {
                 title: lessonCompleted ? "Conversation Complete" : "Current Goal",
                 detail: lessonCompleted
-                  ? lessonState.completion_message || "The lesson goals are complete. You can end the session now."
+                  ? lessonState.completion_message || "The conversation goals are complete. You can end the session now."
                   : lessonState.current_objective?.goal || conversationGuidance.completion?.detail,
                 status: lessonCompleted ? "ready" : lessonCompletionTone,
               } : conversationGuidance.completion}
@@ -728,7 +738,6 @@ const PracticeSession = () => {
           </div>
 
           <MetricsSidebar
-            scenario={scenario}
             durationSeconds={durationSeconds}
             sessionId={sessionId}
             turnCount={userTurnCount}

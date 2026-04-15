@@ -64,7 +64,7 @@ const CurrentQuestionCard = ({
               Current Step
             </div>
             <h2 className="mt-3 font-display text-3xl font-black tracking-tight text-zinc-950">
-              {lessonState?.current_question || "Connect to load the first guided question."}
+              {lessonState?.current_question || "Preparing your opening question..."}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600">
               {statusCopy || guidance?.completion?.detail || "The lesson guide will tell the learner what to do next."}
@@ -73,7 +73,7 @@ const CurrentQuestionCard = ({
 
           <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[320px]">
             <Badge
-              label="Current Objective"
+              label="Current Goal"
               value={lessonState?.current_objective?.goal || "Waiting for lesson state"}
               tone="primary"
             />
@@ -102,14 +102,14 @@ const CurrentQuestionCard = ({
               Progress Signal
             </div>
             <p className="mt-3 text-lg font-black text-zinc-950">
-              {lessonState?.progress ? `${lessonState.progress.completed}/${lessonState.progress.total} objectives complete` : "Waiting for progress"}
+              {lessonState?.progress ? `${lessonState.progress.completed}/${lessonState.progress.total} goals complete` : "Waiting for progress"}
             </p>
             <p className="mt-2 text-sm leading-relaxed text-zinc-600">
               {lessonState?.should_end
-                ? lessonState.completion_message || "The lesson is ready to close."
+                  ? lessonState.completion_message || "The lesson is ready to close."
                 : lessonState?.current_objective?.remaining_follow_ups > 0
-                  ? `${lessonState.current_objective.remaining_follow_ups} follow-up prompts left for this objective.`
-                  : "This objective is close to completion."}
+                  ? `${lessonState.current_objective.remaining_follow_ups} follow-up prompts left for this goal.`
+                  : "This goal is close to completion."}
             </p>
           </div>
         </div>

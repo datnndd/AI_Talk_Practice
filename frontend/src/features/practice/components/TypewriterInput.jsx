@@ -12,12 +12,12 @@ import {
 } from "@/features/practice/utils/lessonState";
 
 const STATUS_COPY = {
-  closed: "Tap the mic to connect to the live conversation session.",
+  closed: "Preparing the conversation session.",
   idle: "Tap the mic when you're ready to speak.",
   recording: "Listening now. Speak naturally, then stop to send your turn.",
-  processing: "Processing your speech and drafting the assistant reply.",
-  assistant: "The assistant is responding with text and audio.",
-  interrupting: "Stopping the assistant reply.",
+  processing: "Processing your speech and choosing the next reply.",
+  assistant: "Your conversation partner is replying with text and audio.",
+  interrupting: "Stopping the current reply.",
   connecting: "Connecting your live conversation session.",
 };
 

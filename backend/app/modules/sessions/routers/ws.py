@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.security import decode_token
 from app.db.session import AsyncSessionLocal
+from app.infra.factory import create_llm
 from app.modules.sessions.schemas.session import MessageCreate, SessionCreate
 from app.modules.auth.services.auth_service import AuthService
 from app.modules.sessions.services.lesson_runtime import LessonRuntimeService
@@ -165,11 +166,27 @@ async def websocket_conversation(websocket: WebSocket):
                     lesson_progress = None
                     lesson_hints = {}
                     if lesson_engine_enabled:
-                        lesson_package, lesson_progress, lesson_hints = LessonRuntimeService.ensure_session_lesson(
-                            scenario=session.scenario,
-                            session_metadata=session.session_metadata,
-                            level=user.level,
-                        )
+                        planning_llm = None
+                        try:
+                            planning_llm = create_llm(settings)
+                            lesson_package, lesson_progress, lesson_hints = (
+                                await LessonRuntimeService.ensure_session_lesson_dynamic(
+                                    scenario=session.scenario,
+                                    session_metadata=session.session_metadata,
+                                    level=user.level,
+                                    llm=planning_llm,
+                                    regenerate=True,
+                                )
+                            )
+                        except Exception:
+                            lesson_package, lesson_progress, lesson_hints = LessonRuntimeService.ensure_session_lesson(
+                                scenario=session.scenario,
+                                session_metadata=session.session_metadata,
+                                level=user.level,
+                            )
+                        finally:
+                            if planning_llm is not None:
+                                await planning_llm.close()
                         async with db_lock:
                             async with AsyncSessionLocal() as db_write:
                                 session = await SessionService.merge_session_metadata(
@@ -255,7 +272,11 @@ async def websocket_conversation(websocket: WebSocket):
                         )
                         await send_json_safe({"type": "lesson_started", "lesson": state.model_dump(mode="json")})
                         await send_lesson_state_event(state)
-                        await persist_message("assistant", state.current_question)
+                        # Proactively speak the opening question so the assistant
+                        # starts the conversation — the user does not need to speak first.
+                        opening_text = state.current_question
+                        if opening_text:
+                            await conversation.speak_opening(opening_text)
                     continue
 
                 if conversation is None:
