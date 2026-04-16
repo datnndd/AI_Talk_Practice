@@ -8,59 +8,55 @@ from app.modules.scenarios.models.scenario import Scenario
 
 
 LESSON_PLAN_SYSTEM_PROMPT = """
-You design realistic English speaking practice sessions.
-
-Act as the conversation partner for the selected scenario, not as an English teacher.
-Generate a finite conversation plan that adapts to the learner's English level.
-Return only valid JSON. Do not include Markdown.
+You are an expert at designing realistic, immersive English speaking practice sessions.
+Act strictly as the conversation partner in the given scenario. 
+Never act as an English teacher or tutor unless the scenario itself requires it.
+Generate a finite, well-structured conversation plan adapted to the learner's CEFR level.
+Return ONLY a valid JSON object. Do not add any explanation, Markdown, or extra text.
 """.strip()
 
 
 LESSON_PLAN_USER_PROMPT_TEMPLATE = """
-Create the initial lesson plan for a live voice conversation.
+Create an initial conversation plan for a live voice roleplay.
 
 Scenario:
 - Title: {title}
 - Description: {description}
 - Category: {category}
-- Mode: {mode}
 - Difficulty: {difficulty}
-- Scenario metadata: {metadata}
-- Existing learning objectives: {learning_objectives}
 - Scenario role prompt: {scenario_prompt}
 
-Learner:
-- English level: {level}
+Learner English level: {level}
 
-Rules:
-- The assistant must proactively open the conversation with a natural first question.
-- Do not wait for the learner to speak first.
-- Stay inside the chosen scenario and role.
-- Do not behave like a teacher unless the scenario itself is a teaching scenario.
-- Convert vague objectives such as "professional vocabulary" into concrete contextual goals,
-  success criteria, and useful phrases.
-- Vocabulary must be specific to this exact scenario, not generic labels.
-- Follow-up questions must sound like real conversation questions from the role.
-- Keep the plan finite:
-  - beginner/A1/A2/easy: 2 goals, simple questions, 1-2 follow-ups per goal.
-  - intermediate/B1/B2/medium: 3 goals, more detail, 2 follow-ups per goal.
-  - advanced/C1/C2/hard: 4 goals, deeper detail, 2-3 follow-ups per goal.
+Rules (follow strictly):
+- The assistant must open the conversation proactively with a natural, in-character line (diegetic).
+- Opening message must sound like the character is speaking inside the scene right now. No meta comments.
+- Stay 100% in character and inside the scenario at all times.
+- Convert learning objectives into concrete, contextual conversation goals.
+- Vocabulary and phrases must be specific to this exact scenario.
+- Make every question and follow-up sound like real human conversation from the role.
 
-JSON schema:
+Level-specific constraints:
+- A1/A2 (Beginner/Easy): Maximum 2 goals. Use very simple language. 1 follow-up per goal.
+- B1/B2 (Intermediate/Medium): 3 goals. Moderate detail. 1-2 natural follow-ups per goal.
+- C1/C2 (Advanced/Hard): 3-4 goals. Deeper, more natural conversation. 2-3 follow-ups per goal.
+
+Return ONLY this exact JSON structure (no extra fields, no extra text):
+
 {{
-  "opening_message": "Natural first assistant message. It must include the first question.",
+  "opening_message": "Natural first line said by the character (max 15-20 words)",
   "goals": [
     {{
-      "goal": "Concrete conversation goal",
-      "question": "Natural question that starts this goal after the previous goal is complete",
-      "success_criteria": ["specific point the learner should include"],
-      "follow_up_questions": ["natural follow-up question"],
-      "vocabulary": ["contextual word or phrase"]
+      "goal": "Short, concrete conversation goal",
+      "starting_question": "Natural question the character asks to begin this goal",
+      "success_criteria": ["What the learner should try to communicate (specific points)"],
+      "follow_up_questions": ["Natural follow-up 1", "Natural follow-up 2"],
+      "useful_phrases": ["1-3 contextual phrases or vocabulary useful for this goal"]
     }}
   ],
-  "summary_instruction": "How to summarize this specific scenario at the end"
+  "ending_summary_instruction": "Brief instruction for how to end the conversation naturally and give light feedback"
 }}
-""".strip()
+"""
 
 
 def _json_default(value: Any) -> str:

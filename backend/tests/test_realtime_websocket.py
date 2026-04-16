@@ -113,6 +113,45 @@ class SpeechStoppedASR(StubASR):
         )
 
 
+class PartialThenFinalASR(StubASR):
+    def __init__(self, _config):
+        super().__init__(_config)
+        self._partial_emitted = False
+
+    async def get_transcript(self):
+        if self.audio_chunks and not self._partial_emitted:
+            self._partial_emitted = True
+            return TranscriptEvent(
+                text="This should stay hidden while recording",
+                type=TranscriptType.PARTIAL,
+                language=self.language,
+            )
+        return None
+
+
+class GracefulSpeechStoppedASR(StubASR):
+    def __init__(self, _config):
+        super().__init__(_config)
+        self._speech_end_emitted = False
+
+    async def get_transcript(self):
+        if self.audio_chunks and not self._speech_end_emitted:
+            self._speech_end_emitted = True
+            return TranscriptEvent(
+                text="",
+                type=TranscriptType.SPEECH_END,
+                language=self.language,
+            )
+        return None
+
+    async def stop_session(self):
+        return TranscriptEvent(
+            text=f"Captured {len(self.audio_chunks)} chunks",
+            type=TranscriptType.FINAL,
+            language=self.language,
+        )
+
+
 class LessonAnswerASR(StubASR):
     async def stop_session(self):
         if not self.audio_chunks:
@@ -128,10 +167,11 @@ class StubLLM:
     def __init__(self, _config):
         self.calls = []
 
-    async def chat_stream(self, messages, system_prompt=None):
+    async def chat_stream(self, messages, system_prompt=None, max_tokens=None):
         self.calls.append({
             "system_prompt": system_prompt,
             "messages": [(message.role, message.content) for message in messages],
+            "max_tokens": max_tokens,
         })
         yield "Hello "
         await asyncio.sleep(0.05)
@@ -145,10 +185,11 @@ class LessonPlanLLM:
     def __init__(self, _config):
         self.calls = []
 
-    async def chat_stream(self, messages, system_prompt=None):
+    async def chat_stream(self, messages, system_prompt=None, max_tokens=None):
         self.calls.append({
             "system_prompt": system_prompt,
             "messages": [(message.role, message.content) for message in messages],
+            "max_tokens": max_tokens,
         })
         yield json.dumps({
             "opening_message": "Welcome. Could you introduce yourself and the role you are practicing for?",
@@ -356,6 +397,7 @@ async def test_final_asr_event_auto_triggers_llm_without_stop_recording(test_use
         return instance
 
     monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(ws_module.settings, "asr_finalization_grace_ms", 10)
     monkeypatch.setattr(conversation_module, "create_asr", lambda config: AutoFinalASR(config))
     monkeypatch.setattr(conversation_module, "create_llm", create_llm)
     monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
@@ -442,6 +484,7 @@ async def test_speech_stopped_event_auto_finalizes_turn(test_user, test_scenario
         return instance
 
     monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(ws_module.settings, "asr_finalization_grace_ms", 10)
     monkeypatch.setattr(conversation_module, "create_asr", lambda config: SpeechStoppedASR(config))
     monkeypatch.setattr(conversation_module, "create_llm", create_llm)
     monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
@@ -484,6 +527,77 @@ async def test_speech_stopped_event_auto_finalizes_turn(test_user, test_scenario
         ("assistant", "Hello from the assistant", 2),
     ]
     assert llm_instances[0].calls[0]["messages"] == [("user", "Hello from speech-stopped ASR")]
+
+
+@pytest.mark.asyncio
+async def test_partial_transcripts_are_not_sent_to_client(test_user, test_scenario, monkeypatch):
+    monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(conversation_module, "create_asr", lambda config: PartialThenFinalASR(config))
+    monkeypatch.setattr(conversation_module, "create_llm", lambda config: StubLLM(config))
+    monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
+
+    token = create_access_token(test_user.id)
+    audio_payload = base64.b64encode(b"\x01\x02" * 4000).decode("ascii")
+    websocket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "language": "en",
+                "voice": "Cherry",
+            },
+            {"type": "start_recording", "language": "en", "voice": "Cherry"},
+            {"type": "audio_chunk", "data": audio_payload},
+            {"type": "stop_recording"},
+        ],
+        message_delay=0.05,
+    )
+
+    await ws_module.websocket_conversation(websocket)
+
+    assert not any(message["type"] == "transcript_partial" for message in websocket.sent)
+    assert any(
+        message["type"] == "transcript_final" and message["text"] == "Hello from the user"
+        for message in websocket.sent
+    )
+
+
+@pytest.mark.asyncio
+async def test_speech_end_waits_for_trailing_audio_before_finalizing(test_user, test_scenario, monkeypatch):
+    monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(ws_module.settings, "asr_finalization_grace_ms", 90)
+    monkeypatch.setattr(conversation_module, "create_asr", lambda config: GracefulSpeechStoppedASR(config))
+    monkeypatch.setattr(conversation_module, "create_llm", lambda config: StubLLM(config))
+    monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
+
+    token = create_access_token(test_user.id)
+    first_audio = base64.b64encode(b"\x01\x02" * 4000).decode("ascii")
+    trailing_audio = base64.b64encode(b"\x03\x04" * 4000).decode("ascii")
+    websocket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "language": "en",
+                "voice": "Cherry",
+            },
+            {"type": "start_recording", "language": "en", "voice": "Cherry"},
+            {"type": "audio_chunk", "data": first_audio},
+            {"type": "audio_chunk", "data": trailing_audio},
+            {"type": "config", "language": "en", "voice": "Cherry"},
+            {"type": "config", "language": "en", "voice": "Cherry"},
+        ],
+        message_delay=0.05,
+    )
+
+    await ws_module.websocket_conversation(websocket)
+
+    assert any(
+        message["type"] == "transcript_final" and message["text"] == "Captured 2 chunks"
+        for message in websocket.sent
+    )
 
 
 @pytest.mark.asyncio
@@ -581,4 +695,5 @@ async def test_lesson_engine_emits_state_and_structured_reply_events(test_user, 
     assert messages[1].content == "I can practice live conversation naturally today."
     assert messages[2].content == "Which experience is most relevant?"
     assert planning_llm_instances[0].calls
+    assert planning_llm_instances[0].calls[0]["max_tokens"] == 1400
     assert llm_instances[0].calls == []

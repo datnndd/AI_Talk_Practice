@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, WarningCircle } from "@phosphor-icons/react";
 import { useNavigate, useParams } from "react-router-dom";
 import ChatWindow from "@/features/practice/components/ChatWindow";
-import CurrentQuestionCard from "@/features/practice/components/CurrentQuestionCard";
 import MetricsSidebar from "@/features/practice/components/MetricsSidebar";
 import TypewriterInput from "@/features/practice/components/TypewriterInput";
 import { SessionHeader } from "@/shared/components/navigation";
@@ -17,11 +16,15 @@ import { practiceApi } from "@/features/practice/api/practiceApi";
 import { buildConversationGuidance } from "@/features/practice/utils/conversationGuidance";
 import {
   appendUniqueMessage,
-  getLessonCompletionTone,
 } from "@/features/practice/utils/lessonState";
 
 const DEFAULT_LANGUAGE = "en";
 const DEFAULT_VOICE = "Cherry";
+const STOP_CAPTURE_FLUSH_MS = 250;
+
+const wait = (milliseconds) => new Promise((resolve) => {
+  window.setTimeout(resolve, milliseconds);
+});
 
 const PracticeSession = () => {
   const navigate = useNavigate();
@@ -61,6 +64,7 @@ const PracticeSession = () => {
   const assistantDraftRef = useRef("");
   const lessonStateRef = useRef(null);
   const hasAutoConnectedRef = useRef(false);
+  const isStoppingRecordingRef = useRef(false);
 
   const buildMessage = (role, content) => {
     messageIdRef.current += 1;
@@ -123,6 +127,7 @@ const PracticeSession = () => {
     isCleaningUpRef.current = intentional;
     autoStartRecordingRef.current = false;
     suppressAssistantStreamRef.current = false;
+    isStoppingRecordingRef.current = false;
 
     if (socketRef.current) {
       socketRef.current.close();
@@ -230,6 +235,7 @@ const PracticeSession = () => {
       setPartialTranscript("");
       setSessionError("");
       setLessonHint(null);
+      isStoppingRecordingRef.current = false;
       captureActiveRef.current = true;
       socketRef.current?.send(JSON.stringify({
         type: "start_recording",
@@ -280,14 +286,6 @@ const PracticeSession = () => {
         break;
       case "lesson_started":
         setLessonState(payload.lesson || null);
-        if (payload.lesson?.current_question) {
-          setMessages((current) => {
-            return appendUniqueMessage(
-              current,
-              buildMessage("assistant", payload.lesson.current_question),
-            );
-          });
-        }
         break;
       case "lesson_state":
         if (
@@ -304,10 +302,10 @@ const PracticeSession = () => {
         setSessionError("");
         break;
       case "transcript_partial":
-        setPartialTranscript(payload.text || "");
         break;
       case "transcript_final":
         captureActiveRef.current = false;
+        isStoppingRecordingRef.current = false;
         if (payload.text) {
           setMessages((current) => appendUniqueMessage(current, buildMessage("user", payload.text)));
         }
@@ -368,6 +366,7 @@ const PracticeSession = () => {
         break;
       case "error":
         stopAssistantPlayback();
+        isStoppingRecordingRef.current = false;
         assistantDraftRef.current = "";
         suppressAssistantStreamRef.current = false;
         autoStartRecordingRef.current = false;
@@ -553,9 +552,18 @@ const PracticeSession = () => {
     }
 
     if (recordingState === "recording") {
-      captureActiveRef.current = false;
-      socketRef.current.send(JSON.stringify({ type: "stop_recording" }));
+      if (isStoppingRecordingRef.current) {
+        return;
+      }
+      isStoppingRecordingRef.current = true;
       setRecordingState("processing");
+      await wait(STOP_CAPTURE_FLUSH_MS);
+      captureActiveRef.current = false;
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({ type: "stop_recording" }));
+      } else {
+        isStoppingRecordingRef.current = false;
+      }
       return;
     }
 
@@ -644,75 +652,24 @@ const PracticeSession = () => {
     durationSeconds,
     turnCount: userTurnCount,
   });
-  const lessonCompletionTone = getLessonCompletionTone(lessonState);
-  const progressPercent = lessonState?.progress?.percent ?? 0;
 
   return (
-    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_top_left,_rgba(49,130,237,0.18),_transparent_30%),linear-gradient(135deg,_#eff6ff_0%,_#ffffff_48%,_#ecfeff_100%)] p-4 font-sans antialiased md:p-6">
+    <div className="min-h-[100dvh] bg-[linear-gradient(135deg,_#f8fafc_0%,_#ffffff_46%,_#f0fdf4_100%)] p-4 font-sans antialiased md:p-6">
       <div className="mx-auto flex h-[calc(100dvh-2rem)] max-w-[1440px] flex-col gap-4 md:h-[calc(100dvh-3rem)] md:gap-6">
         <SessionHeader
-          scenarioTitle={scenario.title}
-          connectionState={connectionState}
-          onBack={() => navigate("/topics")}
-          onExit={handleEndSession}
+          onBack={handleEndSession}
         />
 
-        <section className="rounded-[28px] border border-white/45 bg-white/75 px-5 py-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.4)] backdrop-blur-xl">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-                  Conversation Goals
-                </p>
-                <span className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600">
-                  {lessonState?.progress
-                    ? `${lessonState.progress.completed}/${lessonState.progress.total} complete`
-                    : "Waiting"}
-                </span>
-              </div>
-              <div className="mt-3 h-3 overflow-hidden rounded-full bg-zinc-100">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-3 xl:min-w-[520px]">
-              <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">Current Goal</p>
-                <p className="mt-1 text-sm font-semibold text-zinc-900">
-                  {lessonState?.current_objective?.goal || "Loading goal"}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">Need To Mention</p>
-                <p className="mt-1 text-sm font-semibold text-zinc-900">
-                  {lessonState?.current_objective?.missing_points?.length || 0} points
-                </p>
-              </div>
-              <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">Follow-ups Left</p>
-                <p className="mt-1 text-sm font-semibold text-zinc-900">
-                  {lessonState?.current_objective?.remaining_follow_ups ?? 0}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <main className="grid min-h-0 flex-1 grid-cols-1 gap-8 lg:grid-cols-12">
-          <div className="relative flex min-h-0 flex-col gap-6 lg:col-span-8">
-            <CurrentQuestionCard
+        <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_330px] xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="relative flex min-h-0 flex-col gap-3">
+            <ChatWindow
+              scenario={scenario}
               lessonState={lessonState}
               guidance={conversationGuidance}
-              connectionState={connectionState}
-              recordingState={recordingState}
-            />
-            <ChatWindow
               messages={messages}
               partialTranscript={partialTranscript}
               assistantDraft={assistantDraft}
+              isListening={recordingState === "recording"}
             />
             <TypewriterInput
               partialTranscript={partialTranscript}
@@ -722,14 +679,6 @@ const PracticeSession = () => {
               onReconnect={handleReconnect}
               disabled={isMicDisabled}
               error={sessionError}
-              suggestions={lessonState ? lessonState.suggested_responses || [] : conversationGuidance.suggestedResponses}
-              completion={lessonState ? {
-                title: lessonCompleted ? "Conversation Complete" : "Current Goal",
-                detail: lessonCompleted
-                  ? lessonState.completion_message || "The conversation goals are complete. You can end the session now."
-                  : lessonState.current_objective?.goal || conversationGuidance.completion?.detail,
-                status: lessonCompleted ? "ready" : lessonCompletionTone,
-              } : conversationGuidance.completion}
               lessonState={lessonState}
               hint={lessonHint}
               isHintLoading={isHintLoading}

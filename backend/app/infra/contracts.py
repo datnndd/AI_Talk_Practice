@@ -61,6 +61,7 @@ class LLMBase(ABC):
         self,
         messages: list[Message],
         system_prompt: str | None = None,
+        max_tokens: int | None = None,
     ) -> AsyncGenerator[str, None]:
         ...
 

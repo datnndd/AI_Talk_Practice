@@ -6,10 +6,7 @@ Suitable for machines with limited VRAM (small model ~1GB).
 """
 
 import asyncio
-import io
 import logging
-import struct
-import tempfile
 from typing import Optional
 
 import numpy as np
@@ -30,10 +27,6 @@ class FasterWhisperASR(ASRBase):
         self._sample_rate = 16000
         self._language = "en"
         self._is_active = False
-        # Minimum audio length to process (in seconds)
-        self._min_audio_seconds = 1.0
-        # Silence threshold for VAD-like behavior
-        self._silence_threshold = 500  # RMS value
 
     def _ensure_model(self):
         """Lazy-load the whisper model."""
@@ -84,38 +77,12 @@ class FasterWhisperASR(ASRBase):
 
     async def get_transcript(self) -> Optional[TranscriptEvent]:
         """
-        Process accumulated audio if we have enough data.
-        Returns partial transcripts as audio accumulates.
+        Keep buffering audio during the turn.
+
+        The app is accuracy-first: local Whisper runs once on the completed
+        utterance instead of repeatedly decoding partial audio while the user
+        is still speaking.
         """
-        if not self._is_active or not self._model:
-            return None
-
-        # Check if we have enough audio
-        bytes_per_second = self._sample_rate * 2  # 16-bit = 2 bytes per sample
-        min_bytes = int(bytes_per_second * self._min_audio_seconds)
-
-        if len(self._audio_buffer) < min_bytes:
-            return None
-
-        # Convert buffer to numpy array
-        audio_data = self._pcm_to_float32(bytes(self._audio_buffer))
-
-        # Check if audio has meaningful content (simple energy-based VAD)
-        rms = np.sqrt(np.mean(audio_data ** 2))
-        if rms < 0.01:  # Silence threshold
-            return None
-
-        # Transcribe in background thread
-        transcript = await asyncio.get_event_loop().run_in_executor(
-            None, self._transcribe, audio_data
-        )
-
-        if transcript:
-            return TranscriptEvent(
-                text=transcript,
-                type=TranscriptType.PARTIAL,
-                language=self._language,
-            )
         return None
 
     async def stop_session(self) -> Optional[TranscriptEvent]:
@@ -147,15 +114,13 @@ class FasterWhisperASR(ASRBase):
     def _transcribe(self, audio: np.ndarray) -> Optional[str]:
         """Run whisper transcription (blocking, runs in executor)."""
         try:
-            segments, info = self._model.transcribe(
+            segments, _info = self._model.transcribe(
                 audio,
                 language=self._language if self._language != "auto" else None,
-                beam_size=5,
-                vad_filter=True,
-                vad_parameters=dict(
-                    min_silence_duration_ms=300,
-                    speech_pad_ms=200,
-                ),
+                beam_size=self._config.asr_beam_size,
+                best_of=self._config.asr_best_of,
+                temperature=0,
+                vad_filter=False,
             )
 
             text_parts = []

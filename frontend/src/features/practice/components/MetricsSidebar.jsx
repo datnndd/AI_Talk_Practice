@@ -19,8 +19,12 @@ const STATUS_STYLES = {
   error: "bg-rose-100 text-rose-700 border-rose-200",
 };
 
+const ReadyIcon = ({ className = "text-emerald-600" }) => (
+  <CheckCircle size={20} weight="fill" className={className} aria-label="Ready" />
+);
+
 const RECORDING_COPY = {
-  idle: "Ready",
+  idle: <ReadyIcon />,
   recording: "Listening",
   processing: "Processing",
   assistant: "Assistant speaking",
@@ -28,19 +32,19 @@ const RECORDING_COPY = {
 };
 
 const SectionCard = ({ title, children }) => (
-  <section className="rounded-[28px] border border-white/40 bg-white/80 p-5 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.45)] backdrop-blur-xl">
+  <section className="rounded-lg border border-zinc-300 bg-white p-5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.5)]">
     <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{title}</p>
     <div className="mt-4">{children}</div>
   </section>
 );
 
 const StatCard = ({ icon: Icon, label, value }) => (
-  <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
+  <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
     <div className="mb-1 flex items-center gap-2 text-zinc-400">
       <Icon size={14} />
       <span className="text-[9px] font-bold uppercase tracking-wider">{label}</span>
     </div>
-    <span className="text-lg font-mono font-bold text-zinc-900">{value}</span>
+    <span className="flex min-h-7 items-center text-lg font-mono font-bold text-zinc-900">{value}</span>
   </div>
 );
 
@@ -51,13 +55,13 @@ const CoverageGroup = ({ title, items, tone = "sky", emptyCopy }) => {
       : "border-sky-200 bg-sky-50 text-sky-700";
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
+    <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">{title}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {items.length > 0 ? items.map((item) => (
           <span
             key={item}
-            className={`inline-flex rounded-full border px-3 py-2 text-xs font-bold ${styles}`}
+            className={`inline-flex rounded-lg border px-3 py-2 text-xs font-bold ${styles}`}
           >
             {item}
           </span>
@@ -103,12 +107,12 @@ const MetricsSidebar = ({
   const showDetailsSection = mobileTab === "details";
 
   return (
-    <aside className="flex h-full flex-col gap-5 lg:col-span-4">
+    <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto pr-1">
       <div className="grid grid-cols-2 gap-2 lg:hidden">
         <button
           type="button"
           onClick={() => setMobileTab("progress")}
-          className={`rounded-2xl border px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] ${
+          className={`rounded-lg border px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] ${
             showProgressSection
               ? "border-primary/20 bg-primary/10 text-primary"
               : "border-zinc-200 bg-white text-zinc-500"
@@ -119,7 +123,7 @@ const MetricsSidebar = ({
         <button
           type="button"
           onClick={() => setMobileTab("details")}
-          className={`rounded-2xl border px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] ${
+          className={`rounded-lg border px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] ${
             showDetailsSection
               ? "border-primary/20 bg-primary/10 text-primary"
               : "border-zinc-200 bg-white text-zinc-500"
@@ -144,8 +148,8 @@ const MetricsSidebar = ({
                   : getLessonStatusLabel(lessonState)}
               </p>
             </div>
-            <span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${statusClassName}`}>
-              {connectionState}
+            <span className={`inline-flex min-h-7 items-center rounded-lg border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${statusClassName}`}>
+              {connectionState === "ready" ? <ReadyIcon /> : connectionState}
             </span>
           </div>
 
@@ -169,7 +173,7 @@ const MetricsSidebar = ({
                   : "border-zinc-200 bg-zinc-50";
 
               return (
-                <div key={`${objective}-${index}`} className={`rounded-2xl border p-4 ${toneClass}`}>
+                <div key={`${objective}-${index}`} className={`rounded-lg border p-4 ${toneClass}`}>
                   <div className="flex items-start gap-3">
                     <div
                       className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${
@@ -227,7 +231,7 @@ const MetricsSidebar = ({
             />
           </div>
 
-          <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
+          <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">Partner Persona</p>
             <p className="mt-2 text-sm font-semibold text-zinc-900">
               {lessonState?.persona || "Friendly speaking partner"}
@@ -247,7 +251,7 @@ const MetricsSidebar = ({
 
           <div className="mt-4 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
             <span>Session ID</span>
-            <span className="rounded-full bg-zinc-100 px-2 py-1 font-mono text-zinc-700">
+            <span className="rounded-lg bg-zinc-100 px-2 py-1 font-mono text-zinc-700">
               {sessionId || "pending"}
             </span>
           </div>
@@ -258,14 +262,14 @@ const MetricsSidebar = ({
         <div className="flex gap-3">
           <button
             onClick={onReconnect}
-            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 transition-all hover:bg-zinc-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600 transition-all hover:bg-zinc-50"
           >
             <ArrowsClockwise weight="bold" />
             Reconnect
           </button>
           <button
             onClick={onEndSession}
-            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-zinc-950 py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition-all hover:bg-zinc-800"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-zinc-950 py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition-all hover:bg-zinc-800"
           >
             <SignOut weight="bold" />
             End Session

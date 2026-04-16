@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     )
     llm_temperature: float = Field(default=0.3, description="Sampling temperature for LLM generation")
     llm_max_tokens: int = Field(default=160, description="Maximum tokens generated per assistant turn")
+    lesson_plan_llm_max_tokens: int = Field(
+        default=1400,
+        description="Maximum tokens generated when creating structured lesson plans",
+    )
     llm_history_message_limit: int = Field(
         default=6,
         description="How many recent conversation messages to send to the LLM",
@@ -75,6 +79,16 @@ class Settings(BaseSettings):
     asr_language: str = Field(default="en", description="ASR language code")
     asr_model: str = Field(default="qwen3-asr-flash-realtime", description="DashScope ASR model")
     asr_model_local: str = Field(default="small", description="faster-whisper model size")
+    asr_finalization_grace_ms: int = Field(
+        default=700,
+        description="Delay after ASR speech-end/final events before closing the turn, so trailing audio can arrive",
+    )
+    asr_emit_partial_transcripts: bool = Field(
+        default=False,
+        description="Send interim ASR transcripts to clients. Disabled by default to prioritize final accuracy.",
+    )
+    asr_beam_size: int = Field(default=8, description="Beam size for local faster-whisper final transcription")
+    asr_best_of: int = Field(default=5, description="Best-of candidates for local faster-whisper transcription")
 
     # --- TTS Configuration ---
     tts_voice: str = Field(default="Cherry", description="DashScope TTS voice name")

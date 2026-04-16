@@ -135,23 +135,63 @@ def _goal_points(goal: str) -> list[str]:
     return [goal.strip()]
 
 
+META_OPENING_FRAGMENTS = (
+    "practice ",
+    "i will start",
+    "what would you say first",
+    "your task is",
+    "you are in a scenario",
+    "selected scenario",
+    "lesson goal",
+    "conversation goal",
+    "objective",
+    "roleplay",
+)
+
+
+def _is_meta_opening(text: str) -> bool:
+    normalized = _normalize_text(text)
+    return any(fragment in normalized for fragment in META_OPENING_FRAGMENTS)
+
+
+def _metadata_opening(scenario: Scenario) -> str:
+    metadata = scenario.scenario_metadata or {}
+    for key in ("opening_message", "opening_line", "initial_message", "first_message", "start_message"):
+        value = metadata.get(key)
+        if isinstance(value, str) and value.strip() and not _is_meta_opening(value):
+            return value.strip()
+    return ""
+
+
+def _fallback_opening_message(*, scenario: Scenario, topic: str) -> str:
+    configured = _metadata_opening(scenario)
+    if configured:
+        return configured
+
+    persona = _persona(scenario)
+    if persona and persona.lower() != "friendly speaking partner":
+        return "Hello! How can I help you today?"
+
+    return "Hello! I'm ready to start our conversation whenever you are. What would you like to say first?"
+
+
 def _build_objective_questions(
     *,
     index: int,
     goal: str,
+    scenario: Scenario,
     topic: str,
-    assigned_task: str,
     expected_points: list[str],
 ) -> tuple[str, list[str]]:
     if index == 0:
-        main_question = f"{assigned_task} I will start the conversation: what would you say first?"
+        main_question = _fallback_opening_message(scenario=scenario, topic=topic)
     else:
-        main_question = f"Now focus on {goal.lower()}. How would you continue the conversation?"
+        main_question = "Could you tell me a little more about that?"
 
     follow_ups = []
     for point in expected_points[:2]:
-        follow_ups.append(f"Could you add a concrete detail about {point.lower()}?")
-    follow_ups.append(f"How would you say that naturally in this {topic.lower()} situation?")
+        follow_ups.append("Could you give me a specific detail or an example to explain that further?")
+    follow_ups.append("How would you express that naturally in a real-life situation?")
     return main_question, follow_ups[:3]
 
 
@@ -278,8 +318,8 @@ def _fallback_blueprints(
         main_question, follow_ups = _build_objective_questions(
             index=index,
             goal=resolved_goal,
+            scenario=scenario,
             topic=topic,
-            assigned_task=assigned_task,
             expected_points=expected_points,
         )
         blueprints.append(
@@ -408,6 +448,7 @@ class LessonRuntimeService:
             async for chunk in llm.chat_stream(
                 [Message(role="user", content=prompt)],
                 system_prompt=LESSON_PLAN_SYSTEM_PROMPT,
+                max_tokens=cls._lesson_plan_max_tokens(llm),
             ):
                 chunks.append(chunk)
             response_text = "".join(chunks)
@@ -418,6 +459,11 @@ class LessonRuntimeService:
         if not plan:
             return cls.create_lesson_package(scenario=scenario, level=level)
         return cls.create_lesson_package_from_plan(scenario=scenario, level=level, plan=plan)
+
+    @staticmethod
+    def _lesson_plan_max_tokens(llm: LLMBase) -> int:
+        config = getattr(llm, "_config", None)
+        return int(getattr(config, "lesson_plan_llm_max_tokens", 1400))
 
     @staticmethod
     def create_lesson_package(
@@ -456,6 +502,8 @@ class LessonRuntimeService:
             return LessonRuntimeService.create_lesson_package(scenario=scenario, level=resolved_level)
 
         opening = str(plan.get("opening_message") or "").strip()
+        if opening and _is_meta_opening(opening):
+            opening = _fallback_opening_message(scenario=scenario, topic=topic)
         blueprints: list[ObjectiveBlueprint] = []
         goal_limit = _objective_count_for_level(resolved_level, len(goals))
         for index, item in enumerate(goals[:goal_limit]):
@@ -470,14 +518,16 @@ class LessonRuntimeService:
             ) or _fallback_expected_points(goal)
             vocabulary = _normalize_string_list(item.get("vocabulary"), limit=6) or expected_points
             follow_ups = _normalize_string_list(item.get("follow_up_questions"), limit=3)
-            question = str(item.get("question") or item.get("main_question") or "").strip()
+            question = str(item.get("question") or item.get("main_question") or item.get("starting_question") or "").strip()
+            if question and _is_meta_opening(question):
+                question = ""
             main_question = opening if index == 0 and opening else question
             if not main_question:
                 main_question, default_follow_ups = _build_objective_questions(
                     index=index,
                     goal=goal,
+                    scenario=scenario,
                     topic=topic,
-                    assigned_task=assigned_task,
                     expected_points=expected_points,
                 )
                 follow_ups = follow_ups or default_follow_ups

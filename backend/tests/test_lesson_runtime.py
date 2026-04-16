@@ -27,6 +27,9 @@ def test_lesson_runtime_generates_package_and_advances():
     assert package.lesson_id
     assert len(package.objectives) == 2
     assert state.last_question == package.objectives[0].main_question
+    assert "I will start" not in package.objectives[0].main_question
+    assert "what would you say first" not in package.objectives[0].main_question.lower()
+    assert "Practice " not in package.objectives[0].main_question
 
     first_result = LessonRuntimeService.advance(
         scenario=scenario,
@@ -178,6 +181,37 @@ def test_prompt_generated_follow_up_avoids_generic_teacher_prompt():
     assert "Good start" not in result.assistant_text
     assert "professional vocabulary" not in result.assistant_text.lower()
     assert result.assistant_text == "Which responsibility is closest to this role?"
+
+
+def test_meta_opening_from_plan_is_replaced_with_roleplay_line():
+    scenario = make_scenario()
+    plan = {
+        "opening_message": (
+            "Practice ordering drinks, asking about the menu, and making small talk with a barista. "
+            "I will start the conversation: what would you say first?"
+        ),
+        "goals": [
+            {
+                "goal": "Order a drink",
+                "question": "Practice ordering a drink.",
+                "success_criteria": ["drink order", "polite request"],
+                "follow_up_questions": ["Would you like that hot or iced?"],
+                "vocabulary": ["drink order", "polite request"],
+            }
+        ],
+    }
+
+    package = LessonRuntimeService.create_lesson_package_from_plan(
+        scenario=scenario,
+        level="beginner",
+        plan=plan,
+    )
+
+    opening = package.objectives[0].main_question
+    assert "Practice ordering" not in opening
+    assert "I will start" not in opening
+    assert "what would you say first" not in opening.lower()
+    assert opening == "Hello! How can I help you today?"
 
 
 def test_fallback_contextualizes_vague_vocabulary_objectives():

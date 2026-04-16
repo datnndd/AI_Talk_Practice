@@ -30,11 +30,12 @@ class CapturingLLM:
     def __init__(self, _config):
         self.calls = []
 
-    async def chat_stream(self, messages, system_prompt=None):
+    async def chat_stream(self, messages, system_prompt=None, max_tokens=None):
         self.calls.append(
             {
                 "system_prompt": system_prompt,
                 "messages": [(message.role, message.content) for message in messages],
+                "max_tokens": max_tokens,
             }
         )
         yield "Hello"

@@ -177,10 +177,32 @@ class DashScopeASR(ASRBase):
         self._conversation = None
         self._callback = None
 
-        # Return last transcript if available
+        # Return the most useful transcript event left in the queue. DashScope
+        # may enqueue speech_end after a final transcript, so returning the last
+        # event can accidentally discard the recognized text.
         last = None
+        final_text = ""
+        partial_text = ""
         while not self._transcript_queue.empty():
-            last = self._transcript_queue.get_nowait()
+            event = self._transcript_queue.get_nowait()
+            last = event
+            text = event.text.strip()
+            if event.type == TranscriptType.FINAL and text:
+                if not final_text:
+                    final_text = text
+                elif text == final_text or text in final_text:
+                    continue
+                elif final_text in text:
+                    final_text = text
+                else:
+                    final_text = f"{final_text} {text}".strip()
+            elif event.type == TranscriptType.PARTIAL and text:
+                partial_text = text
+
+        if final_text:
+            return TranscriptEvent(text=final_text, type=TranscriptType.FINAL)
+        if partial_text:
+            return TranscriptEvent(text=partial_text, type=TranscriptType.PARTIAL)
         return last
 
     async def close(self) -> None:

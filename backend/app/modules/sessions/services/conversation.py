@@ -50,6 +50,9 @@ class ConversationSession:
         self._response_task: Optional[asyncio.Task] = None
         self._current_response_text = ""
         self._latest_partial_transcript = ""
+        self._final_transcript_text = ""
+        self._asr_finalize_task: Optional[asyncio.Task] = None
+        self._turn_finalized = False
         self._turn_timing: dict[str, float] = {}
 
     async def initialize(
@@ -111,7 +114,10 @@ class ConversationSession:
         try:
             self._language = language or self._language
             self._latest_partial_transcript = ""
+            self._final_transcript_text = ""
+            self._turn_finalized = False
             self._turn_timing = {}
+            await self._cancel_asr_finalize_task()
             await self._asr.start_session(language=self._language)
             self._is_recording = True
 
@@ -139,21 +145,7 @@ class ConversationSession:
         if not self._is_recording:
             return
 
-        self._is_recording = False
-        self._mark_turn_phase("user_stop")
-
-        # Cancel poll task
-        if self._asr_poll_task:
-            self._asr_poll_task.cancel()
-            try:
-                await self._asr_poll_task
-            except asyncio.CancelledError:
-                pass
-            finally:
-                self._asr_poll_task = None
-
-        final_event = await self._stop_asr_session()
-        await self._handle_completed_turn(final_event.text if final_event else None)
+        await self._finalize_recording_turn()
 
     async def interrupt_response(self) -> str:
         """Interrupt the active assistant response and return any partial text."""
@@ -217,41 +209,17 @@ class ConversationSession:
                             self._latest_partial_transcript = event.text.strip()
 
                         if event.type == TranscriptType.SPEECH_END:
-                            self._is_recording = False
-                            self._mark_turn_phase("user_stop")
-
-                            drained_event = await self._stop_asr_session()
-                            final_text = ""
-                            if (
-                                drained_event
-                                and drained_event.type == TranscriptType.FINAL
-                                and drained_event.text.strip()
-                            ):
-                                final_text = drained_event.text.strip()
-                            else:
-                                final_text = self._latest_partial_transcript
-
-                            await self._handle_completed_turn(final_text)
-                            break
+                            self._schedule_asr_finalization("speech_end")
 
                         if event.type == TranscriptType.FINAL and event.text.strip():
-                            self._is_recording = False
-                            self._mark_turn_phase("user_stop")
+                            self._remember_final_transcript(event.text)
+                            self._schedule_asr_finalization("final_transcript")
 
-                            drained_event = await self._stop_asr_session()
-                            final_text = event.text.strip()
-                            if (
-                                drained_event
-                                and drained_event.type == TranscriptType.FINAL
-                                and drained_event.text.strip()
-                                and len(drained_event.text.strip()) >= len(final_text)
-                            ):
-                                final_text = drained_event.text.strip()
-
-                            await self._handle_completed_turn(final_text)
-                            break
-
-                        if self._on_transcript:
+                        if (
+                            self._config.asr_emit_partial_transcripts
+                            and event.type == TranscriptType.PARTIAL
+                            and self._on_transcript
+                        ):
                             await self._on_transcript(
                                 event.text,
                                 event.type.value,
@@ -264,6 +232,109 @@ class ConversationSession:
         finally:
             if asyncio.current_task() is self._asr_poll_task:
                 self._asr_poll_task = None
+
+    def _remember_final_transcript(self, text: str) -> None:
+        """Keep the most complete final transcript text seen for this turn."""
+        clean = text.strip()
+        if not clean:
+            return
+
+        current = self._final_transcript_text.strip()
+        if not current:
+            self._final_transcript_text = clean
+        elif clean == current or clean in current:
+            return
+        elif current in clean:
+            self._final_transcript_text = clean
+        else:
+            self._final_transcript_text = f"{current} {clean}".strip()
+
+    def _select_turn_transcript(self, final_event: Optional[TranscriptEvent]) -> str:
+        """Choose the best available transcript after ASR has been stopped."""
+        if final_event and final_event.text.strip():
+            if final_event.type == TranscriptType.FINAL:
+                self._remember_final_transcript(final_event.text)
+            elif not self._final_transcript_text:
+                self._latest_partial_transcript = final_event.text.strip()
+
+        final_text = self._final_transcript_text.strip()
+        partial_text = self._latest_partial_transcript.strip()
+        if final_text and partial_text and final_text in partial_text:
+            return partial_text
+        return final_text or partial_text
+
+    def _schedule_asr_finalization(self, reason: str) -> None:
+        """Finalize shortly after ASR says the utterance is done.
+
+        The delay is intentional: browser audio callbacks and provider events can
+        arrive slightly out of order, and closing immediately can drop the last
+        syllables of the user's turn.
+        """
+        if self._turn_finalized:
+            return
+
+        if self._asr_finalize_task and not self._asr_finalize_task.done():
+            self._asr_finalize_task.cancel()
+
+        self._asr_finalize_task = asyncio.create_task(self._finalize_after_grace(reason))
+
+    async def _finalize_after_grace(self, reason: str) -> None:
+        delay = max(0, self._config.asr_finalization_grace_ms) / 1000
+        try:
+            await asyncio.sleep(delay)
+            logger.info("Finalizing ASR turn after %sms grace period (%s)", int(delay * 1000), reason)
+            await self._finalize_recording_turn()
+        except asyncio.CancelledError:
+            pass
+
+    async def _cancel_asr_poll_task(self) -> None:
+        if not self._asr_poll_task:
+            return
+
+        task = self._asr_poll_task
+        if task is asyncio.current_task():
+            return
+
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        finally:
+            if task is self._asr_poll_task:
+                self._asr_poll_task = None
+
+    async def _cancel_asr_finalize_task(self) -> None:
+        if not self._asr_finalize_task:
+            return
+
+        task = self._asr_finalize_task
+        if task is asyncio.current_task():
+            return
+
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        finally:
+            if task is self._asr_finalize_task:
+                self._asr_finalize_task = None
+
+    async def _finalize_recording_turn(self) -> None:
+        """Stop ASR once, choose the best transcript, and complete the turn."""
+        if self._turn_finalized:
+            return
+
+        self._turn_finalized = True
+        self._is_recording = False
+        self._mark_turn_phase("user_stop")
+
+        await self._cancel_asr_finalize_task()
+        await self._cancel_asr_poll_task()
+
+        final_event = await self._stop_asr_session()
+        await self._handle_completed_turn(self._select_turn_transcript(final_event))
 
     async def _stop_asr_session(self) -> Optional[TranscriptEvent]:
         """Stop the active ASR session and return the last queued transcript event."""
@@ -547,6 +618,8 @@ class ConversationSession:
     async def close(self) -> None:
         """Clean up all resources."""
         self._is_recording = False
+
+        await self._cancel_asr_finalize_task()
 
         if self._asr_poll_task:
             self._asr_poll_task.cancel()
