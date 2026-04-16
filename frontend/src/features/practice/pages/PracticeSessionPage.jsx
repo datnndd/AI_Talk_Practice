@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, WarningCircle } from "@phosphor-icons/react";
 import { useNavigate, useParams } from "react-router-dom";
 import ChatWindow from "@/features/practice/components/ChatWindow";
-import MetricsSidebar from "@/features/practice/components/MetricsSidebar";
+import ScenarioSidebar from "@/features/practice/components/ScenarioSidebar";
 import TypewriterInput from "@/features/practice/components/TypewriterInput";
 import { SessionHeader } from "@/shared/components/navigation";
 import {
@@ -302,6 +302,9 @@ const PracticeSession = () => {
         setSessionError("");
         break;
       case "transcript_partial":
+        if (payload.text) {
+          setPartialTranscript(payload.text);
+        }
         break;
       case "transcript_final":
         captureActiveRef.current = false;
@@ -658,10 +661,15 @@ const PracticeSession = () => {
       <div className="mx-auto flex h-[calc(100dvh-2rem)] max-w-[1440px] flex-col gap-4 md:h-[calc(100dvh-3rem)] md:gap-6">
         <SessionHeader
           onBack={handleEndSession}
+          onReconnect={handleReconnect}
+          connectionState={connectionState}
         />
 
-        <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_330px] xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="relative flex min-h-0 flex-col gap-3">
+        <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)] w-full">
+          <div className="hidden min-h-0 lg:flex">
+            <ScenarioSidebar scenario={scenario} lessonState={lessonState} guidance={conversationGuidance} />
+          </div>
+          <div className="relative flex min-h-0 flex-1 flex-col gap-3">
             <ChatWindow
               scenario={scenario}
               lessonState={lessonState}
@@ -685,17 +693,6 @@ const PracticeSession = () => {
               onRequestHint={handleRequestHint}
             />
           </div>
-
-          <MetricsSidebar
-            durationSeconds={durationSeconds}
-            sessionId={sessionId}
-            turnCount={userTurnCount}
-            connectionState={connectionState}
-            recordingState={recordingState}
-            onReconnect={handleReconnect}
-            onEndSession={handleEndSession}
-            lessonState={lessonState}
-          />
         </main>
       </div>
     </div>

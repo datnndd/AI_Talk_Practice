@@ -84,8 +84,8 @@ class Settings(BaseSettings):
         description="Delay after ASR speech-end/final events before closing the turn, so trailing audio can arrive",
     )
     asr_emit_partial_transcripts: bool = Field(
-        default=False,
-        description="Send interim ASR transcripts to clients. Disabled by default to prioritize final accuracy.",
+        default=True,
+        description="Send interim ASR transcripts to clients while the user is speaking.",
     )
     asr_beam_size: int = Field(default=8, description="Beam size for local faster-whisper final transcription")
     asr_best_of: int = Field(default=5, description="Best-of candidates for local faster-whisper transcription")
