@@ -166,7 +166,18 @@ class LessonAnswerASR(StubASR):
         if not self.audio_chunks:
             return None
         return TranscriptEvent(
-            text="I can practice live conversation naturally today.",
+            text="I need help writing this document today.",
+            type=TranscriptType.FINAL,
+            language=self.language,
+        )
+
+
+class OffTopicLessonASR(StubASR):
+    async def stop_session(self):
+        if not self.audio_chunks:
+            return None
+        return TranscriptEvent(
+            text="My cat likes dancing on the moon.",
             type=TranscriptType.FINAL,
             language=self.language,
         )
@@ -865,23 +876,17 @@ async def test_interrupt_assistant_stops_stream_and_persists_partial_reply(test_
 
 @pytest.mark.asyncio
 async def test_lesson_engine_emits_state_and_structured_reply_events(test_user, test_scenario, monkeypatch):
-    llm_instances = []
-    planning_llm_instances = []
+    orchestrator_llm_instances = []
 
-    def create_llm(config):
+    def create_orchestrator_llm(config):
         instance = StubLLM(config)
-        llm_instances.append(instance)
-        return instance
-
-    def create_planning_llm(config):
-        instance = LessonPlanLLM(config)
-        planning_llm_instances.append(instance)
+        orchestrator_llm_instances.append(instance)
         return instance
 
     monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
-    monkeypatch.setattr(ws_module, "create_llm", create_planning_llm)
+    monkeypatch.setattr(ws_module, "create_llm", create_orchestrator_llm)
     monkeypatch.setattr(conversation_module, "create_asr", lambda config: LessonAnswerASR(config))
-    monkeypatch.setattr(conversation_module, "create_llm", create_llm)
+    monkeypatch.setattr(conversation_module, "create_llm", lambda config: StubLLM(config))
     monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
 
     token = create_access_token(test_user.id)
@@ -907,7 +912,7 @@ async def test_lesson_engine_emits_state_and_structured_reply_events(test_user, 
     assert any(message["type"] == "lesson_started" for message in websocket.sent)
     assert any(message["type"] == "lesson_state" for message in websocket.sent)
     assert any(
-        message["type"] == "llm_done" and "Which experience is most relevant?" in message["text"]
+        message["type"] == "llm_done" and message["text"] == "Hello from the assistant"
         for message in websocket.sent
     )
 
@@ -916,30 +921,40 @@ async def test_lesson_engine_emits_state_and_structured_reply_events(test_user, 
         messages = message_result.scalars().all()
 
     assert [message.role for message in messages] == ["assistant", "user", "assistant"]
-    assert "could you introduce yourself" in messages[0].content.lower()
-    assert messages[1].content == "I can practice live conversation naturally today."
-    assert messages[2].content == "Which experience is most relevant?"
-    assert planning_llm_instances[0].calls
-    assert planning_llm_instances[0].calls[0]["max_tokens"] == 2400
-    assert llm_instances[0].calls == []
+    assert messages[0].content
+    assert messages[1].content == "I need help writing this document today."
+    assert messages[2].content == "Hello from the assistant"
+    assert orchestrator_llm_instances[0].calls
+    llm_call = orchestrator_llm_instances[0].calls[0]
+    assert llm_call["messages"] == [("user", "I need help writing this document today.")]
+    assert "Scenario: Realtime Scenario" in llm_call["system_prompt"]
+    assert "Hello from the assistant" not in llm_call["system_prompt"]
+
+    async with TestingSessionLocal() as session:
+        result = await session.execute(select(Session))
+        stored_session = result.scalar_one()
+
+    assert "hybrid_conversation" in stored_session.session_metadata
+    assert stored_session.session_metadata["hybrid_conversation"]["memory"]["current_phase_id"]
 
 
 @pytest.mark.asyncio
-async def test_lesson_engine_reports_generation_error_without_default_questions(test_user, test_scenario, monkeypatch):
-    planning_llm_instances = []
+async def test_lesson_engine_handles_off_topic_without_calling_llm_or_changing_objective(test_user, test_scenario, monkeypatch):
+    orchestrator_llm_instances = []
 
-    def create_planning_llm(config):
-        instance = BrokenLessonPlanLLM(config)
-        planning_llm_instances.append(instance)
+    def create_orchestrator_llm(config):
+        instance = StubLLM(config)
+        orchestrator_llm_instances.append(instance)
         return instance
 
     monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
-    monkeypatch.setattr(ws_module, "create_llm", create_planning_llm)
-    monkeypatch.setattr(conversation_module, "create_asr", lambda config: LessonAnswerASR(config))
+    monkeypatch.setattr(ws_module, "create_llm", create_orchestrator_llm)
+    monkeypatch.setattr(conversation_module, "create_asr", lambda config: OffTopicLessonASR(config))
     monkeypatch.setattr(conversation_module, "create_llm", lambda config: StubLLM(config))
     monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
 
     token = create_access_token(test_user.id)
+    audio_payload = base64.b64encode(b"\x01\x02" * 4000).decode("ascii")
     websocket = FakeWebSocket(
         [
             {
@@ -950,17 +965,81 @@ async def test_lesson_engine_reports_generation_error_without_default_questions(
                 "voice": "Cherry",
                 "metadata": {"conversation_engine": "lesson_v1"},
             },
+            {"type": "start_recording", "language": "en", "voice": "Cherry"},
+            {"type": "audio_chunk", "data": audio_payload},
+            {"type": "stop_recording"},
         ]
     )
 
     await ws_module.websocket_conversation(websocket)
 
     assert any(
-        message["type"] == "error"
-        and message.get("code") == "lesson_plan_generation_failed"
-        and "incomplete lesson plan" in message["message"].lower()
+        message["type"] == "llm_done"
+        and "Let's stay with the roleplay" in message["text"]
         for message in websocket.sent
     )
-    assert not any(message["type"] == "lesson_started" for message in websocket.sent)
-    assert not any(message["type"] == "llm_done" for message in websocket.sent)
-    assert planning_llm_instances[0].calls[0]["max_tokens"] == 2400
+    assert any(message["type"] == "lesson_started" for message in websocket.sent)
+    assert orchestrator_llm_instances[0].calls == []
+
+    lesson_states = [message["lesson"] for message in websocket.sent if message["type"] == "lesson_state"]
+    assert lesson_states[-1]["assigned_task"] == "Practice live conversation"
+
+
+@pytest.mark.asyncio
+async def test_lesson_engine_resume_reloads_hybrid_memory(test_user, test_scenario, monkeypatch):
+    monkeypatch.setattr(ws_module.settings, "ws_resume_grace_seconds", 30)
+    monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(ws_module, "create_llm", lambda config: StubLLM(config))
+    monkeypatch.setattr(conversation_module, "create_asr", lambda config: LessonAnswerASR(config))
+    monkeypatch.setattr(conversation_module, "create_llm", lambda config: StubLLM(config))
+    monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
+
+    token = create_access_token(test_user.id)
+    audio_payload = base64.b64encode(b"\x01\x02" * 4000).decode("ascii")
+    first_socket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "language": "en",
+                "voice": "Cherry",
+                "metadata": {"conversation_engine": "lesson_v1", "resume_enabled": True},
+            },
+            {"type": "start_recording", "language": "en", "voice": "Cherry"},
+            {"type": "audio_chunk", "data": audio_payload},
+            {"type": "stop_recording"},
+        ]
+    )
+
+    await ws_module.websocket_conversation(first_socket)
+    session_id = first_socket.sent[0]["session_id"]
+
+    second_socket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "session_id": session_id,
+                "language": "en",
+                "voice": "Cherry",
+                "metadata": {"conversation_engine": "lesson_v1", "resume_enabled": False},
+            },
+        ]
+    )
+
+    await ws_module.websocket_conversation(second_socket)
+
+    assert any(message["type"] == "lesson_started" for message in second_socket.sent)
+
+    async with TestingSessionLocal() as session:
+        result = await session.execute(select(Session))
+        stored_session = result.scalar_one()
+        message_result = await session.execute(select(Message).order_by(Message.order_index))
+        messages = message_result.scalars().all()
+
+    hybrid = stored_session.session_metadata["hybrid_conversation"]
+    facts = hybrid["memory"]["facts"]
+    assert any(fact["key"] == "need" and "help writing this document" in fact["value"] for fact in facts)
+    assert [message.role for message in messages].count("assistant") == 2

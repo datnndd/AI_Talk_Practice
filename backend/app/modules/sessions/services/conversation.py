@@ -11,7 +11,7 @@ import asyncio
 import logging
 import math
 import time
-from typing import Awaitable, Callable, Optional
+from typing import AsyncIterator, Awaitable, Callable, Optional
 
 from app.core.config import Settings
 from app.infra.contracts import ASRBase, LLMBase, Message, TTSBase, TTSConfig, TranscriptEvent, TranscriptType
@@ -46,6 +46,7 @@ class ConversationSession:
         self._on_user_message: Optional[Callable[[str], Awaitable[None]]] = None
         self._on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None
         self._on_generate_reply: Optional[Callable[[str], Awaitable[str]]] = None
+        self._on_generate_reply_stream: Optional[Callable[[str], AsyncIterator[str]]] = None
         self._system_prompt: Optional[str] = None
         self._language = config.asr_language
         self._voice = config.tts_voice
@@ -74,6 +75,8 @@ class ConversationSession:
         on_user_message: Optional[Callable[[str], Awaitable[None]]] = None,
         on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None,
         on_generate_reply: Optional[Callable[[str], Awaitable[str]]] = None,
+        on_generate_reply_stream: Optional[Callable[[str], AsyncIterator[str]]] = None,
+        llm_provider: Optional[LLMBase] = None,
     ):
         """Initialize services and set up callbacks."""
         self._on_transcript = on_transcript
@@ -85,6 +88,7 @@ class ConversationSession:
         self._on_user_message = on_user_message
         self._on_assistant_message = on_assistant_message
         self._on_generate_reply = on_generate_reply
+        self._on_generate_reply_stream = on_generate_reply_stream
         if language:
             self._language = language
         if voice:
@@ -92,7 +96,7 @@ class ConversationSession:
 
         try:
             self._asr = create_asr(self._config)
-            self._llm = create_llm(self._config)
+            self._llm = llm_provider or create_llm(self._config)
             self._tts = create_tts(self._config)
             logger.info("ConversationSession: all services initialized")
         except Exception as e:
@@ -455,6 +459,9 @@ class ConversationSession:
             if self._on_user_message:
                 await self._on_user_message(user_text)
 
+        if self._on_generate_reply_stream:
+            return await self._run_external_reply_stream_pipeline(user_text)
+
         if self._on_generate_reply:
             return await self._run_custom_reply_pipeline(user_text)
 
@@ -547,6 +554,91 @@ class ConversationSession:
 
         logger.info(
             "Response pipeline complete (response_len=%s interrupted=%s)",
+            len(full_response),
+            interrupted,
+        )
+        self._log_turn_timing(response_len=len(full_response), interrupted=interrupted)
+        return interrupted, full_response
+
+    async def _run_external_reply_stream_pipeline(self, user_text: str) -> tuple[bool, str]:
+        """Run a structured reply pipeline whose text chunks are produced externally."""
+        interrupted = False
+        full_response = ""
+        text_queue: asyncio.Queue[Optional[str]] = asyncio.Queue()
+        producer_task: Optional[asyncio.Task] = None
+
+        async def _queue_text_stream():
+            while True:
+                chunk = await text_queue.get()
+                if chunk is None:
+                    break
+                yield chunk
+
+        async def _external_producer():
+            nonlocal full_response
+            try:
+                async for chunk in self._on_generate_reply_stream(user_text):
+                    full_response += chunk
+                    self._current_response_text = full_response
+                    if "llm_first_token" not in self._turn_timing:
+                        self._mark_turn_phase("llm_first_token")
+                    if self._on_llm_chunk:
+                        await self._on_llm_chunk(chunk, False)
+                    await text_queue.put(chunk)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.error(f"External reply streaming error: {e}")
+                full_response = ""
+                self._current_response_text = ""
+                if self._on_error:
+                    await self._on_error("Could not generate the AI response. Please try again.")
+            finally:
+                await text_queue.put(None)
+
+        producer_task = asyncio.create_task(_external_producer())
+
+        try:
+            tts_config = TTSConfig(
+                voice=self._voice,
+                language=self._language,
+            )
+            async for audio_chunk in self._tts.synthesize_stream(_queue_text_stream(), config=tts_config):
+                if "tts_first_audio" not in self._turn_timing:
+                    self._mark_turn_phase("tts_first_audio")
+                if self._on_audio_chunk:
+                    await self._on_audio_chunk(audio_chunk)
+            await producer_task
+        except asyncio.CancelledError:
+            interrupted = True
+            if producer_task and not producer_task.done():
+                producer_task.cancel()
+                try:
+                    await producer_task
+                except asyncio.CancelledError:
+                    pass
+        except Exception as e:
+            logger.error(f"TTS streaming error: {e}")
+            if self._on_error:
+                await self._on_error(f"TTS error: {e}")
+            if producer_task:
+                await producer_task
+
+        self._current_response_text = full_response
+
+        if not interrupted and self._on_llm_chunk:
+            await self._on_llm_chunk(full_response, True)
+
+        if self._on_audio_chunk:
+            await self._on_audio_chunk(None)
+
+        if full_response:
+            self._messages.append(Message(role="assistant", content=full_response))
+            if self._on_assistant_message:
+                await self._on_assistant_message(full_response)
+
+        logger.info(
+            "External response pipeline complete (response_len=%s interrupted=%s)",
             len(full_response),
             interrupted,
         )

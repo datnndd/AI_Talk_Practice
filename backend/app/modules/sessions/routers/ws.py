@@ -18,9 +18,9 @@ from app.db.session import AsyncSessionLocal
 from app.infra.factory import create_llm
 from app.modules.sessions.schemas.session import MessageCreate, SessionCreate
 from app.modules.auth.services.auth_service import AuthService
-from app.modules.sessions.services.lesson_runtime import LessonRuntimeService
 from app.modules.sessions.services.conversation import ConversationSession
 from app.modules.sessions.services.session import SessionService
+from app.services.conversation import DialogueOrchestrator, build_scenario_definition
 
 logger = logging.getLogger(__name__)
 
@@ -303,78 +303,50 @@ async def websocket_conversation(websocket: WebSocket):
                         else session.scenario.ai_system_prompt
                     )
 
-                    lesson_package = None
-                    lesson_progress = None
-                    lesson_hints = {}
+                    hybrid_orchestrator: DialogueOrchestrator | None = None
+                    orchestrator_llm = None
                     if lesson_engine_enabled:
-                        if is_resume and LessonRuntimeService.has_lesson(session.session_metadata):
-                            lesson_package, lesson_progress, lesson_hints = LessonRuntimeService.deserialize_lesson_metadata(
-                                session.session_metadata
-                            )
-                        else:
-                            planning_llm = None
-                            try:
-                                planning_llm = create_llm(settings)
-                                lesson_package, lesson_progress, lesson_hints = (
-                                    await LessonRuntimeService.ensure_session_lesson_dynamic(
-                                        scenario=session.scenario,
-                                        session_metadata=session.session_metadata,
-                                        level=user.level,
-                                        llm=planning_llm,
-                                        regenerate=True,
-                                    )
-                                )
-                            finally:
-                                if planning_llm is not None:
-                                    await planning_llm.close()
-                            async with db_lock:
-                                async with AsyncSessionLocal() as db_write:
-                                    session = await SessionService.merge_session_metadata(
-                                        db_write,
-                                        session_id=session.id,
-                                        user_id=user.id,
-                                        metadata={
-                                            "lesson": LessonRuntimeService.serialize_lesson_metadata(
-                                                package=lesson_package,
-                                                state=lesson_progress,
-                                                hints=lesson_hints,
-                                            )
-                                        },
-                                    )
-
-                    async def generate_reply(text: str) -> str:
-                        if not lesson_engine_enabled:
-                            return ""
-
-                        async with db_lock:
-                            async with AsyncSessionLocal() as db_turn:
-                                current_session = await SessionService.get_by_id(db_turn, session.id, user.id)
-                        package, state, hints = LessonRuntimeService.deserialize_lesson_metadata(
-                            current_session.session_metadata
+                        orchestrator_llm = create_llm(settings)
+                        scenario_definition = build_scenario_definition(
+                            session.scenario,
+                            variation_prompt=(
+                                session.variation.sample_prompt
+                                if session.variation and session.variation.sample_prompt
+                                else None
+                            ),
+                            user_level=user.level,
                         )
-                        result = LessonRuntimeService.advance(
-                            scenario=current_session.scenario,
-                            session_id=current_session.id,
-                            package=package,
-                            state=state,
-                            user_answer=text,
+                        hybrid_orchestrator = DialogueOrchestrator.from_metadata(
+                            scenario=scenario_definition,
+                            llm=orchestrator_llm,
+                            metadata=session.session_metadata,
+                            max_facts=settings.conversation_memory_max_facts,
+                            recent_turn_limit=settings.conversation_recent_turn_limit,
+                            summary_max_chars=settings.conversation_summary_max_chars,
+                            repair_max_repeats=settings.conversation_repair_max_repeats,
                         )
+
+                    async def persist_hybrid_metadata() -> None:
+                        if not hybrid_orchestrator:
+                            return
                         async with db_lock:
                             async with AsyncSessionLocal() as db_write:
                                 await SessionService.merge_session_metadata(
                                     db_write,
-                                    session_id=current_session.id,
+                                    session_id=session.id,
                                     user_id=user.id,
-                                    metadata={
-                                        "lesson": LessonRuntimeService.serialize_lesson_metadata(
-                                            package=package,
-                                            state=state,
-                                            hints=hints,
-                                        )
-                                    },
+                                    metadata={"hybrid_conversation": hybrid_orchestrator.to_metadata()},
                                 )
-                        await send_lesson_state_event(result.state)
-                        return result.assistant_text
+
+                    async def generate_reply_stream(text: str):
+                        if not hybrid_orchestrator:
+                            return
+
+                        async for chunk in hybrid_orchestrator.stream_turn(text):
+                            yield chunk
+
+                        await persist_hybrid_metadata()
+                        await send_lesson_state_event(hybrid_orchestrator.lesson_state(session_id=session.id))
 
                     conversation = ConversationSession(settings)
                     await conversation.initialize(
@@ -388,7 +360,8 @@ async def websocket_conversation(websocket: WebSocket):
                         on_no_input=on_no_input,
                         on_user_message=lambda text: persist_message("user", text),
                         on_assistant_message=lambda text: persist_message("assistant", text),
-                        on_generate_reply=generate_reply if lesson_engine_enabled else None,
+                        on_generate_reply_stream=generate_reply_stream if lesson_engine_enabled else None,
+                        llm_provider=orchestrator_llm,
                     )
                     max_duration_seconds = session.scenario.estimated_duration
                     remaining_seconds = _remaining_session_seconds(session.started_at, max_duration_seconds)
@@ -413,20 +386,17 @@ async def websocket_conversation(websocket: WebSocket):
                         }
                     )
 
-                    if lesson_engine_enabled and lesson_package and lesson_progress:
-                        state = LessonRuntimeService.build_state_read(
-                            session_id=session.id,
-                            scenario=session.scenario,
-                            package=lesson_package,
-                            state=lesson_progress,
-                        )
+                    if lesson_engine_enabled and hybrid_orchestrator:
+                        state = hybrid_orchestrator.lesson_state(session_id=session.id)
                         await send_json_safe({"type": "lesson_started", "lesson": state.model_dump(mode="json")})
                         await send_lesson_state_event(state)
                         # Proactively speak the opening question so the assistant
                         # starts the conversation — the user does not need to speak first.
-                        opening_text = state.current_question
+                        opening_text = hybrid_orchestrator.opening_message()
                         if opening_text and not is_resume:
                             await conversation.speak_opening(opening_text)
+                            hybrid_orchestrator.record_assistant_turn(opening_text)
+                        await persist_hybrid_metadata()
                     continue
 
                 if conversation is None:

@@ -82,6 +82,40 @@ class Settings(BaseSettings):
         description="How many recent conversation messages to send to the LLM",
     )
 
+    # --- Hybrid Conversation Orchestration ---
+    conversation_memory_max_facts: int = Field(
+        default=12,
+        description="Maximum structured short-term facts retained per realtime conversation session",
+    )
+    conversation_recent_turn_limit: int = Field(
+        default=6,
+        description="Maximum compact recent turns retained in hybrid conversation memory",
+    )
+    conversation_summary_max_chars: int = Field(
+        default=900,
+        description="Maximum characters retained in the hybrid conversation rolling summary",
+    )
+    conversation_relevance_on_topic_threshold: float = Field(
+        default=0.28,
+        description="Rule-based relevance score required to treat a user turn as on-topic",
+    )
+    conversation_relevance_partial_threshold: float = Field(
+        default=0.12,
+        description="Rule-based relevance score required to treat a user turn as partially on-topic",
+    )
+    conversation_enable_llm_fact_extraction: bool = Field(
+        default=False,
+        description="Reserved flag for optional LLM-based fact extraction",
+    )
+    conversation_enable_llm_relevance_analysis: bool = Field(
+        default=False,
+        description="Reserved flag for optional LLM-based relevance analysis",
+    )
+    conversation_repair_max_repeats: int = Field(
+        default=2,
+        description="Maximum repeated repair attempts before narrowing the prompt more aggressively",
+    )
+
     # --- ASR Configuration ---
     asr_language: str = Field(default="en", description="ASR language code")
     asr_model: str = Field(default="qwen3-asr-flash-realtime", description="DashScope ASR model")

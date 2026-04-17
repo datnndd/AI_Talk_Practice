@@ -1,0 +1,235 @@
+import pytest
+
+from app.infra.contracts import Message
+from app.services.conversation.analyzer import TopicAnalyzer
+from app.services.conversation.fact_extractor import RuleBasedFactExtractor
+from app.services.conversation.memory import SessionMemoryManager
+from app.services.conversation.orchestrator import DialogueOrchestrator
+from app.services.conversation.prompt_builder import PromptBuilder
+from app.services.conversation.response_policy import ResponsePolicy
+from app.services.conversation.schemas import (
+    DialogueState,
+    PolicyAction,
+    RepairAction,
+    ScenarioDefinition,
+    ScenarioPhase,
+    SessionMemory,
+    TurnLabel,
+)
+from app.services.conversation.state_controller import DialogueStateController
+
+
+class FakeLLM:
+    def __init__(self):
+        self.calls = []
+
+    async def chat_stream(self, messages, system_prompt=None, max_tokens=None):
+        self.calls.append(
+            {
+                "system_prompt": system_prompt,
+                "messages": [(message.role, message.content) for message in messages],
+                "max_tokens": max_tokens,
+            }
+        )
+        yield "Sure, "
+        yield "what document do you need help with?"
+
+
+def coworker_scenario() -> ScenarioDefinition:
+    return ScenarioDefinition(
+        scenario_id="coworker-help",
+        title="Ask a coworker for help",
+        description="Practice asking a coworker for help with a document.",
+        user_role="Employee",
+        ai_role="Helpful coworker",
+        objective="Ask for help writing a work document and clarify what you need.",
+        allowed_topic_boundaries=[
+            "coworker help",
+            "writing a document",
+            "work task",
+            "deadline",
+            "clarifying help needed",
+        ],
+        phases=[
+            ScenarioPhase(
+                phase_id="greeting",
+                title="Greeting",
+                objective="Open the conversation and state the need.",
+                starting_question="Hi, what do you need help with today?",
+                expected_intents=["ask for help", "state need"],
+            ),
+            ScenarioPhase(
+                phase_id="details",
+                title="Details",
+                objective="Clarify the document and deadline.",
+                starting_question="What kind of document is it?",
+                expected_intents=["clarify document", "deadline"],
+            ),
+        ],
+        speaking_style="friendly and concise",
+        difficulty="medium",
+        expected_intents=["ask for help", "clarify document", "confirm next step"],
+        target_vocabulary=["document", "deadline", "draft"],
+        target_functions=["ask for help", "give context"],
+        opening_message="Hi, what do you need help with today?",
+    )
+
+
+def test_fact_extractor_extracts_relevant_short_term_facts():
+    extractor = RuleBasedFactExtractor()
+
+    facts = extractor.extract(
+        "I'm a designer, I like coffee, I'm nervous about the interview, and I need help writing this document.",
+        turn_index=3,
+    )
+    by_key = {fact.key: fact.value for fact in facts}
+
+    assert by_key["profession"] == "designer"
+    assert by_key["likes"] == "coffee"
+    assert by_key["concern"] == "nervous about the interview"
+    assert by_key["need"] == "help writing this document"
+    assert all(fact.source_turn_index == 3 for fact in facts)
+
+
+def test_memory_upserts_prunes_and_exports_compact_facts():
+    memory = SessionMemory(
+        scenario_id="coworker-help",
+        current_objective="Ask for help with a document",
+        current_phase_id="greeting",
+    )
+    manager = SessionMemoryManager(memory, max_facts=2, recent_turn_limit=2, summary_max_chars=120)
+    extractor = RuleBasedFactExtractor()
+
+    manager.update_facts(extractor.extract("I'm a designer.", turn_index=1))
+    manager.update_facts(extractor.extract("I like coffee.", turn_index=2))
+    manager.update_facts(extractor.extract("I'm a product designer.", turn_index=3))
+    manager.record_turn(user_text="I need help writing this document.", assistant_text="What kind of document?", turn_index=3)
+
+    compact = manager.compact_export()
+
+    assert len(manager.memory.facts) == 2
+    assert "profession: product designer" in compact["facts"]
+    assert "likes: coffee" in compact["facts"]
+    assert "I need help writing this document." in compact["recent_turns"]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("I need help writing this document.", TurnLabel.ON_TOPIC),
+        ("I like coffee by the way.", TurnLabel.PARTIALLY_ON_TOPIC),
+        ("My cat likes dancing on the moon.", TurnLabel.OFF_TOPIC),
+        ("asdf qwer zzzz", TurnLabel.NONSENSE),
+        ("yes", TurnLabel.TOO_SHORT),
+        ("Can you give me a hint?", TurnLabel.HELP_REQUEST),
+        ("What do you mean?", TurnLabel.CLARIFICATION_REQUEST),
+    ],
+)
+def test_topic_analyzer_returns_structured_labels(text, expected):
+    scenario = coworker_scenario()
+    state = DialogueState(scenario_id=scenario.scenario_id, current_phase_id="greeting")
+    facts = RuleBasedFactExtractor().extract(text, turn_index=1)
+
+    analysis = TopicAnalyzer().analyze(text, scenario=scenario, state=state, extracted_facts=facts)
+
+    assert analysis.label == expected
+    assert expected in analysis.labels
+
+
+def test_state_controller_advances_on_useful_answer_and_repairs_low_quality_turns():
+    scenario = coworker_scenario()
+    state = DialogueState(scenario_id=scenario.scenario_id, current_phase_id="greeting")
+    analyzer = TopicAnalyzer()
+    controller = DialogueStateController()
+
+    useful = analyzer.analyze(
+        "I need help writing this document.",
+        scenario=scenario,
+        state=state,
+        extracted_facts=[],
+    )
+    advanced = controller.apply_turn(state, scenario=scenario, analysis=useful)
+
+    assert advanced.current_phase_id == "details"
+    assert advanced.turn_index == 1
+    assert advanced.repair_count == 0
+
+    short = analyzer.analyze("yes", scenario=scenario, state=advanced, extracted_facts=[])
+    repaired = controller.apply_turn(advanced, scenario=scenario, analysis=short)
+
+    assert repaired.current_phase_id == "details"
+    assert repaired.repair_count == 1
+
+
+def test_prompt_builder_uses_compact_context_without_full_transcript():
+    scenario = coworker_scenario()
+    memory = SessionMemory(
+        scenario_id=scenario.scenario_id,
+        current_objective=scenario.objective,
+        current_phase_id="greeting",
+        recent_dialogue_summary="The learner asked for help with a document.",
+    )
+    manager = SessionMemoryManager(memory, max_facts=5, recent_turn_limit=2, summary_max_chars=120)
+    manager.update_facts(RuleBasedFactExtractor().extract("I'm a designer.", turn_index=1))
+
+    system_prompt, messages = PromptBuilder().build(
+        scenario=scenario,
+        memory=memory,
+        state=DialogueState(scenario_id=scenario.scenario_id, current_phase_id="greeting"),
+        user_text="I need help with the draft.",
+        repair_action=RepairAction(action=PolicyAction.GENERATE, reason="on_topic"),
+    )
+
+    prompt_text = system_prompt + "\n" + "\n".join(message.content for message in messages)
+    assert "Ask a coworker for help" in prompt_text
+    assert "profession: designer" in prompt_text
+    assert "one focused question" in prompt_text
+    assert "old raw turn that should not be included" not in prompt_text
+    assert messages == [Message(role="user", content="I need help with the draft.")]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_action"),
+    [
+        ("asdf qwer zzzz", PolicyAction.REASK),
+        ("yes", PolicyAction.NARROW_QUESTION),
+        ("Can you give me a hint?", PolicyAction.HINT),
+        ("My cat likes dancing on the moon.", PolicyAction.REDIRECT),
+        ("I like coffee by the way.", PolicyAction.ACKNOWLEDGE_AND_STEER),
+    ],
+)
+def test_response_policy_selects_repair_actions(text, expected_action):
+    scenario = coworker_scenario()
+    state = DialogueState(scenario_id=scenario.scenario_id, current_phase_id="greeting")
+    facts = RuleBasedFactExtractor().extract(text, turn_index=1)
+    analysis = TopicAnalyzer().analyze(text, scenario=scenario, state=state, extracted_facts=facts)
+
+    action = ResponsePolicy().decide(analysis, scenario=scenario, state=state)
+
+    assert action.action == expected_action
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_stores_side_fact_repairs_and_uses_compact_llm_prompt():
+    scenario = coworker_scenario()
+    llm = FakeLLM()
+    orchestrator = DialogueOrchestrator.create(
+        scenario=scenario,
+        llm=llm,
+        max_facts=5,
+        recent_turn_limit=3,
+        summary_max_chars=240,
+        repair_max_repeats=2,
+    )
+
+    coffee_reply = "".join([chunk async for chunk in orchestrator.stream_turn("I like coffee by the way.")])
+    nonsense_reply = "".join([chunk async for chunk in orchestrator.stream_turn("asdf qwer zzzz")])
+    llm_reply = "".join([chunk async for chunk in orchestrator.stream_turn("I need help writing this document.")])
+
+    assert "coffee" in orchestrator.memory.compact_export()["facts"]
+    assert "today" in coffee_reply.lower() or "need help" in coffee_reply.lower()
+    assert "say that again" in nonsense_reply.lower() or "try again" in nonsense_reply.lower()
+    assert llm_reply == "Sure, what document do you need help with?"
+    assert len(llm.calls) == 1
+    assert llm.calls[0]["messages"] == [("user", "I need help writing this document.")]
+    assert "I like coffee by the way." not in llm.calls[0]["messages"][0][1]
