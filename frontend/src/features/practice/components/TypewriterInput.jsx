@@ -19,6 +19,7 @@ const STATUS_COPY = {
   assistant: "Your conversation partner is replying with text and audio.",
   interrupting: "Stopping the current reply.",
   connecting: "Connecting your live conversation session.",
+  reconnecting: "Reconnecting your live conversation session.",
 };
 
 const TypewriterInput = ({
@@ -48,8 +49,8 @@ const TypewriterInput = ({
           : isInterrupting
             ? "Stopping..."
             : "Start Speaking"
-      : connectionState === "connecting"
-        ? "Connecting..."
+      : connectionState === "connecting" || connectionState === "reconnecting"
+        ? connectionState === "reconnecting" ? "Reconnecting..." : "Connecting..."
         : "Connect Session";
 
   const buttonIcon = isRecording
@@ -73,6 +74,12 @@ const TypewriterInput = ({
     recordingState !== "recording" &&
     recordingState !== "processing" &&
     recordingState !== "assistant";
+  const sampleAnswers = hint?.sample_answers?.length
+    ? hint.sample_answers
+    : hint?.sample_answer
+      ? [hint.sample_answer]
+      : [];
+
   return (
     <footer className="rounded-lg border border-zinc-200 bg-white shadow-[0_20px_54px_-42px_rgba(15,23,42,0.55)]">
       {hint ? (
@@ -86,9 +93,21 @@ const TypewriterInput = ({
             Guided Hint
           </div>
           <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <div>
-              <p className="text-sm font-semibold leading-relaxed">{hint.analysis_vi}</p>
-              <p className="mt-2 text-sm leading-relaxed text-sky-800">{hint.answer_strategy_vi}</p>
+            <div className="space-y-3">
+              {hint.question ? (
+                <div className="rounded-lg border border-sky-200 bg-white/85 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Current Question</p>
+                  <p className="mt-2 text-sm font-semibold leading-relaxed text-zinc-800">{hint.question}</p>
+                </div>
+              ) : null}
+              <div className="rounded-lg border border-sky-200 bg-white/85 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">AI đang hỏi gì?</p>
+                <p className="mt-2 text-sm font-semibold leading-relaxed">{hint.analysis_vi}</p>
+              </div>
+              <div className="rounded-lg border border-sky-200 bg-white/85 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Nên trả lời thế nào?</p>
+                <p className="mt-2 text-sm leading-relaxed text-sky-800">{hint.answer_strategy_vi}</p>
+              </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {hint.keywords?.map((keyword) => (
                   <span
@@ -100,10 +119,16 @@ const TypewriterInput = ({
                 ))}
               </div>
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3">
               <div className="rounded-lg border border-white/70 bg-white/85 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Sample Answer</p>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-700">{hint.sample_answer}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Sample Answers</p>
+                <div className="mt-2 space-y-2">
+                  {sampleAnswers.map((answer, index) => (
+                    <p key={`${answer}-${index}`} className="rounded-lg bg-zinc-50 px-3 py-2 text-sm leading-relaxed text-zinc-700">
+                      {answer}
+                    </p>
+                  ))}
+                </div>
               </div>
               <div className="rounded-lg border border-white/70 bg-white/85 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Easy Version</p>
@@ -153,7 +178,7 @@ const TypewriterInput = ({
 
           <button
             onClick={onReconnect}
-            disabled={connectionState === "connecting"}
+            disabled={connectionState === "connecting" || connectionState === "reconnecting"}
             className="flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
             title="Reconnect session"
           >

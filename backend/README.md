@@ -7,7 +7,7 @@ Real-time AI conversation backend: **Microphone → ASR → LLM → TTS → Spea
 ```
 Browser (Mic) ──WebSocket──▶ FastAPI Backend
                               ├── ASR: DashScope | faster-whisper
-                              ├── LLM: Gemini   | OpenAI-compat
+                              ├── LLM: OpenAI-compatible
                               └── TTS: DashScope | Kokoro
 ```
 
@@ -17,7 +17,7 @@ Browser (Mic) ──WebSocket──▶ FastAPI Backend
 
 | Provider | Key | Get it at |
 |----------|-----|-----------|
-| **Gemini** (LLM) | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/) |
+| **OpenAI-compatible LLM** | `OPENAI_API_KEY` | Your LLM gateway |
 | **DashScope** (ASR/TTS) | `DASHSCOPE_API_KEY` | [Alibaba Cloud Model Studio](https://modelstudio.console.alibabacloud.com/) |
 
 ### 2. Setup & Run
@@ -53,15 +53,16 @@ curl http://localhost:8000/providers
 ```env
 # Switch providers by changing these:
 ASR_PROVIDER=dashscope          # dashscope | faster_whisper
-LLM_PROVIDER=gemini             # gemini | openai
+LLM_PROVIDER=openai             # openai-compatible
 TTS_PROVIDER=dashscope          # dashscope | kokoro
 
 # API Keys
 DASHSCOPE_API_KEY=sk-xxx
-GEMINI_API_KEY=xxx
+OPENAI_API_KEY=sk-xxx
 
 # Models
-LLM_MODEL=gemini-2.5-flash
+LLM_MODEL=ai-talk
+LLM_BASE_URL=https://rfij5ml.9router.com/v1
 ASR_MODEL=qwen3-asr-flash-realtime
 TTS_VOICE=Cherry
 ```

@@ -2,9 +2,13 @@
 Application configuration loaded from .env file.
 """
 
-from pydantic_settings import BaseSettings
-from pydantic import Field
 from typing import Optional
+
+from pydantic import Field
+from pydantic_settings import BaseSettings
+
+
+DEFAULT_LLM_BASE_URL = "https://rfij5ml.9router.com/v1"
 
 
 class Settings(BaseSettings):
@@ -12,7 +16,7 @@ class Settings(BaseSettings):
 
     # --- Provider Selection ---
     asr_provider: str = Field(default="dashscope", description="ASR provider: dashscope | faster_whisper")
-    llm_provider: str = Field(default="gemini", description="LLM provider: gemini | openai")
+    llm_provider: str = Field(default="openai", description="LLM provider: openai-compatible")
     tts_provider: str = Field(default="dashscope", description="TTS provider: dashscope | kokoro")
 
     # --- Database ---
@@ -38,11 +42,10 @@ class Settings(BaseSettings):
     smtp_from_email: Optional[str] = Field(default="noreply@aitalkpractice.com", description="Sender email address")
 
     # --- API Keys ---
-    dashscope_api_key: Optional[str] = Field(default=None, description="DashScope API key")
-    gemini_api_key: Optional[str] = Field(default=None, description="Gemini API key")
-    openai_api_key: Optional[str] = Field(default=None, description="OpenAI API key (optional)")
-    stripe_secret_key: Optional[str] = Field(default=None, description="Stripe secret key")
-    stripe_webhook_secret: Optional[str] = Field(default=None, description="Stripe webhook signing secret")
+    dashscope_api_key: str | None = Field(default=None, description="DashScope API key")
+    openai_api_key: str | None = Field(default=None, description="OpenAI-compatible LLM API key")
+    stripe_secret_key: str | None = Field(default=None, description="Stripe secret key")
+    stripe_webhook_secret: str | None = Field(default=None, description="Stripe webhook signing secret")
 
     # --- Payment / Billing ---
     frontend_url: str = Field(default="http://localhost:5173", description="Public frontend base URL")
@@ -50,10 +53,10 @@ class Settings(BaseSettings):
     payment_pro_amount_usd_cents: int = Field(default=9900, description="Stripe price for PRO plan in cents")
 
     # --- LLM Configuration ---
-    llm_model: str = Field(default="gemini-3.1-flash-lite-preview", description="LLM model name")
+    llm_model: str = Field(default="ai-talk", description="LLM model name")
     llm_base_url: str = Field(
-        default="https://generativelanguage.googleapis.com/v1beta/openai/",
-        description="LLM OpenAI-compatible base URL",
+        default=DEFAULT_LLM_BASE_URL,
+        description="OpenAI-compatible LLM base URL",
     )
     llm_system_prompt: str = Field(
         default=(
@@ -69,6 +72,10 @@ class Settings(BaseSettings):
     lesson_plan_llm_max_tokens: int = Field(
         default=1400,
         description="Maximum tokens generated when creating structured lesson plans",
+    )
+    lesson_hint_llm_max_tokens: int = Field(
+        default=700,
+        description="Maximum tokens generated when creating structured lesson hints",
     )
     llm_history_message_limit: int = Field(
         default=6,
@@ -89,6 +96,18 @@ class Settings(BaseSettings):
     )
     asr_beam_size: int = Field(default=8, description="Beam size for local faster-whisper final transcription")
     asr_best_of: int = Field(default=5, description="Best-of candidates for local faster-whisper transcription")
+    asr_min_audio_ms: int = Field(
+        default=200,
+        description="Minimum recorded audio duration required before accepting a speech turn",
+    )
+    asr_min_rms: float = Field(
+        default=0.003,
+        description="Minimum PCM RMS level required before accepting a speech turn",
+    )
+    ws_resume_grace_seconds: int = Field(
+        default=8,
+        description="Seconds to keep a realtime session active after an unexpected websocket disconnect",
+    )
 
     # --- TTS Configuration ---
     tts_voice: str = Field(default="Cherry", description="DashScope TTS voice name")
@@ -112,13 +131,9 @@ class Settings(BaseSettings):
         return "wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime"
 
     @property
-    def llm_api_key(self) -> Optional[str]:
-        """Get the appropriate API key for the configured LLM provider."""
-        if self.llm_provider == "gemini":
-            return self.gemini_api_key
-        if self.llm_provider == "openai":
-            return self.openai_api_key
-        return self.dashscope_api_key
+    def llm_api_key(self) -> str | None:
+        """Get the API key for the OpenAI-compatible LLM gateway."""
+        return self.openai_api_key
 
     model_config = {
         "env_file": ".env",

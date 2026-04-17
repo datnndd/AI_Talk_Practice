@@ -27,7 +27,7 @@ async def test_admin_route_requires_admin(client, test_user):
         "/api/admin/scenarios",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json()["detail"] == "Admin access is required"
 
 

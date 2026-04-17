@@ -78,7 +78,7 @@ class Session(Base, TimestampMixin):
     target_skills: Mapped[Optional[Any]] = mapped_column(JSONB)
 
     # ── Runtime metadata ─────────────────────────────────────────────────────
-    # {"asr_engine": "azure", "tts_voice": "...", "llm_model": "gemini-2.0-flash"}
+    # {"asr_engine": "azure", "tts_voice": "...", "llm_model": "ai-talk"}
     session_metadata: Mapped[Optional[Any]] = mapped_column("metadata", JSONB, server_default="{}")
 
     # ── Soft-delete ───────────────────────────────────────────────────────────

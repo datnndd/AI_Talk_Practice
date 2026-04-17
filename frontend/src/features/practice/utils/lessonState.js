@@ -29,6 +29,10 @@ export const getLessonStatusCopy = ({ lessonState, recordingState, connectionSta
     return "Reconnect to continue this conversation.";
   }
 
+  if (connectionState === "reconnecting") {
+    return "Reconnecting to continue this conversation.";
+  }
+
   if (lessonState.should_end) {
     return lessonState.completion_message || "The conversation goals are complete. You can close the session now.";
   }

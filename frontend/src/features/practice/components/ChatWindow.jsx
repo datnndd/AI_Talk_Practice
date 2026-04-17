@@ -4,38 +4,46 @@ import {
   ChatCenteredDots,
   Microphone,
   Robot,
+  Info,
   User,
 } from "@phosphor-icons/react";
 import ScenarioSidebar from "./ScenarioSidebar";
 
 
-const MessageBubble = ({ content, isAI, isLive = false }) => (
+const MessageBubble = ({ content, role, isAI, isLive = false }) => {
+  const isNotice = role === "notice" || role === "system";
+  const alignClass = isNotice ? "mx-auto" : isAI ? "" : "ml-auto flex-row-reverse";
+  const iconClass = isNotice
+    ? "border-amber-200 bg-amber-50 text-amber-700"
+    : isAI
+      ? "border-zinc-200 bg-white text-zinc-500"
+      : "border-primary/20 bg-primary text-white";
+  const bubbleClass = isNotice
+    ? "border-amber-200 bg-amber-50 text-amber-950"
+    : isAI
+      ? "border-zinc-200 bg-white text-zinc-900"
+      : "border-primary/20 bg-[#eef6ff] text-zinc-950";
+
+  return (
   <motion.div
     initial={{ opacity: 0, scale: 0.96, y: 10 }}
     animate={{ opacity: 1, scale: 1, y: 0 }}
-    className={`flex max-w-[90%] items-start gap-3 ${isAI ? "" : "ml-auto flex-row-reverse"}`}
+    className={`flex max-w-[90%] items-start gap-3 ${alignClass}`}
   >
     <div
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
-        isAI
-          ? "border-zinc-200 bg-white text-zinc-500"
-          : "border-primary/20 bg-primary text-white"
-      }`}
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${iconClass}`}
     >
-      {isAI ? <Robot size={20} /> : <User size={20} />}
+      {isNotice ? <Info size={20} weight="fill" /> : isAI ? <Robot size={20} /> : <User size={20} />}
     </div>
 
     <div
-      className={`rounded-lg border px-5 py-4 shadow-sm ${
-        isAI
-          ? "border-zinc-200 bg-white text-zinc-900"
-          : "border-primary/20 bg-[#eef6ff] text-zinc-950"
-      } ${isLive ? "border-dashed" : ""}`}
+      className={`rounded-lg border px-5 py-4 shadow-sm ${bubbleClass} ${isLive ? "border-dashed" : ""}`}
     >
       <p className={`text-sm leading-relaxed ${isLive ? "italic text-zinc-500" : ""}`}>{content}</p>
     </div>
   </motion.div>
-);
+  );
+};
 
 const ListeningBubble = () => (
   <motion.div
@@ -75,7 +83,6 @@ const ChatWindow = ({
   lessonState,
   guidance,
   messages,
-  partialTranscript,
   assistantDraft,
   isListening = false,
 }) => {
@@ -83,7 +90,7 @@ const ChatWindow = ({
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [assistantDraft, messages, partialTranscript]);
+  }, [assistantDraft, messages]);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-zinc-200 bg-[#fbfcfb] shadow-[0_28px_70px_-48px_rgba(15,23,42,0.55)]">
@@ -112,7 +119,7 @@ const ChatWindow = ({
           </div>
         </div>
         <div className="bg-zinc-50/30 px-5 py-6">
-          {messages.length === 0 && !partialTranscript && !assistantDraft && !isListening ? (
+          {messages.length === 0 && !assistantDraft && !isListening ? (
             <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-dashed border-zinc-300 bg-white/80 p-8 text-center shadow-sm">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <ChatCenteredDots size={28} weight="fill" />
@@ -128,20 +135,17 @@ const ChatWindow = ({
                 <MessageBubble
                   key={message.id}
                   content={message.content}
+                  role={message.role}
                   isAI={message.role === "assistant"}
                 />
               ))}
 
-              {partialTranscript ? (
-                <MessageBubble content={partialTranscript} isAI={false} isLive />
-              ) : null}
-
-              {isListening && !partialTranscript ? (
+              {isListening ? (
                 <ListeningBubble />
               ) : null}
 
               {assistantDraft ? (
-                <MessageBubble content={assistantDraft} isAI isLive />
+                <MessageBubble content={assistantDraft} role="assistant" isAI isLive />
               ) : null}
             </div>
           )}

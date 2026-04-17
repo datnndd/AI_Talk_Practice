@@ -19,7 +19,7 @@ const SessionHeader = ({ onBack, onReconnect, connectionState }) => {
         {onReconnect && (
           <button
             onClick={onReconnect}
-            disabled={connectionState === "connecting"}
+            disabled={connectionState === "connecting" || connectionState === "reconnecting"}
             className="flex h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50"
           >
             <ArrowsClockwise size={16} weight="bold" />

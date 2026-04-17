@@ -10,7 +10,6 @@ import {
   base64ToArrayBuffer,
   createConversationWebSocketUrl,
   pcm16ToFloat32,
-  resampleFloat32,
 } from "@/features/practice/services/realtimeAudio";
 import { practiceApi } from "@/features/practice/api/practiceApi";
 import { buildConversationGuidance } from "@/features/practice/utils/conversationGuidance";
@@ -21,6 +20,9 @@ import {
 const DEFAULT_LANGUAGE = "en";
 const DEFAULT_VOICE = "Cherry";
 const STOP_CAPTURE_FLUSH_MS = 250;
+const RECONNECT_DELAYS_MS = [500, 1000, 2000];
+const NO_INPUT_NOTICE = "Mải mê nghe giọng bạn làm mình đãng trí. Bạn có thể nói lại một lần nữa được không?";
+const TIME_LIMIT_NOTICE = "Đã hết thời gian luyện tập. Mình sẽ chuyển bạn sang phần đánh giá.";
 
 const wait = (milliseconds) => new Promise((resolve) => {
   window.setTimeout(resolve, milliseconds);
@@ -48,6 +50,8 @@ const PracticeSession = () => {
   const [isHintLoading, setIsHintLoading] = useState(false);
 
   const socketRef = useRef(null);
+  const intentionalCloseSocketRef = useRef(null);
+  const connectSocketRef = useRef(null);
   const audioContextRef = useRef(null);
   const mediaStreamRef = useRef(null);
   const mediaSourceRef = useRef(null);
@@ -65,6 +69,13 @@ const PracticeSession = () => {
   const lessonStateRef = useRef(null);
   const hasAutoConnectedRef = useRef(false);
   const isStoppingRecordingRef = useRef(false);
+  const connectionStateRef = useRef(connectionState);
+  const recordingStateRef = useRef(recordingState);
+  const sessionIdRef = useRef(sessionId);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef(null);
+  const isAutoReconnectingRef = useRef(false);
+  const isNavigatingToResultRef = useRef(false);
 
   const buildMessage = (role, content) => {
     messageIdRef.current += 1;
@@ -78,7 +89,7 @@ const PracticeSession = () => {
     }
 
     if (!audioContextRef.current || audioContextRef.current.state === "closed") {
-      audioContextRef.current = new BrowserAudioContext();
+      audioContextRef.current = new BrowserAudioContext({ sampleRate: 16000 });
       playbackCursorRef.current = 0;
     }
 
@@ -122,18 +133,62 @@ const PracticeSession = () => {
     playbackCursorRef.current = 0;
   };
 
-  const closeSocket = (intentional = false) => {
+  const closeSocket = useCallback((intentional = false) => {
     captureActiveRef.current = false;
     isCleaningUpRef.current = intentional;
     autoStartRecordingRef.current = false;
     suppressAssistantStreamRef.current = false;
     isStoppingRecordingRef.current = false;
+    if (intentional && reconnectTimerRef.current) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+      isAutoReconnectingRef.current = false;
+      reconnectAttemptsRef.current = 0;
+    }
 
     if (socketRef.current) {
+      if (intentional) {
+        intentionalCloseSocketRef.current = socketRef.current;
+      }
       socketRef.current.close();
       socketRef.current = null;
     }
-  };
+  }, []);
+
+  const navigateToResult = useCallback((nextSessionId = sessionIdRef.current) => {
+    if (!nextSessionId || isNavigatingToResultRef.current) {
+      return;
+    }
+    isNavigatingToResultRef.current = true;
+    closeSocket(true);
+    navigate(`/sessions/${nextSessionId}/result`);
+  }, [closeSocket, navigate]);
+
+  const finalizeAfterConnectionFailure = useCallback(async () => {
+    const activeSessionId = sessionIdRef.current;
+    if (!activeSessionId || isNavigatingToResultRef.current) {
+      return;
+    }
+
+    isNavigatingToResultRef.current = true;
+    connectionStateRef.current = "error";
+    recordingStateRef.current = "idle";
+    setConnectionState("error");
+    setRecordingState("idle");
+    setSessionError("Connection failed after 3 reconnect attempts. Moving to your session result.");
+
+    try {
+      await practiceApi.endSession(activeSessionId, {
+        status: "completed",
+        metadata: { end_reason: "connection_failed" },
+      });
+    } catch {
+      // Navigation still proceeds; the backend may already have finalized the session.
+    } finally {
+      closeSocket(true);
+      navigate(`/sessions/${activeSessionId}/result`);
+    }
+  }, [closeSocket, navigate]);
 
   const ensureCapturePipeline = useCallback(async () => {
     if (mediaStreamRef.current && processorRef.current) {
@@ -150,27 +205,22 @@ const PracticeSession = () => {
     });
 
     const source = audioContext.createMediaStreamSource(stream);
-    const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+    await audioContext.audioWorklet.addModule("/audio-capture-worklet.js");
+    const processor = new AudioWorkletNode(audioContext, "audio-capture-processor");
+
     const silentGain = audioContext.createGain();
     silentGain.gain.value = 0;
 
-    processor.onaudioprocess = (event) => {
+    processor.port.onmessage = (event) => {
       if (!captureActiveRef.current || socketRef.current?.readyState !== WebSocket.OPEN) {
         return;
       }
 
-      const input = event.inputBuffer.getChannelData(0);
-      const resampled = resampleFloat32(input, audioContext.sampleRate, 16000);
-      const pcmBuffer = new Int16Array(resampled.length);
-
-      for (let index = 0; index < resampled.length; index += 1) {
-        const sample = Math.max(-1, Math.min(1, resampled[index]));
-        pcmBuffer[index] = sample < 0 ? sample * 32768 : sample * 32767;
-      }
-
+      const pcmBuffer = event.data;
       socketRef.current.send(JSON.stringify({
         type: "audio_chunk",
-        data: arrayBufferToBase64(pcmBuffer.buffer),
+        data: arrayBufferToBase64(pcmBuffer),
       }));
     };
 
@@ -224,6 +274,32 @@ const PracticeSession = () => {
     playbackCursorRef.current = 0;
   }, []);
 
+  const scheduleAutoReconnect = useCallback(() => {
+    if (!sessionIdRef.current || reconnectAttemptsRef.current >= RECONNECT_DELAYS_MS.length) {
+      void finalizeAfterConnectionFailure();
+      return;
+    }
+
+    const attemptIndex = reconnectAttemptsRef.current;
+    const delay = RECONNECT_DELAYS_MS[attemptIndex];
+    reconnectAttemptsRef.current += 1;
+    isAutoReconnectingRef.current = true;
+    connectionStateRef.current = "reconnecting";
+    recordingStateRef.current = "idle";
+    setConnectionState("reconnecting");
+    setRecordingState("idle");
+    setSessionError(`Connection interrupted. Reconnecting (${attemptIndex + 1}/3)...`);
+
+    if (reconnectTimerRef.current) {
+      window.clearTimeout(reconnectTimerRef.current);
+    }
+
+    reconnectTimerRef.current = window.setTimeout(() => {
+      reconnectTimerRef.current = null;
+      connectSocketRef.current?.({ resetConversation: false, resume: true });
+    }, delay);
+  }, [finalizeAfterConnectionFailure]);
+
   const startRecordingTurn = useCallback(async () => {
     try {
       await ensureCapturePipeline();
@@ -242,11 +318,13 @@ const PracticeSession = () => {
         language: DEFAULT_LANGUAGE,
         voice: DEFAULT_VOICE,
       }));
+      recordingStateRef.current = "recording";
       setRecordingState("recording");
     } catch (error) {
       captureActiveRef.current = false;
       autoStartRecordingRef.current = false;
       setSessionError(error?.message || "Microphone access failed.");
+      recordingStateRef.current = "idle";
       setRecordingState("idle");
     }
   }, [ensureAudioContext, ensureCapturePipeline, stopAssistantPlayback]);
@@ -261,6 +339,7 @@ const PracticeSession = () => {
     autoStartRecordingRef.current = startAfterInterrupt;
     stopAssistantPlayback();
     socketRef.current.send(JSON.stringify({ type: "interrupt_assistant" }));
+    recordingStateRef.current = "interrupting";
     setRecordingState("interrupting");
   };
 
@@ -275,14 +354,25 @@ const PracticeSession = () => {
 
     switch (payload.type) {
       case "session_started":
-        sessionStartAtRef.current = Date.now();
+        if (!sessionStartAtRef.current || sessionIdRef.current !== payload.session_id) {
+          sessionStartAtRef.current = Date.now();
+          setDurationSeconds(0);
+        }
+        reconnectAttemptsRef.current = 0;
+        isAutoReconnectingRef.current = false;
+        if (reconnectTimerRef.current) {
+          window.clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+        }
         suppressAssistantStreamRef.current = false;
         assistantDraftRef.current = "";
+        sessionIdRef.current = payload.session_id;
         setSessionId(payload.session_id);
+        connectionStateRef.current = "ready";
+        recordingStateRef.current = "idle";
         setConnectionState("ready");
         setRecordingState("idle");
         setSessionError("");
-        setDurationSeconds(0);
         break;
       case "lesson_started":
         setLessonState(payload.lesson || null);
@@ -298,6 +388,7 @@ const PracticeSession = () => {
         setLessonState(payload.lesson || null);
         break;
       case "recording_started":
+        recordingStateRef.current = "recording";
         setRecordingState("recording");
         setSessionError("");
         break;
@@ -314,7 +405,19 @@ const PracticeSession = () => {
         }
         setLessonHint(null);
         setPartialTranscript("");
+        recordingStateRef.current = "processing";
         setRecordingState("processing");
+        break;
+      case "asr_no_input":
+        captureActiveRef.current = false;
+        isStoppingRecordingRef.current = false;
+        setPartialTranscript("");
+        recordingStateRef.current = "idle";
+        setRecordingState("idle");
+        setMessages((current) => appendUniqueMessage(
+          current,
+          buildMessage("notice", payload.message || NO_INPUT_NOTICE),
+        ));
         break;
       case "llm_chunk":
         if (suppressAssistantStreamRef.current) {
@@ -322,6 +425,7 @@ const PracticeSession = () => {
         }
         assistantDraftRef.current = `${assistantDraftRef.current}${payload.text || ""}`;
         setAssistantDraft((current) => `${current}${payload.text || ""}`);
+        recordingStateRef.current = "assistant";
         setRecordingState("assistant");
         break;
       case "llm_done":
@@ -333,12 +437,14 @@ const PracticeSession = () => {
         if (payload.text) {
           setMessages((current) => appendUniqueMessage(current, buildMessage("assistant", payload.text)));
         }
+        recordingStateRef.current = "assistant";
         setRecordingState("assistant");
         break;
       case "audio_chunk":
         if (suppressAssistantStreamRef.current) {
           break;
         }
+        recordingStateRef.current = "assistant";
         setRecordingState("assistant");
         await queuePlaybackChunk(payload.data);
         break;
@@ -346,11 +452,36 @@ const PracticeSession = () => {
         if (suppressAssistantStreamRef.current) {
           break;
         }
+        recordingStateRef.current = "idle";
         setRecordingState("idle");
         break;
       case "conversation_end":
         setLessonState(payload.lesson || null);
+        recordingStateRef.current = "idle";
         setRecordingState("idle");
+        setPartialTranscript("");
+        if (payload.message) {
+          setMessages((current) => appendUniqueMessage(
+            current,
+            buildMessage("notice", payload.message),
+          ));
+        }
+        if (payload.reason === "time_limit_reached" && payload.session_id) {
+          navigateToResult(payload.session_id);
+        }
+        break;
+      case "session_finalized":
+        if (payload.reason === "time_limit_reached") {
+          setMessages((current) => appendUniqueMessage(
+            current,
+            buildMessage("notice", TIME_LIMIT_NOTICE),
+          ));
+        }
+        if (!isNavigatingToResultRef.current) {
+          isNavigatingToResultRef.current = true;
+          closeSocket(true);
+          navigate(payload.result_url || `/sessions/${payload.session_id}/result`);
+        }
         break;
       case "assistant_interrupted":
         stopAssistantPlayback();
@@ -365,6 +496,7 @@ const PracticeSession = () => {
           await startRecordingTurn();
           break;
         }
+        recordingStateRef.current = "idle";
         setRecordingState("idle");
         break;
       case "error":
@@ -374,15 +506,22 @@ const PracticeSession = () => {
         suppressAssistantStreamRef.current = false;
         autoStartRecordingRef.current = false;
         setSessionError(payload.message || "Unexpected realtime error.");
+        recordingStateRef.current = "idle";
         setRecordingState("idle");
-        setConnectionState((current) => (current === "ready" ? current : "error"));
+        setConnectionState((current) => {
+          const next = current === "ready" ? current : "error";
+          connectionStateRef.current = next;
+          return next;
+        });
         break;
       default:
         break;
     }
-  }, [queuePlaybackChunk, startRecordingTurn, stopAssistantPlayback]);
+  }, [closeSocket, navigate, navigateToResult, queuePlaybackChunk, startRecordingTurn, stopAssistantPlayback]);
 
-  const connectSocket = useCallback((resetConversation = true) => {
+  const connectSocket = useCallback((options = true) => {
+    const resetConversation = typeof options === "boolean" ? options : options.resetConversation !== false;
+    const shouldResume = typeof options === "object" && options.resume && sessionIdRef.current;
     const token = window.localStorage.getItem("access_token");
     if (!token) {
       setSessionError("Missing access token. Please sign in again.");
@@ -390,13 +529,19 @@ const PracticeSession = () => {
       return;
     }
 
+    const reconnectAttemptsBeforeClose = reconnectAttemptsRef.current;
     closeSocket(true);
+    if (shouldResume) {
+      reconnectAttemptsRef.current = reconnectAttemptsBeforeClose;
+      isAutoReconnectingRef.current = true;
+    }
 
     if (resetConversation) {
       setMessages([]);
       setAssistantDraft("");
       setPartialTranscript("");
       setSessionId(null);
+      sessionIdRef.current = null;
       setDurationSeconds(0);
       setLessonState(null);
       setLessonHint(null);
@@ -404,7 +549,9 @@ const PracticeSession = () => {
       assistantDraftRef.current = "";
     }
 
-    setConnectionState("connecting");
+    connectionStateRef.current = shouldResume ? "reconnecting" : "connecting";
+    recordingStateRef.current = "idle";
+    setConnectionState(shouldResume ? "reconnecting" : "connecting");
     setRecordingState("idle");
     setSessionError("");
     isCleaningUpRef.current = false;
@@ -415,7 +562,7 @@ const PracticeSession = () => {
     socketRef.current = socket;
 
     socket.onopen = () => {
-      socket.send(JSON.stringify({
+      const startMessage = {
         type: "session_start",
         token,
         scenario_id: scenarioId,
@@ -423,8 +570,13 @@ const PracticeSession = () => {
         voice: DEFAULT_VOICE,
         metadata: {
           conversation_engine: "lesson_v1",
+          resume_enabled: true,
         },
-      }));
+      };
+      if (shouldResume) {
+        startMessage.session_id = sessionIdRef.current;
+      }
+      socket.send(JSON.stringify(startMessage));
     };
 
     socket.onmessage = (event) => {
@@ -432,23 +584,48 @@ const PracticeSession = () => {
     };
 
     socket.onerror = () => {
+      if (["recording", "processing"].includes(recordingStateRef.current) && sessionIdRef.current) {
+        return;
+      }
       setConnectionState("error");
+      connectionStateRef.current = "error";
       setSessionError("Unable to reach the realtime conversation service.");
     };
 
     socket.onclose = () => {
+      if (intentionalCloseSocketRef.current === socket) {
+        intentionalCloseSocketRef.current = null;
+        return;
+      }
+
       socketRef.current = null;
       captureActiveRef.current = false;
+      const wasActiveTurn = ["recording", "processing"].includes(recordingStateRef.current);
 
       if (isCleaningUpRef.current) {
         isCleaningUpRef.current = false;
         return;
       }
 
-      setConnectionState((current) => (current === "error" ? current : "closed"));
+      if ((wasActiveTurn || isAutoReconnectingRef.current) && sessionIdRef.current) {
+        void teardownAudioPipeline();
+        scheduleAutoReconnect();
+        return;
+      }
+
+      setConnectionState((current) => {
+        const next = current === "error" ? current : "closed";
+        connectionStateRef.current = next;
+        return next;
+      });
+      recordingStateRef.current = "idle";
       setRecordingState("idle");
     };
-  }, [handleSocketMessage, scenarioId, stopAssistantPlayback]);
+  }, [closeSocket, handleSocketMessage, scenarioId, scheduleAutoReconnect, stopAssistantPlayback]);
+
+  useEffect(() => {
+    connectSocketRef.current = connectSocket;
+  }, [connectSocket]);
 
   useEffect(() => {
     if (!Number.isFinite(scenarioId)) {
@@ -491,11 +668,23 @@ const PracticeSession = () => {
   useEffect(() => () => {
     closeSocket(true);
     void teardownAudioPipeline();
-  }, []);
+  }, [closeSocket]);
 
   useEffect(() => {
     lessonStateRef.current = lessonState;
   }, [lessonState]);
+
+  useEffect(() => {
+    connectionStateRef.current = connectionState;
+  }, [connectionState]);
+
+  useEffect(() => {
+    recordingStateRef.current = recordingState;
+  }, [recordingState]);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
 
   useEffect(() => {
     if (!scenario || scenarioError || hasAutoConnectedRef.current || connectionState !== "closed") {
@@ -520,7 +709,7 @@ const PracticeSession = () => {
       return;
     }
 
-    connectSocket(true);
+    connectSocket({ resetConversation: !sessionIdRef.current, resume: Boolean(sessionIdRef.current) });
   }, [connectSocket, reconnectRequest]);
 
   useEffect(() => {
@@ -538,9 +727,9 @@ const PracticeSession = () => {
   const handleToggleRecording = async () => {
     if (connectionState !== "ready" || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
       autoStartRecordingRef.current = true;
-      if (connectionState !== "connecting") {
+      if (connectionState !== "connecting" && connectionState !== "reconnecting") {
         setSessionError("");
-        connectSocket(messages.length === 0 && !sessionId);
+        connectSocket({ resetConversation: messages.length === 0 && !sessionId, resume: Boolean(sessionId) });
       }
       return;
     }
@@ -559,6 +748,7 @@ const PracticeSession = () => {
         return;
       }
       isStoppingRecordingRef.current = true;
+      recordingStateRef.current = "processing";
       setRecordingState("processing");
       await wait(STOP_CAPTURE_FLUSH_MS);
       captureActiveRef.current = false;
@@ -588,7 +778,6 @@ const PracticeSession = () => {
       return;
     }
 
-    const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
     setIsHintLoading(true);
     setSessionError("");
     try {
@@ -596,7 +785,6 @@ const PracticeSession = () => {
         sessionId,
         lessonId: lessonState.lesson_id,
         objectiveId: lessonState.current_objective?.objective_id,
-        userLastAnswer: latestUserMessage?.content || "",
       });
       setLessonHint(hint);
     } catch (error) {
@@ -646,6 +834,7 @@ const PracticeSession = () => {
   const isMicDisabled =
     lessonCompleted ||
     connectionState === "connecting" ||
+    connectionState === "reconnecting" ||
     recordingState === "processing" ||
     recordingState === "interrupting";
   const userTurnCount = messages.filter((message) => message.role === "user").length;
@@ -675,7 +864,6 @@ const PracticeSession = () => {
               lessonState={lessonState}
               guidance={conversationGuidance}
               messages={messages}
-              partialTranscript={partialTranscript}
               assistantDraft={assistantDraft}
               isListening={recordingState === "recording"}
             />

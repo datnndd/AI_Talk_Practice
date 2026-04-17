@@ -60,9 +60,9 @@ async def update_admin_user(
     user_id: int,
     body: AdminUserUpdateRequest,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
+    actor: User = Depends(require_admin_user),
 ):
-    user = await AdminUserService.update_user(db, user_id=user_id, body=body)
+    user = await AdminUserService.update_user(db, actor=actor, user_id=user_id, body=body)
     return serialize_admin_user(user)
 
 

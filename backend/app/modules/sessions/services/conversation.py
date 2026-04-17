@@ -9,6 +9,7 @@ Each WebSocket session creates a ConversationSession that manages:
 
 import asyncio
 import logging
+import math
 import time
 from typing import Awaitable, Callable, Optional
 
@@ -41,6 +42,7 @@ class ConversationSession:
         self._on_llm_chunk: Optional[Callable] = None
         self._on_audio_chunk: Optional[Callable] = None
         self._on_error: Optional[Callable] = None
+        self._on_no_input: Optional[Callable[[str, dict], Awaitable[None]]] = None
         self._on_user_message: Optional[Callable[[str], Awaitable[None]]] = None
         self._on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None
         self._on_generate_reply: Optional[Callable[[str], Awaitable[str]]] = None
@@ -54,6 +56,10 @@ class ConversationSession:
         self._asr_finalize_task: Optional[asyncio.Task] = None
         self._turn_finalized = False
         self._turn_timing: dict[str, float] = {}
+        self._audio_chunk_count = 0
+        self._audio_sample_count = 0
+        self._audio_sum_squares = 0.0
+        self._audio_peak = 0.0
 
     async def initialize(
         self,
@@ -64,6 +70,7 @@ class ConversationSession:
         system_prompt: Optional[str] = None,
         language: Optional[str] = None,
         voice: Optional[str] = None,
+        on_no_input: Optional[Callable[[str, dict], Awaitable[None]]] = None,
         on_user_message: Optional[Callable[[str], Awaitable[None]]] = None,
         on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None,
         on_generate_reply: Optional[Callable[[str], Awaitable[str]]] = None,
@@ -73,6 +80,7 @@ class ConversationSession:
         self._on_llm_chunk = on_llm_chunk
         self._on_audio_chunk = on_audio_chunk
         self._on_error = on_error
+        self._on_no_input = on_no_input
         self._system_prompt = system_prompt
         self._on_user_message = on_user_message
         self._on_assistant_message = on_assistant_message
@@ -117,6 +125,7 @@ class ConversationSession:
             self._final_transcript_text = ""
             self._turn_finalized = False
             self._turn_timing = {}
+            self._reset_audio_metrics()
             await self._cancel_asr_finalize_task()
             await self._asr.start_session(language=self._language)
             self._is_recording = True
@@ -136,6 +145,7 @@ class ConversationSession:
             return
 
         try:
+            self._track_audio_metrics(audio_chunk)
             await self._asr.feed_audio(audio_chunk)
         except Exception as e:
             logger.error(f"Error feeding audio: {e}")
@@ -146,6 +156,17 @@ class ConversationSession:
             return
 
         await self._finalize_recording_turn()
+
+    async def cancel_recording(self) -> None:
+        """Stop active recording without emitting a transcript or assistant reply."""
+        if not self._is_recording:
+            return
+
+        self._turn_finalized = True
+        self._is_recording = False
+        await self._cancel_asr_finalize_task()
+        await self._cancel_asr_poll_task()
+        await self._stop_asr_session()
 
     async def interrupt_response(self) -> str:
         """Interrupt the active assistant response and return any partial text."""
@@ -350,8 +371,12 @@ class ConversationSession:
     async def _handle_completed_turn(self, final_text: Optional[str]) -> None:
         """Forward a completed user turn to the frontend and launch the assistant reply."""
         text = (final_text or "").strip()
-        if not text:
-            logger.info("No transcript from recording")
+        rejection_reason = self._turn_rejection_reason(text)
+        if rejection_reason:
+            metrics = self._audio_metrics()
+            logger.info("Rejected ASR turn reason=%s metrics=%s", rejection_reason, metrics)
+            if self._on_no_input:
+                await self._on_no_input(rejection_reason, metrics)
             return
 
         self._latest_partial_transcript = text
@@ -367,6 +392,54 @@ class ConversationSession:
         # Run LLM → TTS pipeline in the background so the websocket
         # can still accept interrupt messages while the assistant speaks.
         await self._start_response_pipeline(text)
+
+    def _reset_audio_metrics(self) -> None:
+        self._audio_chunk_count = 0
+        self._audio_sample_count = 0
+        self._audio_sum_squares = 0.0
+        self._audio_peak = 0.0
+
+    def _track_audio_metrics(self, audio_chunk: bytes) -> None:
+        if not audio_chunk:
+            return
+
+        self._audio_chunk_count += 1
+        sample_count = len(audio_chunk) // 2
+        if sample_count <= 0:
+            return
+
+        self._audio_sample_count += sample_count
+        try:
+            samples = memoryview(audio_chunk).cast("h")
+            for sample in samples:
+                normalized = max(-1.0, min(1.0, sample / 32768.0))
+                self._audio_sum_squares += normalized * normalized
+                self._audio_peak = max(self._audio_peak, abs(normalized))
+        except TypeError:
+            logger.debug("Unable to cast audio chunk for metrics", exc_info=True)
+
+    def _audio_metrics(self) -> dict[str, float | int]:
+        duration_ms = int((self._audio_sample_count / 16000) * 1000) if self._audio_sample_count else 0
+        rms = math.sqrt(self._audio_sum_squares / self._audio_sample_count) if self._audio_sample_count else 0.0
+        return {
+            "chunk_count": self._audio_chunk_count,
+            "sample_count": self._audio_sample_count,
+            "duration_ms": duration_ms,
+            "rms": round(rms, 6),
+            "peak": round(self._audio_peak, 6),
+        }
+
+    def _turn_rejection_reason(self, text: str) -> str | None:
+        metrics = self._audio_metrics()
+        if self._audio_chunk_count <= 0:
+            return "no_audio"
+        if int(metrics["duration_ms"]) < max(0, self._config.asr_min_audio_ms):
+            return "audio_too_short"
+        if float(metrics["rms"]) < max(0.0, self._config.asr_min_rms):
+            return "audio_too_quiet"
+        if not text:
+            return "empty_transcript"
+        return None
 
     async def _run_response_pipeline(self, user_text: str) -> tuple[bool, str]:
         """Run the LLM → TTS pipeline for a user message."""

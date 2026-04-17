@@ -307,7 +307,7 @@ const ScenarioEditorModal = ({
 
                   <label className="block space-y-2">
                     <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Duration (minutes)
+                      Max conversation time (minutes)
                     </span>
                     <input
                       type="number"
@@ -317,6 +317,9 @@ const ScenarioEditorModal = ({
                       onChange={(event) => updateField("estimated_duration_minutes", event.target.value)}
                       className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
                     />
+                    <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                      The live conversation ends automatically when this limit is reached.
+                    </p>
                   </label>
 
                   <ListEditorField

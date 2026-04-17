@@ -150,7 +150,7 @@ async def list_providers():
         },
         "llm": {
             "current": settings.llm_provider,
-            "available": ["gemini", "openai"],
+            "available": ["openai"],
         },
         "tts": {
             "current": settings.tts_provider,

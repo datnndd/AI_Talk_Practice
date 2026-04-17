@@ -116,25 +116,41 @@ async def build_hint(
         raise BadRequestError("Lesson id does not match the active session lesson")
 
     current_objective_id = body.objective_id or package.objectives[state.current_objective_index].objective_id
+    current_objective = package.objectives[state.current_objective_index]
+    current_question = (state.last_question or current_objective.main_question or "").strip()
     follow_up_index = state.follow_up_index_by_objective.get(current_objective_id, 0)
     cached = LessonRuntimeService.get_cached_hint(
         hints=hints,
         objective_id=current_objective_id,
-        answer=body.user_last_answer,
+        question=current_question,
         follow_up_index=follow_up_index,
     )
     if cached:
         return cached.model_copy(update={"cached": True})
 
-    payload = LessonRuntimeService.build_hint(
-        package=package,
-        state=state,
-        user_last_answer=body.user_last_answer,
-    )
+    hint_llm = None
+    try:
+        hint_llm = create_llm(settings)
+        payload = await LessonRuntimeService.build_hint_dynamic(
+            scenario=session.scenario,
+            package=package,
+            state=state,
+            llm=hint_llm,
+        )
+    except Exception:
+        payload = LessonRuntimeService.build_hint(
+            package=package,
+            state=state,
+            user_last_answer=body.user_last_answer,
+        )
+    finally:
+        if hint_llm is not None:
+            await hint_llm.close()
+
     updated_hints = LessonRuntimeService.store_hint(
         hints=hints,
         objective_id=current_objective_id,
-        answer=body.user_last_answer,
+        question=current_question,
         payload=payload,
         follow_up_index=follow_up_index,
     )

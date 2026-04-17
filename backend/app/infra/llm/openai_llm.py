@@ -4,13 +4,14 @@ Generic OpenAI-compatible LLM provider.
 Works with any OpenAI API-compatible service:
 - OpenAI (api.openai.com)
 - DashScope/Qwen (dashscope-intl.aliyuncs.com)
-- Groq, Together, etc.
+- 9router, Groq, Together, etc.
 """
 
+import json
 import logging
 from typing import AsyncGenerator, Optional
 
-from openai import AsyncOpenAI
+import httpx
 
 from app.core.config import Settings
 from app.infra.contracts import LLMBase, Message
@@ -19,15 +20,20 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAILLM(LLMBase):
-    """Generic OpenAI-compatible LLM client."""
+    """Generic OpenAI-compatible LLM client using httpx to handle non-strict SSE streams."""
 
     def __init__(self, config: Settings):
         self._config = config
-        self._client = AsyncOpenAI(
-            api_key=config.llm_api_key,
-            base_url=config.llm_base_url,
-        )
         self._model = config.llm_model
+        
+        self._client = httpx.AsyncClient(
+            base_url=config.llm_base_url,
+            headers={
+                "Authorization": f"Bearer {config.llm_api_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=120.0,
+        )
         logger.info(f"OpenAILLM initialized (model={self._model}, base_url={config.llm_base_url})")
 
     async def chat_stream(
@@ -49,28 +55,50 @@ class OpenAILLM(LLMBase):
 
         logger.info(f"--- LLM INPUT ({self._model}) ---\n" + "\n".join([f"[{m['role'].upper()}]: {m['content']}" for m in api_messages]))
 
-        try:
-            stream = await self._client.chat.completions.create(
-                model=self._model,
-                messages=api_messages,
-                stream=True,
-                temperature=self._config.llm_temperature,
-                max_tokens=max_tokens or self._config.llm_max_tokens,
-            )
+        payload = {
+            "model": self._model,
+            "messages": api_messages,
+            "stream": True,
+            "temperature": self._config.llm_temperature,
+            "max_tokens": max_tokens or self._config.llm_max_tokens,
+        }
 
+        try:
             full_response = []
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    content = chunk.choices[0].delta.content
-                    full_response.append(content)
-                    yield content
             
+            async with self._client.stream("POST", "/chat/completions", json=payload) as response:
+                response.raise_for_status()
+                
+                async for line in response.aiter_lines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line == "data: [DONE]":
+                        break
+                    if line.startswith("data: "):
+                        data_str = line[len("data: "):]
+                        try:
+                            data = json.loads(data_str)
+                            if data.get("choices") and len(data["choices"]) > 0:
+                                delta = data["choices"][0].get("delta", {})
+                                content = delta.get("content")
+                                if content:
+                                    full_response.append(content)
+                                    yield content
+                        except json.JSONDecodeError:
+                            logger.warning(f"Failed to parse SSE chunk: {data_str}")
+                            continue
+
             logger.info(f"--- LLM OUTPUT ({self._model}) ---\n" + "".join(full_response))
 
+        except httpx.HTTPStatusError as e:
+            error_text = await e.response.aread()
+            logger.error(f"HTTP Status Error: {e.response.status_code} - {error_text.decode('utf-8', errors='ignore')}")
+            yield f"Sorry, I encountered an API error ({e.response.status_code})."
         except Exception as e:
-            logger.error(f"OpenAI LLM error: {e}")
+            logger.error(f"OpenAI LLM connection error: {e}")
             yield f"Sorry, I encountered an error: {str(e)}"
 
     async def close(self) -> None:
         """Close the async client."""
-        await self._client.close()
+        await self._client.aclose()

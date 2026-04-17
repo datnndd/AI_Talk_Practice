@@ -1,5 +1,26 @@
+import json
+
+import pytest
+
 from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.services.lesson_runtime import LessonRuntimeService
+
+
+class HintLLM:
+    def __init__(self, response):
+        self.response = response
+        self.calls = []
+        self._config = type("Config", (), {"lesson_hint_llm_max_tokens": 700})()
+
+    async def chat_stream(self, messages, system_prompt=None, max_tokens=None):
+        self.calls.append(
+            {
+                "system_prompt": system_prompt,
+                "messages": [(message.role, message.content) for message in messages],
+                "max_tokens": max_tokens,
+            }
+        )
+        yield self.response
 
 
 def make_scenario(*, learning_objectives=None, metadata=None):
@@ -58,21 +79,121 @@ def test_lesson_runtime_generates_package_and_advances():
     assert "Goals achieved:" in second_result.assistant_text
 
 
-def test_lesson_hint_highlights_missing_points():
+def test_lesson_hint_fallback_explains_current_question():
     scenario = make_scenario(learning_objectives=["ordering food"])
     package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
     state = LessonRuntimeService.initial_state(package)
+    state.last_question = "What would you like to order today?"
 
     hint = LessonRuntimeService.build_hint(
         package=package,
         state=state,
-        user_last_answer="I want food.",
+        user_last_answer=None,
     )
 
     assert hint.lesson_id == package.lesson_id
     assert hint.objective_id == package.objectives[0].objective_id
+    assert hint.question == "What would you like to order today?"
     assert hint.keywords
+    assert "AI dang hoi" in hint.analysis_vi
     assert "Tra loi toi da" in hint.answer_strategy_vi
+    assert hint.sample_answers
+
+
+@pytest.mark.asyncio
+async def test_lesson_hint_dynamic_sends_current_question_to_llm():
+    scenario = make_scenario(learning_objectives=["ordering food"])
+    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
+    state = LessonRuntimeService.initial_state(package)
+    state.last_question = "Would you like that hot or iced?"
+    llm = HintLLM(json.dumps({
+        "question_analysis_vi": "AI dang hoi ban muon mon do nong hay lanh.",
+        "answer_strategy_vi": "Chon mot lua chon, sau do noi them kich co hoac so thich.",
+        "keywords": ["hot", "iced", "regular"],
+        "sample_answers": [
+            "I would like it iced, please.",
+            "Hot is fine, and I would like a regular size.",
+        ],
+        "simple_answer": "Iced, please.",
+    }))
+
+    hint = await LessonRuntimeService.build_hint_dynamic(
+        scenario=scenario,
+        package=package,
+        state=state,
+        llm=llm,
+    )
+
+    assert hint.question == "Would you like that hot or iced?"
+    assert hint.analysis_vi == "AI dang hoi ban muon mon do nong hay lanh."
+    assert hint.sample_answers == [
+        "I would like it iced, please.",
+        "Hot is fine, and I would like a regular size.",
+    ]
+    assert hint.sample_answer == "I would like it iced, please."
+    assert hint.sample_answer_easy == "Iced, please."
+    assert llm.calls[0]["max_tokens"] == 700
+    assert "Would you like that hot or iced?" in llm.calls[0]["messages"][0][1]
+
+
+@pytest.mark.asyncio
+async def test_lesson_hint_dynamic_invalid_json_can_fallback():
+    scenario = make_scenario(learning_objectives=["ordering food"])
+    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
+    state = LessonRuntimeService.initial_state(package)
+    state.last_question = "What would you like to order today?"
+    llm = HintLLM("not json")
+
+    with pytest.raises(ValueError):
+        await LessonRuntimeService.build_hint_dynamic(
+            scenario=scenario,
+            package=package,
+            state=state,
+            llm=llm,
+        )
+
+    fallback = LessonRuntimeService.build_hint(
+        package=package,
+        state=state,
+        user_last_answer=None,
+    )
+    assert fallback.question == "What would you like to order today?"
+    assert fallback.sample_answer
+
+
+def test_lesson_hint_cache_key_uses_question_and_follow_up_index():
+    scenario = make_scenario(learning_objectives=["ordering food"])
+    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
+    state = LessonRuntimeService.initial_state(package)
+    state.last_question = "What would you like to order today?"
+    hint = LessonRuntimeService.build_hint(package=package, state=state, user_last_answer=None)
+
+    hints = LessonRuntimeService.store_hint(
+        hints={},
+        objective_id=hint.objective_id,
+        question=hint.question,
+        payload=hint,
+        follow_up_index=0,
+    )
+
+    assert LessonRuntimeService.get_cached_hint(
+        hints=hints,
+        objective_id=hint.objective_id,
+        question="What would you like to order today?",
+        follow_up_index=0,
+    )
+    assert LessonRuntimeService.get_cached_hint(
+        hints=hints,
+        objective_id=hint.objective_id,
+        question="Would you like that hot or iced?",
+        follow_up_index=0,
+    ) is None
+    assert LessonRuntimeService.get_cached_hint(
+        hints=hints,
+        objective_id=hint.objective_id,
+        question="What would you like to order today?",
+        follow_up_index=1,
+    ) is None
 
 
 def test_lesson_package_uses_prompt_generated_goals_by_level():

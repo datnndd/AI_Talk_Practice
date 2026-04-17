@@ -113,6 +113,13 @@ async def test_admin_cannot_change_own_admin_access_or_deactivate_self(admin_cli
     assert toggle_response.status_code == 400
     assert toggle_response.json()["detail"] == "You cannot change your own admin access."
 
+    update_response = await admin_client.put(
+        f"/api/admin/users/{test_admin_user.id}",
+        json={"is_admin": False},
+    )
+    assert update_response.status_code == 400
+    assert update_response.json()["detail"] == "You cannot change your own admin access."
+
     deactivate_response = await admin_client.post(f"/api/admin/users/{test_admin_user.id}/deactivate")
     assert deactivate_response.status_code == 400
     assert deactivate_response.json()["detail"] == "You cannot deactivate your own account."

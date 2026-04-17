@@ -153,6 +153,7 @@ class SessionService:
         *,
         session_id: int,
         finalized_user_messages: int,
+        metadata: dict[str, Any] | None = None,
     ) -> Session | None:
         session = await SessionRepository.get_by_id(db, session_id, full=True)
         if session is None:
@@ -160,6 +161,7 @@ class SessionService:
 
         payload = SessionFinishRequest(
             status="completed" if finalized_user_messages > 0 else "abandoned",
+            metadata=metadata or {},
         )
         await SessionService._finalize_session(db, session=session, payload=payload)
         await db.commit()

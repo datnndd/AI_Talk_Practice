@@ -469,6 +469,7 @@ const AdminScenarios = () => {
                     return (
                       <div
                         key={scenario.id}
+                        data-testid={`scenario-row-${scenario.id}`}
                         className={`grid grid-cols-[48px_minmax(0,1.5fr)_120px_120px_120px_150px] gap-3 px-4 py-4 text-sm transition ${
                           isSelected ? "bg-primary/5 dark:bg-primary/10" : ""
                         }`}
@@ -626,7 +627,7 @@ const AdminScenarios = () => {
                   <div className="mt-5 grid gap-3 md:grid-cols-2">
                     <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                        Duration
+                        Max conversation time
                       </p>
                       <p className="mt-2 text-sm font-semibold">
                         {selectedScenario.estimated_duration_minutes || 0} minutes

@@ -71,6 +71,15 @@ class StubASR:
         return None
 
 
+class EmptyTranscriptASR(StubASR):
+    async def stop_session(self):
+        return TranscriptEvent(
+            text="",
+            type=TranscriptType.FINAL,
+            language=self.language,
+        )
+
+
 class AutoFinalASR(StubASR):
     def __init__(self, _config):
         super().__init__(_config)
@@ -348,6 +357,85 @@ async def test_session_start_and_turn_persist_messages(test_user, test_scenario,
 
 
 @pytest.mark.asyncio
+async def test_stop_recording_without_audio_emits_no_input_and_does_not_persist_message(
+    test_user,
+    test_scenario,
+    realtime_stubs,
+):
+    token = create_access_token(test_user.id)
+    websocket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "language": "en",
+                "voice": "Cherry",
+            },
+            {"type": "start_recording", "language": "en", "voice": "Cherry"},
+            {"type": "stop_recording"},
+        ]
+    )
+
+    await ws_module.websocket_conversation(websocket)
+
+    assert any(
+        message["type"] == "asr_no_input" and message["reason"] == "no_audio"
+        for message in websocket.sent
+    )
+    assert not any(message["type"] == "transcript_final" for message in websocket.sent)
+
+    async with TestingSessionLocal() as session:
+        message_result = await session.execute(select(Message))
+        messages = message_result.scalars().all()
+
+    assert messages == []
+
+
+@pytest.mark.asyncio
+async def test_empty_asr_transcript_emits_no_input_and_does_not_persist_message(
+    test_user,
+    test_scenario,
+    monkeypatch,
+):
+    monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(conversation_module, "create_asr", lambda config: EmptyTranscriptASR(config))
+    monkeypatch.setattr(conversation_module, "create_llm", lambda config: StubLLM(config))
+    monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
+
+    token = create_access_token(test_user.id)
+    audio_payload = base64.b64encode(b"\x01\x02" * 4000).decode("ascii")
+    websocket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "language": "en",
+                "voice": "Cherry",
+            },
+            {"type": "start_recording", "language": "en", "voice": "Cherry"},
+            {"type": "audio_chunk", "data": audio_payload},
+            {"type": "stop_recording"},
+        ]
+    )
+
+    await ws_module.websocket_conversation(websocket)
+
+    assert any(
+        message["type"] == "asr_no_input" and message["reason"] == "empty_transcript"
+        for message in websocket.sent
+    )
+    assert not any(message["type"] == "llm_done" for message in websocket.sent)
+
+    async with TestingSessionLocal() as session:
+        message_result = await session.execute(select(Message))
+        messages = message_result.scalars().all()
+
+    assert messages == []
+
+
+@pytest.mark.asyncio
 async def test_session_start_rejects_invalid_token(test_scenario, realtime_stubs):
     websocket = FakeWebSocket(
         [
@@ -385,6 +473,124 @@ async def test_session_start_rejects_missing_scenario(test_user, realtime_stubs)
     await ws_module.websocket_conversation(websocket)
 
     assert websocket.sent == [{"type": "error", "message": "Scenario not found"}]
+
+
+@pytest.mark.asyncio
+async def test_session_start_with_active_session_id_resumes_without_creating_second_session(
+    test_user,
+    test_scenario,
+    realtime_stubs,
+    monkeypatch,
+):
+    monkeypatch.setattr(ws_module.settings, "ws_resume_grace_seconds", 30)
+    token = create_access_token(test_user.id)
+    first_socket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "metadata": {"resume_enabled": True},
+            },
+        ]
+    )
+
+    await ws_module.websocket_conversation(first_socket)
+    session_id = first_socket.sent[0]["session_id"]
+
+    async with TestingSessionLocal() as session:
+        result = await session.execute(select(Session))
+        sessions = result.scalars().all()
+    assert len(sessions) == 1
+    assert sessions[0].status == "active"
+
+    second_socket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "session_id": session_id,
+                "metadata": {"resume_enabled": False},
+            },
+        ]
+    )
+
+    await ws_module.websocket_conversation(second_socket)
+
+    assert second_socket.sent[0]["type"] == "session_started"
+    assert second_socket.sent[0]["session_id"] == session_id
+
+    async with TestingSessionLocal() as session:
+        result = await session.execute(select(Session))
+        sessions = result.scalars().all()
+    assert len(sessions) == 1
+    assert sessions[0].id == session_id
+    assert sessions[0].status == "abandoned"
+
+
+@pytest.mark.asyncio
+async def test_time_limit_emits_conversation_end_and_session_finalized(
+    test_user,
+    clean_realtime_tables,
+    monkeypatch,
+):
+    monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(conversation_module, "create_asr", lambda config: StubASR(config))
+    monkeypatch.setattr(conversation_module, "create_llm", lambda config: StubLLM(config))
+    monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
+
+    async with TestingSessionLocal() as session:
+        scenario = Scenario(
+            title="Timeout Scenario",
+            description="Scenario used for timeout tests",
+            learning_objectives="Practice briefly",
+            ai_system_prompt="You are a concise partner.",
+            category="business",
+            difficulty="medium",
+            is_active=True,
+            estimated_duration=1,
+        )
+        session.add(scenario)
+        await session.commit()
+        await session.refresh(scenario)
+        scenario_id = scenario.id
+
+    token = create_access_token(test_user.id)
+    websocket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": scenario_id,
+                "language": "en",
+                "voice": "Cherry",
+            },
+            *[
+                {"type": "config", "language": "en", "voice": "Cherry"}
+                for _ in range(8)
+            ],
+        ],
+        message_delay=0.2,
+    )
+
+    await ws_module.websocket_conversation(websocket)
+
+    assert any(
+        message["type"] == "conversation_end" and message["reason"] == "time_limit_reached"
+        for message in websocket.sent
+    )
+    assert any(
+        message["type"] == "session_finalized" and message["reason"] == "time_limit_reached"
+        for message in websocket.sent
+    )
+
+    async with TestingSessionLocal() as session:
+        result = await session.execute(select(Session))
+        finalized = result.scalar_one()
+
+    assert finalized.status == "abandoned"
+    assert finalized.session_metadata["end_reason"] == "time_limit_reached"
 
 
 @pytest.mark.asyncio

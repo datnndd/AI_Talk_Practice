@@ -23,6 +23,7 @@ test.describe('Admin Panel Protection', () => {
           id: 2,
           email: 'user@example.com',
           display_name: 'Regular User',
+          is_admin: false,
           preferences: { is_admin: false }
         })
       });
@@ -51,129 +52,143 @@ test.describe('Admin Scenario Management', () => {
           id: 1,
           email: 'admin@example.com',
           display_name: 'Admin User',
+          is_admin: true,
           preferences: { is_admin: true }
         })
       });
     });
 
-    // Mock scenario list (with total/items format)
-    await page.route('**/api/admin/scenarios*', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          items: [
-            {
-              id: 1,
-              title: 'Airport Check-in',
-              description: 'Practice check-in process',
-              is_active: true,
-              latest_prompt_quality: 92,
-              category: 'travel',
-              difficulty: 'medium',
-              usage_count: 5
-            },
-            {
-              id: 2,
-              title: 'Coffee Shop',
-              description: 'Ordering coffee',
-              is_active: false,
-              latest_prompt_quality: 75,
-              category: 'daily',
-              difficulty: 'easy',
-              usage_count: 2
-            }
-          ],
-          total: 2
-        })
-      });
+    const promptQuality = (score: number) => ({
+      score,
+      is_acceptable: score >= 70,
+      warnings: [],
+      suggestions: [],
+      recommended_target_skills: [],
     });
-    // Mock scenario detail
-    await page.route('**/api/admin/scenarios/1', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
+
+    const scenarioList = {
+      items: [
+        {
           id: 1,
           title: 'Airport Check-in',
           description: 'Practice check-in process',
           is_active: true,
-          latest_prompt_quality: 92,
+          latest_prompt_quality: promptQuality(92),
           category: 'travel',
           difficulty: 'medium',
+          usage_count: 5,
           target_skills: ['Vocabulary', 'Politeness'],
+          tags: ['airport'],
+          estimated_duration_minutes: 12,
           pre_gen_count: 5,
-          is_pre_generated: true
-        })
-      });
-    });
+          is_pre_generated: true,
+          variation_count: 0,
+          metadata: {},
+        },
+        {
+          id: 2,
+          title: 'Coffee Shop',
+          description: 'Ordering coffee',
+          is_active: false,
+          latest_prompt_quality: promptQuality(75),
+          category: 'daily',
+          difficulty: 'easy',
+          usage_count: 2,
+          target_skills: ['Vocabulary'],
+          tags: ['coffee'],
+          estimated_duration_minutes: 8,
+          pre_gen_count: 3,
+          is_pre_generated: false,
+          variation_count: 0,
+          metadata: {},
+        },
+      ],
+      total: 2,
+      page: 1,
+      page_size: 12,
+    };
 
-    // Mock prompt history
-    await page.route('**/api/admin/scenarios/1/prompt-history', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
+    await page.route('**/api/admin/**', async route => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const path = url.pathname;
+
+      if (path === '/api/admin/scenarios' && request.method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(scenarioList) });
+        return;
+      }
+
+      if (path === '/api/admin/scenarios/bulk-actions' && request.method() === 'POST') {
+        const payload = request.postDataJSON();
+        expect(payload.action).toBe('activate');
+        expect(payload.scenario_ids).toContain(2);
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true, message: 'Scenarios updated', task: null }),
+        });
+        return;
+      }
+
+      if (path === '/api/admin/scenarios/1' && request.method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(scenarioList.items[0]) });
+        return;
+      }
+
+      if (path === '/api/admin/scenarios/1/prompt-history' && request.method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+        return;
+      }
+
+      if (path === '/api/admin/scenario-variations' && request.method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ items: [], total: 0 }),
+        });
+        return;
+      }
+
+      if (path === '/api/admin/generation-tasks/task_123' && request.method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            task_id: 'task_123',
+            status: 'running',
+            scenario_ids: [1],
+            created_count: 4,
+            skipped_count: 0,
+            errors: [],
+            started_at: new Date().toISOString(),
+            finished_at: null,
+          }),
+        });
+        return;
+      }
+
+      await route.fallback();
     });
   });
 
   test('displays scenario list with quality scores', async ({ page }) => {
     await page.goto('/admin/scenarios');
-    await expect(page.locator('text=Airport Check-in')).toBeVisible();
-    await expect(page.locator('text=Coffee Shop')).toBeVisible();
-    await expect(page.locator('text=92')).toBeVisible();
-    await expect(page.locator('text=75')).toBeVisible();
+    await expect(page.getByTestId('scenario-row-1')).toContainText('Airport Check-in');
+    await expect(page.getByTestId('scenario-row-2')).toContainText('Coffee Shop');
+    await expect(page.getByTestId('scenario-row-1')).toContainText('Prompt 92');
+    await expect(page.getByTestId('scenario-row-2')).toContainText('Prompt 75');
   });
 
   test('performs bulk activation', async ({ page }) => {
-    // Mock bulk action API
-    await page.route('**/api/admin/scenarios/bulk-actions', async route => {
-      expect(route.request().method()).toBe('POST');
-      const payload = route.request().postDataJSON();
-      expect(payload.action).toBe('activate');
-      expect(payload.scenario_ids).toContain(2);
-      
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, message: 'Scenarios updated' })
-      });
-    });
-
     await page.goto('/admin/scenarios');
-    
-    // Find Coffee Shop and its checkbox (assuming it has a checkbox)
-    // This part depends on the actual UI implementation
-    // For now, let's assume there's a Select button or checkbox
-    const coffeeRow = page.locator('div', { hasText: 'Coffee Shop' }).filter({ has: page.locator('input[type="checkbox"]') });
-    await coffeeRow.locator('input[type="checkbox"]').check();
-    
+
+    await page.getByTestId('scenario-row-2').locator('input[type="checkbox"]').check();
     await page.click('button:has-text("Activate")');
-    
-    // Verify success message
+
     await expect(page.locator('text=Scenarios updated')).toBeVisible();
   });
 
   test('shows generation progress', async ({ page }) => {
-    // Mock task status API
-    await page.route('**/api/admin/tasks/*', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          task_id: 'task_123',
-          status: 'running',
-          progress: 50,
-          total_variations: 8,
-          processed_variations: 4
-        })
-      });
-    });
-
     await page.goto('/admin/scenarios');
-    
-    // Simulate active task (if the UI checks for it on load or poll)
-    // This depends on how the UI displays task progress
   });
 });

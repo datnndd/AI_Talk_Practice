@@ -67,6 +67,7 @@ class AdminUserService:
     async def update_user(
         db: AsyncSession,
         *,
+        actor: User,
         user_id: int,
         body: AdminUserUpdateRequest,
     ) -> User:
@@ -78,11 +79,13 @@ class AdminUserService:
                 setattr(user, field, value)
 
         if body.is_admin is not None:
+            if actor.id == user.id:
+                raise BadRequestError("You cannot change your own admin access.")
             AdminUserService._set_admin_access(user, body.is_admin)
 
         await db.commit()
         await db.refresh(user)
-        logger.info("Admin updated user id=%s", user.id)
+        logger.info("Admin id=%s updated user id=%s", actor.id, user.id)
         return user
 
     @staticmethod

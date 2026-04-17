@@ -19,8 +19,11 @@ from app.modules.sessions.schemas.lesson import (
     LessonStateRead,
 )
 from app.modules.sessions.services.lesson_prompts import (
+    LESSON_HINT_SYSTEM_PROMPT,
     LESSON_PLAN_SYSTEM_PROMPT,
+    build_lesson_hint_user_prompt,
     build_lesson_plan_user_prompt,
+    parse_lesson_hint_response,
     parse_lesson_plan_response,
 )
 
@@ -392,6 +395,19 @@ def _sample_answer_for_objective(current: LessonObjective, keywords: list[str], 
     return f"I would mention {primary}, then add a specific detail about {secondary}."
 
 
+def _hint_question(current: LessonObjective, state: LessonProgressState) -> str:
+    return (state.last_question or current.main_question or "").strip()
+
+
+def _hint_vocabulary(current: LessonObjective) -> list[str]:
+    vocabulary = [
+        part.strip()
+        for part in re.split(r",|;|\n|\|", current.hint_seed.grammar or "")
+        if part.strip()
+    ]
+    return vocabulary or current.expected_points[:4] or [current.goal]
+
+
 class LessonRuntimeService:
     @classmethod
     async def ensure_session_lesson_dynamic(
@@ -464,6 +480,11 @@ class LessonRuntimeService:
     def _lesson_plan_max_tokens(llm: LLMBase) -> int:
         config = getattr(llm, "_config", None)
         return int(getattr(config, "lesson_plan_llm_max_tokens", 1400))
+
+    @staticmethod
+    def _lesson_hint_max_tokens(llm: LLMBase) -> int:
+        config = getattr(llm, "_config", None)
+        return int(getattr(config, "lesson_hint_llm_max_tokens", 700))
 
     @staticmethod
     def create_lesson_package(
@@ -808,41 +829,15 @@ class LessonRuntimeService:
         current = package.objectives[state.current_objective_index]
         objective_id = current.objective_id
         follow_up_index = state.follow_up_index_by_objective.get(objective_id, 0)
-        answer = (user_last_answer or "").strip()
-        matched, missing = (
-            cls._match_expected_points(answer, current.expected_points)
-            if answer
-            else ([], list(current.expected_points))
-        )
-        keywords = missing or current.expected_points[:3]
+        question = _hint_question(current, state)
+        keywords = _hint_vocabulary(current)[:4]
         max_length = current.hint_seed.max_length
         keyword_phrase = ", ".join(item.lower() for item in keywords[:3])
 
-        matched_count = len(matched)
-        total_points = len(current.expected_points)
-
-        if not answer:
-            analysis = (
-                "Ban chua tra loi ro y chinh. "
-                "Hay noi 1-2 cau ngan, di thang vao muc tieu hien tai."
-            )
-        elif matched_count == total_points:
-            analysis = (
-                f"Ban da de cap day du {total_points}/{total_points} y chinh. "
-                "Hay mo rong them mot chut de cau tra loi co chieu sau hon."
-            )
-        elif matched_count > 0:
-            matched_desc = ", ".join(item.lower() for item in matched[:3])
-            missing_desc = ", ".join(item.lower() for item in missing[:3])
-            analysis = (
-                f"Tot! Ban da de cap: {matched_desc}. "
-                f"Can bo sung them: {missing_desc}."
-            )
-        else:
-            analysis = (
-                f"Ban chua de cap y chinh nao. "
-                f"Hay tap trung vao: {keyword_phrase or current.goal.lower()}."
-            )
+        analysis = (
+            f"AI dang hoi: \"{question}\". "
+            f"Trong tam la {current.goal.lower()}, nen tra loi dung vao y chinh cua cau hoi."
+        )
 
         # Adjust advice based on how many follow-ups have already been used
         if follow_up_index == 0:
@@ -861,17 +856,111 @@ class LessonRuntimeService:
         return LessonHintRead(
             lesson_id=package.lesson_id,
             objective_id=current.objective_id,
+            question=question,
             analysis_vi=analysis,
             answer_strategy_vi=answer_strategy,
             keywords=keywords[:4],
+            sample_answers=[sample_answer, sample_answer_easy],
             sample_answer=sample_answer,
             sample_answer_easy=sample_answer_easy,
             cached=cached,
             metadata={
-                "matched_points": matched,
-                "missing_points": missing,
                 "focus": current.hint_seed.focus,
                 "follow_up_index": follow_up_index,
+                "source": "fallback",
+            },
+        )
+
+    @classmethod
+    async def build_hint_dynamic(
+        cls,
+        *,
+        scenario: Scenario,
+        package: LessonPackage,
+        state: LessonProgressState,
+        llm: LLMBase,
+    ) -> LessonHintRead:
+        current = package.objectives[state.current_objective_index]
+        question = _hint_question(current, state)
+        vocabulary = _hint_vocabulary(current)
+        prompt = build_lesson_hint_user_prompt(
+            scenario=scenario,
+            persona=package.persona,
+            level=package.level,
+            current_question=question,
+            goal=current.goal,
+            expected_points=current.expected_points,
+            useful_vocabulary=vocabulary,
+        )
+
+        chunks: list[str] = []
+        async for chunk in llm.chat_stream(
+            [Message(role="user", content=prompt)],
+            system_prompt=LESSON_HINT_SYSTEM_PROMPT,
+            max_tokens=cls._lesson_hint_max_tokens(llm),
+        ):
+            chunks.append(chunk)
+
+        payload = parse_lesson_hint_response("".join(chunks))
+        if not payload:
+            raise ValueError("LLM returned an invalid lesson hint payload")
+
+        return cls.create_hint_from_plan(
+            package=package,
+            state=state,
+            payload=payload,
+        )
+
+    @classmethod
+    def create_hint_from_plan(
+        cls,
+        *,
+        package: LessonPackage,
+        state: LessonProgressState,
+        payload: dict[str, Any],
+        cached: bool = False,
+    ) -> LessonHintRead:
+        current = package.objectives[state.current_objective_index]
+        objective_id = current.objective_id
+        follow_up_index = state.follow_up_index_by_objective.get(objective_id, 0)
+        question = _hint_question(current, state)
+
+        analysis = str(payload.get("question_analysis_vi") or payload.get("analysis_vi") or "").strip()
+        strategy = str(payload.get("answer_strategy_vi") or "").strip()
+        keywords = _normalize_string_list(payload.get("keywords"), limit=6) or _hint_vocabulary(current)[:4]
+        sample_answers = _normalize_string_list(payload.get("sample_answers"), limit=3)
+        if not sample_answers:
+            sample_answers = _normalize_string_list(payload.get("sample_answer"), limit=1)
+
+        simple_answer = str(
+            payload.get("simple_answer")
+            or payload.get("sample_answer_easy")
+            or ""
+        ).strip()
+        if not sample_answers and simple_answer:
+            sample_answers = [simple_answer]
+
+        sample_answer = sample_answers[0] if sample_answers else ""
+        sample_answer_easy = simple_answer or (sample_answers[-1] if sample_answers else "")
+
+        if not analysis or not strategy or not sample_answer:
+            raise ValueError("LLM lesson hint payload is missing required fields")
+
+        return LessonHintRead(
+            lesson_id=package.lesson_id,
+            objective_id=objective_id,
+            question=question,
+            analysis_vi=analysis,
+            answer_strategy_vi=strategy,
+            keywords=keywords[:6],
+            sample_answers=sample_answers[:3],
+            sample_answer=sample_answer,
+            sample_answer_easy=sample_answer_easy,
+            cached=cached,
+            metadata={
+                "focus": current.hint_seed.focus,
+                "follow_up_index": follow_up_index,
+                "source": "llm",
             },
         )
 
@@ -880,13 +969,11 @@ class LessonRuntimeService:
         *,
         hints: dict[str, Any],
         objective_id: str,
-        answer: str | None,
+        question: str | None,
         payload: LessonHintRead,
         follow_up_index: int = 0,
     ) -> dict[str, Any]:
-        # Include follow_up_index in the key so hints are refreshed as the
-        # conversation progresses, even if the answer text is similar.
-        key = f"{objective_id}:{follow_up_index}:{_normalize_text(answer or '')}"
+        key = f"{objective_id}:{follow_up_index}:{_normalize_text(question or '')}"
         updated = dict(hints)
         updated[key] = payload.model_dump()
         return updated
@@ -896,10 +983,10 @@ class LessonRuntimeService:
         *,
         hints: dict[str, Any],
         objective_id: str,
-        answer: str | None,
+        question: str | None,
         follow_up_index: int = 0,
     ) -> LessonHintRead | None:
-        key = f"{objective_id}:{follow_up_index}:{_normalize_text(answer or '')}"
+        key = f"{objective_id}:{follow_up_index}:{_normalize_text(question or '')}"
         cached = hints.get(key)
         if not cached:
             return None

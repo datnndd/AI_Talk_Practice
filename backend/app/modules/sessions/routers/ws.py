@@ -6,6 +6,8 @@ import asyncio
 import base64
 import json
 import logging
+from contextlib import suppress
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -24,6 +26,28 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+_PENDING_RESUME_FINALIZE_TASKS: dict[int, asyncio.Task] = {}
+
+NO_INPUT_MESSAGE = "Mải mê nghe giọng bạn làm mình đãng trí. Bạn có thể nói lại một lần nữa được không?"
+TIME_LIMIT_MESSAGE = "Đã hết thời gian luyện tập. Mình sẽ chuyển bạn sang phần đánh giá."
+
+
+def _result_url(session_id: int) -> str:
+    return f"/sessions/{session_id}/result"
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _remaining_session_seconds(started_at: datetime, max_duration_seconds: int | None) -> float | None:
+    if not max_duration_seconds or max_duration_seconds <= 0:
+        return None
+    if started_at.tzinfo is None:
+        started_at = started_at.replace(tzinfo=timezone.utc)
+    elapsed = (_utcnow() - started_at).total_seconds()
+    return max(0.0, float(max_duration_seconds) - elapsed)
+
 
 @router.websocket("/ws/conversation")
 async def websocket_conversation(websocket: WebSocket):
@@ -34,6 +58,9 @@ async def websocket_conversation(websocket: WebSocket):
     session_id: int | None = None
     finalized_user_messages = 0
     lesson_engine_enabled = False
+    resume_enabled = False
+    finalized_by_server = False
+    timeout_task: asyncio.Task | None = None
     db_lock = asyncio.Lock()
 
     async def send_json_safe(data: dict):
@@ -59,6 +86,16 @@ async def websocket_conversation(websocket: WebSocket):
 
     async def on_error(message: str):
         await send_json_safe({"type": "error", "message": message})
+
+    async def on_no_input(reason: str, metrics: dict):
+        await send_json_safe(
+            {
+                "type": "asr_no_input",
+                "message": NO_INPUT_MESSAGE,
+                "reason": reason,
+                "metrics": metrics,
+            }
+        )
 
     async def persist_message(role: str, content: str):
         nonlocal finalized_user_messages
@@ -93,6 +130,83 @@ async def websocket_conversation(websocket: WebSocket):
             )
 
     active_user_id: int | None = None
+
+    async def finalize_session(reason: str) -> None:
+        nonlocal finalized_by_server
+        if session_id is None:
+            return
+
+        finalized_by_server = True
+        async with db_lock:
+            async with AsyncSessionLocal() as db_final:
+                finalized = await SessionService.finalize_after_ws_disconnect(
+                    db_final,
+                    session_id=session_id,
+                    finalized_user_messages=finalized_user_messages,
+                    metadata={"end_reason": reason},
+                )
+
+        status = finalized.status if finalized is not None else "completed"
+        await send_json_safe(
+            {
+                "type": "session_finalized",
+                "session_id": session_id,
+                "status": status,
+                "reason": reason,
+                "result_url": _result_url(session_id),
+            }
+        )
+
+    async def run_timeout_after(seconds: float) -> None:
+        try:
+            await asyncio.sleep(seconds)
+            if conversation is not None:
+                await conversation.cancel_recording()
+                await conversation.interrupt_response()
+            await send_json_safe(
+                {
+                    "type": "conversation_end",
+                    "reason": "time_limit_reached",
+                    "message": TIME_LIMIT_MESSAGE,
+                }
+            )
+            await finalize_session("time_limit_reached")
+            await websocket.close()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Error finalizing session after timeout")
+
+    async def schedule_resume_finalize(user_message_count: int) -> None:
+        if session_id is None:
+            return
+
+        resume_session_id = session_id
+
+        async def delayed_finalize() -> None:
+            try:
+                await asyncio.sleep(max(0, settings.ws_resume_grace_seconds))
+                async with AsyncSessionLocal() as db_final:
+                    await SessionService.finalize_after_ws_disconnect(
+                        db_final,
+                        session_id=resume_session_id,
+                        finalized_user_messages=user_message_count,
+                        metadata={"end_reason": "websocket_disconnect"},
+                    )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Error finalizing websocket session id=%s after resume grace", resume_session_id)
+            finally:
+                task = _PENDING_RESUME_FINALIZE_TASKS.get(resume_session_id)
+                if task is asyncio.current_task():
+                    _PENDING_RESUME_FINALIZE_TASKS.pop(resume_session_id, None)
+
+        previous = _PENDING_RESUME_FINALIZE_TASKS.pop(resume_session_id, None)
+        if previous is not None and not previous.done():
+            previous.cancel()
+
+        _PENDING_RESUME_FINALIZE_TASKS[resume_session_id] = asyncio.create_task(delayed_finalize())
 
     try:
         while True:
@@ -129,6 +243,10 @@ async def websocket_conversation(websocket: WebSocket):
                         return
 
                     request_metadata = msg.get("metadata") or {}
+                    resume_enabled = bool(request_metadata.get("resume_enabled"))
+                    resume_session_id = msg.get("session_id")
+                    is_resume = resume_session_id is not None
+
                     async with db_lock:
                         async with AsyncSessionLocal() as db_start:
                             user = await AuthService.get_user_by_id(db_start, user_id)
@@ -137,24 +255,47 @@ async def websocket_conversation(websocket: WebSocket):
                                 await websocket.close()
                                 return
 
-                            session = await SessionService.start_session(
-                                db_start,
-                                user_id=user.id,
-                                payload=SessionCreate(
-                                    scenario_id=scenario_id,
-                                    variation_id=msg.get("variation_id"),
-                                    variation_seed=msg.get("variation_seed"),
-                                    variation_parameters=msg.get("variation_parameters") or {},
-                                    prefer_pregenerated=msg.get("prefer_pregenerated", True),
-                                    create_variation_if_missing=msg.get("create_variation_if_missing", True),
-                                    mode=msg.get("mode"),
-                                    metadata=request_metadata,
-                                    target_skills=msg.get("target_skills"),
-                                ),
-                            )
+                            if is_resume:
+                                try:
+                                    resume_session_id = int(resume_session_id)
+                                except (TypeError, ValueError):
+                                    await send_json_safe({"type": "error", "message": "Invalid session_id"})
+                                    await websocket.close()
+                                    return
+
+                                session = await SessionService.get_by_id(db_start, resume_session_id, user.id)
+                                if session.status != "active":
+                                    await send_json_safe({"type": "error", "message": "Session is no longer active"})
+                                    await websocket.close()
+                                    return
+                                if int(session.scenario_id) != int(scenario_id):
+                                    await send_json_safe({"type": "error", "message": "Session scenario mismatch"})
+                                    await websocket.close()
+                                    return
+                            else:
+                                session = await SessionService.start_session(
+                                    db_start,
+                                    user_id=user.id,
+                                    payload=SessionCreate(
+                                        scenario_id=scenario_id,
+                                        variation_id=msg.get("variation_id"),
+                                        variation_seed=msg.get("variation_seed"),
+                                        variation_parameters=msg.get("variation_parameters") or {},
+                                        prefer_pregenerated=msg.get("prefer_pregenerated", True),
+                                        create_variation_if_missing=msg.get("create_variation_if_missing", True),
+                                        mode=msg.get("mode"),
+                                        metadata=request_metadata,
+                                        target_skills=msg.get("target_skills"),
+                                    ),
+                                )
                     active_user_id = user.id
                     session_id = session.id
+                    finalized_user_messages = len([item for item in session.messages if item.role == "user"])
                     lesson_engine_enabled = request_metadata.get("conversation_engine") == "lesson_v1"
+
+                    pending_finalize = _PENDING_RESUME_FINALIZE_TASKS.pop(session.id, None)
+                    if pending_finalize is not None and not pending_finalize.done():
+                        pending_finalize.cancel()
 
                     system_prompt = (
                         session.variation.system_prompt_override
@@ -166,41 +307,46 @@ async def websocket_conversation(websocket: WebSocket):
                     lesson_progress = None
                     lesson_hints = {}
                     if lesson_engine_enabled:
-                        planning_llm = None
-                        try:
-                            planning_llm = create_llm(settings)
-                            lesson_package, lesson_progress, lesson_hints = (
-                                await LessonRuntimeService.ensure_session_lesson_dynamic(
+                        if is_resume and LessonRuntimeService.has_lesson(session.session_metadata):
+                            lesson_package, lesson_progress, lesson_hints = LessonRuntimeService.deserialize_lesson_metadata(
+                                session.session_metadata
+                            )
+                        else:
+                            planning_llm = None
+                            try:
+                                planning_llm = create_llm(settings)
+                                lesson_package, lesson_progress, lesson_hints = (
+                                    await LessonRuntimeService.ensure_session_lesson_dynamic(
+                                        scenario=session.scenario,
+                                        session_metadata=session.session_metadata,
+                                        level=user.level,
+                                        llm=planning_llm,
+                                        regenerate=True,
+                                    )
+                                )
+                            except Exception:
+                                lesson_package, lesson_progress, lesson_hints = LessonRuntimeService.ensure_session_lesson(
                                     scenario=session.scenario,
                                     session_metadata=session.session_metadata,
                                     level=user.level,
-                                    llm=planning_llm,
-                                    regenerate=True,
                                 )
-                            )
-                        except Exception:
-                            lesson_package, lesson_progress, lesson_hints = LessonRuntimeService.ensure_session_lesson(
-                                scenario=session.scenario,
-                                session_metadata=session.session_metadata,
-                                level=user.level,
-                            )
-                        finally:
-                            if planning_llm is not None:
-                                await planning_llm.close()
-                        async with db_lock:
-                            async with AsyncSessionLocal() as db_write:
-                                session = await SessionService.merge_session_metadata(
-                                    db_write,
-                                    session_id=session.id,
-                                    user_id=user.id,
-                                    metadata={
-                                        "lesson": LessonRuntimeService.serialize_lesson_metadata(
-                                            package=lesson_package,
-                                            state=lesson_progress,
-                                            hints=lesson_hints,
-                                        )
-                                    },
-                                )
+                            finally:
+                                if planning_llm is not None:
+                                    await planning_llm.close()
+                            async with db_lock:
+                                async with AsyncSessionLocal() as db_write:
+                                    session = await SessionService.merge_session_metadata(
+                                        db_write,
+                                        session_id=session.id,
+                                        user_id=user.id,
+                                        metadata={
+                                            "lesson": LessonRuntimeService.serialize_lesson_metadata(
+                                                package=lesson_package,
+                                                state=lesson_progress,
+                                                hints=lesson_hints,
+                                            )
+                                        },
+                                    )
 
                     async def generate_reply(text: str) -> str:
                         if not lesson_engine_enabled:
@@ -245,10 +391,18 @@ async def websocket_conversation(websocket: WebSocket):
                         system_prompt=system_prompt,
                         language=msg.get("language", settings.asr_language),
                         voice=msg.get("voice", settings.tts_voice),
+                        on_no_input=on_no_input,
                         on_user_message=lambda text: persist_message("user", text),
                         on_assistant_message=lambda text: persist_message("assistant", text),
                         on_generate_reply=generate_reply if lesson_engine_enabled else None,
                     )
+                    max_duration_seconds = session.scenario.estimated_duration
+                    remaining_seconds = _remaining_session_seconds(session.started_at, max_duration_seconds)
+                    if remaining_seconds is not None:
+                        if remaining_seconds <= 0:
+                            timeout_task = asyncio.create_task(run_timeout_after(0))
+                        else:
+                            timeout_task = asyncio.create_task(run_timeout_after(remaining_seconds))
 
                     await send_json_safe(
                         {
@@ -260,6 +414,8 @@ async def websocket_conversation(websocket: WebSocket):
                             "mode": session.session_metadata.get("mode"),
                             "language": msg.get("language", settings.asr_language),
                             "voice": msg.get("voice", settings.tts_voice),
+                            "max_duration_seconds": max_duration_seconds,
+                            "result_url": _result_url(session.id),
                         }
                     )
 
@@ -275,7 +431,7 @@ async def websocket_conversation(websocket: WebSocket):
                         # Proactively speak the opening question so the assistant
                         # starts the conversation — the user does not need to speak first.
                         opening_text = state.current_question
-                        if opening_text:
+                        if opening_text and not is_resume:
                             await conversation.speak_opening(opening_text)
                     continue
 
@@ -322,21 +478,29 @@ async def websocket_conversation(websocket: WebSocket):
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")
     finally:
+        if timeout_task is not None and not timeout_task.done():
+            timeout_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await timeout_task
+
         if conversation is not None:
             try:
                 await conversation.close()
             except Exception:
                 logger.exception("Error closing conversation")
 
-        if session_id is not None:
+        if session_id is not None and not finalized_by_server:
             try:
-                async with db_lock:
-                    async with AsyncSessionLocal() as db_final:
-                        await SessionService.finalize_after_ws_disconnect(
-                            db_final,
-                            session_id=session_id,
-                            finalized_user_messages=finalized_user_messages,
-                        )
+                if resume_enabled:
+                    await schedule_resume_finalize(finalized_user_messages)
+                else:
+                    async with db_lock:
+                        async with AsyncSessionLocal() as db_final:
+                            await SessionService.finalize_after_ws_disconnect(
+                                db_final,
+                                session_id=session_id,
+                                finalized_user_messages=finalized_user_messages,
+                            )
             except Exception:
                 logger.exception("Error finalizing websocket session id=%s", session_id)
 

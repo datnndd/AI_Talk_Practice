@@ -11,6 +11,7 @@ const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const OnboardingPage = lazy(() => import("@/features/onboarding/pages/OnboardingPage"));
 const PracticeTopicPage = lazy(() => import("@/features/practice/pages/PracticeTopicPage"));
 const PracticeSessionPage = lazy(() => import("@/features/practice/pages/PracticeSessionPage"));
+const SessionResultPage = lazy(() => import("@/features/practice/pages/SessionResultPage"));
 const ProfileSettingsPage = lazy(() => import("@/features/profile/pages/ProfileSettingsPage"));
 const DashboardPage = lazy(() => import("@/features/dashboard/pages/DashboardPage"));
 const AdminUsersPage = lazy(() => import("@/features/admin-users/pages/AdminUsersPage"));
@@ -44,6 +45,7 @@ function App() {
         <Route path="/onboarding" element={<PrivateRoute>{withSuspense(<OnboardingPage />)}</PrivateRoute>} />
         <Route path="/topics" element={<PrivateRoute>{withAppLayout(<PracticeTopicPage />)}</PrivateRoute>} />
         <Route path="/practice/:id" element={<PrivateRoute requireSubscription>{withSuspense(<PracticeSessionPage />)}</PrivateRoute>} />
+        <Route path="/sessions/:id/result" element={<PrivateRoute>{withAppLayout(<SessionResultPage />)}</PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute>{withAppLayout(<ProfileSettingsPage />)}</PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute>{withAppLayout(<DashboardPage />)}</PrivateRoute>} />
         <Route path="/subscription" element={<PrivateRoute>{withAppLayout(<SubscriptionPage />)}</PrivateRoute>} />

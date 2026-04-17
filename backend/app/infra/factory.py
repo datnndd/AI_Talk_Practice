@@ -36,14 +36,9 @@ def create_asr(config: Settings) -> ASRBase:
 
 def create_llm(config: Settings) -> LLMBase:
     """Create an LLM provider instance based on configuration."""
-    provider = config.llm_provider.lower()
+    provider = config.llm_provider.strip().lower()
 
-    if provider == "gemini":
-        from app.infra.llm.gemini_llm import GeminiLLM
-        logger.info("Using Gemini LLM")
-        return GeminiLLM(config)
-
-    elif provider == "openai":
+    if provider == "openai":
         from app.infra.llm.openai_llm import OpenAILLM
         logger.info("Using OpenAI-compatible LLM")
         return OpenAILLM(config)
@@ -51,7 +46,7 @@ def create_llm(config: Settings) -> LLMBase:
     else:
         raise ValueError(
             f"Unknown LLM provider: '{provider}'. "
-            f"Available: gemini, openai"
+            f"Available: openai"
         )
 
 

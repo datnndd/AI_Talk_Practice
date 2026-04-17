@@ -168,7 +168,7 @@ class ScenarioVariation(Base, TimestampMixin):
 
     # ── Provenance ────────────────────────────────────────────────────────────
     is_pregenerated: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
-    # Which LLM model generated this variation, e.g. "gemini-2.0-flash"
+    # Which LLM model generated this variation, e.g. "ai-talk"
     generated_by_model: Mapped[Optional[str]] = mapped_column(String(100))
     # LLM generation latency in ms — useful for cost/latency analytics
     generation_latency_ms: Mapped[Optional[int]] = mapped_column(Integer)

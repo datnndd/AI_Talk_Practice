@@ -71,7 +71,7 @@ class SessionScore(Base, TimestampMixin):
     feedback_summary: Mapped[Optional[str]] = mapped_column(Text)
 
     # ── Grader provenance ─────────────────────────────────────────────────────
-    # {"model": "gemini-2.0-flash", "latency_ms": 850}
+    # {"model": "ai-talk", "latency_ms": 850}
     score_metadata: Mapped[Optional[Any]] = mapped_column("metadata", JSONB)
 
     # ── Relationships ─────────────────────────────────────────────────────────
