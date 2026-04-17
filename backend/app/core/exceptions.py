@@ -48,6 +48,11 @@ class ConflictError(AppError):
     code = "conflict"
 
 
+class UpstreamServiceError(AppError):
+    status_code = status.HTTP_502_BAD_GATEWAY
+    code = "upstream_service_error"
+
+
 def setup_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def app_exception_handler(_: Request, exc: AppError) -> JSONResponse:

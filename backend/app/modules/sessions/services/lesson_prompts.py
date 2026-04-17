@@ -12,6 +12,7 @@ You are an expert at designing realistic, immersive English speaking practice se
 Act strictly as the conversation partner in the given scenario. 
 Never act as an English teacher or tutor unless the scenario itself requires it.
 Generate a finite, well-structured conversation plan adapted to the learner's CEFR level.
+Keep the JSON compact and short enough to fit in one completion.
 Return ONLY a valid JSON object. Do not add any explanation, Markdown, or extra text.
 """.strip()
 
@@ -40,6 +41,15 @@ Level-specific constraints:
 - A1/A2 (Beginner/Easy): Maximum 2 goals. Use very simple language. 1 follow-up per goal.
 - B1/B2 (Intermediate/Medium): 3 goals. Moderate detail. 1-2 natural follow-ups per goal.
 - C1/C2 (Advanced/Hard): 3-4 goals. Deeper, more natural conversation. 2-3 follow-ups per goal.
+- Hard output limits:
+  - opening_message: max 20 words.
+  - goal: max 12 words.
+  - starting_question: max 18 words.
+  - success_criteria: max 2 items, each max 10 words.
+  - follow_up_questions: max 2 items, each max 14 words.
+  - useful_phrases: max 3 items, each max 8 words.
+  - ending_summary_instruction: max 18 words.
+- Use compact JSON strings. Do not include long explanations.
 
 Return ONLY this exact JSON structure (no extra fields, no extra text):
 

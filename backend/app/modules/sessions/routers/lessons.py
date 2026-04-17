@@ -47,13 +47,6 @@ async def generate_lesson(
             llm=planning_llm,
             regenerate=body.regenerate,
         )
-    except Exception:
-        package, state, hints = LessonRuntimeService.ensure_session_lesson(
-            scenario=session.scenario,
-            session_metadata=session.session_metadata,
-            level=body.level or user.level,
-            regenerate=body.regenerate,
-        )
     finally:
         if planning_llm is not None:
             await planning_llm.close()

@@ -14,6 +14,7 @@ from typing import AsyncGenerator, Optional
 import httpx
 
 from app.core.config import Settings
+from app.core.exceptions import UpstreamServiceError
 from app.infra.contracts import LLMBase, Message
 
 logger = logging.getLogger(__name__)
@@ -94,10 +95,10 @@ class OpenAILLM(LLMBase):
         except httpx.HTTPStatusError as e:
             error_text = await e.response.aread()
             logger.error(f"HTTP Status Error: {e.response.status_code} - {error_text.decode('utf-8', errors='ignore')}")
-            yield f"Sorry, I encountered an API error ({e.response.status_code})."
+            raise UpstreamServiceError(f"LLM API error ({e.response.status_code}).") from e
         except Exception as e:
             logger.error(f"OpenAI LLM connection error: {e}")
-            yield f"Sorry, I encountered an error: {str(e)}"
+            raise UpstreamServiceError("LLM service is unavailable. Please try again.") from e
 
     async def close(self) -> None:
         """Close the async client."""

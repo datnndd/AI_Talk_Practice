@@ -324,12 +324,6 @@ async def websocket_conversation(websocket: WebSocket):
                                         regenerate=True,
                                     )
                                 )
-                            except Exception:
-                                lesson_package, lesson_progress, lesson_hints = LessonRuntimeService.ensure_session_lesson(
-                                    scenario=session.scenario,
-                                    session_metadata=session.session_metadata,
-                                    level=user.level,
-                                )
                             finally:
                                 if planning_llm is not None:
                                     await planning_llm.close()
@@ -468,7 +462,12 @@ async def websocket_conversation(websocket: WebSocket):
                 else:
                     await send_json_safe({"type": "error", "message": f"Unknown message type: {msg_type}"})
             except AppError as exc:
-                await send_json_safe({"type": "error", "message": exc.detail})
+                payload = {"type": "error", "message": exc.detail}
+                if exc.code == "lesson_plan_generation_failed":
+                    payload["code"] = exc.code
+                if exc.extra:
+                    payload["extra"] = exc.extra
+                await send_json_safe(payload)
                 if msg_type == "session_start" and conversation is None:
                     await websocket.close()
                     return

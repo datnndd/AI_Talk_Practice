@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     llm_temperature: float = Field(default=0.3, description="Sampling temperature for LLM generation")
     llm_max_tokens: int = Field(default=160, description="Maximum tokens generated per assistant turn")
     lesson_plan_llm_max_tokens: int = Field(
-        default=1400,
+        default=2400,
         description="Maximum tokens generated when creating structured lesson plans",
     )
     lesson_hint_llm_max_tokens: int = Field(

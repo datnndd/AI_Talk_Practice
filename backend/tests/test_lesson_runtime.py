@@ -264,6 +264,30 @@ def test_lesson_package_uses_prompt_generated_goals_by_level():
     assert advanced_package.objectives[0].follow_up_questions == ["What experience is most relevant?"]
 
 
+def test_lesson_package_uses_prompt_generated_useful_phrases():
+    scenario = make_scenario()
+    plan = {
+        "opening_message": "Good morning. What can I get started for you?",
+        "goals": [
+            {
+                "goal": "Order a drink",
+                "starting_question": "What can I get started for you?",
+                "success_criteria": ["drink order", "menu detail"],
+                "follow_up_questions": ["Would you like that hot or iced?"],
+                "useful_phrases": ["I'd like a latte", "What's in this?", "How much is it?"],
+            }
+        ],
+    }
+
+    package = LessonRuntimeService.create_lesson_package_from_plan(
+        scenario=scenario,
+        level="beginner",
+        plan=plan,
+    )
+
+    assert package.objectives[0].hint_seed.grammar == "I'd like a latte, What's in this?, How much is it?"
+
+
 def test_prompt_generated_follow_up_avoids_generic_teacher_prompt():
     scenario = make_scenario(
         learning_objectives=["Professional vocabulary"],

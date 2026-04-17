@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from app.core.exceptions import BadRequestError
+from app.core.exceptions import BadRequestError, UpstreamServiceError
 from app.infra.contracts import LLMBase, Message
 from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.schemas.lesson import (
@@ -26,6 +27,8 @@ from app.modules.sessions.services.lesson_prompts import (
     parse_lesson_hint_response,
     parse_lesson_plan_response,
 )
+
+logger = logging.getLogger(__name__)
 
 STOPWORDS = {
     "a",
@@ -221,6 +224,10 @@ def chunk_text_for_stream(text: str, chunk_size: int = 48) -> list[str]:
 class LessonAdvanceResult:
     assistant_text: str
     state: LessonStateRead
+
+
+class LessonPlanGenerationError(UpstreamServiceError):
+    code = "lesson_plan_generation_failed"
 
 
 @dataclass(frozen=True)
@@ -455,7 +462,7 @@ class LessonRuntimeService:
         llm: LLMBase | None,
     ) -> LessonPackage:
         if llm is None:
-            return cls.create_lesson_package(scenario=scenario, level=level)
+            raise LessonPlanGenerationError("Lesson plan generation is unavailable because the LLM is not configured.")
 
         prompt = build_lesson_plan_user_prompt(scenario=scenario, level=level)
         response_text = ""
@@ -468,18 +475,27 @@ class LessonRuntimeService:
             ):
                 chunks.append(chunk)
             response_text = "".join(chunks)
-        except Exception:
-            return cls.create_lesson_package(scenario=scenario, level=level)
+        except UpstreamServiceError:
+            raise
+        except Exception as exc:
+            logger.exception("Dynamic lesson plan LLM call failed")
+            raise LessonPlanGenerationError("Could not generate the lesson plan. Please try again.") from exc
 
         plan = parse_lesson_plan_response(response_text)
         if not plan:
-            return cls.create_lesson_package(scenario=scenario, level=level)
-        return cls.create_lesson_package_from_plan(scenario=scenario, level=level, plan=plan)
+            logger.warning(
+                "Dynamic lesson plan response was not valid JSON "
+                "(response_len=%s, max_tokens=%s)",
+                len(response_text),
+                cls._lesson_plan_max_tokens(llm),
+            )
+            raise LessonPlanGenerationError("The AI returned an incomplete lesson plan. Please try again.")
+        return cls.create_lesson_package_from_plan(scenario=scenario, level=level, plan=plan, strict=True)
 
     @staticmethod
     def _lesson_plan_max_tokens(llm: LLMBase) -> int:
         config = getattr(llm, "_config", None)
-        return int(getattr(config, "lesson_plan_llm_max_tokens", 1400))
+        return int(getattr(config, "lesson_plan_llm_max_tokens", 2400))
 
     @staticmethod
     def _lesson_hint_max_tokens(llm: LLMBase) -> int:
@@ -514,16 +530,21 @@ class LessonRuntimeService:
         scenario: Scenario,
         level: str | None,
         plan: dict[str, Any],
+        strict: bool = False,
     ) -> LessonPackage:
         topic = _title_case_topic(scenario)
         assigned_task = _assigned_task(scenario)
         resolved_level = (level or "intermediate").strip()
         goals = plan.get("goals")
         if not isinstance(goals, list):
+            if strict:
+                raise LessonPlanGenerationError("The AI lesson plan did not include a valid goals list.")
             return LessonRuntimeService.create_lesson_package(scenario=scenario, level=resolved_level)
 
         opening = str(plan.get("opening_message") or "").strip()
-        if opening and _is_meta_opening(opening):
+        if opening and _is_meta_opening(opening) and strict:
+            raise LessonPlanGenerationError("The AI lesson plan opening was not a valid roleplay line.")
+        elif opening and _is_meta_opening(opening):
             opening = _fallback_opening_message(scenario=scenario, topic=topic)
         blueprints: list[ObjectiveBlueprint] = []
         goal_limit = _objective_count_for_level(resolved_level, len(goals))
@@ -537,7 +558,10 @@ class LessonRuntimeService:
                 item.get("success_criteria") or item.get("expected_points"),
                 limit=4,
             ) or _fallback_expected_points(goal)
-            vocabulary = _normalize_string_list(item.get("vocabulary"), limit=6) or expected_points
+            vocabulary = _normalize_string_list(
+                item.get("useful_phrases") or item.get("vocabulary"),
+                limit=6,
+            ) or expected_points
             follow_ups = _normalize_string_list(item.get("follow_up_questions"), limit=3)
             question = str(item.get("question") or item.get("main_question") or item.get("starting_question") or "").strip()
             if question and _is_meta_opening(question):
@@ -563,6 +587,8 @@ class LessonRuntimeService:
             )
 
         if not blueprints:
+            if strict:
+                raise LessonPlanGenerationError("The AI lesson plan did not include any usable conversation goals.")
             return LessonRuntimeService.create_lesson_package(scenario=scenario, level=resolved_level)
 
         return LessonRuntimeService._package_from_blueprints(

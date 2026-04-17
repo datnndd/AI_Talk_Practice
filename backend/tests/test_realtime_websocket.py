@@ -224,6 +224,22 @@ class LessonPlanLLM:
         return None
 
 
+class BrokenLessonPlanLLM:
+    def __init__(self, _config):
+        self.calls = []
+
+    async def chat_stream(self, messages, system_prompt=None, max_tokens=None):
+        self.calls.append({
+            "system_prompt": system_prompt,
+            "messages": [(message.role, message.content) for message in messages],
+            "max_tokens": max_tokens,
+        })
+        yield '{"opening_message":"Welcome","goals":[{"goal":"Order a drink","success_criteria":["drink"]'
+
+    async def close(self):
+        return None
+
+
 class StubTTS:
     def __init__(self, _config):
         self.configs = []
@@ -904,5 +920,47 @@ async def test_lesson_engine_emits_state_and_structured_reply_events(test_user, 
     assert messages[1].content == "I can practice live conversation naturally today."
     assert messages[2].content == "Which experience is most relevant?"
     assert planning_llm_instances[0].calls
-    assert planning_llm_instances[0].calls[0]["max_tokens"] == 1400
+    assert planning_llm_instances[0].calls[0]["max_tokens"] == 2400
     assert llm_instances[0].calls == []
+
+
+@pytest.mark.asyncio
+async def test_lesson_engine_reports_generation_error_without_default_questions(test_user, test_scenario, monkeypatch):
+    planning_llm_instances = []
+
+    def create_planning_llm(config):
+        instance = BrokenLessonPlanLLM(config)
+        planning_llm_instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(ws_module, "create_llm", create_planning_llm)
+    monkeypatch.setattr(conversation_module, "create_asr", lambda config: LessonAnswerASR(config))
+    monkeypatch.setattr(conversation_module, "create_llm", lambda config: StubLLM(config))
+    monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
+
+    token = create_access_token(test_user.id)
+    websocket = FakeWebSocket(
+        [
+            {
+                "type": "session_start",
+                "token": token,
+                "scenario_id": test_scenario.id,
+                "language": "en",
+                "voice": "Cherry",
+                "metadata": {"conversation_engine": "lesson_v1"},
+            },
+        ]
+    )
+
+    await ws_module.websocket_conversation(websocket)
+
+    assert any(
+        message["type"] == "error"
+        and message.get("code") == "lesson_plan_generation_failed"
+        and "incomplete lesson plan" in message["message"].lower()
+        for message in websocket.sent
+    )
+    assert not any(message["type"] == "lesson_started" for message in websocket.sent)
+    assert not any(message["type"] == "llm_done" for message in websocket.sent)
+    assert planning_llm_instances[0].calls[0]["max_tokens"] == 2400

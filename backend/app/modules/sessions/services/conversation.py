@@ -491,12 +491,10 @@ class ConversationSession:
                 raise
             except Exception as e:
                 logger.error(f"LLM streaming error: {e}")
-                error_msg = f"Sorry, I had trouble generating a response."
-                full_response = error_msg
-                self._current_response_text = full_response
-                if self._on_llm_chunk:
-                    await self._on_llm_chunk(error_msg, False)
-                await text_queue.put(error_msg)
+                full_response = ""
+                self._current_response_text = ""
+                if self._on_error:
+                    await self._on_error("Could not generate the AI response. Please try again.")
             finally:
                 await text_queue.put(None)
 
@@ -565,10 +563,15 @@ class ConversationSession:
             self._current_response_text = ""
         except Exception as e:
             logger.error(f"Structured reply generation error: {e}")
-            full_response = "Sorry, I had trouble preparing the next step."
+            if self._on_error:
+                await self._on_error("Could not prepare the next lesson question. Please try again.")
+            if self._on_audio_chunk:
+                await self._on_audio_chunk(None)
+            self._log_turn_timing(response_len=0, interrupted=interrupted)
+            return interrupted, ""
 
         async def _text_stream():
-            for chunk in chunk_text_for_stream(full_response or "Sorry, I had trouble preparing the next step."):
+            for chunk in chunk_text_for_stream(full_response):
                 self._current_response_text = f"{self._current_response_text}{chunk}"
                 if "llm_first_token" not in self._turn_timing:
                     self._mark_turn_phase("llm_first_token")
