@@ -313,7 +313,10 @@ async def websocket_conversation(websocket: WebSocket):
                     active_user_id = user.id
                     session_id = session.id
                     finalized_user_messages = len([item for item in session.messages if item.role == "user"])
-                    lesson_engine_enabled = request_metadata.get("conversation_engine") == "lesson_v1"
+                    lesson_engine_enabled = request_metadata.get("conversation_engine") in (
+                        "lesson_v1",
+                        "hybrid_conversation",
+                    )
 
                     pending_finalize = _PENDING_RESUME_FINALIZE_TASKS.pop(session.id, None)
                     if pending_finalize is not None and not pending_finalize.done():

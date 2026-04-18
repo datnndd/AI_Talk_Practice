@@ -65,6 +65,8 @@ class Scenario(Base, TimestampMixin):
 
     # ── Session parameters ────────────────────────────────────────────────────
     estimated_duration: Mapped[Optional[int]] = mapped_column(SmallInteger)  # seconds
+    time_limit_minutes: Mapped[Optional[int]] = mapped_column(Integer)  # New: session time limit in minutes
+    starter: Mapped[str] = mapped_column(String(10), server_default="AI")  # 'AI' or 'USER' - who starts
     # "conversation" | "roleplay" | "debate" | "interview"
     mode: Mapped[str] = mapped_column(String(30), nullable=False, server_default="conversation")
     is_ai_start_first: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")

@@ -46,10 +46,11 @@ async def test_admin_can_create_scenario_and_prompt_history(client, db_session):
             "coach the learner with brief corrections, and keep the conversation focused on "
             "solving the missing reservation issue without breaking roleplay."
         ),
-        "learning_objectives": ["clarify a booking issue", "ask for confirmation details"],
+        "objectives": ["clarify a booking issue", "ask for confirmation details"],
         "target_skills": ["fluency", "grammar"],
         "tags": ["hotel", "travel", "problem-solving"],
-        "estimated_duration_minutes": 12,
+        "time_limit_seconds": 720,
+        "starter": "USER",
         "is_pre_generated": True,
         "pre_gen_count": 10,
         "mode": "roleplay",
@@ -64,6 +65,10 @@ async def test_admin_can_create_scenario_and_prompt_history(client, db_session):
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["title"] == payload["title"]
+    assert body["objectives"] == payload["objectives"]
+    assert body["learning_objectives"] == payload["objectives"]
+    assert body["starter"] == "USER"
+    assert body["time_limit_seconds"] == 720
     assert body["estimated_duration_minutes"] == 12
     assert body["variation_count"] == 0
     assert len(body["prompt_history"]) == 1

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ChatCenteredDots,
+  CheckCircle,
   Microphone,
   Robot,
   Info,
@@ -12,19 +13,37 @@ import {
 import ScenarioSidebar from "./ScenarioSidebar";
 import { practiceApi } from "../api/practiceApi";
 
+
+const isCompletionNotice = (role, content) => {
+  if (role !== "notice" && role !== "system") return false;
+  const lower = (content || "").toLowerCase();
+  return (
+    content.trim().startsWith("✅") ||
+    (lower.includes("objective") && (lower.includes("complete") || lower.includes("achieved"))) ||
+    lower.includes("nice work") ||
+    lower.includes("well done")
+  );
+};
+
 const MessageBubble = ({ content, role, isAI, isLive = false }) => {
   const isNotice = role === "notice" || role === "system";
+  const isCompletion = isCompletionNotice(role, content);
   const alignClass = isNotice ? "mx-auto" : isAI ? "" : "ml-auto flex-row-reverse";
-  const iconClass = isNotice
-    ? "border-amber-200 bg-amber-50 text-amber-700"
-    : isAI
-      ? "border-zinc-200 bg-white text-zinc-500"
-      : "border-primary/20 bg-primary text-white";
-  const bubbleClass = isNotice
-    ? "border-amber-200 bg-amber-50 text-amber-950"
-    : isAI
-      ? "border-zinc-200 bg-white text-zinc-900"
-      : "border-primary/20 bg-[#eef6ff] text-zinc-950";
+  const iconClass = isCompletion
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    : isNotice
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : isAI
+        ? "border-zinc-200 bg-white text-zinc-500"
+        : "border-primary/20 bg-primary text-white";
+  const bubbleClass = isCompletion
+    ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+    : isNotice
+      ? "border-amber-200 bg-amber-50 text-amber-950"
+      : isAI
+        ? "border-zinc-200 bg-white text-zinc-900"
+        : "border-primary/20 bg-[#eef6ff] text-zinc-950";
+
 
   const [translation, setTranslation] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
@@ -53,7 +72,13 @@ const MessageBubble = ({ content, role, isAI, isLive = false }) => {
     <div
       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border flex-col ${iconClass} overflow-hidden`}
     >
-      {isNotice ? <Info size={20} weight="fill" /> : isAI ? <Robot size={20} /> : <User size={20} />}
+      {isCompletion
+        ? <CheckCircle size={20} weight="fill" />
+        : isNotice
+          ? <Info size={20} weight="fill" />
+          : isAI
+            ? <Robot size={20} />
+            : <User size={20} />}
     </div>
 
     <div className="flex flex-col gap-2">

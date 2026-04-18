@@ -2,11 +2,23 @@ from __future__ import annotations
 
 from app.infra.contracts import Message
 from app.modules.sessions.services.hybrid_conversation.memory import SessionMemoryManager
-from app.modules.sessions.services.hybrid_conversation.schemas import DialogueState, RepairAction, ScenarioDefinition, SessionMemory, TurnAnalysis
+from app.modules.sessions.services.hybrid_conversation.schemas import (
+    DialogueState,
+    RepairAction,
+    ScenarioDefinition,
+    SessionMemory,
+    TurnAnalysis,
+)
 
 
 class PromptBuilder:
-    """Builds compact spoken-dialogue prompts from structured state."""
+    """Builds compact spoken-dialogue prompts from structured state.
+
+    The admin's ``ai_system_prompt`` is injected as the first block so the
+    AI's persona and behaviour rules are always respected.  Structured
+    context (phase, memory, policy) is appended after so the engine can
+    steer the conversation without overriding character.
+    """
 
     def build(
         self,
@@ -37,27 +49,41 @@ class PromptBuilder:
             else "No analysis available."
         )
 
-        system_prompt = "\n".join(
+        parts: list[str] = []
+
+        # --- Admin-authored persona block (injected first, verbatim) ---
+        if scenario.ai_system_prompt and scenario.ai_system_prompt.strip():
+            parts.append(scenario.ai_system_prompt.strip())
+            parts.append("")  # blank separator
+
+        # --- Structural context block ---
+        parts.extend(
             [
-                "You are running a real-time spoken English practice conversation.",
                 f"Scenario: {scenario.title}",
                 f"Situation Context: {scenario.description}",
                 f"AI role: {scenario.ai_role}",
                 f"Learner role: {scenario.user_role}",
-                f"Missions to accomplish: {scenario.objective}",
-                f"Current phase: {phase.title} - {phase.objective}",
-                "Stay centered on the situation context and missions.",
+                f"Overall mission: {scenario.objective}",
+                f"Current phase: {phase.title} — {phase.objective}",
+                f"Current phase question to resolve: {phase.starting_question}",
+                "",
                 f"Relevant learner facts: {facts_line}",
                 f"Recent compact summary: {summary_line}",
                 f"Target vocabulary/functions: {vocabulary}",
                 f"Dialogue policy: {repair_action.action.value} ({repair_action.reason})",
                 f"Turn analysis: {analysis_line}",
-                "Stay centered on the scenario objective.",
-                "Reuse learner facts only when it feels natural and useful.",
-                "If the learner drifts, acknowledge briefly and steer back.",
-                "Keep the reply concise, conversational, and optimized for speech.",
-                "Ask one focused question at a time.",
-                "Do not use markdown, bullets, or long paragraphs.",
+                "",
+                # Behavioural guard-rails
+                "Rules:",
+                "- Stay centered on the situation context and current phase mission.",
+                "- If the learner drifts off-topic, acknowledge briefly and steer back.",
+                "- Keep replies concise, conversational, and optimised for speech.",
+                "- Ask one focused question at a time.",
+                "- Do not use markdown, bullets, or long paragraphs.",
+                "- Reuse learner facts only when it feels natural.",
+                f"- Speaking style: {scenario.speaking_style}.",
             ]
         )
+
+        system_prompt = "\n".join(parts)
         return system_prompt, [Message(role="user", content=user_text.strip())]

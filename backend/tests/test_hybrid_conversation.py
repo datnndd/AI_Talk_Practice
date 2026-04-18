@@ -14,6 +14,7 @@ from app.modules.sessions.services.hybrid_conversation.schemas import (
     PolicyAction,
     RepairAction,
     ScenarioDefinition,
+    ScenarioObjective,
     ScenarioPhase,
     SessionMemory,
     TurnLabel,
@@ -75,6 +76,11 @@ def coworker_scenario() -> ScenarioDefinition:
         target_vocabulary=["document", "deadline", "draft"],
         target_functions=["ask for help", "give context"],
         opening_message="Hi, what do you need help with today?",
+        objectives=[
+            ScenarioObjective(objective_id="ask_for_help", goal="Ask for help writing a work document"),
+            ScenarioObjective(objective_id="clarify_need", goal="Clarify what kind of help is needed"),
+            ScenarioObjective(objective_id="confirm_next_step", goal="Confirm the next step"),
+        ],
     )
 
 
@@ -99,6 +105,10 @@ def coffee_scenario() -> ScenarioDefinition:
         target_vocabulary=["coffee", "latte", "cappuccino", "espresso", "iced", "hot"],
         target_functions=["order a drink", "ask about menu"],
         opening_message="Welcome to Morning Brew. What can I get for you?",
+        objectives=[
+            ScenarioObjective(objective_id="order_drink", goal="Order a drink"),
+            ScenarioObjective(objective_id="ask_menu", goal="Ask a simple menu detail"),
+        ],
     )
 
 
@@ -307,6 +317,10 @@ async def test_llm_turn_analysis_enriches_gray_zone_and_falls_back_on_bad_json()
             '"contains_direct_answer":true,"intent":"ask for help",'
             '"useful_facts":[{"key":"need","value":"help with a project brief",'
             '"category":"goal","confidence":0.88,"relevance_to_scenario":0.9}],'
+            '"corrected_text":"I need help with a project brief.",'
+            '"explanation":"Add help with to make the request natural.",'
+            '"completed_objective_ids":["ask_for_help"],'
+            '"objective_confidences":{"ask_for_help":0.92},'
             '"repair_reason":"answers active phase"}'
         ]
     )
@@ -327,6 +341,10 @@ async def test_llm_turn_analysis_enriches_gray_zone_and_falls_back_on_bad_json()
     assert analysis.label == TurnLabel.ON_TOPIC
     assert analysis.relevance_score == 0.82
     assert analysis.contains_direct_answer is True
+    assert analysis.corrected_text == "I need help with a project brief."
+    assert analysis.explanation == "Add help with to make the request natural."
+    assert analysis.completed_objective_ids == ["ask_for_help"]
+    assert analysis.objective_confidences == {"ask_for_help": 0.92}
     assert facts[0].key == "need"
     assert facts[0].value == "help with a project brief"
     assert analysis_llm.calls
@@ -348,6 +366,36 @@ async def test_llm_turn_analysis_enriches_gray_zone_and_falls_back_on_bad_json()
 
     assert fallback.label in {TurnLabel.PARTIALLY_ON_TOPIC, TurnLabel.OFF_TOPIC}
     assert fallback_facts == []
+
+
+def test_state_controller_tracks_objective_progress_and_closing_mode():
+    scenario = coworker_scenario()
+    controller = DialogueStateController()
+    state = DialogueState(scenario_id=scenario.scenario_id, current_phase_id="greeting")
+
+    first = TopicAnalyzer().analyze(
+        "I need help writing this document.",
+        scenario=scenario,
+        state=state,
+        extracted_facts=[],
+    ).model_copy(update={"completed_objective_ids": ["ask_for_help", "clarify_need"]})
+
+    advanced = controller.apply_turn(state, scenario=scenario, analysis=first)
+    progress = advanced.objective_progress(total_objectives=len(scenario.objectives))
+
+    assert advanced.completed_objective_ids == ["ask_for_help", "clarify_need"]
+    assert progress.completed == 2
+    assert progress.percent == 67
+    assert advanced.closing_mode is False
+
+    second = first.model_copy(update={"completed_objective_ids": ["confirm_next_step"]})
+    completed = controller.apply_turn(advanced, scenario=scenario, analysis=second)
+    final_progress = completed.objective_progress(total_objectives=len(scenario.objectives))
+
+    assert completed.closing_mode is True
+    assert completed.should_end is True
+    assert completed.end_reason == "scenario_objective_completed"
+    assert final_progress.percent == 100
 
 
 @pytest.mark.asyncio

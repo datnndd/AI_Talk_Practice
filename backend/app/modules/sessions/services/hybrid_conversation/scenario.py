@@ -8,15 +8,6 @@ from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.services.hybrid_conversation.schemas import ScenarioDefinition, ScenarioPhase
 
 
-DEFAULT_PHASES = [
-    ("greeting", "Greeting", "Start the roleplay and establish the learner's need."),
-    ("clarify_need", "Clarify Need", "Ask for the key detail needed to move the scenario forward."),
-    ("ask_details", "Ask Details", "Collect one useful supporting detail."),
-    ("confirm", "Confirm", "Confirm the next step or shared understanding."),
-    ("close", "Close", "Close the conversation naturally."),
-]
-
-
 def build_scenario_definition(
     scenario: Scenario,
     *,
@@ -30,20 +21,26 @@ def build_scenario_definition(
     target_vocabulary = _listify(metadata.get("target_vocabulary") or metadata.get("vocab_focus"))
     target_functions = _listify(metadata.get("target_functions") or metadata.get("language_functions"))
 
+    # Derive the overall objective from learning objectives first, then description
     objective = _first_text(
-        " ".join(objectives),
+        "; ".join(objectives) if objectives else "",
         scenario.description,
         "General conversation practice",
     )
+
+    # AI role: prefer explicit metadata keys, then parse from system prompt, then generic
     ai_role = _first_text(
         metadata.get("ai_role"),
         metadata.get("persona"),
         metadata.get("partner_persona"),
         _role_from_prompt(scenario.ai_system_prompt),
-        "Helpful speaking partner",
+        "Conversation partner",
     )
     user_role = _first_text(metadata.get("user_role"), metadata.get("learner_role"), "Learner")
-    phases = _build_phases(metadata, objective=objective, scenario_title=scenario.title)
+
+    # Build phases strictly from learning objectives
+    phases = _build_phases_from_objectives(objectives, scenario_title=scenario.title)
+
     opening = _first_text(
         scenario.opening_message,
         metadata.get("opening_message"),
@@ -64,6 +61,8 @@ def build_scenario_definition(
         user_role=user_role,
         ai_role=ai_role,
         objective=objective,
+        ai_system_prompt=scenario.ai_system_prompt or "",
+        is_ai_start_first=getattr(scenario, "is_ai_start_first", True),
         allowed_topic_boundaries=_dedupe(boundaries),
         phases=phases,
         speaking_style=_first_text(metadata.get("speaking_style"), metadata.get("tone"), "friendly, concise, and natural"),
@@ -78,52 +77,80 @@ def build_scenario_definition(
             "tags": tags,
             "target_skills": target_skills,
             "variation_prompt": variation_prompt,
-            "is_ai_start_first": getattr(scenario, "is_ai_start_first", True),
         },
     )
 
 
-def _build_phases(metadata: dict[str, Any], *, objective: str, scenario_title: str) -> list[ScenarioPhase]:
-    raw_phases = metadata.get("suggested_conversation_phases") or metadata.get("phases")
-    phases: list[ScenarioPhase] = []
-    if isinstance(raw_phases, list) and raw_phases:
-        for index, raw in enumerate(raw_phases):
-            if isinstance(raw, dict):
-                title = _first_text(raw.get("title"), raw.get("name"), f"Phase {index + 1}")
-                phase_objective = _first_text(raw.get("objective"), raw.get("goal"), objective)
-                question = _first_text(raw.get("starting_question"), raw.get("question"), _question_for_phase(title, scenario_title))
-                intents = _listify(raw.get("expected_intents") or raw.get("intents"))
-                follow_ups = _listify(raw.get("follow_up_questions") or raw.get("followups"))
-            else:
-                title = str(raw).strip() or f"Phase {index + 1}"
-                phase_objective = _objective_for_phase(title, objective)
-                question = _question_for_phase(title, scenario_title)
-                intents = []
-                follow_ups = []
-            phases.append(
-                ScenarioPhase(
-                    phase_id=_slug(title) or f"phase_{index + 1}",
-                    title=title,
-                    objective=phase_objective,
-                    starting_question=question,
-                    expected_intents=intents,
-                    follow_up_questions=follow_ups,
-                )
-            )
-    if phases:
-        return phases
+def _build_phases_from_objectives(objectives: list[str], *, scenario_title: str) -> list[ScenarioPhase]:
+    """Build one ScenarioPhase per admin-defined learning objective.
 
-    return [
-        ScenarioPhase(
-            phase_id=phase_id,
-            title=title,
-            objective=_objective_for_phase(title, objective_text=objective),
-            starting_question=_question_for_phase(title, scenario_title),
-            expected_intents=[],
-            follow_up_questions=[],
+    Each objective text becomes the phase objective verbatim. A contextual
+    starting question is derived from the objective wording.
+
+    If no objectives are defined, fall back to a single generic phase so the
+    conversation engine never has an empty phases list.
+    """
+    if not objectives:
+        return [
+            ScenarioPhase(
+                phase_id="conversation",
+                title="Open Conversation",
+                objective=f"Practice speaking about the {scenario_title} scenario.",
+                starting_question=f"What would you like to say in this {scenario_title} situation?",
+                expected_intents=[],
+                follow_up_questions=[],
+            )
+        ]
+
+    phases: list[ScenarioPhase] = []
+    for index, objective_text in enumerate(objectives):
+        phase_id = _slug(objective_text) or f"objective_{index + 1}"
+        title = _short_title(objective_text)
+        starting_question = _question_for_objective(objective_text, scenario_title)
+        phases.append(
+            ScenarioPhase(
+                phase_id=phase_id,
+                title=title,
+                objective=objective_text,
+                starting_question=starting_question,
+                expected_intents=[objective_text],
+                follow_up_questions=[],
+            )
         )
-        for phase_id, title, _ in DEFAULT_PHASES
-    ]
+    return phases
+
+
+def _short_title(objective: str) -> str:
+    """Turn a full objective sentence into a short readable title (≤5 words)."""
+    words = re.sub(r"[^a-zA-Z0-9 ]+", "", objective).split()
+    return " ".join(words[:5]).title() if words else "Objective"
+
+
+def _question_for_objective(objective: str, scenario_title: str) -> str:
+    """Generate a natural starting question from an objective sentence."""
+    lower = objective.lower()
+    # Action verbs → interrogative phrasing
+    for verb, question_start in [
+        ("explain", "Can you explain"),
+        ("describe", "Can you describe"),
+        ("ask", "Go ahead and ask"),
+        ("request", "Please make your request"),
+        ("confirm", "Can you confirm"),
+        ("clarify", "Can you clarify"),
+        ("state", "Please state"),
+        ("introduce", "Please introduce"),
+        ("greet", "Please greet the other person"),
+        ("complain", "Please explain the issue"),
+        ("negotiate", "Let's start the negotiation"),
+        ("order", "Please go ahead and order"),
+        ("book", "Please go ahead and book"),
+        ("check", "Please go ahead and check"),
+    ]:
+        if verb in lower:
+            # Remove leading verb from objective to form the object of the question
+            question_object = re.sub(rf"^(to )?\b{verb}\b\s*", "", objective, flags=re.IGNORECASE).strip()
+            return f"{question_start} {question_object}." if question_object else f"{question_start}."
+    return f"How would you handle this part of the {scenario_title} situation?"
 
 
 def _listify(value: Any) -> list[str]:
@@ -173,32 +200,4 @@ def _dedupe(values: list[str]) -> list[str]:
 
 
 def _slug(value: str) -> str:
-    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", value.lower())).strip("_")
-
-
-def _objective_for_phase(title: str, objective_text: str) -> str:
-    lower = title.lower()
-    if "greet" in lower:
-        return "Open the conversation and invite the learner to start."
-    if "clarify" in lower or "detail" in lower:
-        return "Clarify one concrete detail while staying on the scenario objective."
-    if "confirm" in lower:
-        return "Confirm the learner's meaning and move toward a next step."
-    if "close" in lower:
-        return "Close the roleplay naturally."
-    return objective_text
-
-
-def _question_for_phase(title: str, scenario_title: str) -> str:
-    lower = title.lower()
-    if "greet" in lower:
-        return "Hi, how can I help you today?"
-    if "clarify" in lower:
-        return "What do you need help with exactly?"
-    if "detail" in lower:
-        return "Can you give me one specific detail?"
-    if "confirm" in lower:
-        return "So what would you like to do next?"
-    if "close" in lower:
-        return "Is there anything else you want to add before we finish?"
-    return f"What would you say in this {scenario_title} situation?"
+    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", value.lower())).strip("_")[:40]

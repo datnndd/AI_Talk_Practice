@@ -42,6 +42,8 @@ class ScenarioDefinition(BaseModel):
     ai_role: str
     objective: str
     opening_message: str | None = None
+    ai_system_prompt: str = ""
+    is_ai_start_first: bool = True
     allowed_topic_boundaries: list[str] = Field(default_factory=list)
     phases: list[ScenarioPhase] = Field(default_factory=list)
     speaking_style: str = "friendly, concise, and natural"
@@ -49,7 +51,6 @@ class ScenarioDefinition(BaseModel):
     expected_intents: list[str] = Field(default_factory=list)
     target_vocabulary: list[str] = Field(default_factory=list)
     target_functions: list[str] = Field(default_factory=list)
-    opening_message: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     def current_or_first_phase(self, phase_id: str | None = None) -> ScenarioPhase:

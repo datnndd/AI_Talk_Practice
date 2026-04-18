@@ -44,6 +44,7 @@ const PracticeSession = () => {
   const [sessionId, setSessionId] = useState(null);
   const [sessionError, setSessionError] = useState("");
   const [durationSeconds, setDurationSeconds] = useState(0);
+  const [timeLimitSeconds, setTimeLimitSeconds] = useState(null);
   const [reconnectRequest, setReconnectRequest] = useState(0);
   const [lessonState, setLessonState] = useState(null);
   const [lessonHint, setLessonHint] = useState(null);
@@ -368,6 +369,9 @@ const PracticeSession = () => {
         assistantDraftRef.current = "";
         sessionIdRef.current = payload.session_id;
         setSessionId(payload.session_id);
+        if (payload.max_duration_seconds) {
+          setTimeLimitSeconds(payload.max_duration_seconds);
+        }
         connectionStateRef.current = "ready";
         recordingStateRef.current = "idle";
         setConnectionState("ready");
@@ -857,6 +861,8 @@ const PracticeSession = () => {
           onBack={handleEndSession}
           onReconnect={handleReconnect}
           connectionState={connectionState}
+          durationSeconds={durationSeconds}
+          timeLimitSeconds={timeLimitSeconds}
         />
 
         <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)] w-full">

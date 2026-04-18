@@ -52,3 +52,11 @@ class DialogueStateController:
 
         state.should_end = True
         state.end_reason = "scenario_objective_completed"
+
+    def apply_time_limit_end(self, state: DialogueState) -> DialogueState:
+        """Mark the dialogue as ended because the session time limit was reached."""
+        next_state = state.model_copy(deep=True)
+        next_state.should_end = True
+        next_state.end_reason = "time_limit_reached"
+        return next_state
+
