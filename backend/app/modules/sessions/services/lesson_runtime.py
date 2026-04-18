@@ -96,17 +96,11 @@ def _title_case_topic(scenario: Scenario) -> str:
 
 
 def _assigned_task(scenario: Scenario) -> str:
-    metadata = scenario.scenario_metadata or {}
-    return (
-        str(
-            metadata.get("assigned_task")
-            or metadata.get("task")
-            or metadata.get("user_goal")
-            or metadata.get("goal")
-            or scenario.description
-            or f"Talk about {scenario.title}"
-        ).strip()
-    )
+    """
+    Returns the situation/detail description provided by the admin.
+    This is what the AI uses to understand the context.
+    """
+    return (scenario.description or scenario.title or "General conversation practice").strip()
 
 
 def _persona(scenario: Scenario) -> str:
@@ -161,6 +155,9 @@ def _is_meta_opening(text: str) -> bool:
 
 
 def _metadata_opening(scenario: Scenario) -> str:
+    if scenario.opening_message and scenario.opening_message.strip() and not _is_meta_opening(scenario.opening_message):
+        return scenario.opening_message.strip()
+        
     metadata = scenario.scenario_metadata or {}
     for key in ("opening_message", "opening_line", "initial_message", "first_message", "start_message"):
         value = metadata.get(key)
@@ -315,7 +312,12 @@ def _fallback_blueprints(
     assigned_task: str,
     level: str | None,
 ) -> list[ObjectiveBlueprint]:
-    goals = _normalize_list(scenario.learning_objectives) or [scenario.description or scenario.title]
+    # Strictly use admin defined objectives. 
+    # If none are provided, the goal is just the scenario itself.
+    goals = _normalize_list(scenario.learning_objectives)
+    if not goals:
+        goals = ["Hoàn thành cuộc hội thoại dựa trên tình huống"]
+
     count = _objective_count_for_level(level, len(goals))
     blueprints: list[ObjectiveBlueprint] = []
     for index, goal in enumerate(goals[:count]):
@@ -426,14 +428,13 @@ class LessonRuntimeService:
         llm: LLMBase | None = None,
         regenerate: bool = False,
     ) -> tuple[LessonPackage, LessonProgressState, dict[str, Any]]:
-        existing_metadata = dict(session_metadata or {})
-        if not regenerate and cls.has_lesson(existing_metadata):
-            return cls.deserialize_lesson_metadata(existing_metadata)
-
-        package = await cls.create_lesson_package_dynamic(scenario=scenario, level=level, llm=llm)
-        state = cls.initial_state(package)
-        hints: dict[str, Any] = {}
-        return package, state, hints
+        # Delegated directly to static ensuring logic. Dynamic generation is deprecated.
+        return cls.ensure_session_lesson(
+            scenario=scenario,
+            session_metadata=session_metadata,
+            level=level,
+            regenerate=regenerate,
+        )
 
     @classmethod
     def ensure_session_lesson(
@@ -461,36 +462,8 @@ class LessonRuntimeService:
         level: str | None,
         llm: LLMBase | None,
     ) -> LessonPackage:
-        if llm is None:
-            raise LessonPlanGenerationError("Lesson plan generation is unavailable because the LLM is not configured.")
-
-        prompt = build_lesson_plan_user_prompt(scenario=scenario, level=level)
-        response_text = ""
-        try:
-            chunks: list[str] = []
-            async for chunk in llm.chat_stream(
-                [Message(role="user", content=prompt)],
-                system_prompt=LESSON_PLAN_SYSTEM_PROMPT,
-                max_tokens=cls._lesson_plan_max_tokens(llm),
-            ):
-                chunks.append(chunk)
-            response_text = "".join(chunks)
-        except UpstreamServiceError:
-            raise
-        except Exception as exc:
-            logger.exception("Dynamic lesson plan LLM call failed")
-            raise LessonPlanGenerationError("Could not generate the lesson plan. Please try again.") from exc
-
-        plan = parse_lesson_plan_response(response_text)
-        if not plan:
-            logger.warning(
-                "Dynamic lesson plan response was not valid JSON "
-                "(response_len=%s, max_tokens=%s)",
-                len(response_text),
-                cls._lesson_plan_max_tokens(llm),
-            )
-            raise LessonPlanGenerationError("The AI returned an incomplete lesson plan. Please try again.")
-        return cls.create_lesson_package_from_plan(scenario=scenario, level=level, plan=plan, strict=True)
+        # The AI-generated lesson dynamic process is deleted. Uses static definitions.
+        return cls.create_lesson_package(scenario=scenario, level=level)
 
     @staticmethod
     def _lesson_plan_max_tokens(llm: LLMBase) -> int:

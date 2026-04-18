@@ -34,5 +34,12 @@ export const practiceApi = {
     });
     return data;
   },
+  translate: async ({ text, targetLanguage }) => {
+    const { data } = await httpClient.post("/translations/translate", {
+      text,
+      target_language: targetLanguage,
+    });
+    return data;
+  },
   getApiBaseUrl,
 };

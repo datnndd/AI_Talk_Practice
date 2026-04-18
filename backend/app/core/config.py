@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     openai_api_key: str | None = Field(default=None, description="OpenAI-compatible LLM API key")
     stripe_secret_key: str | None = Field(default=None, description="Stripe secret key")
     stripe_webhook_secret: str | None = Field(default=None, description="Stripe webhook signing secret")
+    google_translate_api_key: str | None = Field(default=None, description="Google Cloud Translation API v2 Key")
 
     # --- Payment / Billing ---
     frontend_url: str = Field(default="http://localhost:5173", description="Public frontend base URL")

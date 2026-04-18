@@ -59,6 +59,7 @@ class ScenarioAdminBase(BaseModel):
     category: str = Field(min_length=2, max_length=50)
     difficulty: str = Field(default="medium", pattern=r"^(easy|medium|hard)$")
     ai_system_prompt: str = Field(min_length=40)
+    opening_message: str | None = None
     learning_objectives: list[str] = Field(default_factory=list)
     target_skills: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
@@ -71,6 +72,7 @@ class ScenarioAdminBase(BaseModel):
     )
     metadata: dict[str, Any] = Field(default_factory=dict)
     is_active: bool = True
+    is_ai_start_first: bool = True
     change_note: str | None = Field(default=None, max_length=255)
 
     @field_validator("learning_objectives", "target_skills", "tags", mode="before")
@@ -95,6 +97,7 @@ class ScenarioAdminUpdate(BaseModel):
     category: str | None = Field(default=None, min_length=2, max_length=50)
     difficulty: str | None = Field(default=None, pattern=r"^(easy|medium|hard)$")
     ai_system_prompt: str | None = Field(default=None, min_length=40)
+    opening_message: str | None = None
     learning_objectives: list[str] | None = None
     target_skills: list[str] | None = None
     tags: list[str] | None = None
@@ -107,6 +110,7 @@ class ScenarioAdminUpdate(BaseModel):
     )
     metadata: dict[str, Any] | None = None
     is_active: bool | None = None
+    is_ai_start_first: bool | None = None
     change_note: str | None = Field(default=None, max_length=255)
 
     @field_validator("learning_objectives", "target_skills", "tags", mode="before")
@@ -207,6 +211,7 @@ class ScenarioAdminRead(ORMModel):
     category: str
     difficulty: str
     ai_system_prompt: str
+    opening_message: str | None = None
     learning_objectives: list[str] = Field(default_factory=list)
     target_skills: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
@@ -216,6 +221,7 @@ class ScenarioAdminRead(ORMModel):
     mode: str
     metadata: dict[str, Any] = Field(default_factory=dict)
     is_active: bool
+    is_ai_start_first: bool
     deleted_at: datetime | None = None
     created_by: int | None = None
     usage_count: int = 0

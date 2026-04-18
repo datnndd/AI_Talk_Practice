@@ -414,8 +414,9 @@ async def websocket_conversation(websocket: WebSocket):
                         await send_lesson_state_event(state)
                         # Proactively speak the opening question so the assistant
                         # starts the conversation — the user does not need to speak first.
+                        is_ai_start_first = hybrid_orchestrator.scenario.is_ai_start_first
                         opening_text = hybrid_orchestrator.opening_message()
-                        if opening_text and not is_resume:
+                        if is_ai_start_first and opening_text and not is_resume:
                             await conversation.speak_opening(opening_text)
                             hybrid_orchestrator.record_assistant_turn(opening_text)
                         await persist_hybrid_metadata()

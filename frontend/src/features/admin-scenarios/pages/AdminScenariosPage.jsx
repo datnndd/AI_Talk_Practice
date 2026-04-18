@@ -680,6 +680,22 @@ const AdminScenarios = () => {
                         {endCondition || "Lesson ends when the learner covers the objectives clearly enough."}
                       </p>
                     </div>
+                    <div className="mt-3 rounded-[20px] bg-white px-4 py-3 dark:bg-zinc-900">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                        Opening Message
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-zinc-700 dark:text-zinc-200 italic">
+                        "{selectedScenario.opening_message || "No opening message set."}"
+                      </p>
+                    </div>
+                    <div className="mt-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${selectedScenario.is_ai_start_first ? "bg-emerald-500" : "bg-zinc-400"}`}></span>
+                        <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+                          {selectedScenario.is_ai_start_first ? "AI initiates conversation" : "User initiates conversation"}
+                        </p>
+                      </div>
+                    </div>
                     {evaluationFocus.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {evaluationFocus.map((item) => (

@@ -41,6 +41,7 @@ class ScenarioDefinition(BaseModel):
     user_role: str
     ai_role: str
     objective: str
+    opening_message: str | None = None
     allowed_topic_boundaries: list[str] = Field(default_factory=list)
     phases: list[ScenarioPhase] = Field(default_factory=list)
     speaking_style: str = "friendly, concise, and natural"

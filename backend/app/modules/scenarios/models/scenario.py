@@ -53,6 +53,7 @@ class Scenario(Base, TimestampMixin):
     learning_objectives: Mapped[Optional[Any]] = mapped_column(JSONB, server_default="[]")
 
     ai_system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    opening_message: Mapped[Optional[str]] = mapped_column(Text)
 
     # ── Classification ────────────────────────────────────────────────────────
     category: Mapped[str] = mapped_column(String(50), nullable=False)     # "travel", "business"
@@ -66,6 +67,7 @@ class Scenario(Base, TimestampMixin):
     estimated_duration: Mapped[Optional[int]] = mapped_column(SmallInteger)  # seconds
     # "conversation" | "roleplay" | "debate" | "interview"
     mode: Mapped[str] = mapped_column(String(30), nullable=False, server_default="conversation")
+    is_ai_start_first: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
 
     # ── Extension bag ─────────────────────────────────────────────────────────
     # {"partner_persona": "Friendly barista", "vocab_focus": ["latte", "espresso"]}

@@ -18,7 +18,7 @@ const compactItems = (items = [], limit = 5) => {
 const ScenarioSidebar = ({ scenario, lessonState, guidance }) => {
   const focusItems = lessonState?.lesson_goals?.length
     ? compactItems(lessonState.lesson_goals, 10)
-    : compactItems(guidance?.evaluationFocus, 10);
+    : compactItems(scenario?.learning_objectives || guidance?.evaluationFocus, 10);
 
   return (
     <aside className="flex flex-col gap-5 overflow-y-auto rounded-lg border border-zinc-200 bg-white p-5 shadow-[0_20px_54px_-42px_rgba(15,23,42,0.55)]">
@@ -31,14 +31,14 @@ const ScenarioSidebar = ({ scenario, lessonState, guidance }) => {
           {scenario?.title || guidance?.topic || "Practice session"}
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-          {scenario?.description || guidance?.assignedTask || "Stay on topic and answer naturally."}
+          {scenario?.description || guidance?.assignedTask || "Hoàn thành cuộc hội thoại dựa trên tình huống thiết lập."}
         </p>
       </section>
 
       <section className="rounded-2xl border border-zinc-200 bg-zinc-50/50 p-4">
         <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
           <Target size={16} weight="fill" />
-          Mục tiêu buổi học
+          Nhiệm vụ
         </div>
         
         {focusItems.length > 0 ? (

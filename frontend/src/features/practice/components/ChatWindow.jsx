@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ChatCenteredDots,
@@ -6,9 +6,11 @@ import {
   Robot,
   Info,
   User,
+  Translate,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import ScenarioSidebar from "./ScenarioSidebar";
-
+import { practiceApi } from "../api/practiceApi";
 
 const MessageBubble = ({ content, role, isAI, isLive = false }) => {
   const isNotice = role === "notice" || role === "system";
@@ -24,6 +26,24 @@ const MessageBubble = ({ content, role, isAI, isLive = false }) => {
       ? "border-zinc-200 bg-white text-zinc-900"
       : "border-primary/20 bg-[#eef6ff] text-zinc-950";
 
+  const [translation, setTranslation] = useState("");
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState("");
+
+  const handleTranslate = async () => {
+    if (translation || isTranslating || isLive) return;
+    setIsTranslating(true);
+    setTranslationError("");
+    try {
+      const response = await practiceApi.translate({ text: content, targetLanguage: "vi" });
+      setTranslation(response.translated_text);
+    } catch (err) {
+      setTranslationError("Không thể dịch nội dung này.");
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   return (
   <motion.div
     initial={{ opacity: 0, scale: 0.96, y: 10 }}
@@ -31,15 +51,45 @@ const MessageBubble = ({ content, role, isAI, isLive = false }) => {
     className={`flex max-w-[90%] items-start gap-3 ${alignClass}`}
   >
     <div
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${iconClass}`}
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border flex-col ${iconClass} overflow-hidden`}
     >
       {isNotice ? <Info size={20} weight="fill" /> : isAI ? <Robot size={20} /> : <User size={20} />}
     </div>
 
-    <div
-      className={`rounded-lg border px-5 py-4 shadow-sm ${bubbleClass} ${isLive ? "border-dashed" : ""}`}
-    >
-      <p className={`text-sm leading-relaxed ${isLive ? "italic text-zinc-500" : ""}`}>{content}</p>
+    <div className="flex flex-col gap-2">
+      <div
+        className={`rounded-lg border px-5 py-4 shadow-sm relative group ${bubbleClass} ${isLive ? "border-dashed" : ""}`}
+      >
+        <p className={`text-sm leading-relaxed ${isLive ? "italic text-zinc-500" : ""}`}>{content}</p>
+        
+        {isAI && !isLive && !isNotice && !translation && (
+          <button
+            onClick={handleTranslate}
+            disabled={isTranslating}
+            title="Dịch câu này"
+            className="absolute -right-10 top-2 opacity-0 group-hover:opacity-100 transition-opacity p-2 text-zinc-400 hover:text-primary rounded-full hover:bg-primary/5 disabled:opacity-50"
+          >
+            {isTranslating ? <CircleNotch size={18} className="animate-spin" /> : <Translate size={18} />}
+          </button>
+        )}
+      </div>
+      
+      {translation && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 shadow-sm"
+        >
+          <div className="flex items-start gap-2">
+            <Translate size={16} className="text-primary mt-0.5 shrink-0" />
+            <p className="text-sm leading-relaxed text-zinc-700 italic">{translation}</p>
+          </div>
+        </motion.div>
+      )}
+      
+      {translationError && (
+        <p className="text-xs text-red-500 ml-1">{translationError}</p>
+      )}
     </div>
   </motion.div>
   );

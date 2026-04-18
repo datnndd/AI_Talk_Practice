@@ -31,11 +31,9 @@ def build_scenario_definition(
     target_functions = _listify(metadata.get("target_functions") or metadata.get("language_functions"))
 
     objective = _first_text(
-        metadata.get("objective"),
-        metadata.get("goal"),
-        metadata.get("assigned_task"),
         " ".join(objectives),
         scenario.description,
+        "General conversation practice",
     )
     ai_role = _first_text(
         metadata.get("ai_role"),
@@ -47,6 +45,7 @@ def build_scenario_definition(
     user_role = _first_text(metadata.get("user_role"), metadata.get("learner_role"), "Learner")
     phases = _build_phases(metadata, objective=objective, scenario_title=scenario.title)
     opening = _first_text(
+        scenario.opening_message,
         metadata.get("opening_message"),
         metadata.get("opening_line"),
         metadata.get("initial_message"),
@@ -79,6 +78,7 @@ def build_scenario_definition(
             "tags": tags,
             "target_skills": target_skills,
             "variation_prompt": variation_prompt,
+            "is_ai_start_first": getattr(scenario, "is_ai_start_first", True),
         },
     )
 

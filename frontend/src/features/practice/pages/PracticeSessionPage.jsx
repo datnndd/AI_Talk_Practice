@@ -537,7 +537,12 @@ const PracticeSession = () => {
     }
 
     if (resetConversation) {
-      setMessages([]);
+      const initialMsgs = [];
+      if (scenario?.opening_message) {
+        initialMsgs.push(buildMessage("notice", scenario.opening_message));
+        initialMsgs.push(buildMessage("notice", "--- ROLEPLAY BẮT ĐẦU ---"));
+      }
+      setMessages(initialMsgs);
       setAssistantDraft("");
       setPartialTranscript("");
       setSessionId(null);
@@ -569,7 +574,7 @@ const PracticeSession = () => {
         language: DEFAULT_LANGUAGE,
         voice: DEFAULT_VOICE,
         metadata: {
-          conversation_engine: "lesson_v1",
+          conversation_engine: "hybrid_conversation",
           resume_enabled: true,
         },
       };

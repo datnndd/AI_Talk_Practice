@@ -100,6 +100,8 @@ const createInitialState = (scenario) => ({
   pre_gen_count: scenario?.pre_gen_count || 8,
   mode: scenario?.mode || "conversation",
   is_active: scenario?.is_active ?? true,
+  opening_message: scenario?.opening_message || "",
+  is_ai_start_first: scenario?.is_ai_start_first ?? true,
   change_note: "",
   learning_objectives: prettyList(scenario?.learning_objectives),
   target_skills: prettyList(scenario?.target_skills),
@@ -148,6 +150,8 @@ const ScenarioEditorModal = ({
         learning_objectives: parseListInput(form.learning_objectives),
         target_skills: parseListInput(form.target_skills),
         tags: parseListInput(form.tags),
+        is_ai_start_first: Boolean(form.is_ai_start_first),
+        opening_message: form.opening_message.trim() || null,
         metadata: {
           ...metadata,
           ...(form.topic.trim() ? { topic: form.topic.trim() } : {}),
@@ -471,6 +475,31 @@ const ScenarioEditorModal = ({
                       className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
                       placeholder="6"
                     />
+                  </label>
+
+                  <label className="block space-y-2 xl:col-span-2">
+                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+                      Opening Message
+                    </span>
+                    <textarea
+                      value={form.opening_message}
+                      onChange={(event) => updateField("opening_message", event.target.value)}
+                      rows={3}
+                      className="w-full rounded-[24px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      placeholder="The first line the AI will say, or the scene description for the user."
+                    />
+                  </label>
+
+                  <label className="flex items-center gap-3 rounded-[24px] border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900 xl:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={form.is_ai_start_first}
+                      onChange={(event) => updateField("is_ai_start_first", event.target.checked)}
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold">AI Start First</span>
+                      <span className="text-xs text-zinc-500">If checked, AI will send the opening message first. Otherwise, it waits for the user.</span>
+                    </div>
                   </label>
                 </div>
               </section>
