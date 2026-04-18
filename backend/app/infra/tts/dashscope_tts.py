@@ -49,18 +49,27 @@ class _TTSCallback(QwenTtsRealtimeCallback):
 
     def on_event(self, response: dict) -> None:
         event_type = response.get("type", "")
+        logger.debug("DashScope TTS event: %s", event_type)
 
         if event_type == "response.audio.delta":
             audio_b64 = response.get("delta", "")
             if audio_b64:
-                audio_bytes = base64.b64decode(audio_b64)
-                self._loop.call_soon_threadsafe(self._queue.put_nowait, audio_bytes)
+                try:
+                    audio_bytes = base64.b64decode(audio_b64)
+                except Exception:
+                    logger.exception("DashScope TTS: failed to decode audio delta")
+                else:
+                    self._loop.call_soon_threadsafe(self._queue.put_nowait, audio_bytes)
 
         elif event_type == "response.done":
-            logger.debug("DashScope TTS: response done")
+            logger.info("DashScope TTS: response done")
+            if not self._sentinel_emitted:
+                self._sentinel_emitted = True
+                self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
+            self._done_event.set()
 
         elif event_type == "session.finished":
-            logger.debug("DashScope TTS: session finished")
+            logger.info("DashScope TTS: session finished")
             # Signal end of audio with None sentinel
             if not self._sentinel_emitted:
                 self._sentinel_emitted = True
@@ -110,6 +119,10 @@ class DashScopeTTS(TTSBase):
         if config.dashscope_api_key:
             dashscope.api_key = config.dashscope_api_key
 
+    async def _run_blocking(self, function, *args):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, function, *args)
+
     async def synthesize_stream(
         self,
         text_iterator: AsyncGenerator[str, None],
@@ -121,66 +134,76 @@ class DashScopeTTS(TTSBase):
             language=self._config.tts_language,
         )
 
-        loop = asyncio.get_event_loop()
+        parts: list[str] = []
+        async for text_chunk in text_iterator:
+            if text_chunk.strip():
+                parts.append(text_chunk)
+
+        full_text = "".join(parts).strip()
+        if not full_text:
+            return
+
+        loop = asyncio.get_running_loop()
         audio_queue: asyncio.Queue[Optional[bytes]] = asyncio.Queue()
         callback = _TTSCallback(audio_queue, loop)
 
         tts_client = _SafeQwenTtsRealtime(
-            model="qwen3-tts-flash-realtime",
+            model=self._config.tts_model,
             callback=callback,
             url=self._config.dashscope_ws_url,
         )
 
-        # Connect and configure in executor
-        await loop.run_in_executor(None, tts_client.connect)
-        await loop.run_in_executor(
-            None,
+        await self._run_blocking(tts_client.connect)
+        await self._run_blocking(
             lambda: tts_client.update_session(
                 voice=cfg.voice,
                 response_format=AudioFormat.PCM_24000HZ_MONO_16BIT,
-                mode="server_commit",
+                mode="commit",
+                language_type=cfg.language,
             ),
         )
+        logger.info(
+            "DashScope TTS: session configured (model=%s, mode=commit, voice=%s, language=%s, text_len=%s)",
+            self._config.tts_model,
+            cfg.voice,
+            cfg.language,
+            len(full_text),
+        )
 
-        # Send text chunks in background task
-        async def _send_text():
-            try:
-                async for text_chunk in text_iterator:
-                    if text_chunk.strip():
-                        await loop.run_in_executor(
-                            None, tts_client.append_text, text_chunk
-                        )
-                        await asyncio.sleep(0.05)  # Small delay between chunks
-            except Exception as e:
-                logger.error(f"Error sending text to TTS: {e}")
-            finally:
-                await loop.run_in_executor(None, tts_client.finish)
-
-        send_task = asyncio.create_task(_send_text())
+        try:
+            await self._run_blocking(tts_client.append_text, full_text)
+            logger.info("DashScope TTS: committing text buffer (text_len=%s)", len(full_text))
+            await self._run_blocking(tts_client.commit)
+        except Exception as e:
+            logger.error(f"Error sending text to TTS: {e}")
+            await self._run_blocking(tts_client.close)
+            return
 
         # Yield audio chunks as they arrive
+        received_audio = False
         try:
             while True:
                 try:
                     chunk = await asyncio.wait_for(audio_queue.get(), timeout=30.0)
                     if chunk is None:  # Sentinel: end of audio
                         break
+                    received_audio = True
                     yield chunk
                 except asyncio.TimeoutError:
                     logger.warning("TTS audio queue timeout")
                     break
         finally:
-            if not send_task.done():
-                send_task.cancel()
-                try:
-                    await send_task
-                except asyncio.CancelledError:
-                    pass
-            await loop.run_in_executor(None, callback.wait_for_done, 5.0)
+            await self._run_blocking(callback.wait_for_done, 5.0)
             try:
-                await loop.run_in_executor(None, tts_client.close)
+                await self._run_blocking(tts_client.close)
             except Exception as e:
                 logger.debug(f"DashScope TTS close ignored: {e}")
+            if not received_audio:
+                logger.warning(
+                    "DashScope TTS finished without audio; last_message=%s response_id=%s",
+                    tts_client.get_last_message(),
+                    tts_client.get_last_response_id(),
+                )
 
     async def synthesize(
         self,

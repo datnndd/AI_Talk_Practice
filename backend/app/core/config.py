@@ -171,6 +171,10 @@ class Settings(BaseSettings):
     )
 
     # --- TTS Configuration ---
+    tts_model: str = Field(
+        default="qwen3-tts-flash-realtime-2025-09-18",
+        description="DashScope TTS model",
+    )
     tts_voice: str = Field(default="Cherry", description="DashScope TTS voice name")
     tts_language: str = Field(default="en", description="TTS language")
     tts_voice_local: str = Field(default="af_heart", description="Kokoro voice ID")

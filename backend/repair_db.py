@@ -1,5 +1,13 @@
-import sqlite3
 import os
+import sqlite3
+
+
+NEEDED_SCENARIO_COLUMNS = {
+    "opening_message": "TEXT",
+    "is_ai_start_first": "BOOLEAN DEFAULT 1 NOT NULL",
+    "time_limit_minutes": "INTEGER",
+    "starter": "VARCHAR(10) DEFAULT 'AI' NOT NULL",
+}
 
 def repair():
     db_path = 'ai_talk_practice.db'
@@ -15,12 +23,7 @@ def repair():
         cursor.execute("PRAGMA table_info(scenarios)")
         columns = [col[1] for col in cursor.fetchall()]
         
-        needed = {
-            "opening_message": "TEXT",
-            "is_ai_start_first": "BOOLEAN DEFAULT 1 NOT NULL"
-        }
-        
-        for col_name, col_type in needed.items():
+        for col_name, col_type in NEEDED_SCENARIO_COLUMNS.items():
             if col_name not in columns:
                 print(f"Adding column {col_name}...")
                 cursor.execute(f"ALTER TABLE scenarios ADD COLUMN {col_name} {col_type}")

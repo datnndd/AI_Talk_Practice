@@ -15,6 +15,7 @@ import app.db.models  # noqa: E402,F401
 from app.api.router import api_router, ws_router  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.exceptions import setup_exception_handlers  # noqa: E402
+from app.db.session import ensure_sqlite_schema_compatibility  # noqa: E402
 
 # ─── Logging ────────────────────────────────────────────────────────────────
 
@@ -66,6 +67,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"TTS Provider: {settings.tts_provider}")
     logger.info(f"DashScope Region: {settings.dashscope_region}")
     logger.info("=" * 60)
+    await ensure_sqlite_schema_compatibility()
 
     yield
     

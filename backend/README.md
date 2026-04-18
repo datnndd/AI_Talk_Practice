@@ -64,6 +64,7 @@ OPENAI_API_KEY=sk-xxx
 LLM_MODEL=ai-talk
 LLM_BASE_URL=https://rfij5ml.9router.com/v1
 ASR_MODEL=qwen3-asr-flash-realtime
+TTS_MODEL=qwen3-tts-flash-realtime-2025-09-18
 TTS_VOICE=Cherry
 ```
 
