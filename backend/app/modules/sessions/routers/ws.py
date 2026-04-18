@@ -15,18 +15,19 @@ from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.security import decode_token
 from app.db.session import AsyncSessionLocal
-from app.infra.factory import create_llm
+from app.infra.factory import ConversationLLMClients, create_conversation_llm_clients, create_llm
 from app.modules.sessions.schemas.session import MessageCreate, SessionCreate
 from app.modules.auth.services.auth_service import AuthService
 from app.modules.sessions.services.conversation import ConversationSession
 from app.modules.sessions.services.session import SessionService
-from app.services.conversation import DialogueOrchestrator, build_scenario_definition
+from app.modules.sessions.services.hybrid_conversation import DialogueOrchestrator, build_scenario_definition
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 _PENDING_RESUME_FINALIZE_TASKS: dict[int, asyncio.Task] = {}
+_DEFAULT_CREATE_LLM = create_llm
 
 NO_INPUT_MESSAGE = "Mải mê nghe giọng bạn làm mình đãng trí. Bạn có thể nói lại một lần nữa được không?"
 TIME_LIMIT_MESSAGE = "Đã hết thời gian luyện tập. Mình sẽ chuyển bạn sang phần đánh giá."
@@ -38,6 +39,13 @@ def _result_url(session_id: int) -> str:
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _create_conversation_llm_clients() -> ConversationLLMClients:
+    if create_llm is not _DEFAULT_CREATE_LLM:
+        llm = create_llm(settings)
+        return ConversationLLMClients(analysis=llm, dialogue=llm, evaluation=llm)
+    return create_conversation_llm_clients(settings)
 
 
 def _remaining_session_seconds(started_at: datetime, max_duration_seconds: int | None) -> float | None:
@@ -145,6 +153,7 @@ async def websocket_conversation(websocket: WebSocket):
                     finalized_user_messages=finalized_user_messages,
                     metadata={"end_reason": reason},
                 )
+        schedule_final_evaluation(session_id)
 
         status = finalized.status if finalized is not None else "completed"
         await send_json_safe(
@@ -177,6 +186,17 @@ async def websocket_conversation(websocket: WebSocket):
         except Exception:
             logger.exception("Error finalizing session after timeout")
 
+    def schedule_final_evaluation(finalized_session_id: int) -> None:
+        async def run() -> None:
+            try:
+                async with AsyncSessionLocal() as db_eval:
+                    await SessionService.run_final_evaluation(db_eval, session_id=finalized_session_id)
+                    await db_eval.commit()
+            except Exception:
+                logger.exception("Error running final evaluation for websocket session id=%s", finalized_session_id)
+
+        asyncio.create_task(run())
+
     async def schedule_resume_finalize(user_message_count: int) -> None:
         if session_id is None:
             return
@@ -193,6 +213,8 @@ async def websocket_conversation(websocket: WebSocket):
                         finalized_user_messages=user_message_count,
                         metadata={"end_reason": "websocket_disconnect"},
                     )
+                    await db_final.commit()
+                schedule_final_evaluation(resume_session_id)
             except asyncio.CancelledError:
                 raise
             except Exception:
@@ -304,9 +326,9 @@ async def websocket_conversation(websocket: WebSocket):
                     )
 
                     hybrid_orchestrator: DialogueOrchestrator | None = None
-                    orchestrator_llm = None
+                    orchestrator_llm_clients: ConversationLLMClients | None = None
                     if lesson_engine_enabled:
-                        orchestrator_llm = create_llm(settings)
+                        orchestrator_llm_clients = _create_conversation_llm_clients()
                         scenario_definition = build_scenario_definition(
                             session.scenario,
                             variation_prompt=(
@@ -318,7 +340,7 @@ async def websocket_conversation(websocket: WebSocket):
                         )
                         hybrid_orchestrator = DialogueOrchestrator.from_metadata(
                             scenario=scenario_definition,
-                            llm=orchestrator_llm,
+                            llm_clients=orchestrator_llm_clients,
                             metadata=session.session_metadata,
                             max_facts=settings.conversation_memory_max_facts,
                             recent_turn_limit=settings.conversation_recent_turn_limit,
@@ -361,7 +383,7 @@ async def websocket_conversation(websocket: WebSocket):
                         on_user_message=lambda text: persist_message("user", text),
                         on_assistant_message=lambda text: persist_message("assistant", text),
                         on_generate_reply_stream=generate_reply_stream if lesson_engine_enabled else None,
-                        llm_provider=orchestrator_llm,
+                        llm_provider=orchestrator_llm_clients.dialogue if orchestrator_llm_clients else None,
                     )
                     max_duration_seconds = session.scenario.estimated_duration
                     remaining_seconds = _remaining_session_seconds(session.started_at, max_duration_seconds)
@@ -470,6 +492,7 @@ async def websocket_conversation(websocket: WebSocket):
                                 session_id=session_id,
                                 finalized_user_messages=finalized_user_messages,
                             )
+                    schedule_final_evaluation(session_id)
             except Exception:
                 logger.exception("Error finalizing websocket session id=%s", session_id)
 

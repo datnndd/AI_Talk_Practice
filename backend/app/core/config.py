@@ -82,6 +82,28 @@ class Settings(BaseSettings):
         description="How many recent conversation messages to send to the LLM",
     )
 
+    # --- Role-specific LLM Configuration ---
+    analysis_llm_provider: str | None = Field(default=None, description="LLM provider for turn analysis")
+    analysis_llm_model: str | None = Field(default=None, description="LLM model for turn analysis")
+    analysis_llm_base_url: str | None = Field(default=None, description="LLM base URL for turn analysis")
+    analysis_llm_api_key: str | None = Field(default=None, description="LLM API key for turn analysis")
+    analysis_llm_temperature: float | None = Field(default=None, description="LLM temperature for turn analysis")
+    analysis_llm_max_tokens: int | None = Field(default=None, description="Maximum tokens for turn analysis")
+
+    dialogue_llm_provider: str | None = Field(default=None, description="LLM provider for realtime dialogue")
+    dialogue_llm_model: str | None = Field(default=None, description="LLM model for realtime dialogue")
+    dialogue_llm_base_url: str | None = Field(default=None, description="LLM base URL for realtime dialogue")
+    dialogue_llm_api_key: str | None = Field(default=None, description="LLM API key for realtime dialogue")
+    dialogue_llm_temperature: float | None = Field(default=None, description="LLM temperature for realtime dialogue")
+    dialogue_llm_max_tokens: int | None = Field(default=None, description="Maximum tokens for realtime dialogue")
+
+    evaluation_llm_provider: str | None = Field(default=None, description="LLM provider for final session evaluation")
+    evaluation_llm_model: str | None = Field(default=None, description="LLM model for final session evaluation")
+    evaluation_llm_base_url: str | None = Field(default=None, description="LLM base URL for final session evaluation")
+    evaluation_llm_api_key: str | None = Field(default=None, description="LLM API key for final session evaluation")
+    evaluation_llm_temperature: float | None = Field(default=None, description="LLM temperature for final session evaluation")
+    evaluation_llm_max_tokens: int | None = Field(default=None, description="Maximum tokens for final session evaluation")
+
     # --- Hybrid Conversation Orchestration ---
     conversation_memory_max_facts: int = Field(
         default=12,
@@ -114,6 +136,10 @@ class Settings(BaseSettings):
     conversation_repair_max_repeats: int = Field(
         default=2,
         description="Maximum repeated repair attempts before narrowing the prompt more aggressively",
+    )
+    conversation_final_evaluation_timeout_seconds: float = Field(
+        default=15.0,
+        description="Best-effort timeout for final session evaluation LLM calls",
     )
 
     # --- ASR Configuration ---

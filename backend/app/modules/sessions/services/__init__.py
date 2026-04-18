@@ -1,4 +1,5 @@
-from .session import SessionService
-from .conversation import ConversationSession
+"""Session service package.
 
-__all__ = ["SessionService", "ConversationSession"]
+Import concrete services from their modules to avoid eager SQLAlchemy mapper
+initialization when importing nested service packages.
+"""

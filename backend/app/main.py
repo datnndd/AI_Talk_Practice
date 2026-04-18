@@ -10,13 +10,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Register fully all models before routers or repositories trigger mapper initialization
-import app.db.models  # noqa: F401
+import app.db.models  # noqa: E402,F401
 
-from app.api.router import api_router, ws_router
-from app.core.config import settings
-from app.core.exceptions import setup_exception_handlers
-from app.db.session import engine
-from app.db.base_class import Base
+from app.api.router import api_router, ws_router  # noqa: E402
+from app.core.config import settings  # noqa: E402
+from app.core.exceptions import setup_exception_handlers  # noqa: E402
 
 # ─── Logging ────────────────────────────────────────────────────────────────
 
@@ -26,15 +24,23 @@ class SuppressDashScopeWebSocketNoise(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         message = record.getMessage()
-        if "Connection to remote host was lost" not in message:
+        expected_shutdown_fragments = (
+            "Connection to remote host was lost",
+            "Invalid close frame.",
+        )
+        if not any(fragment in message for fragment in expected_shutdown_fragments):
             return True
         if "websocket closed due to Connection to remote host was lost" in message:
+            return False
+        if "websocket closed due to Invalid close frame" in message:
             return False
         if "error from callback" in message:
             return False
         if message.strip() in {
             "Connection to remote host was lost.",
             "Connection to remote host was lost. - goodbye",
+            "Invalid close frame.",
+            "Invalid close frame. - goodbye",
         }:
             return False
         return True
@@ -52,11 +58,6 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Create tables
-    # async with engine.begin() as conn:
-    #     await conn.run_sync(Base.metadata.create_all)
-    # logger.info("Database tables verified")
-    
     logger.info("=" * 60)
     logger.info("AI Talk Practice - Realtime Conversation API")
     logger.info("=" * 60)
@@ -73,9 +74,9 @@ async def lifespan(app: FastAPI):
 
 # ─── FastAPI App ────────────────────────────────────────────────────────────
 
-from slowapi.errors import RateLimitExceeded
-from slowapi import _rate_limit_exceeded_handler
-from app.core.rate_limit import limiter
+from slowapi.errors import RateLimitExceeded  # noqa: E402
+from slowapi import _rate_limit_exceeded_handler  # noqa: E402
+from app.core.rate_limit import limiter  # noqa: E402
 
 app = FastAPI(
     title="AI Talk Practice - Realtime Conversation API",

@@ -37,6 +37,10 @@ class _TTSCallback(QwenTtsRealtimeCallback):
         logger.info("DashScope TTS: connection opened")
 
     def on_close(self, close_status_code, close_msg) -> None:
+        if self._done_event.is_set():
+            logger.debug("DashScope TTS: duplicate close ignored (code=%s)", close_status_code)
+            return
+
         logger.info(f"DashScope TTS: connection closed (code={close_status_code})")
         if not self._sentinel_emitted:
             self._sentinel_emitted = True
@@ -75,6 +79,27 @@ class _TTSCallback(QwenTtsRealtimeCallback):
         self._done_event.wait(timeout=timeout)
 
 
+class _SafeQwenTtsRealtime(QwenTtsRealtime):
+    """DashScope SDK wrapper that does not re-raise websocket-client close noise."""
+
+    def on_error(self, ws, error):  # pylint: disable=unused-argument
+        error_message = str(error)
+        if "Invalid close frame" in error_message:
+            logger.debug("DashScope TTS websocket closed with invalid close frame")
+            if self.callback:
+                self.callback.on_close(None, error_message)
+            return
+
+        logger.error("DashScope TTS websocket error: %s", error_message)
+        if self.callback:
+            self.callback.on_event(
+                {
+                    "type": "error",
+                    "error": {"message": error_message},
+                }
+            )
+
+
 class DashScopeTTS(TTSBase):
     """DashScope Realtime TTS using qwen3-tts-flash-realtime."""
 
@@ -100,7 +125,7 @@ class DashScopeTTS(TTSBase):
         audio_queue: asyncio.Queue[Optional[bytes]] = asyncio.Queue()
         callback = _TTSCallback(audio_queue, loop)
 
-        tts_client = QwenTtsRealtime(
+        tts_client = _SafeQwenTtsRealtime(
             model="qwen3-tts-flash-realtime",
             callback=callback,
             url=self._config.dashscope_ws_url,

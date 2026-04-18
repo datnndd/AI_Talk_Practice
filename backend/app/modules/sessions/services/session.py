@@ -1,18 +1,22 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
+from app.infra.factory import LLMRole, create_llm_for_role
 from app.modules.sessions.models.message import Message
 from app.modules.sessions.models.session import Session
 from app.modules.scenarios.repository import ScenarioRepository
 from app.modules.sessions.repository import SessionRepository
 from app.modules.sessions.schemas.session import MessageCreate, SessionCreate, SessionFinishRequest
 from app.modules.scenarios.services.variation_service import VariationService
+from app.modules.sessions.services.hybrid_conversation.final_evaluation import SessionFinalEvaluationService
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +147,7 @@ class SessionService:
             session=session,
             payload=payload,
         )
+        await SessionService._run_final_evaluation_if_needed(db, session=session)
         await db.commit()
         logger.info("Ended session id=%s user_id=%s status=%s", session.id, user_id, session.status)
         return await SessionService.get_by_id(db, session.id, user_id)
@@ -184,6 +189,13 @@ class SessionService:
         session.session_metadata = merged_metadata
         await db.commit()
         return await SessionService.get_by_id(db, session.id, user_id)
+
+    @staticmethod
+    async def run_final_evaluation(db: AsyncSession, *, session_id: int) -> None:
+        session = await SessionRepository.get_by_id(db, session_id, full=True)
+        if session is None:
+            return
+        await SessionService._run_final_evaluation_if_needed(db, session=session)
 
     @staticmethod
     async def _finalize_session(
@@ -236,3 +248,33 @@ class SessionService:
                 "score_metadata": {"aggregated_at": _utcnow().isoformat()},
             },
         )
+
+    @staticmethod
+    async def _run_final_evaluation_if_needed(db: AsyncSession, *, session: Session) -> None:
+        metadata = session.session_metadata or {}
+        if metadata.get("conversation_engine") != "lesson_v1" and "hybrid_conversation" not in metadata:
+            return
+        try:
+            llm = create_llm_for_role(settings, LLMRole.EVALUATION)
+            service = SessionFinalEvaluationService(
+                llm=llm,
+                max_tokens=settings.evaluation_llm_max_tokens or 1200,
+            )
+            await asyncio.wait_for(
+                service.evaluate_and_store(db, session_id=session.id),
+                timeout=max(1.0, settings.conversation_final_evaluation_timeout_seconds),
+            )
+        except Exception:
+            logger.exception("Best-effort final evaluation failed for session id=%s", session.id)
+            metadata = dict(session.session_metadata or {})
+            final_evaluation = dict(metadata.get("final_evaluation") or {})
+            final_evaluation.update(
+                {
+                    "evaluation_status": "failed",
+                    "reason": "timeout_or_service_error",
+                    "updated_at": _utcnow().isoformat(),
+                }
+            )
+            metadata["final_evaluation"] = final_evaluation
+            session.session_metadata = metadata
+            await db.flush()

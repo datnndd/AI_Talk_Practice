@@ -1,13 +1,15 @@
 import pytest
 
 from app.infra.contracts import Message
-from app.services.conversation.analyzer import TopicAnalyzer
-from app.services.conversation.fact_extractor import RuleBasedFactExtractor
-from app.services.conversation.memory import SessionMemoryManager
-from app.services.conversation.orchestrator import DialogueOrchestrator
-from app.services.conversation.prompt_builder import PromptBuilder
-from app.services.conversation.response_policy import ResponsePolicy
-from app.services.conversation.schemas import (
+from app.infra.factory import ConversationLLMClients
+from app.modules.sessions.services.hybrid_conversation.analysis_service import LLMTurnAnalysisService
+from app.modules.sessions.services.hybrid_conversation.analyzer import TopicAnalyzer
+from app.modules.sessions.services.hybrid_conversation.fact_extractor import RuleBasedFactExtractor
+from app.modules.sessions.services.hybrid_conversation.memory import SessionMemoryManager
+from app.modules.sessions.services.hybrid_conversation.orchestrator import DialogueOrchestrator
+from app.modules.sessions.services.hybrid_conversation.prompt_builder import PromptBuilder
+from app.modules.sessions.services.hybrid_conversation.response_policy import ResponsePolicy
+from app.modules.sessions.services.hybrid_conversation.schemas import (
     DialogueState,
     PolicyAction,
     RepairAction,
@@ -16,12 +18,13 @@ from app.services.conversation.schemas import (
     SessionMemory,
     TurnLabel,
 )
-from app.services.conversation.state_controller import DialogueStateController
+from app.modules.sessions.services.hybrid_conversation.state_controller import DialogueStateController
 
 
 class FakeLLM:
-    def __init__(self):
+    def __init__(self, chunks=None):
         self.calls = []
+        self.chunks = chunks or ["Sure, ", "what document do you need help with?"]
 
     async def chat_stream(self, messages, system_prompt=None, max_tokens=None):
         self.calls.append(
@@ -31,8 +34,8 @@ class FakeLLM:
                 "max_tokens": max_tokens,
             }
         )
-        yield "Sure, "
-        yield "what document do you need help with?"
+        for chunk in self.chunks:
+            yield chunk
 
 
 def coworker_scenario() -> ScenarioDefinition:
@@ -72,6 +75,30 @@ def coworker_scenario() -> ScenarioDefinition:
         target_vocabulary=["document", "deadline", "draft"],
         target_functions=["ask for help", "give context"],
         opening_message="Hi, what do you need help with today?",
+    )
+
+
+def coffee_scenario() -> ScenarioDefinition:
+    return ScenarioDefinition(
+        scenario_id="morning-brew",
+        title="Morning Brew",
+        description="Practice ordering coffee at a cafe.",
+        user_role="Customer",
+        ai_role="Barista",
+        objective="Order a drink and ask simple menu details.",
+        allowed_topic_boundaries=["coffee shop", "ordering drinks", "menu", "price", "ingredients"],
+        phases=[
+            ScenarioPhase(
+                phase_id="greeting",
+                title="Greeting",
+                objective="Ask what the customer wants to order.",
+                starting_question="What kind of coffee can I get for you today?",
+                expected_intents=["order a drink"],
+            )
+        ],
+        target_vocabulary=["coffee", "latte", "cappuccino", "espresso", "iced", "hot"],
+        target_functions=["order a drink", "ask about menu"],
+        opening_message="Welcome to Morning Brew. What can I get for you?",
     )
 
 
@@ -134,6 +161,17 @@ def test_topic_analyzer_returns_structured_labels(text, expected):
 
     assert analysis.label == expected
     assert expected in analysis.labels
+
+
+@pytest.mark.parametrize("text", ["A latte please.", "Cappuccino.", "Iced coffee with oat milk."])
+def test_topic_analyzer_accepts_short_cafe_order_answers(text):
+    scenario = coffee_scenario()
+    state = DialogueState(scenario_id=scenario.scenario_id, current_phase_id="greeting")
+
+    analysis = TopicAnalyzer().analyze(text, scenario=scenario, state=state, extracted_facts=[])
+
+    assert analysis.label == TurnLabel.ON_TOPIC
+    assert analysis.contains_direct_answer is True
 
 
 def test_state_controller_advances_on_useful_answer_and_repairs_low_quality_turns():
@@ -233,3 +271,109 @@ async def test_orchestrator_stores_side_fact_repairs_and_uses_compact_llm_prompt
     assert len(llm.calls) == 1
     assert llm.calls[0]["messages"] == [("user", "I need help writing this document.")]
     assert "I like coffee by the way." not in llm.calls[0]["messages"][0][1]
+
+
+@pytest.mark.asyncio
+async def test_llm_turn_analysis_uses_rule_result_without_llm_for_confident_turn():
+    scenario = coworker_scenario()
+    state = DialogueState(scenario_id=scenario.scenario_id, current_phase_id="greeting")
+    analysis_llm = FakeLLM(chunks=['{"label":"off_topic","relevance_score":0.0}'])
+    service = LLMTurnAnalysisService(
+        llm=analysis_llm,
+        analyzer=TopicAnalyzer(),
+        enable_llm_relevance=False,
+        enable_llm_fact_extraction=False,
+    )
+
+    analysis, facts = await service.analyze(
+        "I need help writing this document.",
+        scenario=scenario,
+        state=state,
+        rule_facts=[],
+    )
+
+    assert analysis.label == TurnLabel.ON_TOPIC
+    assert facts == []
+    assert analysis_llm.calls == []
+
+
+@pytest.mark.asyncio
+async def test_llm_turn_analysis_enriches_gray_zone_and_falls_back_on_bad_json():
+    scenario = coworker_scenario()
+    state = DialogueState(scenario_id=scenario.scenario_id, current_phase_id="greeting")
+    analysis_llm = FakeLLM(
+        chunks=[
+            '{"label":"on_topic","relevance_score":0.82,"confidence":0.91,'
+            '"contains_direct_answer":true,"intent":"ask for help",'
+            '"useful_facts":[{"key":"need","value":"help with a project brief",'
+            '"category":"goal","confidence":0.88,"relevance_to_scenario":0.9}],'
+            '"repair_reason":"answers active phase"}'
+        ]
+    )
+    service = LLMTurnAnalysisService(
+        llm=analysis_llm,
+        analyzer=TopicAnalyzer(on_topic_threshold=0.6, partial_threshold=0.2),
+        enable_llm_relevance=True,
+        enable_llm_fact_extraction=True,
+    )
+
+    analysis, facts = await service.analyze(
+        "I need a project brief.",
+        scenario=scenario,
+        state=state,
+        rule_facts=[],
+    )
+
+    assert analysis.label == TurnLabel.ON_TOPIC
+    assert analysis.relevance_score == 0.82
+    assert analysis.contains_direct_answer is True
+    assert facts[0].key == "need"
+    assert facts[0].value == "help with a project brief"
+    assert analysis_llm.calls
+
+    broken_llm = FakeLLM(chunks=["not json"])
+    broken_service = LLMTurnAnalysisService(
+        llm=broken_llm,
+        analyzer=TopicAnalyzer(on_topic_threshold=0.6, partial_threshold=0.2),
+        enable_llm_relevance=True,
+        enable_llm_fact_extraction=False,
+    )
+
+    fallback, fallback_facts = await broken_service.analyze(
+        "I need a project brief.",
+        scenario=scenario,
+        state=state,
+        rule_facts=[],
+    )
+
+    assert fallback.label in {TurnLabel.PARTIALLY_ON_TOPIC, TurnLabel.OFF_TOPIC}
+    assert fallback_facts == []
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_routes_analysis_and_dialogue_to_separate_llms():
+    scenario = coworker_scenario()
+    analysis_llm = FakeLLM(chunks=['{"label":"off_topic","relevance_score":0.0}'])
+    dialogue_llm = FakeLLM(chunks=["Dialogue reply."])
+    evaluation_llm = FakeLLM(chunks=["unused"])
+    orchestrator = DialogueOrchestrator.create(
+        scenario=scenario,
+        llm_clients=ConversationLLMClients(
+            analysis=analysis_llm,
+            dialogue=dialogue_llm,
+            evaluation=evaluation_llm,
+        ),
+        max_facts=5,
+        recent_turn_limit=3,
+        summary_max_chars=240,
+        repair_max_repeats=2,
+        enable_llm_relevance_analysis=False,
+        enable_llm_fact_extraction=False,
+    )
+
+    reply = "".join([chunk async for chunk in orchestrator.stream_turn("I need help writing this document.")])
+
+    assert reply == "Dialogue reply."
+    assert analysis_llm.calls == []
+    assert len(dialogue_llm.calls) == 1
+    assert evaluation_llm.calls == []
