@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Any, Optional
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, SmallInteger, String
+from sqlalchemy import Boolean, Date, DateTime, Index, Integer, SmallInteger, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -10,7 +10,9 @@ from app.db.base_class import Base, TimestampMixin
 if TYPE_CHECKING:
     from app.modules.sessions.models.session import Session
     from app.modules.gamification.models.daily_stat import DailyStat
+    from app.modules.gamification.models.gem_transaction import GemTransaction
     from app.modules.gamification.models.user_achievement import UserAchievement
+    from app.modules.users.models.subscription import Subscription
     # If these exist elsewhere, point to them
     # from app.models.recording import Recording
     # from app.models.subscription import Subscription
@@ -41,8 +43,21 @@ class User(Base, TimestampMixin):
     current_cefr: Mapped[Optional[str]] = mapped_column(String(10))
 
     # Streak & Progress
-    current_streak: Mapped[int] = mapped_column(Integer, server_default="0")
-    longest_streak: Mapped[int] = mapped_column(Integer, server_default="0")
+    current_streak: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    longest_streak: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_completed_lesson_date: Mapped[Optional[date]] = mapped_column(Date)
+    total_xp: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    daily_xp_goal: Mapped[int] = mapped_column(Integer, default=50, server_default="50")
+    gem_balance: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    heart_balance: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
+    heart_max: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
+    last_heart_refill_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    total_lessons_completed: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    total_speaking_lessons_completed: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    total_vocabulary_lessons_completed: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    perfect_score_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    daily_goal_streak: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_daily_goal_date: Mapped[Optional[date]] = mapped_column(Date)
     total_practice_minutes: Mapped[int] = mapped_column(Integer, server_default="0")
 
     # Onboarding JSONB
@@ -62,6 +77,7 @@ class User(Base, TimestampMixin):
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="user", lazy="select", cascade="all, delete-orphan")
     daily_stats: Mapped[list["DailyStat"]] = relationship("DailyStat", back_populates="user")
     achievements: Mapped[list["UserAchievement"]] = relationship("UserAchievement", back_populates="user")
+    gem_transactions: Mapped[list["GemTransaction"]] = relationship("GemTransaction", back_populates="user")
     subscription: Mapped[Optional["Subscription"]] = relationship("Subscription", back_populates="user", uselist=False, lazy="selectin")
 
     __table_args__ = (

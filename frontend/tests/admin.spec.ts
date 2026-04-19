@@ -80,9 +80,7 @@ test.describe('Admin Scenario Management', () => {
           target_skills: ['Vocabulary', 'Politeness'],
           tags: ['airport'],
           estimated_duration_minutes: 12,
-          pre_gen_count: 5,
-          is_pre_generated: true,
-          variation_count: 0,
+          mode: 'roleplay',
           metadata: {},
         },
         {
@@ -97,9 +95,7 @@ test.describe('Admin Scenario Management', () => {
           target_skills: ['Vocabulary'],
           tags: ['coffee'],
           estimated_duration_minutes: 8,
-          pre_gen_count: 3,
-          is_pre_generated: false,
-          variation_count: 0,
+          mode: 'conversation',
           metadata: {},
         },
       ],
@@ -125,7 +121,7 @@ test.describe('Admin Scenario Management', () => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ success: true, message: 'Scenarios updated', task: null }),
+          body: JSON.stringify({ success: true, message: 'Scenarios updated' }),
         });
         return;
       }
@@ -137,33 +133,6 @@ test.describe('Admin Scenario Management', () => {
 
       if (path === '/api/admin/scenarios/1/prompt-history' && request.method() === 'GET') {
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
-        return;
-      }
-
-      if (path === '/api/admin/scenario-variations' && request.method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ items: [], total: 0 }),
-        });
-        return;
-      }
-
-      if (path === '/api/admin/generation-tasks/task_123' && request.method() === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            task_id: 'task_123',
-            status: 'running',
-            scenario_ids: [1],
-            created_count: 4,
-            skipped_count: 0,
-            errors: [],
-            started_at: new Date().toISOString(),
-            finished_at: null,
-          }),
-        });
         return;
       }
 
@@ -188,7 +157,8 @@ test.describe('Admin Scenario Management', () => {
     await expect(page.locator('text=Scenarios updated')).toBeVisible();
   });
 
-  test('shows generation progress', async ({ page }) => {
+  test('loads scenario detail', async ({ page }) => {
     await page.goto('/admin/scenarios');
+    await expect(page.locator('text=Scenario Detail')).toBeVisible();
   });
 });

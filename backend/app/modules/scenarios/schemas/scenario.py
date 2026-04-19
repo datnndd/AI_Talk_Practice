@@ -10,34 +10,6 @@ class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ScenarioVariationCreate(BaseModel):
-    variation_seed: str | None = Field(default=None, min_length=8, max_length=64)
-    parameters: dict[str, Any] = Field(default_factory=dict)
-    system_prompt_override: str | None = None
-    sample_prompt: str | None = Field(default=None, max_length=500)
-    is_pregenerated: bool = False
-    generated_by_model: str | None = Field(default=None, max_length=100)
-    generation_latency_ms: int | None = Field(default=None, ge=0)
-    is_approved: bool = False
-
-
-class ScenarioVariationRead(ORMModel):
-    id: int
-    scenario_id: int
-    variation_seed: str
-    parameters: dict[str, Any]
-    system_prompt_override: str | None = None
-    sample_prompt: str | None = None
-    is_pregenerated: bool
-    generated_by_model: str | None = None
-    generation_latency_ms: int | None = None
-    usage_count: int
-    last_used_at: datetime | None = None
-    is_approved: bool
-    created_at: datetime
-    updated_at: datetime
-
-
 class ScenarioCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(min_length=1)
@@ -97,4 +69,3 @@ class ScenarioRead(ORMModel):
     created_by: int | None = None
     created_at: datetime
     updated_at: datetime
-    variations: list[ScenarioVariationRead] = Field(default_factory=list)

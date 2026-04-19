@@ -6,13 +6,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import get_db, require_admin_user
 from app.modules.users.models.user import User
 from app.modules.users.schemas.admin_user import (
+    AdminUserBalanceAdjustmentRequest,
     AdminUserListResponse,
     AdminUserRead,
+    AdminUserResetStreakRequest,
     AdminUserSubscriptionUpdateRequest,
     AdminUserUpdateRequest,
 )
 from app.modules.users.serializers import serialize_admin_user
 from app.modules.users.services.admin_user_service import AdminUserService
+from app.modules.gamification.settings import get_effective_rules
 
 router = APIRouter(prefix="/admin/users", tags=["admin"])
 
@@ -37,8 +40,9 @@ async def list_admin_users(
         page=page,
         page_size=page_size,
     )
+    rules = await get_effective_rules(db)
     return AdminUserListResponse(
-        items=[serialize_admin_user(user) for user in users],
+        items=[serialize_admin_user(user, rules) for user in users],
         total=total,
         page=page,
         page_size=page_size,
@@ -52,7 +56,8 @@ async def get_admin_user(
     _: User = Depends(require_admin_user),
 ):
     user = await AdminUserService.get_user(db, user_id)
-    return serialize_admin_user(user)
+    rules = await get_effective_rules(db)
+    return serialize_admin_user(user, rules)
 
 
 @router.put("/{user_id}", response_model=AdminUserRead)
@@ -63,7 +68,8 @@ async def update_admin_user(
     actor: User = Depends(require_admin_user),
 ):
     user = await AdminUserService.update_user(db, actor=actor, user_id=user_id, body=body)
-    return serialize_admin_user(user)
+    rules = await get_effective_rules(db)
+    return serialize_admin_user(user, rules)
 
 
 @router.post("/{user_id}/toggle-admin", response_model=AdminUserRead)
@@ -73,7 +79,32 @@ async def toggle_admin_user_access(
     actor: User = Depends(require_admin_user),
 ):
     user = await AdminUserService.toggle_admin_access(db, actor=actor, user_id=user_id)
-    return serialize_admin_user(user)
+    rules = await get_effective_rules(db)
+    return serialize_admin_user(user, rules)
+
+
+@router.post("/{user_id}/gamification/reset-streak", response_model=AdminUserRead)
+async def reset_admin_user_streak(
+    user_id: int,
+    body: AdminUserResetStreakRequest,
+    db: AsyncSession = Depends(get_db),
+    actor: User = Depends(require_admin_user),
+):
+    user = await AdminUserService.reset_streak(db, actor=actor, user_id=user_id, body=body)
+    rules = await get_effective_rules(db)
+    return serialize_admin_user(user, rules)
+
+
+@router.post("/{user_id}/gamification/adjust-balance", response_model=AdminUserRead)
+async def adjust_admin_user_gamification_balance(
+    user_id: int,
+    body: AdminUserBalanceAdjustmentRequest,
+    db: AsyncSession = Depends(get_db),
+    actor: User = Depends(require_admin_user),
+):
+    user = await AdminUserService.adjust_balance(db, actor=actor, user_id=user_id, body=body)
+    rules = await get_effective_rules(db)
+    return serialize_admin_user(user, rules)
 
 
 @router.put("/{user_id}/subscription", response_model=AdminUserRead)
@@ -81,10 +112,11 @@ async def update_admin_user_subscription(
     user_id: int,
     body: AdminUserSubscriptionUpdateRequest,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
+    actor: User = Depends(require_admin_user),
 ):
-    user = await AdminUserService.update_subscription(db, user_id=user_id, body=body)
-    return serialize_admin_user(user)
+    user = await AdminUserService.update_subscription(db, actor=actor, user_id=user_id, body=body)
+    rules = await get_effective_rules(db)
+    return serialize_admin_user(user, rules)
 
 
 @router.post("/{user_id}/deactivate", response_model=AdminUserRead)
@@ -94,14 +126,38 @@ async def deactivate_admin_user(
     actor: User = Depends(require_admin_user),
 ):
     user = await AdminUserService.deactivate_user(db, actor=actor, user_id=user_id)
-    return serialize_admin_user(user)
+    rules = await get_effective_rules(db)
+    return serialize_admin_user(user, rules)
+
+
+@router.post("/{user_id}/lock", response_model=AdminUserRead)
+async def lock_admin_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    actor: User = Depends(require_admin_user),
+):
+    user = await AdminUserService.deactivate_user(db, actor=actor, user_id=user_id)
+    rules = await get_effective_rules(db)
+    return serialize_admin_user(user, rules)
 
 
 @router.post("/{user_id}/restore", response_model=AdminUserRead)
 async def restore_admin_user(
     user_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
+    actor: User = Depends(require_admin_user),
 ):
-    user = await AdminUserService.restore_user(db, user_id=user_id)
-    return serialize_admin_user(user)
+    user = await AdminUserService.restore_user(db, actor=actor, user_id=user_id)
+    rules = await get_effective_rules(db)
+    return serialize_admin_user(user, rules)
+
+
+@router.post("/{user_id}/unlock", response_model=AdminUserRead)
+async def unlock_admin_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    actor: User = Depends(require_admin_user),
+):
+    user = await AdminUserService.restore_user(db, actor=actor, user_id=user_id)
+    rules = await get_effective_rules(db)
+    return serialize_admin_user(user, rules)

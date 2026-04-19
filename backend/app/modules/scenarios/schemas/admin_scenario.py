@@ -64,8 +64,6 @@ class ScenarioAdminBase(BaseModel):
     target_skills: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     estimated_duration_minutes: int | None = Field(default=10, ge=1, le=180)
-    is_pre_generated: bool = False
-    pre_gen_count: int = Field(default=8, ge=0, le=30)
     mode: str = Field(
         default="conversation",
         pattern=r"^(conversation|roleplay|debate|interview|presentation)$",
@@ -102,8 +100,6 @@ class ScenarioAdminUpdate(BaseModel):
     target_skills: list[str] | None = None
     tags: list[str] | None = None
     estimated_duration_minutes: int | None = Field(default=None, ge=1, le=180)
-    is_pre_generated: bool | None = None
-    pre_gen_count: int | None = Field(default=None, ge=0, le=30)
     mode: str | None = Field(
         default=None,
         pattern=r"^(conversation|roleplay|debate|interview|presentation)$",
@@ -129,81 +125,6 @@ class ScenarioAdminUpdate(BaseModel):
         return parsed or {}
 
 
-class ScenarioVariationAdminBase(BaseModel):
-    scenario_id: int
-    variation_name: str = Field(min_length=2, max_length=160)
-    parameters: dict[str, Any] = Field(default_factory=dict)
-    sample_prompt: str | None = Field(default=None, max_length=500)
-    sample_conversation: list[dict[str, Any]] = Field(default_factory=list)
-    system_prompt_override: str | None = None
-    is_active: bool = True
-    is_pregenerated: bool = False
-    is_approved: bool = False
-
-    @field_validator("parameters", mode="before")
-    @classmethod
-    def parse_parameters(cls, value: Any) -> dict[str, Any]:
-        parsed = _parse_jsonish(value)
-        return parsed or {}
-
-    @field_validator("sample_conversation", mode="before")
-    @classmethod
-    def parse_sample_conversation(cls, value: Any) -> list[dict[str, Any]]:
-        parsed = _parse_jsonish(value)
-        return parsed or []
-
-
-class ScenarioVariationAdminCreate(ScenarioVariationAdminBase):
-    variation_seed: str | None = Field(default=None, min_length=8, max_length=64)
-
-
-class ScenarioVariationAdminUpdate(BaseModel):
-    variation_name: str | None = Field(default=None, min_length=2, max_length=160)
-    parameters: dict[str, Any] | None = None
-    sample_prompt: str | None = Field(default=None, max_length=500)
-    sample_conversation: list[dict[str, Any]] | None = None
-    system_prompt_override: str | None = None
-    is_active: bool | None = None
-    is_pregenerated: bool | None = None
-    is_approved: bool | None = None
-
-    @field_validator("parameters", mode="before")
-    @classmethod
-    def parse_optional_parameters(cls, value: Any) -> dict[str, Any] | None:
-        if value is None:
-            return None
-        parsed = _parse_jsonish(value)
-        return parsed or {}
-
-    @field_validator("sample_conversation", mode="before")
-    @classmethod
-    def parse_optional_sample_conversation(cls, value: Any) -> list[dict[str, Any]] | None:
-        if value is None:
-            return None
-        parsed = _parse_jsonish(value)
-        return parsed or []
-
-
-class ScenarioVariationAdminRead(ORMModel):
-    id: int
-    scenario_id: int
-    variation_seed: str
-    variation_name: str
-    parameters: dict[str, Any]
-    sample_prompt: str | None = None
-    sample_conversation: list[dict[str, Any]] = Field(default_factory=list)
-    system_prompt_override: str | None = None
-    is_active: bool
-    is_pregenerated: bool
-    is_approved: bool
-    generated_by_model: str | None = None
-    generation_latency_ms: int | None = None
-    usage_count: int
-    last_used_at: datetime | None = None
-    created_at: datetime
-    updated_at: datetime
-
-
 class ScenarioAdminRead(ORMModel):
     id: int
     title: str
@@ -216,8 +137,6 @@ class ScenarioAdminRead(ORMModel):
     target_skills: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     estimated_duration_minutes: int | None = None
-    is_pre_generated: bool
-    pre_gen_count: int
     mode: str
     metadata: dict[str, Any] = Field(default_factory=dict)
     is_active: bool
@@ -225,10 +144,7 @@ class ScenarioAdminRead(ORMModel):
     deleted_at: datetime | None = None
     created_by: int | None = None
     usage_count: int = 0
-    variation_count: int = 0
-    active_variation_count: int = 0
     latest_prompt_quality: PromptQualityAssessment | None = None
-    variations: list[ScenarioVariationAdminRead] = Field(default_factory=list)
     prompt_history: list[PromptHistoryRead] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
@@ -239,11 +155,6 @@ class ScenarioListResponse(BaseModel):
     total: int
     page: int
     page_size: int
-
-
-class VariationListResponse(BaseModel):
-    items: list[ScenarioVariationAdminRead]
-    total: int
 
 
 class SuggestSkillsRequest(BaseModel):
@@ -257,28 +168,9 @@ class SuggestSkillsResponse(BaseModel):
 
 class BulkScenarioActionRequest(BaseModel):
     scenario_ids: list[int] = Field(min_length=1)
-    action: str = Field(pattern=r"^(activate|deactivate|soft_delete|generate_variations)$")
-    generation_count: int | None = Field(default=None, ge=1, le=20)
+    action: str = Field(pattern=r"^(activate|deactivate|soft_delete)$")
 
 
 class BulkScenarioActionResponse(BaseModel):
     success: bool
     message: str
-    task: "GenerationTaskRead | None" = None
-
-
-class GenerateVariationsRequest(BaseModel):
-    count: int = Field(default=8, ge=1, le=20)
-    overwrite_existing: bool = False
-    approve_generated: bool = True
-
-
-class GenerationTaskRead(BaseModel):
-    task_id: str
-    status: str
-    scenario_ids: list[int] = Field(default_factory=list)
-    created_count: int = 0
-    skipped_count: int = 0
-    errors: list[str] = Field(default_factory=list)
-    started_at: datetime
-    finished_at: datetime | None = None

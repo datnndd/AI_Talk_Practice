@@ -1,6 +1,11 @@
 from fastapi import APIRouter
 
 from app.modules.auth.routers import router as auth
+from app.modules.admin.routers import audit_logs_router
+from app.modules.gamification.routers import admin_router as admin_gamification
+from app.modules.gamification.routers import router as gamification
+from app.modules.notifications.routers import admin_router as admin_notifications
+from app.modules.notifications.routers import router as notifications
 from app.modules.payments.routers import admin_router as admin_payments
 from app.modules.payments.routers import router as payments
 from app.modules.users.routers import admin_router as admin_users
@@ -15,6 +20,11 @@ from app.modules.translations.routers import translation
 api_router = APIRouter()
 
 api_router.include_router(auth)
+api_router.include_router(audit_logs_router)
+api_router.include_router(admin_gamification)
+api_router.include_router(gamification)
+api_router.include_router(notifications)
+api_router.include_router(admin_notifications)
 api_router.include_router(payments)
 api_router.include_router(admin_payments)
 api_router.include_router(users)

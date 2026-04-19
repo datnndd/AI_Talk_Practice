@@ -1,4 +1,4 @@
-import { CreditCard, Moon, Sun, Sparkle, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
+import { CreditCard, Moon, Sun, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -7,7 +7,6 @@ import { BrandMark } from "@/shared/components/navigation";
 const defaultNavItems = [
   { label: "Users", icon: UserList, to: "/admin/users" },
   { label: "Scenario Library", icon: SquaresFour, anchor: "#scenario-library" },
-  { label: "Generation Queue", icon: Sparkle, anchor: "#generation-queue" },
   { label: "Payments", icon: CreditCard, to: "/admin/payments" },
 ];
 
@@ -57,11 +56,9 @@ const AdminShell = ({ title, subtitle, theme, onToggleTheme, navItems = defaultN
 
             <div className="mt-8 rounded-[28px] bg-gradient-to-br from-primary to-[#1d7df3] p-5 text-white shadow-xl shadow-primary/20">
               <p className="text-[11px] font-black uppercase tracking-[0.25em] text-white/70">Workflow</p>
-              <h3 className="mt-3 font-display text-2xl font-black tracking-tight">
-                Hybrid pre-generation for reusable speaking practice.
-              </h3>
+              <h3 className="mt-3 font-display text-2xl font-black tracking-tight">Reusable speaking practice.</h3>
               <p className="mt-3 text-sm leading-6 text-white/80">
-                Create strong scenario prompts once, then scale them into approved variations for teachers and learners.
+                Create strong scenario prompts once, then refine them through prompt history.
               </p>
             </div>
 

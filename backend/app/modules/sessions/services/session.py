@@ -10,12 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.infra.factory import LLMRole, create_llm_for_role
+from app.modules.gamification.services import GamificationService
 from app.modules.sessions.models.message import Message
 from app.modules.sessions.models.session import Session
 from app.modules.scenarios.repository import ScenarioRepository
 from app.modules.sessions.repository import SessionRepository
 from app.modules.sessions.schemas.session import MessageCreate, SessionCreate, SessionFinishRequest
-from app.modules.scenarios.services.variation_service import VariationService
 from app.modules.sessions.services.hybrid_conversation.final_evaluation import SessionFinalEvaluationService
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,6 @@ class SessionService:
         scenario = await ScenarioRepository.get_by_id(
             db,
             payload.scenario_id,
-            include_variations=True,
         )
         if scenario is None or scenario.deleted_at is not None or not scenario.is_active:
             logger.warning("Attempted to start session for inactive or missing scenario_id=%s", payload.scenario_id)
@@ -72,33 +71,25 @@ class SessionService:
             if unsupported:
                 logger.info("User requested additional target skills for session: %s", unsupported)
 
-        variation = await VariationService.resolve_variation_for_session(
-            db,
-            scenario=scenario,
-            payload=payload,
-        )
-
         session_metadata: dict[str, Any] = dict(payload.metadata or {})
         session_metadata["mode"] = payload.mode or scenario.mode
-        if variation is not None:
-            session_metadata["variation_seed"] = variation.variation_seed
+
+        await GamificationService.consume_speaking_heart(db, user_id)
 
         session = await SessionRepository.create_session(
             db,
             user_id=user_id,
             scenario_id=scenario.id,
-            variation_id=variation.id if variation else None,
             status="active",
             target_skills=payload.target_skills or scenario.target_skills,
             session_metadata=session_metadata,
         )
         await db.commit()
         logger.info(
-            "Started session id=%s user_id=%s scenario_id=%s variation_id=%s",
+            "Started session id=%s user_id=%s scenario_id=%s",
             session.id,
             user_id,
             scenario.id,
-            variation.id if variation else None,
         )
         return await SessionService.get_by_id(db, session.id, user_id)
 

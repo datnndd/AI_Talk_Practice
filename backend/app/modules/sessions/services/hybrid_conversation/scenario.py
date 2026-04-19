@@ -11,7 +11,6 @@ from app.modules.sessions.services.hybrid_conversation.schemas import ScenarioDe
 def build_scenario_definition(
     scenario: Scenario,
     *,
-    variation_prompt: str | None = None,
     user_level: str | None = None,
 ) -> ScenarioDefinition:
     metadata = dict(scenario.scenario_metadata or {})
@@ -51,8 +50,6 @@ def build_scenario_definition(
 
     boundaries = _listify(metadata.get("allowed_topic_boundaries") or metadata.get("allowed_topics"))
     boundaries.extend([scenario.title, scenario.category, *tags, *objectives, objective])
-    if variation_prompt:
-        boundaries.append(variation_prompt)
 
     return ScenarioDefinition(
         scenario_id=str(scenario.id),
@@ -76,7 +73,6 @@ def build_scenario_definition(
             "mode": scenario.mode,
             "tags": tags,
             "target_skills": target_skills,
-            "variation_prompt": variation_prompt,
         },
     )
 

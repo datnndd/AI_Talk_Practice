@@ -26,6 +26,7 @@ def _normalize_optional_string(value: Any) -> Any:
 
 class AdminUserRead(UserRead):
     deleted_at: datetime | None = None
+    gamification: dict[str, Any] | None = None
 
 
 class AdminUserListResponse(BaseModel):
@@ -77,3 +78,19 @@ class AdminUserUpdateRequest(BaseModel):
 
 class AdminUserSubscriptionUpdateRequest(BaseModel):
     tier: Literal["FREE", "PRO", "ENTERPRISE"]
+
+
+class AdminUserResetStreakRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class AdminUserBalanceAdjustmentRequest(BaseModel):
+    gem_delta: int | None = None
+    heart_delta: int | None = None
+    reason: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_non_empty_payload(self) -> "AdminUserBalanceAdjustmentRequest":
+        if self.gem_delta is None and self.heart_delta is None:
+            raise ValueError("gem_delta or heart_delta must be provided")
+        return self

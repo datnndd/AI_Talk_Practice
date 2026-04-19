@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.modules.scenarios.serializers import serialize_scenario, serialize_variation
+from app.modules.scenarios.serializers import serialize_scenario
 from app.modules.sessions.models.correction import Correction
 from app.modules.sessions.models.message import Message
 from app.modules.sessions.models.message_score import MessageScore
@@ -84,13 +84,6 @@ def _session_mode(session: Session) -> str:
     return metadata.get("mode") or session.scenario.mode
 
 
-def _session_variation_seed(session: Session) -> str | None:
-    if session.variation:
-        return session.variation.variation_seed
-    metadata = session.session_metadata or {}
-    return metadata.get("variation_seed")
-
-
 def serialize_session_list_item(session: Session) -> SessionListItem:
     return SessionListItem.model_validate(
         {
@@ -99,8 +92,6 @@ def serialize_session_list_item(session: Session) -> SessionListItem:
             "scenario_title": session.scenario.title,
             "status": session.status,
             "mode": _session_mode(session),
-            "variation_id": session.variation_id,
-            "variation_seed": _session_variation_seed(session),
             "duration_seconds": session.duration_seconds,
             "started_at": session.started_at,
             "ended_at": session.ended_at,
@@ -115,7 +106,6 @@ def serialize_session(session: Session) -> SessionRead:
             "id": session.id,
             "user_id": session.user_id,
             "scenario_id": session.scenario_id,
-            "variation_id": session.variation_id,
             "status": session.status,
             "mode": _session_mode(session),
             "started_at": session.started_at,
@@ -123,9 +113,7 @@ def serialize_session(session: Session) -> SessionRead:
             "duration_seconds": session.duration_seconds,
             "target_skills": session.target_skills,
             "metadata": session.session_metadata or {},
-            "variation_seed": _session_variation_seed(session),
-            "scenario": serialize_scenario(session.scenario, include_variations=False),
-            "variation": serialize_variation(session.variation) if session.variation else None,
+            "scenario": serialize_scenario(session.scenario),
             "messages": [serialize_message(item) for item in session.messages],
             "score": serialize_session_score(session.score) if session.score else None,
             "created_at": session.created_at,

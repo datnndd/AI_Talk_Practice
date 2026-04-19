@@ -96,8 +96,6 @@ const createInitialState = (scenario) => ({
   difficulty: scenario?.difficulty || "medium",
   ai_system_prompt: scenario?.ai_system_prompt || "",
   estimated_duration_minutes: scenario?.estimated_duration_minutes || 10,
-  is_pre_generated: scenario?.is_pre_generated ?? true,
-  pre_gen_count: scenario?.pre_gen_count || 8,
   mode: scenario?.mode || "conversation",
   is_active: scenario?.is_active ?? true,
   opening_message: scenario?.opening_message || "",
@@ -146,7 +144,6 @@ const ScenarioEditorModal = ({
       const payload = {
         ...form,
         estimated_duration_minutes: Number(form.estimated_duration_minutes),
-        pre_gen_count: Number(form.pre_gen_count),
         learning_objectives: parseListInput(form.learning_objectives),
         target_skills: parseListInput(form.target_skills),
         tags: parseListInput(form.tags),
@@ -353,7 +350,7 @@ const ScenarioEditorModal = ({
                     />
                   </div>
 
-                  <div className="grid gap-4 xl:col-span-2 md:grid-cols-3">
+                  <div className="grid gap-4 xl:col-span-2 md:grid-cols-2">
                     <label className="flex items-center gap-3 rounded-[24px] border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
                       <input
                         type="checkbox"
@@ -361,27 +358,6 @@ const ScenarioEditorModal = ({
                         onChange={(event) => updateField("is_active", event.target.checked)}
                       />
                       <span className="text-sm font-semibold">Active</span>
-                    </label>
-                    <label className="flex items-center gap-3 rounded-[24px] border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-                      <input
-                        type="checkbox"
-                        checked={form.is_pre_generated}
-                        onChange={(event) => updateField("is_pre_generated", event.target.checked)}
-                      />
-                      <span className="text-sm font-semibold">Pre-generate variations</span>
-                    </label>
-                    <label className="block space-y-2 rounded-[24px] border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-                      <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                        Target pre-gen count
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="30"
-                        value={form.pre_gen_count}
-                        onChange={(event) => updateField("pre_gen_count", event.target.value)}
-                        className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium outline-none dark:border-zinc-700 dark:bg-zinc-950"
-                      />
                     </label>
                   </div>
                 </div>

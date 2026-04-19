@@ -1,3 +1,3 @@
-from .scenario import Scenario, ScenarioVariation, ScenarioPromptHistory
+from .scenario import Scenario, ScenarioPromptHistory
 
-__all__ = ["Scenario", "ScenarioVariation", "ScenarioPromptHistory"]
+__all__ = ["Scenario", "ScenarioPromptHistory"]

@@ -41,30 +41,4 @@ export const adminApi = {
     const { data } = await httpClient.get(`/admin/scenarios/${scenarioId}/prompt-history`);
     return data;
   },
-  generateVariations: async (scenarioId, payload) => {
-    const { data } = await httpClient.post(`/admin/scenarios/${scenarioId}/generate-variations`, payload);
-    return data;
-  },
-  getGenerationTask: async (taskId) => {
-    const { data } = await httpClient.get(`/admin/generation-tasks/${taskId}`);
-    return data;
-  },
-  listVariations: async (scenarioId, search = "") => {
-    const { data } = await httpClient.get("/admin/scenario-variations", {
-      params: { scenario_id: scenarioId, search: search || undefined },
-    });
-    return data;
-  },
-  createVariation: async (payload) => {
-    const { data } = await httpClient.post("/admin/scenario-variations", payload);
-    return data;
-  },
-  updateVariation: async (variationId, payload) => {
-    const { data } = await httpClient.put(`/admin/scenario-variations/${variationId}`, payload);
-    return data;
-  },
-  deleteVariation: async (variationId) => {
-    const { data } = await httpClient.delete(`/admin/scenario-variations/${variationId}`);
-    return data;
-  },
 };

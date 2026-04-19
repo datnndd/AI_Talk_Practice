@@ -196,41 +196,15 @@ async def test_scenario(db_session):
 
 
 @pytest_asyncio.fixture
-async def test_variation(db_session, test_scenario):
-    """Seed a test variation."""
-    from app.modules.scenarios.models.scenario import ScenarioVariation
-    from app.modules.scenarios.services.variation_service import VariationService
-    params = {"proficiency": "B1", "formality": "formal"}
-    seed = VariationService.build_variation_seed(
-        scenario_id=test_scenario.id,
-        parameters=params,
-        mode="roleplay"
-    )
-    variation = ScenarioVariation(
-        scenario_id=test_scenario.id,
-        variation_seed=seed,
-        parameters=params,
-        system_prompt_override="Variation prompt override.",
-        is_pregenerated=True,
-        is_approved=True
-    )
-    db_session.add(variation)
-    await db_session.flush()
-    await db_session.refresh(variation)
-    return variation
-
-
-@pytest_asyncio.fixture
-async def test_session(db_session, test_user, test_scenario, test_variation):
+async def test_session(db_session, test_user, test_scenario):
     """Seed a test session."""
     from app.modules.sessions.models.session import Session
     session = Session(
         user_id=test_user.id,
         scenario_id=test_scenario.id,
-        variation_id=test_variation.id,
         status="active",
         target_skills=test_scenario.target_skills,
-        session_metadata={"mode": "roleplay", "variation_seed": test_variation.variation_seed}
+        session_metadata={"mode": "roleplay"}
     )
     db_session.add(session)
     await db_session.flush()

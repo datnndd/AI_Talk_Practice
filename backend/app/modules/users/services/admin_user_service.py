@@ -6,14 +6,18 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError, NotFoundError
+from app.modules.admin.services.audit_log_service import AdminAuditLogService
+from app.modules.gamification.models.gem_transaction import GemTransaction
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 from app.modules.users.repository import UserRepository
 from app.modules.users.schemas.admin_user import (
+    AdminUserBalanceAdjustmentRequest,
+    AdminUserResetStreakRequest,
     AdminUserSubscriptionUpdateRequest,
     AdminUserUpdateRequest,
 )
-from app.modules.users.serializers import user_is_admin
+from app.modules.users.serializers import user_has_unlimited_hearts, user_is_admin
 
 logger = logging.getLogger(__name__)
 
@@ -84,9 +88,8 @@ class AdminUserService:
             AdminUserService._set_admin_access(user, body.is_admin)
 
         await db.commit()
-        await db.refresh(user)
         logger.info("Admin id=%s updated user id=%s", actor.id, user.id)
-        return user
+        return await AdminUserService.get_user(db, user.id)
 
     @staticmethod
     async def toggle_admin_access(
@@ -102,14 +105,115 @@ class AdminUserService:
 
         AdminUserService._set_admin_access(user, not user_is_admin(user))
         await db.commit()
-        await db.refresh(user)
         logger.info("Admin id=%s toggled admin access for user id=%s", actor.id, user.id)
-        return user
+        return await AdminUserService.get_user(db, user.id)
+
+    @staticmethod
+    async def reset_streak(
+        db: AsyncSession,
+        *,
+        actor: User,
+        user_id: int,
+        body: AdminUserResetStreakRequest,
+    ) -> User:
+        user = await AdminUserService.get_user(db, user_id)
+        before = {
+            "current_streak": user.current_streak,
+            "longest_streak": user.longest_streak,
+            "last_completed_lesson_date": user.last_completed_lesson_date.isoformat()
+            if user.last_completed_lesson_date
+            else None,
+        }
+        user.current_streak = 0
+        user.last_completed_lesson_date = None
+        after = {
+            "current_streak": user.current_streak,
+            "longest_streak": user.longest_streak,
+            "last_completed_lesson_date": None,
+        }
+        AdminAuditLogService.record(
+            db,
+            actor_user_id=actor.id,
+            action="user.streak_reset",
+            entity_type="user",
+            entity_id=user.id,
+            target_user_id=user.id,
+            before=before,
+            after=after,
+            reason=body.reason,
+        )
+        await db.commit()
+        logger.info("Admin id=%s reset streak for user id=%s", actor.id, user.id)
+        return await AdminUserService.get_user(db, user.id)
+
+    @staticmethod
+    async def adjust_balance(
+        db: AsyncSession,
+        *,
+        actor: User,
+        user_id: int,
+        body: AdminUserBalanceAdjustmentRequest,
+    ) -> User:
+        user = await AdminUserService.get_user(db, user_id)
+        before = {
+            "gem_balance": user.gem_balance,
+            "heart_balance": user.heart_balance,
+            "heart_max": user.heart_max,
+            "heart_is_unlimited": user_has_unlimited_hearts(user),
+        }
+
+        if body.gem_delta is not None:
+            new_gem_balance = (user.gem_balance or 0) + body.gem_delta
+            if new_gem_balance < 0:
+                raise BadRequestError("Gem balance cannot be negative.")
+            user.gem_balance = new_gem_balance
+            if body.gem_delta != 0:
+                db.add(
+                    GemTransaction(
+                        user_id=user.id,
+                        type="admin_adjustment",
+                        amount=body.gem_delta,
+                        balance_after=user.gem_balance,
+                        reference_type="admin_user",
+                        reference_id=str(actor.id),
+                        transaction_metadata={"reason": body.reason},
+                    )
+                )
+
+        if body.heart_delta is not None:
+            if user_has_unlimited_hearts(user):
+                raise BadRequestError("Pro users have unlimited Hearts.")
+            new_heart_balance = (user.heart_balance or 0) + body.heart_delta
+            if new_heart_balance < 0 or new_heart_balance > (user.heart_max or 5):
+                raise BadRequestError("Heart balance must stay between 0 and the user's Heart max.")
+            user.heart_balance = new_heart_balance
+
+        after = {
+            "gem_balance": user.gem_balance,
+            "heart_balance": user.heart_balance,
+            "heart_max": user.heart_max,
+            "heart_is_unlimited": user_has_unlimited_hearts(user),
+        }
+        AdminAuditLogService.record(
+            db,
+            actor_user_id=actor.id,
+            action="user.balance_adjusted",
+            entity_type="user",
+            entity_id=user.id,
+            target_user_id=user.id,
+            before=before,
+            after=after,
+            reason=body.reason,
+        )
+        await db.commit()
+        logger.info("Admin id=%s adjusted gamification balance for user id=%s", actor.id, user.id)
+        return await AdminUserService.get_user(db, user.id)
 
     @staticmethod
     async def update_subscription(
         db: AsyncSession,
         *,
+        actor: User,
         user_id: int,
         body: AdminUserSubscriptionUpdateRequest,
     ) -> User:
@@ -124,6 +228,11 @@ class AdminUserService:
             subscription = Subscription(user_id=user.id)
             db.add(subscription)
 
+        before = {
+            "tier": subscription.tier,
+            "status": subscription.status,
+            "expires_at": subscription.expires_at.isoformat() if subscription.expires_at else None,
+        }
         subscription.tier = tier
         subscription.status = "active"
         subscription.features = PLAN_FEATURES[tier]
@@ -141,10 +250,24 @@ class AdminUserService:
         else:
             subscription.expires_at = None
 
+        after = {
+            "tier": subscription.tier,
+            "status": subscription.status,
+            "expires_at": subscription.expires_at.isoformat() if subscription.expires_at else None,
+        }
+        AdminAuditLogService.record(
+            db,
+            actor_user_id=actor.id,
+            action="user.subscription_updated",
+            entity_type="subscription",
+            entity_id=user.id,
+            target_user_id=user.id,
+            before=before,
+            after=after,
+        )
         await db.commit()
-        await db.refresh(user)
         logger.info("Admin updated subscription tier=%s for user id=%s", tier, user.id)
-        return user
+        return await AdminUserService.get_user(db, user.id)
 
     @staticmethod
     async def deactivate_user(
@@ -161,23 +284,43 @@ class AdminUserService:
         if user.deleted_at is None:
             user.deleted_at = datetime.now(timezone.utc)
 
+        AdminAuditLogService.record(
+            db,
+            actor_user_id=actor.id,
+            action="user.locked",
+            entity_type="user",
+            entity_id=user.id,
+            target_user_id=user.id,
+            before={"deleted_at": None},
+            after={"deleted_at": user.deleted_at.isoformat() if user.deleted_at else None},
+        )
         await db.commit()
-        await db.refresh(user)
         logger.info("Admin id=%s deactivated user id=%s", actor.id, user.id)
-        return user
+        return await AdminUserService.get_user(db, user.id)
 
     @staticmethod
     async def restore_user(
         db: AsyncSession,
         *,
+        actor: User,
         user_id: int,
     ) -> User:
         user = await AdminUserService.get_user(db, user_id)
+        before = {"deleted_at": user.deleted_at.isoformat() if user.deleted_at else None}
         user.deleted_at = None
+        AdminAuditLogService.record(
+            db,
+            actor_user_id=actor.id,
+            action="user.unlocked",
+            entity_type="user",
+            entity_id=user.id,
+            target_user_id=user.id,
+            before=before,
+            after={"deleted_at": None},
+        )
         await db.commit()
-        await db.refresh(user)
         logger.info("Restored user id=%s", user.id)
-        return user
+        return await AdminUserService.get_user(db, user.id)
 
     @staticmethod
     def _apply_role_filter(users: list[User], role: str | None) -> list[User]:

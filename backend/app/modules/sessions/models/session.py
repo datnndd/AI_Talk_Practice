@@ -1,4 +1,4 @@
-"""Session model — production-grade with variation tracking and soft-delete."""
+"""Session model — production-grade practice-session tracking with soft-delete."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    SmallInteger,
     String,
     func,
 )
@@ -21,10 +20,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base, TimestampMixin
 
 if TYPE_CHECKING:
-    from app.modules.sessions.models.correction import Correction
     from app.modules.sessions.models.message import Message
-    from app.modules.sessions.models.message_score import MessageScore
-    from app.modules.scenarios.models.scenario import Scenario, ScenarioVariation
+    from app.modules.scenarios.models.scenario import Scenario
     from app.modules.sessions.models.session_score import SessionScore
     from app.modules.users.models.user import User
 
@@ -34,8 +31,6 @@ class Session(Base, TimestampMixin):
     A single practice session between a user and the AI partner.
 
     Design notes:
-    - `variation_id` (nullable) links to the ScenarioVariation used.
-      NULL = pure real-time LLM with no cached variation.
     - `session_metadata` JSONB captures runtime context that doesn't need its own
       column: {"asr_engine": "azure", "tts_voice": "en-US-JennyNeural", ...}
     - `target_skills` JSONB overrides Scenario.target_skills for this specific
@@ -57,11 +52,6 @@ class Session(Base, TimestampMixin):
     scenario_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("scenarios.id", ondelete="RESTRICT"), nullable=False
     )
-    # Nullable: None = no pre-generated variation was used
-    variation_id: Mapped[Optional[int]] = mapped_column(
-        Integer, ForeignKey("scenario_variations.id", ondelete="SET NULL"), nullable=True
-    )
-
     # ── Status ────────────────────────────────────────────────────────────────
     # "active" | "completed" | "abandoned" | "error"
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="active")
@@ -87,9 +77,6 @@ class Session(Base, TimestampMixin):
     # ── Relationships ─────────────────────────────────────────────────────────
     user: Mapped["User"] = relationship("User", back_populates="sessions", lazy="select")
     scenario: Mapped["Scenario"] = relationship("Scenario", back_populates="sessions", lazy="select")
-    variation: Mapped[Optional["ScenarioVariation"]] = relationship(
-        "ScenarioVariation", back_populates="sessions", lazy="select"
-    )
     # lazy="select" — load explicitly with selectinload() to avoid N+1
     messages: Mapped[list["Message"]] = relationship(
         "Message",
@@ -114,8 +101,7 @@ class Session(Base, TimestampMixin):
         Index("ix_sessions_user_status_started", "user_id", "status", "started_at"),
         # Dashboard: sessions per scenario
         Index("ix_sessions_scenario_status", "scenario_id", "status"),
-        # Variation analytics
-        Index("ix_sessions_variation_id", "variation_id"),
+        Index("ix_sessions_started_at", "started_at"),
         # Partial: live sessions (dashboard monitoring)
         Index(
             "ix_sessions_active_live",

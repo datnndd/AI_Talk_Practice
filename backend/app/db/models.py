@@ -17,7 +17,6 @@ from app.modules.payments.models.payment_webhook_event import PaymentWebhookEven
 from app.modules.scenarios.models.scenario import (
     Scenario,
     ScenarioPromptHistory,
-    ScenarioVariation,
 )
 
 # Sessions
@@ -32,20 +31,32 @@ from app.modules.sessions.models.word_error import WordError
 # Gamification
 from app.modules.gamification.models.achievement import Achievement
 from app.modules.gamification.models.daily_stat import DailyStat
+from app.modules.gamification.models.gamification_setting import GamificationSetting
+from app.modules.gamification.models.gem_transaction import GemTransaction
 from app.modules.gamification.models.user_achievement import UserAchievement
 
+# Admin
+from app.modules.admin.models.audit_log import AdminAuditLog
+
+# Notifications
+from app.modules.notifications.models.notification import Notification, NotificationReadState
+
 __all__ = [
+    "AdminAuditLog",
     "Achievement",
     "Correction",
     "DailyStat",
+    "GamificationSetting",
+    "GemTransaction",
     "Message",
     "MessageScore",
+    "Notification",
+    "NotificationReadState",
     "PaymentTransaction",
     "PaymentWebhookEvent",
     "PhonemeError",
     "Scenario",
     "ScenarioPromptHistory",
-    "ScenarioVariation",
     "Session",
     "SessionScore",
     "Subscription",

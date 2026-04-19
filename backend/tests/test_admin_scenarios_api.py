@@ -46,13 +46,10 @@ async def test_admin_can_create_scenario_and_prompt_history(client, db_session):
             "coach the learner with brief corrections, and keep the conversation focused on "
             "solving the missing reservation issue without breaking roleplay."
         ),
-        "objectives": ["clarify a booking issue", "ask for confirmation details"],
+        "learning_objectives": ["clarify a booking issue", "ask for confirmation details"],
         "target_skills": ["fluency", "grammar"],
         "tags": ["hotel", "travel", "problem-solving"],
-        "time_limit_seconds": 720,
-        "starter": "USER",
-        "is_pre_generated": True,
-        "pre_gen_count": 10,
+        "estimated_duration_minutes": 12,
         "mode": "roleplay",
         "metadata": {"persona": "front desk"},
     }
@@ -65,49 +62,29 @@ async def test_admin_can_create_scenario_and_prompt_history(client, db_session):
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["title"] == payload["title"]
-    assert body["objectives"] == payload["objectives"]
-    assert body["learning_objectives"] == payload["objectives"]
-    assert body["starter"] == "USER"
-    assert body["time_limit_seconds"] == 720
+    assert body["learning_objectives"] == payload["learning_objectives"]
     assert body["estimated_duration_minutes"] == 12
-    assert body["variation_count"] == 0
+    assert "variation_count" not in body
+    assert "active_variation_count" not in body
+    assert "variations" not in body
     assert len(body["prompt_history"]) == 1
     assert body["prompt_history"][0]["quality_score"] >= 70
 
 
 @pytest.mark.asyncio
-async def test_admin_can_create_and_list_variations(client, db_session, test_scenario):
+async def test_admin_variation_endpoints_are_removed(client, db_session, test_scenario):
     admin = await _create_admin_user(db_session)
     token = create_access_token(admin.id)
-
-    payload = {
-        "scenario_id": test_scenario.id,
-        "variation_name": "Formal airport queue",
-        "parameters": {"tone": "formal", "stress_level": "high"},
-        "sample_prompt": "The airport line is long and the learner needs concise, polite responses.",
-        "sample_conversation": [
-            {"role": "assistant", "content": "Good evening. Passport and ticket, please."},
-            {"role": "user", "content": "Of course. I also need help finding my gate."},
-        ],
-        "is_active": True,
-        "is_pregenerated": True,
-        "is_approved": True,
-    }
 
     create_response = await client.post(
         "/api/admin/scenario-variations",
         headers={"Authorization": f"Bearer {token}"},
-        json=payload,
+        json={"scenario_id": test_scenario.id, "variation_name": "Legacy"},
     )
-    assert create_response.status_code == 201, create_response.text
-    created = create_response.json()
-    assert created["variation_name"] == payload["variation_name"]
-    assert created["is_pregenerated"] is True
+    assert create_response.status_code == 404
 
     list_response = await client.get(
         f"/api/admin/scenario-variations?scenario_id={test_scenario.id}",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert list_response.status_code == 200
-    items = list_response.json()["items"]
-    assert any(item["variation_name"] == payload["variation_name"] for item in items)
+    assert list_response.status_code == 404

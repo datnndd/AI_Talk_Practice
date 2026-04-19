@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { CheckSquareOffset, FadersHorizontal, PencilSimple, Plus, Trash, ArrowCounterClockwise, Sparkle } from "@phosphor-icons/react";
+import { CheckSquareOffset, FadersHorizontal, PencilSimple, Plus, Trash, ArrowCounterClockwise } from "@phosphor-icons/react";
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
 import PromptQualityBadge from "@/features/admin-scenarios/components/PromptQualityBadge";
 import ScenarioEditorModal from "@/features/admin-scenarios/components/ScenarioEditorModal";
-import VariationPanel from "@/features/admin-scenarios/components/VariationPanel";
 import { adminApi } from "@/features/admin-scenarios/api/adminScenariosApi";
 import { useTheme } from "@/shared/context/ThemeContext";
 
@@ -62,9 +61,6 @@ const AdminScenarios = () => {
   const [selectedScenarioId, setSelectedScenarioId] = useState(null);
   const [selectedScenario, setSelectedScenario] = useState(null);
   const [promptHistory, setPromptHistory] = useState([]);
-  const [variations, setVariations] = useState([]);
-  const [variationSearch, setVariationSearch] = useState("");
-  const [generationTask, setGenerationTask] = useState(null);
   const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
   const [editingScenario, setEditingScenario] = useState(null);
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(true);
@@ -97,15 +93,6 @@ const AdminScenarios = () => {
     }
   }, []);
 
-  const loadVariations = useCallback(async (scenarioId, search = "") => {
-    try {
-      const data = await adminApi.listVariations(scenarioId, search);
-      setVariations(data.items);
-    } catch (variationError) {
-      setError(variationError?.response?.data?.detail || "Failed to load variations.");
-    }
-  }, []);
-
   const loadScenarios = useCallback(async () => {
     setIsLoadingScenarios(true);
     setError("");
@@ -117,7 +104,6 @@ const AdminScenarios = () => {
       if (data.items.length === 0) {
         setSelectedScenarioId(null);
         setSelectedScenario(null);
-        setVariations([]);
         return;
       }
 
@@ -143,38 +129,6 @@ const AdminScenarios = () => {
       void loadScenarioDetail(selectedScenarioId);
     }
   }, [loadScenarioDetail, selectedScenarioId]);
-
-  useEffect(() => {
-    if (selectedScenarioId) {
-      void loadVariations(selectedScenarioId, variationSearch);
-    }
-  }, [loadVariations, selectedScenarioId, variationSearch]);
-
-  useEffect(() => {
-    if (!generationTask || !["queued", "running"].includes(generationTask.status)) {
-      return undefined;
-    }
-
-    const interval = setInterval(async () => {
-      try {
-        const latest = await adminApi.getGenerationTask(generationTask.task_id);
-        setGenerationTask(latest);
-        if (latest.status === "completed") {
-          setNotice(`Generated ${latest.created_count} variations.`);
-          if (selectedScenarioId) {
-            await loadScenarioDetail(selectedScenarioId);
-            await loadVariations(selectedScenarioId, variationSearch);
-          }
-          await loadScenarios();
-        }
-      } catch (taskError) {
-        clearInterval(interval);
-        setError(taskError?.response?.data?.detail || "Failed to refresh generation task.");
-      }
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [generationTask, loadScenarioDetail, loadScenarios, loadVariations, selectedScenarioId, variationSearch]);
 
   const openCreateScenario = () => {
     setEditingScenario(null);
@@ -262,11 +216,7 @@ const AdminScenarios = () => {
       const response = await adminApi.bulkAction({
         scenario_ids: selectedIds,
         action,
-        generation_count: action === "generate_variations" ? 8 : undefined,
       });
-      if (response.task) {
-        setGenerationTask(response.task);
-      }
       setNotice(response.message);
       setSelectedIds([]);
       await loadScenarios();
@@ -275,51 +225,11 @@ const AdminScenarios = () => {
     }
   };
 
-  const handleGenerateVariations = async (scenarioId) => {
-    try {
-      const task = await adminApi.generateVariations(scenarioId, {
-        count: selectedScenario?.pre_gen_count || 8,
-        overwrite_existing: false,
-        approve_generated: true,
-      });
-      setGenerationTask(task);
-      setNotice("Variation generation started.");
-    } catch (generationError) {
-      setError(generationError?.response?.data?.detail || "Failed to start generation.");
-    }
-  };
-
-  const handleCreateVariation = async (payload) => {
-    await adminApi.createVariation(payload);
-    setNotice("Variation created.");
-    await loadVariations(payload.scenario_id, variationSearch);
-    await loadScenarioDetail(payload.scenario_id);
-  };
-
-  const handleUpdateVariation = async (variationId, payload) => {
-    await adminApi.updateVariation(variationId, payload);
-    setNotice("Variation updated.");
-    await loadVariations(selectedScenarioId, variationSearch);
-    await loadScenarioDetail(selectedScenarioId);
-  };
-
-  const handleDeleteVariation = async (variationId) => {
-    try {
-      await adminApi.deleteVariation(variationId);
-      setNotice("Variation disabled.");
-      await loadVariations(selectedScenarioId, variationSearch);
-      await loadScenarioDetail(selectedScenarioId);
-    } catch (variationError) {
-      setError(variationError?.response?.data?.detail || "Failed to disable variation.");
-    }
-  };
-
   const totalPages = Math.max(1, Math.ceil(total / filters.page_size));
   const selectedCount = selectedIds.length;
   const summaryCards = [
     { label: "Scenarios", value: total },
     { label: "Selected", value: selectedCount },
-    { label: "Variations", value: selectedScenario?.variation_count || 0 },
     { label: "Usage", value: selectedScenario?.usage_count || 0 },
   ];
 
@@ -328,7 +238,7 @@ const AdminScenarios = () => {
       theme={theme}
       onToggleTheme={toggleTheme}
       title="Scenario Admin Panel"
-      subtitle="Manage reusable speaking scenarios, prompt history, and the hybrid pre-generation workflow for teachers and content operators."
+      subtitle="Manage reusable speaking scenarios and prompt history for teachers and content operators."
     >
       <div className="space-y-6">
         {(notice || error) && (
@@ -343,7 +253,7 @@ const AdminScenarios = () => {
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           {summaryCards.map((card) => (
             <div key={card.label} className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
@@ -369,15 +279,6 @@ const AdminScenarios = () => {
                 >
                   <Plus size={16} />
                   New Scenario
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBulkAction("generate_variations")}
-                  disabled={selectedCount === 0}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                >
-                  <Sparkle size={16} />
-                  Batch Generate
                 </button>
               </div>
             </div>
@@ -635,10 +536,10 @@ const AdminScenarios = () => {
                     </div>
                     <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                        Pre-generation
+                        Mode
                       </p>
                       <p className="mt-2 text-sm font-semibold">
-                        {selectedScenario.is_pre_generated ? `${selectedScenario.pre_gen_count} targets` : "Dynamic only"}
+                        {selectedScenario.mode}
                       </p>
                     </div>
                   </div>
@@ -721,18 +622,6 @@ const AdminScenarios = () => {
           </div>
         </section>
 
-        <VariationPanel
-          scenario={selectedScenario}
-          variations={variations}
-          search={variationSearch}
-          onSearchChange={setVariationSearch}
-          onCreateVariation={handleCreateVariation}
-          onUpdateVariation={handleUpdateVariation}
-          onDeleteVariation={handleDeleteVariation}
-          onGenerateVariations={handleGenerateVariations}
-          generationTask={generationTask}
-          isLoading={isLoadingDetail}
-        />
       </div>
 
       {isScenarioModalOpen && (

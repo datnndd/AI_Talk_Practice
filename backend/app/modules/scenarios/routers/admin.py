@@ -8,24 +8,17 @@ from app.modules.users.models.user import User
 from app.modules.scenarios.schemas import (
     BulkScenarioActionRequest,
     BulkScenarioActionResponse,
-    GenerateVariationsRequest,
-    GenerationTaskRead,
     PromptHistoryRead,
     ScenarioAdminCreate,
     ScenarioAdminRead,
     ScenarioAdminUpdate,
     ScenarioListResponse,
-    ScenarioVariationAdminCreate,
-    ScenarioVariationAdminRead,
-    ScenarioVariationAdminUpdate,
     SuggestSkillsRequest,
     SuggestSkillsResponse,
-    VariationListResponse,
 )
 from app.modules.scenarios.serializers import (
     serialize_admin_prompt_history,
     serialize_admin_scenario,
-    serialize_admin_variation,
 )
 from app.modules.scenarios.services.admin_scenario_service import AdminScenarioService
 
@@ -50,12 +43,6 @@ async def bulk_admin_scenario_action(
     db: AsyncSession = Depends(get_db),
 ):
     task = await AdminScenarioService.bulk_action(db=db, user_id=user.id, body=body)
-    if task is not None:
-        return BulkScenarioActionResponse(
-            success=True,
-            message="Background generation started",
-            task=task,
-        )
     return BulkScenarioActionResponse(success=True, message="Bulk action applied")
 
 
@@ -90,7 +77,6 @@ async def list_admin_scenarios(
                 description=scenario.description,
                 target_skills=scenario.target_skills or [],
             ),
-            include_variations=False,
             include_prompt_history=False,
         )
         for scenario in scenarios
@@ -221,77 +207,3 @@ async def get_prompt_history(
 ):
     scenario = await AdminScenarioService.get_scenario(db, scenario_id)
     return [serialize_admin_prompt_history(item) for item in scenario.prompt_history]
-
-
-@router.post("/scenarios/{scenario_id}/generate-variations", response_model=GenerationTaskRead)
-async def generate_variations_for_scenario(
-    scenario_id: int,
-    body: GenerateVariationsRequest,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    await AdminScenarioService.get_scenario(db, scenario_id)
-    return await AdminScenarioService.start_generation_for_single_scenario(scenario_id=scenario_id, body=body)
-
-
-
-
-@router.get("/scenario-variations", response_model=VariationListResponse)
-async def list_admin_variations(
-    scenario_id: int = Query(..., ge=1),
-    search: str | None = Query(default=None),
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    variations = await AdminScenarioService.list_variations(db, scenario_id=scenario_id, search=search)
-    items = [serialize_admin_variation(item) for item in variations]
-    return VariationListResponse(items=items, total=len(items))
-
-
-@router.post("/scenario-variations", response_model=ScenarioVariationAdminRead, status_code=status.HTTP_201_CREATED)
-async def create_admin_variation(
-    body: ScenarioVariationAdminCreate,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    variation = await AdminScenarioService.create_variation(db, body=body)
-    return serialize_admin_variation(variation)
-
-
-@router.get("/scenario-variations/{variation_id}", response_model=ScenarioVariationAdminRead)
-async def get_admin_variation(
-    variation_id: int,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    variation = await AdminScenarioService.get_variation(db, variation_id)
-    return serialize_admin_variation(variation)
-
-
-@router.put("/scenario-variations/{variation_id}", response_model=ScenarioVariationAdminRead)
-async def update_admin_variation(
-    variation_id: int,
-    body: ScenarioVariationAdminUpdate,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    variation = await AdminScenarioService.update_variation(db, variation_id=variation_id, body=body)
-    return serialize_admin_variation(variation)
-
-
-@router.delete("/scenario-variations/{variation_id}", response_model=ScenarioVariationAdminRead)
-async def delete_admin_variation(
-    variation_id: int,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    variation = await AdminScenarioService.soft_delete_variation(db, variation_id)
-    return serialize_admin_variation(variation)
-
-
-@router.get("/generation-tasks/{task_id}", response_model=GenerationTaskRead)
-async def get_generation_task(
-    task_id: str,
-    _: User = Depends(require_admin_user),
-):
-    return AdminScenarioService.get_task(task_id)

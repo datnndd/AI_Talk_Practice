@@ -3,41 +3,30 @@ from httpx import AsyncClient
 from app.core.security import create_access_token
 
 @pytest.mark.asyncio
-async def test_api_start_session_pregenerated(client, test_user, test_scenario, test_variation):
-    """Test starting a session using a pre-generated variation."""
+async def test_api_start_session_ignores_legacy_variation_payload(client, test_user, test_scenario):
+    """Starting a session no longer resolves or stores scenario variations."""
     token = create_access_token(test_user.id)
     headers = {"Authorization": f"Bearer {token}"}
-    
-    payload = {
-        "scenario_id": test_scenario.id,
-        "prefer_pregenerated": True
-    }
-    response = await client.post("/api/sessions", json=payload, headers=headers)
-    assert response.status_code == 201
-    data = response.json()
-    assert data["scenario_id"] == test_scenario.id
-    assert data["variation_id"] == test_variation.id
-    assert data["status"] == "active"
-    assert "variation_seed" in data["metadata"]
 
-@pytest.mark.asyncio
-async def test_api_start_session_realtime_variation(client, test_user, test_scenario):
-    """Test starting a session that triggers real-time variation creation."""
-    token = create_access_token(test_user.id)
-    headers = {"Authorization": f"Bearer {token}"}
-    
     payload = {
         "scenario_id": test_scenario.id,
+        "variation_id": 9999,
+        "variation_seed": "legacy-seed",
         "variation_parameters": {"topic": "delay"},
+        "prefer_pregenerated": True,
         "create_variation_if_missing": True,
-        "mode": "debate"
+        "mode": "debate",
     }
     response = await client.post("/api/sessions", json=payload, headers=headers)
     assert response.status_code == 201
     data = response.json()
     assert data["scenario_id"] == test_scenario.id
-    assert data["variation_id"] is not None
+    assert data["status"] == "active"
     assert data["mode"] == "debate"
+    assert "variation_id" not in data
+    assert "variation_seed" not in data
+    assert "variation" not in data
+    assert "variation_seed" not in data["metadata"]
 
 @pytest.mark.asyncio
 async def test_api_session_lifecycle(client, test_user, test_session):

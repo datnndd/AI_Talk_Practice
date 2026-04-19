@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.modules.scenarios.schemas import ScenarioRead, ScenarioVariationRead
+from app.modules.scenarios.schemas import ScenarioRead
 
 
 class ORMModel(BaseModel):
@@ -108,11 +108,6 @@ class SessionScoreRead(ORMModel):
 
 class SessionCreate(BaseModel):
     scenario_id: int
-    variation_id: int | None = None
-    variation_seed: str | None = Field(default=None, min_length=8, max_length=64)
-    variation_parameters: dict[str, Any] = Field(default_factory=dict)
-    prefer_pregenerated: bool = True
-    create_variation_if_missing: bool = True
     mode: str | None = Field(
         default=None,
         pattern=r"^(conversation|roleplay|debate|interview|presentation)$",
@@ -135,8 +130,6 @@ class SessionListItem(ORMModel):
     scenario_title: str
     status: str
     mode: str
-    variation_id: int | None = None
-    variation_seed: str | None = None
     duration_seconds: int | None = None
     started_at: datetime
     ended_at: datetime | None = None
@@ -147,7 +140,6 @@ class SessionRead(ORMModel):
     id: int
     user_id: int
     scenario_id: int
-    variation_id: int | None = None
     status: str
     mode: str
     started_at: datetime
@@ -155,9 +147,7 @@ class SessionRead(ORMModel):
     duration_seconds: int | None = None
     target_skills: Any | None = None
     metadata: dict[str, Any] | None = None
-    variation_seed: str | None = None
     scenario: ScenarioRead
-    variation: ScenarioVariationRead | None = None
     messages: list[MessageRead] = Field(default_factory=list)
     score: SessionScoreRead | None = None
     created_at: datetime

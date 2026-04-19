@@ -300,11 +300,6 @@ async def websocket_conversation(websocket: WebSocket):
                                     user_id=user.id,
                                     payload=SessionCreate(
                                         scenario_id=scenario_id,
-                                        variation_id=msg.get("variation_id"),
-                                        variation_seed=msg.get("variation_seed"),
-                                        variation_parameters=msg.get("variation_parameters") or {},
-                                        prefer_pregenerated=msg.get("prefer_pregenerated", True),
-                                        create_variation_if_missing=msg.get("create_variation_if_missing", True),
                                         mode=msg.get("mode"),
                                         metadata=request_metadata,
                                         target_skills=msg.get("target_skills"),
@@ -322,11 +317,7 @@ async def websocket_conversation(websocket: WebSocket):
                     if pending_finalize is not None and not pending_finalize.done():
                         pending_finalize.cancel()
 
-                    system_prompt = (
-                        session.variation.system_prompt_override
-                        if session.variation and session.variation.system_prompt_override
-                        else session.scenario.ai_system_prompt
-                    )
+                    system_prompt = session.scenario.ai_system_prompt
 
                     hybrid_orchestrator: DialogueOrchestrator | None = None
                     orchestrator_llm_clients: ConversationLLMClients | None = None
@@ -334,11 +325,6 @@ async def websocket_conversation(websocket: WebSocket):
                         orchestrator_llm_clients = _create_conversation_llm_clients()
                         scenario_definition = build_scenario_definition(
                             session.scenario,
-                            variation_prompt=(
-                                session.variation.sample_prompt
-                                if session.variation and session.variation.sample_prompt
-                                else None
-                            ),
                             user_level=user.level,
                         )
                         hybrid_orchestrator = DialogueOrchestrator.from_metadata(
@@ -401,8 +387,6 @@ async def websocket_conversation(websocket: WebSocket):
                             "type": "session_started",
                             "session_id": session.id,
                             "scenario_id": session.scenario_id,
-                            "variation_id": session.variation_id,
-                            "variation_seed": session.session_metadata.get("variation_seed"),
                             "mode": session.session_metadata.get("mode"),
                             "language": msg.get("language", settings.asr_language),
                             "voice": msg.get("voice", settings.tts_voice),

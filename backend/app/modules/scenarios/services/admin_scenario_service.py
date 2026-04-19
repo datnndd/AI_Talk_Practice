@@ -1,37 +1,22 @@
 from __future__ import annotations
 
-import asyncio
-import json
 import logging
-import uuid
-from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from itertools import cycle
 from typing import Any
 
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.db.session import AsyncSessionLocal
-from app.modules.scenarios.models.scenario import Scenario, ScenarioVariation
+from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.models.session import Session
 from app.modules.scenarios.repository import ScenarioRepository
 from app.modules.scenarios.schemas.admin_scenario import (
     BulkScenarioActionRequest,
-    GenerateVariationsRequest,
-    GenerationTaskRead,
     PromptQualityAssessment,
     ScenarioAdminCreate,
     ScenarioAdminUpdate,
-    ScenarioVariationAdminCreate,
-    ScenarioVariationAdminUpdate,
 )
-from app.infra.contracts import Message
-from app.infra.factory import create_llm
-from app.modules.scenarios.services.variation_service import VariationService
 
 logger = logging.getLogger(__name__)
 
@@ -54,20 +39,7 @@ CATEGORY_SKILL_HINTS: dict[str, list[str]] = {
 }
 
 
-@dataclass
-class GenerationTaskState:
-    task_id: str
-    status: str = "queued"
-    scenario_ids: list[int] = field(default_factory=list)
-    created_count: int = 0
-    skipped_count: int = 0
-    errors: list[str] = field(default_factory=list)
-    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    finished_at: datetime | None = None
-
-
 class AdminScenarioService:
-    _tasks: dict[str, GenerationTaskState] = {}
 
     @classmethod
     def suggest_target_skills(cls, description: str, category: str | None = None) -> list[str]:
@@ -112,7 +84,7 @@ class AdminScenarioService:
         if any(marker in normalized.lower() for marker in ("stay in character", "tone", "persona")):
             score += 10
         else:
-            suggestions.append("Specify tone or persona constraints so variations stay consistent.")
+            suggestions.append("Specify tone or persona constraints so scenario behavior stays consistent.")
 
         if any(marker in normalized.lower() for marker in ("correct", "feedback", "coach", "encourage")):
             score += 10
@@ -231,8 +203,6 @@ class AdminScenarioService:
             mode=body.mode,
             scenario_metadata=body.metadata,
             is_active=body.is_active,
-            is_pre_generated=body.is_pre_generated,
-            pre_gen_count=body.pre_gen_count,
             created_by=user_id,
         )
         await ScenarioRepository.create_prompt_history(
@@ -331,103 +301,13 @@ class AdminScenarioService:
         return scenario
 
     @classmethod
-    async def list_variations(
-        cls,
-        db: AsyncSession,
-        *,
-        scenario_id: int,
-        search: str | None = None,
-    ) -> list[ScenarioVariation]:
-        await cls.get_scenario(db, scenario_id)
-        return await ScenarioRepository.list_admin_variations(
-            db,
-            scenario_id=scenario_id,
-            search=search,
-            include_inactive=True,
-        )
-
-    @staticmethod
-    async def get_variation(db: AsyncSession, variation_id: int) -> ScenarioVariation:
-        variation = await ScenarioRepository.get_variation_by_id(db, variation_id)
-        if variation is None:
-            raise NotFoundError("Scenario variation not found")
-        return variation
-
-    @classmethod
-    async def create_variation(
-        cls,
-        db: AsyncSession,
-        *,
-        body: ScenarioVariationAdminCreate,
-    ) -> ScenarioVariation:
-        scenario = await cls.get_scenario(db, body.scenario_id)
-        variation_seed = body.variation_seed or VariationService.build_variation_seed(
-            scenario_id=scenario.id,
-            parameters=body.parameters,
-            mode=scenario.mode,
-        )
-        existing = await ScenarioRepository.get_variation_by_seed(
-            db,
-            scenario_id=scenario.id,
-            variation_seed=variation_seed,
-        )
-        if existing is not None:
-            raise BadRequestError("A variation with the same parameters already exists")
-
-        variation = await ScenarioRepository.create_variation(
-            db,
-            scenario_id=scenario.id,
-            variation_seed=variation_seed,
-            variation_name=body.variation_name,
-            parameters=body.parameters,
-            sample_prompt=body.sample_prompt,
-            sample_conversation=body.sample_conversation,
-            system_prompt_override=body.system_prompt_override
-            or VariationService.build_system_prompt_override(
-                scenario,
-                mode=scenario.mode,
-                parameters=body.parameters,
-            ),
-            is_active=body.is_active,
-            is_pregenerated=body.is_pregenerated,
-            is_approved=body.is_approved,
-            generated_by_model=settings.llm_model if body.is_pregenerated else None,
-        )
-        await db.commit()
-        await db.refresh(variation)
-        return variation
-
-    @classmethod
-    async def update_variation(
-        cls,
-        db: AsyncSession,
-        *,
-        variation_id: int,
-        body: ScenarioVariationAdminUpdate,
-    ) -> ScenarioVariation:
-        variation = await cls.get_variation(db, variation_id)
-        update_data = body.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(variation, key, value)
-        await db.commit()
-        await db.refresh(variation)
-        return variation
-
-    @classmethod
-    async def soft_delete_variation(cls, db: AsyncSession, variation_id: int) -> ScenarioVariation:
-        variation = await cls.get_variation(db, variation_id)
-        variation.is_active = False
-        await db.commit()
-        return variation
-
-    @classmethod
     async def bulk_action(
         cls,
         *,
         db: AsyncSession,
         user_id: int,
         body: BulkScenarioActionRequest,
-    ) -> GenerationTaskRead | None:
+    ) -> None:
         scenarios = [
             scenario
             for scenario_id in body.scenario_ids
@@ -436,13 +316,6 @@ class AdminScenarioService:
         ]
         if not scenarios:
             raise NotFoundError("No matching scenarios found")
-
-        if body.action == "generate_variations":
-            return cls.start_generation_task(
-                scenario_ids=[scenario.id for scenario in scenarios],
-                count=body.generation_count or 8,
-                approve_generated=True,
-            )
 
         for scenario in scenarios:
             if body.action == "activate":
@@ -463,253 +336,3 @@ class AdminScenarioService:
                 )
         await db.commit()
         return None
-
-    @classmethod
-    def start_generation_task(
-        cls,
-        *,
-        scenario_ids: list[int],
-        count: int,
-        approve_generated: bool,
-        overwrite_existing: bool = False,
-    ) -> GenerationTaskRead:
-        task_id = str(uuid.uuid4())
-        state = GenerationTaskState(task_id=task_id, scenario_ids=scenario_ids)
-        cls._tasks[task_id] = state
-        asyncio.create_task(
-            cls._run_generation_task(
-                task_id=task_id,
-                scenario_ids=scenario_ids,
-                count=count,
-                approve_generated=approve_generated,
-                overwrite_existing=overwrite_existing,
-            )
-        )
-        return GenerationTaskRead(**asdict(state))
-
-    @classmethod
-    def get_task(cls, task_id: str) -> GenerationTaskRead:
-        state = cls._tasks.get(task_id)
-        if state is None:
-            raise NotFoundError("Generation task not found")
-        return GenerationTaskRead(**asdict(state))
-
-    @classmethod
-    async def start_generation_for_single_scenario(
-        cls,
-        *,
-        scenario_id: int,
-        body: GenerateVariationsRequest,
-    ) -> GenerationTaskRead:
-        return cls.start_generation_task(
-            scenario_ids=[scenario_id],
-            count=body.count,
-            approve_generated=body.approve_generated,
-            overwrite_existing=body.overwrite_existing,
-        )
-
-    @classmethod
-    async def _run_generation_task(
-        cls,
-        *,
-        task_id: str,
-        scenario_ids: list[int],
-        count: int,
-        approve_generated: bool,
-        overwrite_existing: bool,
-    ) -> None:
-        state = cls._tasks[task_id]
-        state.status = "running"
-        llm = None
-
-        try:
-            llm = create_llm(settings)
-            async with AsyncSessionLocal() as db:
-                for scenario_id in scenario_ids:
-                    scenario = await ScenarioRepository.get_admin_scenario_by_id(db, scenario_id, include_deleted=True)
-                    if scenario is None:
-                        state.errors.append(f"Scenario {scenario_id} was not found")
-                        continue
-                    blueprints = await cls._generate_variation_blueprints(scenario, count=count, llm=llm)
-                    created, skipped = await cls._persist_generated_variations(
-                        db=db,
-                        scenario=scenario,
-                        blueprints=blueprints,
-                        approve_generated=approve_generated,
-                        overwrite_existing=overwrite_existing,
-                    )
-                    state.created_count += created
-                    state.skipped_count += skipped
-                    await db.commit()
-            state.status = "completed"
-        except Exception as exc:
-            logger.exception("Variation generation task failed")
-            state.status = "failed"
-            state.errors.append(str(exc))
-        finally:
-            state.finished_at = datetime.now(timezone.utc)
-            if llm is not None:
-                await llm.close()
-
-    @classmethod
-    async def _generate_variation_blueprints(
-        cls,
-        scenario: Scenario,
-        *,
-        count: int,
-        llm: Any,
-    ) -> list[dict[str, Any]]:
-        prompt = cls._build_variation_generation_prompt(scenario, count)
-        raw_output = ""
-        try:
-            async for chunk in llm.chat_stream(
-                messages=[Message(role="user", content=prompt)],
-                system_prompt="Return only valid JSON.",
-            ):
-                raw_output += chunk
-        except Exception:
-            logger.exception("LLM variation generation failed, using heuristic fallback")
-
-        parsed = cls._parse_variation_blueprints(raw_output)
-        if parsed:
-            return parsed[:count]
-        return cls._heuristic_variation_blueprints(scenario, count)
-
-    @staticmethod
-    def _build_variation_generation_prompt(scenario: Scenario, count: int) -> str:
-        return (
-            "Generate scenario variations for a language-learning admin panel.\n"
-            f"Scenario title: {scenario.title}\n"
-            f"Description: {scenario.description}\n"
-            f"Category: {scenario.category}\n"
-            f"Difficulty: {scenario.difficulty}\n"
-            f"Target skills: {json.dumps(scenario.target_skills or [])}\n"
-            f"Base prompt: {scenario.ai_system_prompt}\n"
-            f"Return {count} JSON array items. "
-            "Each item must include variation_name, parameters, sample_prompt, sample_conversation.\n"
-            "sample_conversation must be a list of 2-4 objects with role and content.\n"
-            "Do not include markdown."
-        )
-
-    @staticmethod
-    def _parse_variation_blueprints(raw_output: str) -> list[dict[str, Any]]:
-        if not raw_output:
-            return []
-        start = raw_output.find("[")
-        end = raw_output.rfind("]")
-        if start == -1 or end == -1 or end <= start:
-            return []
-        try:
-            payload = json.loads(raw_output[start : end + 1])
-        except json.JSONDecodeError:
-            return []
-        if not isinstance(payload, list):
-            return []
-        return [item for item in payload if isinstance(item, dict)]
-
-    @classmethod
-    def _heuristic_variation_blueprints(cls, scenario: Scenario, count: int) -> list[dict[str, Any]]:
-        tones = cycle(["formal", "friendly", "urgent", "warm", "assertive"])
-        twists = cycle(
-            [
-                "first-time learner",
-                "time pressure",
-                "unexpected misunderstanding",
-                "follow-up question required",
-                "confidence-building opener",
-            ]
-        )
-        skill_cycle = cycle(scenario.target_skills or ["fluency", "vocabulary"])
-        blueprints: list[dict[str, Any]] = []
-
-        for index in range(count):
-            tone = next(tones)
-            twist = next(twists)
-            focus_skill = next(skill_cycle)
-            parameters = {
-                "tone": tone,
-                "twist": twist,
-                "focus_skill": focus_skill,
-            }
-            blueprints.append(
-                {
-                    "variation_name": f"{scenario.title} Variant {index + 1}",
-                    "parameters": parameters,
-                    "sample_prompt": f"{scenario.title} with a {tone} tone and {twist}.",
-                    "sample_conversation": [
-                        {"role": "assistant", "content": f"Welcome. Let's begin this {tone} scenario."},
-                        {
-                            "role": "user",
-                            "content": f"I want to practise {focus_skill.replace('_', ' ')} in a {scenario.category} setting.",
-                        },
-                        {
-                            "role": "assistant",
-                            "content": f"Great. I will introduce a {twist} while keeping the learner engaged.",
-                        },
-                    ],
-                }
-            )
-        return blueprints
-
-    @classmethod
-    async def _persist_generated_variations(
-        cls,
-        *,
-        db: AsyncSession,
-        scenario: Scenario,
-        blueprints: list[dict[str, Any]],
-        approve_generated: bool,
-        overwrite_existing: bool,
-    ) -> tuple[int, int]:
-        created = 0
-        skipped = 0
-        for blueprint in blueprints:
-            parameters = blueprint.get("parameters") or {}
-            seed = VariationService.build_variation_seed(
-                scenario_id=scenario.id,
-                parameters=parameters,
-                mode=scenario.mode,
-            )
-            existing = await ScenarioRepository.get_variation_by_seed(
-                db,
-                scenario_id=scenario.id,
-                variation_seed=seed,
-            )
-            if existing and not overwrite_existing:
-                skipped += 1
-                continue
-
-            payload = {
-                "scenario_id": scenario.id,
-                "variation_seed": seed,
-                "variation_name": blueprint.get("variation_name") or f"{scenario.title} Variant",
-                "parameters": parameters,
-                "sample_prompt": blueprint.get("sample_prompt")
-                or VariationService.build_sample_prompt(
-                    scenario=scenario,
-                    mode=scenario.mode,
-                    parameters=parameters,
-                ),
-                "sample_conversation": blueprint.get("sample_conversation") or [],
-                "system_prompt_override": VariationService.build_system_prompt_override(
-                    scenario,
-                    mode=scenario.mode,
-                    parameters=parameters,
-                ),
-                "is_active": True,
-                "is_pregenerated": True,
-                "is_approved": approve_generated,
-                "generated_by_model": settings.llm_model,
-            }
-
-            try:
-                if existing and overwrite_existing:
-                    for key, value in payload.items():
-                        if key not in {"scenario_id", "variation_seed"}:
-                            setattr(existing, key, value)
-                else:
-                    await ScenarioRepository.create_variation(db, **payload)
-                created += 1
-            except IntegrityError:
-                skipped += 1
-        return created, skipped

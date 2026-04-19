@@ -96,11 +96,10 @@ async def test_bulk_soft_delete_scenarios(admin_client, multiple_scenarios, db_s
         assert scenario.is_active is False
 
 @pytest.mark.asyncio
-async def test_bulk_generate_variations_task_lifecycle(admin_client, multiple_scenarios):
-    """Test bulk generating variations and tracking the task."""
+async def test_bulk_generate_variations_action_is_removed(admin_client, multiple_scenarios):
+    """Bulk scenario actions no longer expose variation generation."""
     scenario_ids = [s.id for s in multiple_scenarios]
-    
-    # Trigger generation
+
     response = await admin_client.post(
         "/api/admin/scenarios/bulk-actions",
         json={
@@ -109,20 +108,8 @@ async def test_bulk_generate_variations_task_lifecycle(admin_client, multiple_sc
             "generation_count": 2
         }
     )
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert data["message"] == "Background generation started"
-    assert "task" in data
-    task_id = data["task"]["task_id"]
-    assert task_id is not None
-    
-    # Check task status
-    response = await admin_client.get(f"/api/admin/generation-tasks/{task_id}")
-    assert response.status_code == 200
-    task_data = response.json()
-    assert task_data["task_id"] == task_id
-    assert task_data["status"] in ["queued", "running", "completed", "failed"]
+
+    assert response.status_code == 422
 
 @pytest.mark.asyncio
 async def test_bulk_action_unauthorized(test_client, multiple_scenarios):

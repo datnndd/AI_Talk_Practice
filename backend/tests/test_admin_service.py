@@ -41,26 +41,14 @@ def test_assess_prompt_quality_low_quality():
     assert len(assessment.warnings) > 0
     assert any("too short" in w.lower() for w in assessment.warnings)
 
-def test_heuristic_variation_blueprints():
-    """Test _heuristic_variation_blueprints generates expected structure."""
-    from app.modules.scenarios.models.scenario import Scenario
-    
-    scenario = Scenario(
-        id=1,
-        title="Job Interview",
-        description="A formal job interview simulation.",
+def test_suggest_target_skills_uses_category_and_keywords():
+    """Target skill suggestions remain available without variation generation."""
+
+    skills = AdminScenarioService.suggest_target_skills(
+        "The learner needs to present clearly and respond with correct grammar.",
         category="interview",
-        target_skills=["presentation", "grammar"]
     )
-    
-    count = 3
-    blueprints = AdminScenarioService._heuristic_variation_blueprints(scenario, count=count)
-    
-    assert len(blueprints) == count
-    for bp in blueprints:
-        assert "variation_name" in bp
-        assert "parameters" in bp
-        assert "sample_prompt" in bp
-        assert "sample_conversation" in bp
-        assert len(bp["sample_conversation"]) >= 2
-        assert bp["parameters"]["tone"] in ["formal", "friendly", "urgent", "warm", "assertive"]
+
+    assert "presentation" in skills
+    assert "grammar" in skills
+    assert "fluency" in skills
