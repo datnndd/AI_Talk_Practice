@@ -21,7 +21,6 @@ const DEFAULT_VOICE = "Cherry";
 const STOP_CAPTURE_FLUSH_MS = 250;
 const RECONNECT_DELAYS_MS = [500, 1000, 2000];
 const NO_INPUT_NOTICE = "Mải mê nghe giọng bạn làm mình đãng trí. Bạn có thể nói lại một lần nữa được không?";
-const TIME_LIMIT_NOTICE = "Đã hết thời gian luyện tập. Mình sẽ chuyển bạn sang phần đánh giá.";
 
 const wait = (milliseconds) => new Promise((resolve) => {
   window.setTimeout(resolve, milliseconds);
@@ -60,6 +59,8 @@ const PracticeSession = () => {
   const [reconnectRequest, setReconnectRequest] = useState(0);
   const [lessonHint, setLessonHint] = useState(null);
   const [isHintLoading, setIsHintLoading] = useState(false);
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const [analysisResultUrl, setAnalysisResultUrl] = useState("");
 
   const socketRef = useRef(null);
   const intentionalCloseSocketRef = useRef(null);
@@ -181,15 +182,6 @@ const PracticeSession = () => {
       socketRef.current = null;
     }
   }, []);
-
-  const navigateToResult = useCallback((nextSessionId = sessionIdRef.current) => {
-    if (!nextSessionId || isNavigatingToResultRef.current) {
-      return;
-    }
-    isNavigatingToResultRef.current = true;
-    closeSocket(true);
-    navigate(`/sessions/${nextSessionId}/result`);
-  }, [closeSocket, navigate]);
 
   const finalizeAfterConnectionFailure = useCallback(async () => {
     const activeSessionId = sessionIdRef.current;
@@ -395,6 +387,8 @@ const PracticeSession = () => {
         assistantDraftRef.current = "";
         sessionIdRef.current = payload.session_id;
         setSessionId(payload.session_id);
+        setSessionEnded(false);
+        setAnalysisResultUrl("");
         if (payload.max_duration_seconds) {
           setTimeLimitSeconds(payload.max_duration_seconds);
         }
@@ -485,28 +479,22 @@ const PracticeSession = () => {
         recordingStateRef.current = "idle";
         setRecordingState("idle");
         setPartialTranscript("");
+        setSessionEnded(true);
         if (payload.message) {
           setMessages((current) => appendUniqueMessage(
             current,
             buildMessage("notice", payload.message),
           ));
         }
-        if (payload.reason === "time_limit_reached" && payload.session_id) {
-          navigateToResult(payload.session_id);
-        }
         break;
       case "session_finalized":
-        if (payload.reason === "time_limit_reached") {
-          setMessages((current) => appendUniqueMessage(
-            current,
-            buildMessage("notice", TIME_LIMIT_NOTICE),
-          ));
-        }
-        if (!isNavigatingToResultRef.current) {
-          isNavigatingToResultRef.current = true;
-          closeSocket(true);
-          navigate(payload.result_url || `/sessions/${payload.session_id}/result`);
-        }
+        setSessionEnded(true);
+        setAnalysisResultUrl(payload.result_url || `/sessions/${payload.session_id}/result`);
+        closeSocket(true);
+        connectionStateRef.current = "closed";
+        recordingStateRef.current = "idle";
+        setConnectionState("closed");
+        setRecordingState("idle");
         break;
       case "assistant_interrupted":
         stopAssistantPlayback();
@@ -542,7 +530,7 @@ const PracticeSession = () => {
       default:
         break;
     }
-  }, [closeSocket, navigate, navigateToResult, queuePlaybackChunk, startRecordingTurn, stopAssistantPlayback]);
+  }, [closeSocket, queuePlaybackChunk, startRecordingTurn, stopAssistantPlayback]);
 
   const connectSocket = useCallback((options = true) => {
     const resetConversation = typeof options === "boolean" ? options : options.resetConversation !== false;
@@ -566,6 +554,8 @@ const PracticeSession = () => {
       setAssistantDraft("");
       setPartialTranscript("");
       setSessionId(null);
+      setSessionEnded(false);
+      setAnalysisResultUrl("");
       sessionIdRef.current = null;
       setDurationSeconds(0);
       setLessonHint(null);
@@ -744,6 +734,10 @@ const PracticeSession = () => {
   }, [sessionId]);
 
   const handleToggleRecording = async () => {
+    if (sessionEnded) {
+      return;
+    }
+
     if (connectionState !== "ready" || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
       autoStartRecordingRef.current = true;
       if (connectionState !== "connecting" && connectionState !== "reconnecting") {
@@ -783,6 +777,9 @@ const PracticeSession = () => {
   };
 
   const handleReconnect = () => {
+    if (sessionEnded) {
+      return;
+    }
     setReconnectRequest((current) => current + 1);
   };
 
@@ -793,7 +790,7 @@ const PracticeSession = () => {
   };
 
   const handleRequestHint = async () => {
-    if (!sessionId || isHintLoading) {
+    if (!sessionId || isHintLoading || sessionEnded) {
       return;
     }
 
@@ -848,6 +845,7 @@ const PracticeSession = () => {
   }
 
   const isMicDisabled =
+    sessionEnded ||
     connectionState === "connecting" ||
     connectionState === "reconnecting" ||
     recordingState === "processing" ||
@@ -888,6 +886,7 @@ const PracticeSession = () => {
               partialTranscript={partialTranscript}
               recordingState={recordingState}
               connectionState={connectionState}
+              sessionEnded={sessionEnded}
               onToggleRecording={handleToggleRecording}
               onReconnect={handleReconnect}
               disabled={isMicDisabled}
@@ -896,6 +895,8 @@ const PracticeSession = () => {
               isHintLoading={isHintLoading}
               onRequestHint={handleRequestHint}
               userNativeLanguage={user?.native_language || "vi"}
+              analysisResultUrl={analysisResultUrl}
+              onViewAnalysis={() => navigate(analysisResultUrl)}
             />
           </div>
         </main>

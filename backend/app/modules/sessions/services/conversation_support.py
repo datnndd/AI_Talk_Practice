@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Literal
 
 from pydantic import BaseModel, Field
 
@@ -11,6 +11,7 @@ from app.infra.contracts import LLMBase, Message
 from app.modules.sessions.schemas.lesson import LessonHintRead
 from app.modules.sessions.schemas.session import RealtimeCorrectionItem, RealtimeCorrectionResponse
 from app.modules.sessions.services.conversation_prompts import (
+    build_conversation_end_check_prompt,
     build_dialogue_system_prompt,
     build_full_assessment_prompt,
     build_hint_prompt,
@@ -62,6 +63,11 @@ class PersonalInfoPayload(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class ConversationEndDecisionPayload(BaseModel):
+    should_end: Literal["yes", "no"] = "no"
+    reason: str = ""
+
+
 def session_rolling_summary(session) -> str:
     metadata = session.session_metadata or {}
     return str(metadata.get("rolling_summary") or "").strip()
@@ -69,6 +75,10 @@ def session_rolling_summary(session) -> str:
 
 def session_user_turn_count(session) -> int:
     return sum(1 for message in session.messages if message.role == "user" and message.content.strip())
+
+
+def session_total_turn_count(session) -> int:
+    return sum(1 for message in session.messages if (message.content or "").strip())
 
 
 def session_recent_turns_text(session, *, limit: int = 12) -> str:
@@ -143,8 +153,13 @@ class ConversationReplyService:
         *,
         session,
         user_preferences: dict[str, Any] | None = None,
+        extra_instruction: str | None = None,
     ) -> AsyncIterator[str]:
-        system_prompt = self._system_prompt(session=session, user_preferences=user_preferences)
+        system_prompt = self._system_prompt(
+            session=session,
+            user_preferences=user_preferences,
+            extra_instruction=extra_instruction,
+        )
         messages = session_recent_llm_messages(session, limit=self.message_limit)
         async for chunk in self.llm.chat_stream(messages, system_prompt=system_prompt):
             yield chunk
@@ -154,6 +169,7 @@ class ConversationReplyService:
         *,
         session,
         user_preferences: dict[str, Any] | None = None,
+        extra_instruction: str | None = None,
     ) -> str:
         return build_dialogue_system_prompt(
             scenario=session.scenario,
@@ -161,7 +177,55 @@ class ConversationReplyService:
             recent_turns=session_recent_turns_text(session, limit=self.message_limit * 2),
             target_skills=list(session.target_skills or session.scenario.target_skills or []),
             user_preferences=user_preferences,
+            extra_instruction=extra_instruction,
         )
+
+
+class ConversationEndingService:
+    def __init__(self, *, llm: LLMBase, max_tokens: int = 250, min_turns: int = 6):
+        self.llm = llm
+        self.max_tokens = max_tokens
+        self.min_turns = max(1, int(min_turns))
+        self._signal_patterns = [
+            re.compile(pattern, flags=re.IGNORECASE)
+            for pattern in (
+                r"\bgoodbye\b",
+                r"\bbye(?:\s+bye)?\b",
+                r"\bsee you (?:later|soon|next time)\b",
+                r"\btalk to you later\b",
+                r"\bcatch you later\b",
+                r"\bsee ya\b",
+                r"\bfarewell\b",
+                r"\bhave a (?:nice|good) day\b",
+                r"\bthat's all\b",
+                r"\bnothing else\b",
+                r"\bno,? thank you\b",
+                r"\bthanks?,?\s+bye\b",
+                r"\bthank you,?\s+bye\b",
+            )
+        ]
+
+    def should_consider(self, *, session, user_text: str) -> bool:
+        if session_total_turn_count(session) < self.min_turns:
+            return False
+        normalized_text = (user_text or "").strip()
+        if not normalized_text:
+            return False
+        return any(pattern.search(normalized_text) for pattern in self._signal_patterns)
+
+    async def should_end(self, *, session) -> bool:
+        recent_turns = session_recent_turns_text(session, limit=6)
+        payload = await _collect_json(
+            self.llm,
+            model=ConversationEndDecisionPayload,
+            system_prompt=build_conversation_end_check_prompt(
+                scenario=session.scenario,
+                recent_turns=recent_turns,
+            ),
+            user_text=recent_turns or session.scenario.title,
+            max_tokens=self.max_tokens,
+        )
+        return payload.should_end == "yes"
 
 
 class ConversationHintService:

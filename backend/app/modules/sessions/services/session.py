@@ -324,20 +324,40 @@ class SessionService:
                 service.evaluate_and_store(db, session_id=session.id),
                 timeout=max(1.0, settings.conversation_final_evaluation_timeout_seconds),
             )
+        except asyncio.TimeoutError:
+            logger.warning("Best-effort final evaluation timed out for session id=%s", session.id)
+            await SessionService._mark_final_evaluation_failure(
+                db,
+                session=session,
+                reason="final_evaluation_timeout",
+            )
         except Exception:
             logger.exception("Best-effort final evaluation failed for session id=%s", session.id)
-            metadata = dict(session.session_metadata or {})
-            final_evaluation = dict(metadata.get("final_evaluation") or {})
-            final_evaluation.update(
-                {
-                    "evaluation_status": "failed",
-                    "reason": "timeout_or_service_error",
-                    "updated_at": _utcnow().isoformat(),
-                }
+            await SessionService._mark_final_evaluation_failure(
+                db,
+                session=session,
+                reason="final_evaluation_service_error",
             )
-            metadata["final_evaluation"] = final_evaluation
-            session.session_metadata = metadata
-            await db.flush()
         finally:
             if llm is not None:
                 await llm.close()
+
+    @staticmethod
+    async def _mark_final_evaluation_failure(
+        db: AsyncSession,
+        *,
+        session: Session,
+        reason: str,
+    ) -> None:
+        metadata = dict(session.session_metadata or {})
+        final_evaluation = dict(metadata.get("final_evaluation") or {})
+        final_evaluation.update(
+            {
+                "evaluation_status": "failed",
+                "reason": reason,
+                "updated_at": _utcnow().isoformat(),
+            }
+        )
+        metadata["final_evaluation"] = final_evaluation
+        session.session_metadata = metadata
+        await db.flush()

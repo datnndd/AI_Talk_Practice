@@ -21,12 +21,14 @@ const STATUS_COPY = {
   interrupting: "Stopping the current reply.",
   connecting: "Connecting your live conversation session.",
   reconnecting: "Reconnecting your live conversation session.",
+  ended: "This conversation has ended. You can review the analysis when ready.",
 };
 
 const TypewriterInput = ({
   partialTranscript,
   recordingState,
   connectionState,
+  sessionEnded = false,
   onToggleRecording,
   onReconnect,
   disabled,
@@ -35,6 +37,8 @@ const TypewriterInput = ({
   isHintLoading = false,
   onRequestHint,
   userNativeLanguage = "vi",
+  analysisResultUrl = "",
+  onViewAnalysis,
 }) => {
   const [translatedHint, setTranslatedHint] = useState("");
   const [isTranslatingHint, setIsTranslatingHint] = useState(false);
@@ -43,9 +47,11 @@ const TypewriterInput = ({
   const isRecording = recordingState === "recording";
   const isAssistantSpeaking = recordingState === "assistant";
   const isInterrupting = recordingState === "interrupting";
-  const transcript = partialTranscript || STATUS_COPY[recordingState] || STATUS_COPY.idle;
+  const transcript = partialTranscript || (sessionEnded ? STATUS_COPY.ended : STATUS_COPY[recordingState] || STATUS_COPY.idle);
   const buttonLabel =
-    connectionState === "ready"
+    sessionEnded
+      ? "Conversation Ended"
+      : connectionState === "ready"
       ? isRecording
         ? "Stop Turn"
         : isAssistantSpeaking
@@ -72,6 +78,7 @@ const TypewriterInput = ({
         : "bg-primary shadow-primary/30";
   const canRequestHint =
     Boolean(onRequestHint) &&
+    !sessionEnded &&
     recordingState !== "recording" &&
     recordingState !== "processing" &&
     recordingState !== "assistant";
@@ -226,9 +233,20 @@ const TypewriterInput = ({
             </button>
           ) : null}
 
+          {sessionEnded ? (
+            <button
+              onClick={onViewAnalysis}
+              disabled={!analysisResultUrl}
+              className="flex min-w-40 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Sparkle weight="fill" size={18} />
+              <span>{analysisResultUrl ? "View Analysis" : "Preparing Analysis..."}</span>
+            </button>
+          ) : null}
+
           <button
             onClick={onReconnect}
-            disabled={connectionState === "connecting" || connectionState === "reconnecting"}
+            disabled={sessionEnded || connectionState === "connecting" || connectionState === "reconnecting"}
             className="flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
             title="Reconnect session"
           >

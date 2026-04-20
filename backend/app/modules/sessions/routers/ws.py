@@ -19,7 +19,11 @@ from app.infra.factory import ConversationLLMClients, create_conversation_llm_cl
 from app.modules.sessions.schemas.session import MessageCreate, RealtimeCorrectionRequest, SessionCreate
 from app.modules.auth.services.auth_service import AuthService
 from app.modules.sessions.services.conversation import ConversationSession
-from app.modules.sessions.services.conversation_support import ConversationReplyService, ConversationSummaryService
+from app.modules.sessions.services.conversation_support import (
+    ConversationEndingService,
+    ConversationReplyService,
+    ConversationSummaryService,
+)
 from app.modules.sessions.services.session import SessionService
 
 logger = logging.getLogger(__name__)
@@ -31,6 +35,8 @@ _DEFAULT_CREATE_LLM = create_llm
 
 NO_INPUT_MESSAGE = "Mải mê nghe giọng bạn làm mình đãng trí. Bạn có thể nói lại một lần nữa được không?"
 TIME_LIMIT_MESSAGE = "Đã hết thời gian luyện tập. Mình sẽ chuyển bạn sang phần đánh giá."
+NATURAL_CLOSE_MESSAGE = "Cuộc hội thoại đã khép lại. Bạn có thể xem phần phân tích khi sẵn sàng."
+NATURAL_CLOSE_INSTRUCTION = "Trả lời lịch sự, khép lại cuộc trò chuyện một cách tự nhiên"
 
 
 def _result_url(session_id: int) -> str:
@@ -72,6 +78,8 @@ async def websocket_conversation(websocket: WebSocket):
     runtime_llm_clients: ConversationLLMClients | None = None
     reply_service: ConversationReplyService | None = None
     summary_service: ConversationSummaryService | None = None
+    ending_service: ConversationEndingService | None = None
+    pending_natural_close = False
 
     async def send_json_safe(data: dict):
         try:
@@ -111,7 +119,7 @@ async def websocket_conversation(websocket: WebSocket):
         )
 
     async def persist_message(role: str, content: str):
-        nonlocal finalized_user_messages
+        nonlocal finalized_user_messages, pending_natural_close
         if not session_id or not content.strip():
             return None
         try:
@@ -138,6 +146,12 @@ async def websocket_conversation(websocket: WebSocket):
                             metadata["conversation_engine"] = "realtime_v1"
                             session_for_summary.session_metadata = metadata
                             await db_write.commit()
+                        if (
+                            ending_service
+                            and not pending_natural_close
+                            and ending_service.should_consider(session=session_for_summary, user_text=message.content)
+                        ):
+                            pending_natural_close = await ending_service.should_end(session=session_for_summary)
                         asyncio.create_task(_emit_realtime_correction(message.id, message.content))
                     return {"message_id": message.id, "order_index": message.order_index}
         except Exception:
@@ -169,7 +183,7 @@ async def websocket_conversation(websocket: WebSocket):
 
     active_user_id: int | None = None
 
-    async def finalize_session(reason: str) -> None:
+    async def finalize_session(reason: str, *, metadata: dict | None = None) -> None:
         nonlocal finalized_by_server
         if session_id is None:
             return
@@ -181,7 +195,7 @@ async def websocket_conversation(websocket: WebSocket):
                     db_final,
                     session_id=session_id,
                     finalized_user_messages=finalized_user_messages,
-                    metadata={"end_reason": reason},
+                    metadata={"end_reason": reason, **(metadata or {})},
                 )
         schedule_final_evaluation(session_id)
 
@@ -226,6 +240,26 @@ async def websocket_conversation(websocket: WebSocket):
                 logger.exception("Error running final evaluation for websocket session id=%s", finalized_session_id)
 
         asyncio.create_task(run())
+
+    async def on_assistant_message_persist(text: str) -> None:
+        nonlocal pending_natural_close
+        await persist_message("assistant", text)
+        if not pending_natural_close or finalized_by_server:
+            return
+        pending_natural_close = False
+        await send_json_safe(
+            {
+                "type": "conversation_end",
+                "session_id": session_id,
+                "reason": "natural_close",
+                "message": NATURAL_CLOSE_MESSAGE,
+            }
+        )
+        await finalize_session(
+            "natural_close",
+            metadata={"conversation_closed_naturally": True},
+        )
+        await websocket.close()
 
     async def schedule_resume_finalize(user_message_count: int) -> None:
         if session_id is None:
@@ -355,6 +389,11 @@ async def websocket_conversation(websocket: WebSocket):
                         turn_interval=settings.conversation_summary_turn_interval,
                         summary_max_chars=settings.conversation_summary_max_chars,
                     )
+                    ending_service = ConversationEndingService(
+                        llm=runtime_llm_clients.analysis,
+                        max_tokens=settings.analysis_llm_max_tokens or 250,
+                        min_turns=6,
+                    )
 
                     async def generate_reply_stream(_: str):
                         async with AsyncSessionLocal() as db_reply:
@@ -366,6 +405,7 @@ async def websocket_conversation(websocket: WebSocket):
                         async for chunk in reply_service.stream_reply(
                             session=session_for_reply,
                             user_preferences=dict(user.preferences or {}),
+                            extra_instruction=NATURAL_CLOSE_INSTRUCTION if pending_natural_close else None,
                         ):
                             yield chunk
 
@@ -379,7 +419,7 @@ async def websocket_conversation(websocket: WebSocket):
                         voice=msg.get("voice", settings.tts_voice),
                         on_no_input=on_no_input,
                         on_user_message=lambda text: persist_message("user", text),
-                        on_assistant_message=lambda text: persist_message("assistant", text),
+                        on_assistant_message=on_assistant_message_persist,
                         on_generate_reply_stream=generate_reply_stream,
                     )
                     max_duration_seconds = session.scenario.estimated_duration

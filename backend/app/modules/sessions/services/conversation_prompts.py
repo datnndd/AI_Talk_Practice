@@ -11,6 +11,7 @@ def build_dialogue_system_prompt(
     recent_turns: str,
     target_skills: list[str] | None = None,
     user_preferences: dict[str, Any] | None = None,
+    extra_instruction: str | None = None,
 ) -> str:
     target_skill_text = ", ".join(item.strip() for item in (target_skills or []) if item and item.strip())
     preference_text = json.dumps(user_preferences or {}, ensure_ascii=False)[:1200] or "{}"
@@ -42,6 +43,8 @@ def build_dialogue_system_prompt(
             "- Avoid markdown, bullet points, labels, or stage directions.",
         ]
     )
+    if extra_instruction and extra_instruction.strip():
+        parts.append(f"- {extra_instruction.strip()}")
     return "\n".join(parts)
 
 
@@ -180,5 +183,26 @@ def build_personal_info_extraction_prompt(
             '  "preferences": {"favorite_topics":["..."], "communication_style":"..."},',
             '  "notes": ["short durable observations"]',
             "}",
+        ]
+    )
+
+
+def build_conversation_end_check_prompt(
+    *,
+    scenario: Any,
+    recent_turns: str,
+) -> str:
+    return "\n".join(
+        [
+            "Decide whether an English speaking role-play should end now.",
+            "Return only one JSON object. Do not include markdown.",
+            f"Scenario: {scenario.title}",
+            f"Situation details: {scenario.description}",
+            f"AI role: {getattr(scenario, 'ai_role', '') or 'Conversation partner'}",
+            f"Learner role: {getattr(scenario, 'user_role', '') or 'English learner'}",
+            f"Recent 6 turns:\n{recent_turns or 'None'}",
+            "Answer yes only if the learner is clearly trying to close the conversation and the scene can end naturally now.",
+            "Answer no if the learner is not closing the conversation yet, is only being polite mid-conversation, or if an important next step is still unresolved.",
+            'JSON schema: {"should_end":"yes|no","reason":"short explanation"}',
         ]
     )
