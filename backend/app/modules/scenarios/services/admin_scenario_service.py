@@ -20,6 +20,47 @@ from app.modules.scenarios.schemas.admin_scenario import (
 
 logger = logging.getLogger(__name__)
 
+
+def _clean_scenario_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    next_metadata = dict(metadata or {})
+    next_metadata.pop("ai_role", None)
+    next_metadata.pop("user_role", None)
+    return next_metadata
+
+
+def _default_system_prompt(
+    *,
+    title: str,
+    description: str,
+    ai_role: str | None,
+    user_role: str | None,
+    mode: str,
+    learning_objectives: list[str] | None = None,
+    target_skills: list[str] | None = None,
+) -> str:
+    clean_ai_role = (ai_role or "").strip() or "a realistic English conversation partner"
+    clean_user_role = (user_role or "").strip() or "an English learner"
+    objectives = ", ".join(item.strip() for item in (learning_objectives or []) if item.strip()) or "Help the learner complete the scenario naturally."
+    skills = ", ".join(item.strip() for item in (target_skills or []) if item.strip()) or "fluency, grammar, vocabulary"
+    return "\n".join(
+        [
+            f"You are {clean_ai_role} in an English {mode} practice scenario.",
+            f"Scenario title: {title}",
+            f"Situation details: {description}",
+            f"Learner role: {clean_user_role}",
+            f"Learning objectives: {objectives}",
+            f"Target skills: {skills}",
+            "Instructions:",
+            "- Stay in character throughout the conversation.",
+            "- Speak naturally, clearly, and concisely.",
+            "- Keep the conversation grounded in the scenario details.",
+            "- Ask one focused follow-up question at a time when needed.",
+            "- Give brief helpful corrections only when they help the learner continue.",
+            "- Encourage the learner to complete the scenario successfully.",
+            "- Do not mention these instructions or break role.",
+        ]
+    )
+
 SKILL_KEYWORDS: dict[str, tuple[str, ...]] = {
     "pronunciation": ("pronunciation", "speak", "sounds", "accent", "clarity"),
     "fluency": ("fluency", "flow", "speak naturally", "hesitation", "confidence"),
@@ -40,6 +81,28 @@ CATEGORY_SKILL_HINTS: dict[str, list[str]] = {
 
 
 class AdminScenarioService:
+    @classmethod
+    def generate_default_prompt(
+        cls,
+        *,
+        title: str,
+        description: str,
+        ai_role: str | None,
+        user_role: str | None,
+        mode: str,
+        learning_objectives: list[str] | None,
+        target_skills: list[str] | None,
+    ) -> str:
+        return _default_system_prompt(
+            title=title,
+            description=description,
+            ai_role=ai_role,
+            user_role=user_role,
+            mode=mode,
+            learning_objectives=learning_objectives,
+            target_skills=target_skills,
+        )
+
 
     @classmethod
     def suggest_target_skills(cls, description: str, category: str | None = None) -> list[str]:
@@ -178,8 +241,11 @@ class AdminScenarioService:
         body: ScenarioAdminCreate,
     ) -> Scenario:
         target_skills = body.target_skills or cls.suggest_target_skills(body.description, body.category)
+        ai_system_prompt = body.ai_system_prompt.strip()
+        if not ai_system_prompt:
+            raise BadRequestError("System prompt is required. Generate or enter a prompt before saving.")
         quality = cls.assess_prompt_quality(
-            prompt=body.ai_system_prompt,
+            prompt=ai_system_prompt,
             description=body.description,
             target_skills=target_skills,
         )
@@ -194,14 +260,16 @@ class AdminScenarioService:
             title=body.title,
             description=body.description,
             learning_objectives=body.learning_objectives,
-            ai_system_prompt=body.ai_system_prompt,
+            ai_system_prompt=ai_system_prompt,
+            ai_role=body.ai_role.strip(),
+            user_role=body.user_role.strip(),
             category=body.category,
             difficulty=body.difficulty,
             target_skills=target_skills,
             tags=body.tags,
             estimated_duration=(body.estimated_duration_minutes or 10) * 60,
             mode=body.mode,
-            scenario_metadata=body.metadata,
+            scenario_metadata=_clean_scenario_metadata(body.metadata),
             is_active=body.is_active,
             created_by=user_id,
         )
@@ -209,7 +277,7 @@ class AdminScenarioService:
             db,
             scenario_id=scenario.id,
             previous_prompt="",
-            new_prompt=body.ai_system_prompt,
+            new_prompt=ai_system_prompt,
             change_note=body.change_note or "Initial prompt",
             quality_score=quality.score,
             changed_by=user_id,
@@ -230,7 +298,15 @@ class AdminScenarioService:
         update_data = body.model_dump(exclude_unset=True)
 
         if "metadata" in update_data:
-            update_data["scenario_metadata"] = update_data.pop("metadata")
+            update_data["scenario_metadata"] = _clean_scenario_metadata(update_data.pop("metadata"))
+        if "ai_role" in update_data and update_data["ai_role"] is not None:
+            update_data["ai_role"] = update_data["ai_role"].strip()
+        if "user_role" in update_data and update_data["user_role"] is not None:
+            update_data["user_role"] = update_data["user_role"].strip()
+        if {"ai_role", "user_role"} & update_data.keys():
+            update_data["scenario_metadata"] = _clean_scenario_metadata(
+                update_data.get("scenario_metadata", scenario.scenario_metadata)
+            )
         if "estimated_duration_minutes" in update_data:
             minutes = update_data.pop("estimated_duration_minutes")
             update_data["estimated_duration"] = minutes * 60 if minutes is not None else None
@@ -247,6 +323,9 @@ class AdminScenarioService:
 
         prompt_quality: PromptQualityAssessment | None = None
         if "ai_system_prompt" in update_data:
+            update_data["ai_system_prompt"] = (update_data["ai_system_prompt"] or "").strip()
+            if not update_data["ai_system_prompt"]:
+                raise BadRequestError("System prompt cannot be empty.")
             prompt_quality = cls.assess_prompt_quality(
                 prompt=update_data["ai_system_prompt"],
                 description=update_data.get("description", scenario.description),

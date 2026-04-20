@@ -20,7 +20,6 @@ from app.db.base_class import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from app.modules.sessions.models.correction import Correction
-    from app.modules.sessions.models.message_score import MessageScore
     from app.modules.sessions.models.session import Session
 
 
@@ -32,13 +31,12 @@ class Message(Base, TimestampMixin):
     - `role`: "user" (learner) or "assistant" (AI partner).
     - `content`: transcript text (ASR result for user, LLM output for assistant).
     - `audio_url`: path/URL to stored audio file (S3, GCS, etc.).
-    - `audio_duration_ms`: length of the audio clip — used for fluency scoring.
     - `asr_metadata` JSONB: raw ASR provider response, word timings, confidence
-      scores, etc.  Keeping raw data allows re-scoring without re-transcribing.
+      values, etc.
     - `order_index` + UniqueConstraint(session_id, order_index): enforces message
       ordering and prevents duplicate positions.
-    - `corrections` and `score` loaded lazily — always use selectinload() in
-      batch queries to prevent N+1.
+    - `corrections` loaded lazily — always use selectinload() in batch queries
+      to prevent N+1.
     """
 
     __tablename__ = "messages"
@@ -61,7 +59,7 @@ class Message(Base, TimestampMixin):
     audio_duration_ms: Mapped[Optional[int]] = mapped_column(Integer)  # clip length
 
     # ── ASR raw data ──────────────────────────────────────────────────────────
-    # {"provider": "azure", "confidence": 0.97, "words": [{"w": "hello", "t": 0.1}]}
+    # {"provider": "dashscope", "confidence": 0.97, "words": [{"w": "hello", "t": 0.1}]}
     asr_metadata: Mapped[Optional[Any]] = mapped_column(JSONB)
 
     # ── Relationships ─────────────────────────────────────────────────────────
@@ -73,15 +71,6 @@ class Message(Base, TimestampMixin):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    score: Mapped[Optional["MessageScore"]] = relationship(
-        "MessageScore",
-        back_populates="message",
-        uselist=False,
-        lazy="select",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-
     # ── Indexes & constraints ─────────────────────────────────────────────────
     __table_args__ = (
         # Core access pattern: fetch all messages for a session, ordered

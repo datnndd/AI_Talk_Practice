@@ -17,20 +17,10 @@ export const practiceApi = {
     const { data } = await httpClient.post(`/sessions/${sessionId}/end`, payload);
     return data;
   },
-  generateLesson: async ({ sessionId, scenarioId, level, regenerate = false }) => {
-    const { data } = await httpClient.post("/lessons/generate", {
-      session_id: sessionId,
-      scenario_id: scenarioId,
-      level,
-      regenerate,
-    });
-    return data;
-  },
-  getLessonHint: async ({ sessionId, lessonId, objectiveId }) => {
-    const { data } = await httpClient.post("/lessons/hint", {
-      session_id: sessionId,
-      lesson_id: lessonId,
-      objective_id: objectiveId,
+  getLessonHint: async ({ sessionId, text, messageId }) => {
+    const { data } = await httpClient.post(`/sessions/${sessionId}/hint`, {
+      ...(messageId ? { message_id: messageId } : {}),
+      ...(text ? { text } : {}),
     });
     return data;
   },

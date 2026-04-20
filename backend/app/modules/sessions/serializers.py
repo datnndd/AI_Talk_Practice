@@ -3,13 +3,11 @@ from __future__ import annotations
 from app.modules.scenarios.serializers import serialize_scenario
 from app.modules.sessions.models.correction import Correction
 from app.modules.sessions.models.message import Message
-from app.modules.sessions.models.message_score import MessageScore
 from app.modules.sessions.models.session import Session
 from app.modules.sessions.models.session_score import SessionScore
 from app.modules.sessions.schemas import (
     CorrectionRead,
     MessageRead,
-    MessageScoreRead,
     SessionListItem,
     SessionRead,
     SessionScoreRead,
@@ -18,25 +16,6 @@ from app.modules.sessions.schemas import (
 
 def serialize_correction(correction: Correction) -> CorrectionRead:
     return CorrectionRead.model_validate(correction)
-
-
-def serialize_message_score(score: MessageScore) -> MessageScoreRead:
-    return MessageScoreRead.model_validate(
-        {
-            "id": score.id,
-            "pronunciation_score": score.pronunciation_score,
-            "fluency_score": score.fluency_score,
-            "grammar_score": score.grammar_score,
-            "vocabulary_score": score.vocabulary_score,
-            "intonation_score": score.intonation_score,
-            "overall_score": score.overall_score,
-            "mispronounced_words": score.mispronounced_words,
-            "feedback": score.feedback,
-            "metadata": score.score_metadata or {},
-            "created_at": score.created_at,
-            "updated_at": score.updated_at,
-        }
-    )
 
 
 def serialize_message(message: Message) -> MessageRead:
@@ -51,7 +30,6 @@ def serialize_message(message: Message) -> MessageRead:
             "audio_duration_ms": message.audio_duration_ms,
             "asr_metadata": message.asr_metadata,
             "corrections": [serialize_correction(item) for item in message.corrections],
-            "score": serialize_message_score(message.score) if message.score else None,
             "created_at": message.created_at,
             "updated_at": message.updated_at,
         }

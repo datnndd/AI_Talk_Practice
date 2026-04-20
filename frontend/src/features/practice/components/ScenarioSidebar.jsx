@@ -1,4 +1,4 @@
-import { ClipboardText, Robot, Target } from "@phosphor-icons/react";
+import { ClipboardText, Target } from "@phosphor-icons/react";
 
 const compactItems = (items = [], limit = 5) => {
   if (typeof items === "string" && items.trim()) {
@@ -15,10 +15,8 @@ const compactItems = (items = [], limit = 5) => {
     .slice(0, limit);
 };
 
-const ScenarioSidebar = ({ scenario, lessonState, guidance }) => {
-  const focusItems = lessonState?.lesson_goals?.length
-    ? compactItems(lessonState.lesson_goals, 10)
-    : compactItems(scenario?.learning_objectives || guidance?.evaluationFocus, 10);
+const ScenarioSidebar = ({ scenario, guidance }) => {
+  const focusItems = compactItems(scenario?.learning_objectives || guidance?.evaluationFocus, 10);
 
   return (
     <aside className="flex flex-col gap-5 overflow-y-auto rounded-lg border border-zinc-200 bg-white p-5 shadow-[0_20px_54px_-42px_rgba(15,23,42,0.55)]">
@@ -52,18 +50,10 @@ const ScenarioSidebar = ({ scenario, lessonState, guidance }) => {
           </ul>
         ) : (
           <p className="mt-3 text-sm font-medium text-zinc-500">
-            {lessonState?.assigned_task || guidance?.assignedTask || "Hoàn thành các thử thách thực tế từ đối tác hội thoại."}
+            {guidance?.assignedTask || "Hoàn thành các thử thách thực tế từ đối tác hội thoại."}
           </p>
         )}
       </section>
-
-      {lessonState?.persona && (
-        <div className="mt-auto flex items-center gap-3 rounded-xl border border-dashed border-zinc-300 px-4 py-3">
-          <Robot size={18} weight="fill" className="text-zinc-400" />
-          <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Đang luyện tập cùng:</p>
-          <span className="text-sm font-bold text-zinc-900">{lessonState.persona}</span>
-        </div>
-      )}
     </aside>
   );
 };

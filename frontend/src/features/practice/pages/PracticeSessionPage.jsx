@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, WarningCircle } from "@phosphor-icons/react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/features/auth/context/AuthContext";
 import ChatWindow from "@/features/practice/components/ChatWindow";
 import ScenarioSidebar from "@/features/practice/components/ScenarioSidebar";
 import TypewriterInput from "@/features/practice/components/TypewriterInput";
@@ -13,9 +14,7 @@ import {
 } from "@/features/practice/services/realtimeAudio";
 import { practiceApi } from "@/features/practice/api/practiceApi";
 import { buildConversationGuidance } from "@/features/practice/utils/conversationGuidance";
-import {
-  appendUniqueMessage,
-} from "@/features/practice/utils/lessonState";
+import { appendUniqueMessage } from "@/features/practice/utils/lessonState";
 
 const DEFAULT_LANGUAGE = "en";
 const DEFAULT_VOICE = "Cherry";
@@ -28,9 +27,22 @@ const wait = (milliseconds) => new Promise((resolve) => {
   window.setTimeout(resolve, milliseconds);
 });
 
+const upsertMessageCorrection = (messages, payload) => messages.map((message) => {
+  if (message.serverMessageId !== payload.message_id) {
+    return message;
+  }
+  return {
+    ...message,
+    correctedText: payload.corrected_text || message.correctedText || "",
+    corrections: Array.isArray(payload.corrections) ? payload.corrections : message.corrections || [],
+    correctionsPersisted: Boolean(payload.persisted),
+  };
+});
+
 const PracticeSession = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth();
   const scenarioId = Number(id);
 
   const [scenario, setScenario] = useState(null);
@@ -46,7 +58,6 @@ const PracticeSession = () => {
   const [durationSeconds, setDurationSeconds] = useState(0);
   const [timeLimitSeconds, setTimeLimitSeconds] = useState(null);
   const [reconnectRequest, setReconnectRequest] = useState(0);
-  const [lessonState, setLessonState] = useState(null);
   const [lessonHint, setLessonHint] = useState(null);
   const [isHintLoading, setIsHintLoading] = useState(false);
 
@@ -67,7 +78,6 @@ const PracticeSession = () => {
   const autoStartRecordingRef = useRef(false);
   const suppressAssistantStreamRef = useRef(false);
   const assistantDraftRef = useRef("");
-  const lessonStateRef = useRef(null);
   const hasAutoConnectedRef = useRef(false);
   const isStoppingRecordingRef = useRef(false);
   const connectionStateRef = useRef(connectionState);
@@ -78,9 +88,25 @@ const PracticeSession = () => {
   const isAutoReconnectingRef = useRef(false);
   const isNavigatingToResultRef = useRef(false);
 
-  const buildMessage = (role, content) => {
+  const buildMessage = (role, content, options = {}) => {
+    const {
+      serverMessageId = null,
+      orderIndex = null,
+      correctedText = "",
+      corrections = [],
+      correctionsPersisted = false,
+    } = options;
     messageIdRef.current += 1;
-    return { id: `${role}-${messageIdRef.current}`, role, content };
+    return {
+      id: serverMessageId ? `${role}-${serverMessageId}` : `${role}-${messageIdRef.current}`,
+      role,
+      content,
+      serverMessageId,
+      orderIndex,
+      correctedText,
+      corrections,
+      correctionsPersisted,
+    };
   };
 
   const ensureAudioContext = useCallback(async () => {
@@ -378,19 +404,6 @@ const PracticeSession = () => {
         setRecordingState("idle");
         setSessionError("");
         break;
-      case "lesson_started":
-        setLessonState(payload.lesson || null);
-        break;
-      case "lesson_state":
-        if (
-          lessonStateRef.current?.current_objective?.objective_id &&
-          payload.lesson?.current_objective?.objective_id &&
-          lessonStateRef.current.current_objective.objective_id !== payload.lesson.current_objective.objective_id
-        ) {
-          setLessonHint(null);
-        }
-        setLessonState(payload.lesson || null);
-        break;
       case "recording_started":
         recordingStateRef.current = "recording";
         setRecordingState("recording");
@@ -405,7 +418,13 @@ const PracticeSession = () => {
         captureActiveRef.current = false;
         isStoppingRecordingRef.current = false;
         if (payload.text) {
-          setMessages((current) => appendUniqueMessage(current, buildMessage("user", payload.text)));
+          setMessages((current) => appendUniqueMessage(
+            current,
+            buildMessage("user", payload.text, {
+              serverMessageId: payload.message_id ?? null,
+              orderIndex: payload.order_index ?? null,
+            }),
+          ));
         }
         setLessonHint(null);
         setPartialTranscript("");
@@ -459,8 +478,10 @@ const PracticeSession = () => {
         recordingStateRef.current = "idle";
         setRecordingState("idle");
         break;
+      case "message_correction":
+        setMessages((current) => upsertMessageCorrection(current, payload));
+        break;
       case "conversation_end":
-        setLessonState(payload.lesson || null);
         recordingStateRef.current = "idle";
         setRecordingState("idle");
         setPartialTranscript("");
@@ -541,18 +562,12 @@ const PracticeSession = () => {
     }
 
     if (resetConversation) {
-      const initialMsgs = [];
-      if (scenario?.opening_message) {
-        initialMsgs.push(buildMessage("notice", scenario.opening_message));
-        initialMsgs.push(buildMessage("notice", "--- ROLEPLAY BẮT ĐẦU ---"));
-      }
-      setMessages(initialMsgs);
+      setMessages([]);
       setAssistantDraft("");
       setPartialTranscript("");
       setSessionId(null);
       sessionIdRef.current = null;
       setDurationSeconds(0);
-      setLessonState(null);
       setLessonHint(null);
       sessionStartAtRef.current = null;
       assistantDraftRef.current = "";
@@ -578,7 +593,6 @@ const PracticeSession = () => {
         language: DEFAULT_LANGUAGE,
         voice: DEFAULT_VOICE,
         metadata: {
-          conversation_engine: "hybrid_conversation",
           resume_enabled: true,
         },
       };
@@ -680,10 +694,6 @@ const PracticeSession = () => {
   }, [closeSocket]);
 
   useEffect(() => {
-    lessonStateRef.current = lessonState;
-  }, [lessonState]);
-
-  useEffect(() => {
     connectionStateRef.current = connectionState;
   }, [connectionState]);
 
@@ -783,7 +793,7 @@ const PracticeSession = () => {
   };
 
   const handleRequestHint = async () => {
-    if (!sessionId || !lessonState?.lesson_id || isHintLoading) {
+    if (!sessionId || isHintLoading) {
       return;
     }
 
@@ -792,8 +802,6 @@ const PracticeSession = () => {
     try {
       const hint = await practiceApi.getLessonHint({
         sessionId,
-        lessonId: lessonState.lesson_id,
-        objectiveId: lessonState.current_objective?.objective_id,
       });
       setLessonHint(hint);
     } catch (error) {
@@ -839,9 +847,7 @@ const PracticeSession = () => {
     );
   }
 
-  const lessonCompleted = lessonState?.should_end || lessonState?.status === "completed";
   const isMicDisabled =
-    lessonCompleted ||
     connectionState === "connecting" ||
     connectionState === "reconnecting" ||
     recordingState === "processing" ||
@@ -867,16 +873,16 @@ const PracticeSession = () => {
 
         <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)] w-full">
           <div className="hidden min-h-0 lg:flex">
-            <ScenarioSidebar scenario={scenario} lessonState={lessonState} guidance={conversationGuidance} />
+            <ScenarioSidebar scenario={scenario} guidance={conversationGuidance} />
           </div>
           <div className="relative flex min-h-0 flex-1 flex-col gap-3">
             <ChatWindow
               scenario={scenario}
-              lessonState={lessonState}
               guidance={conversationGuidance}
               messages={messages}
               assistantDraft={assistantDraft}
               isListening={recordingState === "recording"}
+              userNativeLanguage={user?.native_language || "vi"}
             />
             <TypewriterInput
               partialTranscript={partialTranscript}
@@ -886,10 +892,10 @@ const PracticeSession = () => {
               onReconnect={handleReconnect}
               disabled={isMicDisabled}
               error={sessionError}
-              lessonState={lessonState}
               hint={lessonHint}
               isHintLoading={isHintLoading}
               onRequestHint={handleRequestHint}
+              userNativeLanguage={user?.native_language || "vi"}
             />
           </div>
         </main>

@@ -61,10 +61,10 @@ const TutorPreview = () => {
             >
               <div className="flex items-center gap-2">
                 <Sparkle weight="bold" className="text-secondary" size={18} />
-                <p className="text-[11px] font-black text-secondary uppercase tracking-[0.1em]">Perfect Feedback</p>
+                <p className="text-[11px] font-black text-secondary uppercase tracking-[0.1em]">Smart Feedback</p>
               </div>
               <p className="text-sm text-zinc-700 leading-relaxed italic font-medium">
-                Your pronunciation of <span className="text-zinc-900 font-black">"samedi"</span> was spot on. Shall we try a more complex sentence?
+                That sentence is clear. Try adding one more detail about where you will meet your friends.
               </p>
             </motion.div>
           </div>

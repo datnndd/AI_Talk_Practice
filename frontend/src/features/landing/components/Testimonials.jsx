@@ -12,7 +12,7 @@ const Testimonials = () => {
     {
       name: "Elena Rodriguez",
       role: "Software Engineer, Brazil",
-      content: "LingoAI's business-specific tracks helped me land my dream job in Berlin. The pronunciation feedback is unmatched.",
+      content: "LingoAI's business-specific tracks helped me land my dream job in Berlin. The roleplay practice felt focused and practical.",
       image: "https://picsum.photos/seed/elena/200/200"
     },
     {

@@ -32,7 +32,7 @@ class Session(Base, TimestampMixin):
 
     Design notes:
     - `session_metadata` JSONB captures runtime context that doesn't need its own
-      column: {"asr_engine": "azure", "tts_voice": "en-US-JennyNeural", ...}
+      column: {"asr_engine": "dashscope", "tts_voice": "...", ...}
     - `target_skills` JSONB overrides Scenario.target_skills for this specific
       session (e.g., user selected "focus on pronunciation today").
     - `deleted_at` soft-delete: sessions are never hard-deleted for audit trail.
@@ -68,7 +68,7 @@ class Session(Base, TimestampMixin):
     target_skills: Mapped[Optional[Any]] = mapped_column(JSONB)
 
     # ── Runtime metadata ─────────────────────────────────────────────────────
-    # {"asr_engine": "azure", "tts_voice": "...", "llm_model": "ai-talk"}
+    # {"asr_engine": "dashscope", "tts_voice": "...", "llm_model": "ai-talk"}
     session_metadata: Mapped[Optional[Any]] = mapped_column("metadata", JSONB, server_default="{}")
 
     # ── Soft-delete ───────────────────────────────────────────────────────────

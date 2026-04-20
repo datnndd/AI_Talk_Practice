@@ -27,7 +27,7 @@ class SessionScore(Base, TimestampMixin):
     Aggregated score for an entire session, computed when session ends.
 
     Design notes:
-    - Scores are averaged from MessageScore rows for user-role messages.
+    - Scores are produced by post-session evaluation.
     - `scored_message_count` tracks how many messages contributed — needed to
       detect sessions with too few messages to be meaningful.
     - `skill_breakdown` JSONB allows storing per-skill details/trends without
@@ -64,7 +64,7 @@ class SessionScore(Base, TimestampMixin):
     scored_message_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
 
     # ── Per-skill details ─────────────────────────────────────────────────────
-    # {"pronunciation": {"avg": 7.2, "min": 4.0, "max": 9.5, "trend": "improving"}}
+    # {"pronunciation": {"avg": 7.2}, "grammar": {"avg": 8.1}}
     skill_breakdown: Mapped[Optional[Any]] = mapped_column(JSONB)
 
     # ── Narrative feedback ────────────────────────────────────────────────────

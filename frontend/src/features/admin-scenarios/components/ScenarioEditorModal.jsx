@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { X, Sparkle, ClockCounterClockwise, BracketsCurly, NotePencil } from "@phosphor-icons/react";
+import { X, Sparkle, ClockCounterClockwise, BracketsCurly } from "@phosphor-icons/react";
 import JsonEditorField from "./JsonEditorField";
 import ListEditorField from "./ListEditorField";
 import PromptQualityBadge from "./PromptQualityBadge";
@@ -21,6 +21,8 @@ const STRUCTURED_METADATA_KEYS = [
   "goal",
   "persona",
   "partner_persona",
+  "ai_role",
+  "user_role",
   "evaluation_focus",
   "success_criteria",
   "rubric",
@@ -81,32 +83,23 @@ const metadataList = (metadata, keys) => {
   return [];
 };
 
-const PROMPT_STARTER = `You are the speaking partner for this practice scenario.
-
-Stay in character throughout the interaction.
-Keep your replies natural, concise, and appropriate to the learner's level.
-Encourage the learner to clarify, ask follow-up questions, and complete the task goal.
-Correct only important mistakes, and do so briefly without breaking the flow.
-End the conversation once the learner reaches the scenario outcome.`;
-
 const createInitialState = (scenario) => ({
   title: scenario?.title || "",
   description: scenario?.description || "",
   category: scenario?.category || "travel",
   difficulty: scenario?.difficulty || "medium",
   ai_system_prompt: scenario?.ai_system_prompt || "",
+  ai_role: scenario?.ai_role || metadataString(scenario?.metadata, ["ai_role", "persona", "partner_persona"]),
+  user_role: scenario?.user_role || metadataString(scenario?.metadata, ["user_role", "learner_role"]),
   estimated_duration_minutes: scenario?.estimated_duration_minutes || 10,
   mode: scenario?.mode || "conversation",
   is_active: scenario?.is_active ?? true,
-  opening_message: scenario?.opening_message || "",
-  is_ai_start_first: scenario?.is_ai_start_first ?? true,
   change_note: "",
   learning_objectives: prettyList(scenario?.learning_objectives),
   target_skills: prettyList(scenario?.target_skills),
   tags: prettyList(scenario?.tags),
   topic: metadataString(scenario?.metadata, ["topic", "conversation_topic"]),
   assigned_task: metadataString(scenario?.metadata, ["assigned_task", "task", "user_goal", "goal"]),
-  persona: metadataString(scenario?.metadata, ["persona", "partner_persona"]),
   evaluation_focus: prettyList(metadataList(scenario?.metadata, ["evaluation_focus", "success_criteria", "rubric"])),
   suggested_responses: prettyList(metadataList(scenario?.metadata, ["suggested_responses", "stuck_help", "response_hints"])),
   end_condition: metadataString(scenario?.metadata, ["end_condition", "completion_signal", "wrap_up_cue"]),
@@ -120,10 +113,12 @@ const ScenarioEditorModal = ({
   onClose,
   onSubmit,
   onSuggestSkills,
+  onGeneratePrompt,
   isSaving,
 }) => {
   const [form, setForm] = useState(() => createInitialState(scenario));
   const [jsonError, setJsonError] = useState("");
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(() => Boolean(scenario?.metadata && Object.keys(scenario.metadata).length));
 
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
@@ -132,12 +127,16 @@ const ScenarioEditorModal = ({
   const tagCount = useMemo(() => parseListInput(form.tags).length, [form.tags]);
   const evaluationFocusCount = useMemo(() => parseListInput(form.evaluation_focus).length, [form.evaluation_focus]);
   const responseHintCount = useMemo(() => parseListInput(form.suggested_responses).length, [form.suggested_responses]);
-  const promptLength = form.ai_system_prompt.trim().length;
+  const roleLength = `${form.ai_role} ${form.user_role}`.trim().length;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     try {
+      if (!form.ai_system_prompt.trim()) {
+        setJsonError("Generate or enter a system prompt before saving.");
+        return;
+      }
       const metadata = JSON.parse(form.metadata || "{}");
       const evaluationFocus = parseListInput(form.evaluation_focus);
       const suggestedResponses = parseListInput(form.suggested_responses);
@@ -147,13 +146,13 @@ const ScenarioEditorModal = ({
         learning_objectives: parseListInput(form.learning_objectives),
         target_skills: parseListInput(form.target_skills),
         tags: parseListInput(form.tags),
-        is_ai_start_first: Boolean(form.is_ai_start_first),
-        opening_message: form.opening_message.trim() || null,
+        ai_system_prompt: form.ai_system_prompt.trim(),
+        ai_role: form.ai_role.trim(),
+        user_role: form.user_role.trim(),
         metadata: {
           ...metadata,
           ...(form.topic.trim() ? { topic: form.topic.trim() } : {}),
           ...(form.assigned_task.trim() ? { assigned_task: form.assigned_task.trim() } : {}),
-          ...(form.persona.trim() ? { persona: form.persona.trim() } : {}),
           ...(evaluationFocus.length > 0 ? { evaluation_focus: evaluationFocus } : {}),
           ...(suggestedResponses.length > 0 ? { suggested_responses: suggestedResponses } : {}),
           ...(form.end_condition.trim() ? { end_condition: form.end_condition.trim() } : {}),
@@ -162,7 +161,6 @@ const ScenarioEditorModal = ({
       };
       delete payload.topic;
       delete payload.assigned_task;
-      delete payload.persona;
       delete payload.evaluation_focus;
       delete payload.suggested_responses;
       delete payload.end_condition;
@@ -180,6 +178,27 @@ const ScenarioEditorModal = ({
       category: form.category,
     });
     updateField("target_skills", prettyList(suggested));
+  };
+
+  const handleGeneratePrompt = async () => {
+    try {
+      setIsGeneratingPrompt(true);
+      const generated = await onGeneratePrompt({
+        title: form.title,
+        description: form.description,
+        ai_role: form.ai_role.trim(),
+        user_role: form.user_role.trim(),
+        mode: form.mode,
+        learning_objectives: parseListInput(form.learning_objectives),
+        target_skills: parseListInput(form.target_skills),
+      });
+      updateField("ai_system_prompt", generated.prompt || "");
+      setJsonError("");
+    } catch (error) {
+      setJsonError(error?.response?.data?.detail || error.message || "Failed to generate default prompt.");
+    } finally {
+      setIsGeneratingPrompt(false);
+    }
   };
 
   return (
@@ -336,7 +355,7 @@ const ScenarioEditorModal = ({
                     value={form.target_skills}
                     onChange={(value) => updateField("target_skills", value)}
                     helperText="What should this practice improve?"
-                    placeholder={"fluency\npronunciation\ngrammar"}
+                    placeholder={"fluency\ngrammar\nvocabulary"}
                   />
 
                   <div className="xl:col-span-2">
@@ -364,12 +383,22 @@ const ScenarioEditorModal = ({
               </section>
 
               <section className="rounded-[28px] border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Lesson Conversation</p>
-                  <h3 className="mt-1 font-display text-2xl font-black tracking-tight">Guide the new lesson engine</h3>
-                  <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                    These fields shape the structured lesson flow used in the new guided conversation experience. They replace the need to hand-edit metadata JSON for common lesson behavior.
-                  </p>
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Role-play Conversation</p>
+                    <h3 className="mt-1 font-display text-2xl font-black tracking-tight">Define the situation and roles</h3>
+                    <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                      These fields feed the default prompt template. Define the situation and roles first, then generate and confirm the system prompt below.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSkillSuggestion}
+                    className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    <Sparkle size={14} />
+                    Suggest skills
+                  </button>
                 </div>
 
                 <div className="mt-5 grid gap-5 xl:grid-cols-2">
@@ -387,13 +416,25 @@ const ScenarioEditorModal = ({
 
                   <label className="block space-y-2">
                     <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Conversation Partner
+                      AI Role
                     </span>
                     <input
-                      value={form.persona}
-                      onChange={(event) => updateField("persona", event.target.value)}
+                      value={form.ai_role}
+                      onChange={(event) => updateField("ai_role", event.target.value)}
                       className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
                       placeholder="Friendly hotel front desk agent"
+                    />
+                  </label>
+
+                  <label className="block space-y-2">
+                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+                      User Role
+                    </span>
+                    <input
+                      value={form.user_role}
+                      onChange={(event) => updateField("user_role", event.target.value)}
+                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      placeholder="Traveler whose reservation cannot be found"
                     />
                   </label>
 
@@ -453,103 +494,51 @@ const ScenarioEditorModal = ({
                     />
                   </label>
 
-                  <label className="block space-y-2 xl:col-span-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Opening Message
-                    </span>
-                    <textarea
-                      value={form.opening_message}
-                      onChange={(event) => updateField("opening_message", event.target.value)}
-                      rows={3}
-                      className="w-full rounded-[24px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                      placeholder="The first line the AI will say, or the scene description for the user."
-                    />
-                  </label>
-
-                  <label className="flex items-center gap-3 rounded-[24px] border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900 xl:col-span-2">
-                    <input
-                      type="checkbox"
-                      checked={form.is_ai_start_first}
-                      onChange={(event) => updateField("is_ai_start_first", event.target.checked)}
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold">AI Start First</span>
-                      <span className="text-xs text-zinc-500">If checked, AI will send the opening message first. Otherwise, it waits for the user.</span>
-                    </div>
-                  </label>
                 </div>
               </section>
 
               <section className="rounded-[28px] border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">AI Prompt</p>
-                    <h3 className="mt-1 font-display text-2xl font-black tracking-tight">Give the tutor clear operating rules</h3>
-                    <p className="mt-2 max-w-3xl text-sm text-zinc-500 dark:text-zinc-400">
-                      Focus on role, tone, correction style, and the condition for ending the conversation. Keep the brief above learner-facing and this prompt tutor-facing.
+                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">System Prompt</p>
+                    <h3 className="mt-1 font-display text-2xl font-black tracking-tight">Confirm the prompt the AI will use</h3>
+                    <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                      Generate the default prompt from the current scenario details, then review or refine it before saving.
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={handleSkillSuggestion}
-                      className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                      onClick={handleGeneratePrompt}
+                      disabled={isGeneratingPrompt}
+                      className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                     >
                       <Sparkle size={14} />
-                      Suggest skills
+                      {isGeneratingPrompt ? "Generating..." : "Generate Default Prompt"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => updateField("ai_system_prompt", form.ai_system_prompt.trim() ? `${form.ai_system_prompt.trim()}\n\n${PROMPT_STARTER}` : PROMPT_STARTER)}
+                      onClick={() => setShowAdvanced((current) => !current)}
                       className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                     >
-                      <NotePencil size={14} />
-                      Insert starter
+                      <BracketsCurly size={14} />
+                      {showAdvanced ? "Hide advanced" : "Show advanced"}
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_280px]">
-                  <div>
-                    <textarea
-                      required
-                      value={form.ai_system_prompt}
-                      onChange={(event) => updateField("ai_system_prompt", event.target.value)}
-                      rows={14}
-                      className="w-full rounded-[28px] border border-zinc-200 bg-zinc-950 px-4 py-4 font-mono text-sm text-emerald-200 outline-none transition focus:border-primary dark:border-zinc-700"
-                      placeholder="You are a patient but realistic conversation partner..."
-                    />
-                  </div>
-
-                  <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                      Prompt Checklist
-                    </p>
-                    <ul className="mt-3 space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
-                      <li>State who the AI is and what role it plays.</li>
-                      <li>Explain how much correction the learner should receive.</li>
-                      <li>Describe the desired tone and realism level.</li>
-                      <li>Tell the AI when the scenario is considered complete.</li>
-                    </ul>
-                  </div>
-                </div>
-              </section>
-
-              <section className="rounded-[28px] border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Advanced</p>
-                    <h3 className="mt-1 font-display text-2xl font-black tracking-tight">Metadata and change tracking</h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvanced((current) => !current)}
-                    className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                  >
-                    <BracketsCurly size={14} />
-                    {showAdvanced ? "Hide advanced" : "Show advanced"}
-                  </button>
-                </div>
+                <label className="mt-5 block space-y-2">
+                  <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+                    Confirmed System Prompt
+                  </span>
+                  <textarea
+                    value={form.ai_system_prompt}
+                    onChange={(event) => updateField("ai_system_prompt", event.target.value)}
+                    rows={10}
+                    className="w-full rounded-[24px] border border-zinc-200 bg-zinc-950 px-4 py-4 font-mono text-sm text-emerald-200 outline-none transition focus:border-primary dark:border-zinc-700"
+                    placeholder="Generate the default prompt or write a custom prompt here before saving."
+                  />
+                </label>
 
                 <label className="mt-5 block space-y-2">
                   <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
@@ -598,7 +587,7 @@ const ScenarioEditorModal = ({
                   ["Tags", tagCount],
                   ["Eval focus", evaluationFocusCount],
                   ["Help lines", responseHintCount],
-                  ["Prompt chars", promptLength],
+                  ["Role chars", roleLength],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-900">
                     <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
@@ -643,8 +632,8 @@ const ScenarioEditorModal = ({
               </p>
               <ul className="mt-3 space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
                 <li>Keep scenarios reusable across many learners.</li>
-                <li>Put skill-specific guidance in the prompt, not only the description.</li>
-                <li>Use metadata for persona and vocabulary hints instead of prompt clutter.</li>
+                <li>Use clear role names so the role-play prompt stays grounded.</li>
+                <li>Use metadata only for advanced flags and vocabulary hints.</li>
               </ul>
             </div>
           </aside>

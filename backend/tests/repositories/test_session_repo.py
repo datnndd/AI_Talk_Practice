@@ -1,5 +1,4 @@
 import pytest
-from app.modules.sessions.models.message import Message
 from app.modules.sessions.repository import SessionRepository
 
 @pytest.mark.asyncio
@@ -15,22 +14,12 @@ async def test_create_session(db_session, test_user, test_scenario):
     assert session.status == "active"
 
 @pytest.mark.asyncio
-async def test_add_message_with_scoring(db_session, test_session):
+async def test_add_message_with_corrections(db_session, test_session):
     message = await SessionRepository.add_message(
         db_session,
         session_id=test_session.id,
         role="user",
         content="Hello, I'd like to check in.",
-        score={
-            "pronunciation_score": 8.5,
-            "fluency_score": 7.0,
-            "grammar_score": 9.0,
-            "vocabulary_score": 8.0,
-            "intonation_score": 7.5,
-            "overall_score": 8.0,
-            "feedback": "Good job!",
-            "metadata": {"engine": "test-grader"}
-        },
         corrections=[
             {
                 "original_text": "check in",
@@ -43,40 +32,25 @@ async def test_add_message_with_scoring(db_session, test_session):
     )
     assert message.id is not None
     assert message.role == "user"
-    assert message.score is not None
-    assert message.score.overall_score == 8.0
     assert len(message.corrections) == 1
     assert message.corrections[0].corrected_text == "check-in"
 
 @pytest.mark.asyncio
-async def test_aggregate_scores(db_session, test_session):
-    # Add two scored messages
+async def test_add_messages_without_per_message_scores(db_session, test_session):
     await SessionRepository.add_message(
         db_session,
         session_id=test_session.id,
         role="user",
         content="Message 1",
-        score={
-            "pronunciation_score": 8, "fluency_score": 8, "grammar_score": 8, 
-            "vocabulary_score": 8, "intonation_score": 8, "overall_score": 8
-        }
     )
-    await SessionRepository.add_message(
+    message = await SessionRepository.add_message(
         db_session,
         session_id=test_session.id,
         role="user",
         content="Message 2",
-        score={
-            "pronunciation_score": 10, "fluency_score": 10, "grammar_score": 10, 
-            "vocabulary_score": 10, "intonation_score": 10, "overall_score": 10
-        }
     )
-    
-    aggregate = await SessionRepository.aggregate_message_scores(db_session, test_session.id)
-    assert aggregate is not None
-    assert aggregate["scored_message_count"] == 2
-    assert aggregate["overall_score"] == 9.0
-    assert aggregate["avg_pronunciation"] == 9.0
+    assert message.id is not None
+    assert await SessionRepository.count_messages(db_session, test_session.id, role="user") == 2
 
 @pytest.mark.asyncio
 async def test_upsert_session_score(db_session, test_session):

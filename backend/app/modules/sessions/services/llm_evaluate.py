@@ -1,30 +1,49 @@
-from typing import Dict
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
-from app.infra.llm.openai_llm import OpenAILLM
 from app.modules.sessions.models.session import Session
 
+
 class EvalScores(BaseModel):
-    grammar: int = Field(1, ge=1, le=5)
-    vocabulary: int = Field(1, ge=1, le=5)
-    pronunciation: int = Field(1, ge=1, le=5)
+    grammar: int = Field(ge=1, le=5)
+    vocabulary: int = Field(ge=1, le=5)
+    pronunciation: int = Field(ge=1, le=5)
+
 
 class LLM_EvaluateResponse(BaseModel):
+    overall_score: float
     scores: EvalScores
-    feedback: Dict[str, str]
+    feedback: str
 
-async def llm_evaluate(session: Session, llm: OpenAILLM = OpenAILLM()) -> LLM_EvaluateResponse:
-    prompt = f"""Evaluate speaking session transcript:
 
-Transcript: {session.transcript}
+async def llm_evaluate(session: Session, llm=None) -> LLM_EvaluateResponse:
+    """Deprecated wrapper.
 
-Audio summary: {session.audio_metadata or 'No audio data'}
+    Full session assessment now lives in SessionFinalEvaluationService. This
+    adapter returns already-stored score data when legacy callers still import
+    this function.
+    """
+    score = getattr(session, "score", None)
+    if score is None:
+        return LLM_EvaluateResponse(
+            overall_score=0.0,
+            scores=EvalScores(grammar=1, vocabulary=1, pronunciation=1),
+            feedback="No stored final assessment is available for this session.",
+        )
 
-Scenario: {session.scenario.title}
+    return LLM_EvaluateResponse(
+        overall_score=float(score.overall_score or 0.0),
+        scores=EvalScores(
+            grammar=_score_10_to_5(score.avg_grammar),
+            vocabulary=_score_10_to_5(score.avg_vocabulary),
+            pronunciation=_score_10_to_5(score.avg_pronunciation),
+        ),
+        feedback=score.feedback_summary or "Final assessment is available in the session score.",
+    )
 
-Score grammar, vocabulary, pronunciation on 1-5 scale.
-Provide structured feedback.
 
-JSON:"""
-    response = await llm.chat([{"role": "user", "content": prompt}], max_tokens=500)
-    return LLM_EvaluateResponse.model_validate_json(response)
+def _score_10_to_5(value: float | None) -> int:
+    if value is None:
+        return 1
+    return max(1, min(5, round(float(value) / 2)))

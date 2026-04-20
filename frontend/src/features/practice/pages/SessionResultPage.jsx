@@ -7,7 +7,6 @@ import {
   CheckCircle,
   Clock,
   Lightning,
-  SpeakerHigh,
   Textbox,
   Trophy,
   WarningCircle,
@@ -30,13 +29,13 @@ const formatDuration = (seconds) => {
 };
 
 const SKILL_META = {
-  pronunciation: { label: "Pronunciation", icon: SpeakerHigh, color: "bg-blue-50 border-blue-200 text-blue-700" },
   fluency: { label: "Fluency", icon: Lightning, color: "bg-purple-50 border-purple-200 text-purple-700" },
   grammar: { label: "Grammar", icon: Textbox, color: "bg-amber-50 border-amber-200 text-amber-700" },
   vocabulary: { label: "Vocabulary", icon: ChatCenteredText, color: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-  intonation: { label: "Intonation", icon: SpeakerHigh, color: "bg-rose-50 border-rose-200 text-rose-700" },
   relevance: { label: "Relevance", icon: CheckCircle, color: "bg-teal-50 border-teal-200 text-teal-700" },
 };
+
+const VISIBLE_SKILL_KEYS = new Set(Object.keys(SKILL_META));
 
 const ScoreRing = ({ score, size = 80 }) => {
   const pct = Math.min(100, Math.max(0, (score / 10) * 100));
@@ -82,12 +81,16 @@ const CorrectionCard = ({ correction, index }) => (
     <div className="flex items-start gap-3">
       <div className="flex-1 min-w-0">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-rose-600 mb-2">Original</p>
-        <p className="text-sm text-rose-900 line-through opacity-70">{correction.original}</p>
+        <p className="text-sm text-rose-900 line-through opacity-70">
+          {correction.original || correction.original_text}
+        </p>
       </div>
       <ArrowRight size={16} className="mt-5 shrink-0 text-rose-400" />
       <div className="flex-1 min-w-0">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600 mb-2">Correction</p>
-        <p className="text-sm font-semibold text-emerald-900">{correction.suggestion}</p>
+        <p className="text-sm font-semibold text-emerald-900">
+          {correction.suggestion || correction.corrected_text}
+        </p>
       </div>
     </div>
     {correction.explanation && (
@@ -177,8 +180,10 @@ const SessionResultPage = () => {
   const messages = session.messages || [];
   const userMessages = messages.filter((m) => m.role === "user");
   const score = session.score;
-  const scoreMeta = score?.score_metadata || {};
-  const skillBreakdown = score?.skill_breakdown || {};
+  const scoreMeta = score?.metadata || {};
+  const skillBreakdown = Object.fromEntries(
+    Object.entries(score?.skill_breakdown || {}).filter(([key]) => VISIBLE_SKILL_KEYS.has(key))
+  );
   const strengths = scoreMeta.strengths || [];
   const improvements = scoreMeta.improvements || [];
   const corrections = scoreMeta.corrections || [];

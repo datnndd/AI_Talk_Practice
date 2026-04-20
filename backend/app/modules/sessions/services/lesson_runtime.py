@@ -155,9 +155,6 @@ def _is_meta_opening(text: str) -> bool:
 
 
 def _metadata_opening(scenario: Scenario) -> str:
-    if scenario.opening_message and scenario.opening_message.strip() and not _is_meta_opening(scenario.opening_message):
-        return scenario.opening_message.strip()
-        
     metadata = scenario.scenario_metadata or {}
     for key in ("opening_message", "opening_line", "initial_message", "first_message", "start_message"):
         value = metadata.get(key)

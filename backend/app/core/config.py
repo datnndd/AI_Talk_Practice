@@ -118,6 +118,10 @@ class Settings(BaseSettings):
         default=900,
         description="Maximum characters retained in the hybrid conversation rolling summary",
     )
+    conversation_summary_turn_interval: int = Field(
+        default=8,
+        description="Summarize hybrid conversation memory after this many learner turns",
+    )
     conversation_relevance_on_topic_threshold: float = Field(
         default=0.28,
         description="Rule-based relevance score required to treat a user turn as on-topic",
@@ -127,12 +131,12 @@ class Settings(BaseSettings):
         description="Rule-based relevance score required to treat a user turn as partially on-topic",
     )
     conversation_enable_llm_fact_extraction: bool = Field(
-        default=False,
-        description="Reserved flag for optional LLM-based fact extraction",
+        default=True,
+        description="Run LLM-based analysis and learner info collection before dialogue replies",
     )
     conversation_enable_llm_relevance_analysis: bool = Field(
-        default=False,
-        description="Reserved flag for optional LLM-based relevance analysis",
+        default=True,
+        description="Use LLM-based relevance analysis before dialogue replies",
     )
     conversation_repair_max_repeats: int = Field(
         default=2,

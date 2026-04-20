@@ -33,6 +33,10 @@ export const adminApi = {
     const { data } = await httpClient.post("/admin/scenarios/suggest-skills", payload);
     return data;
   },
+  generateDefaultPrompt: async (payload) => {
+    const { data } = await httpClient.post("/admin/scenarios/generate-default-prompt", payload);
+    return data;
+  },
   bulkAction: async (payload) => {
     const { data } = await httpClient.post("/admin/scenarios/bulk-actions", payload);
     return data;

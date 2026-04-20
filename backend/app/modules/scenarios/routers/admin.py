@@ -8,6 +8,8 @@ from app.modules.users.models.user import User
 from app.modules.scenarios.schemas import (
     BulkScenarioActionRequest,
     BulkScenarioActionResponse,
+    GenerateDefaultPromptRequest,
+    GenerateDefaultPromptResponse,
     PromptHistoryRead,
     ScenarioAdminCreate,
     ScenarioAdminRead,
@@ -32,6 +34,28 @@ async def suggest_skills(
 ):
     suggested = AdminScenarioService.suggest_target_skills(body.description, body.category)
     return SuggestSkillsResponse(suggested_skills=suggested)
+
+
+@router.post("/scenarios/generate-default-prompt", response_model=GenerateDefaultPromptResponse)
+async def generate_default_prompt(
+    body: GenerateDefaultPromptRequest,
+    _: User = Depends(require_admin_user),
+):
+    prompt = AdminScenarioService.generate_default_prompt(
+        title=body.title,
+        description=body.description,
+        ai_role=body.ai_role,
+        user_role=body.user_role,
+        mode=body.mode,
+        learning_objectives=body.learning_objectives,
+        target_skills=body.target_skills,
+    )
+    quality = AdminScenarioService.assess_prompt_quality(
+        prompt=prompt,
+        description=body.description,
+        target_skills=body.target_skills,
+    )
+    return GenerateDefaultPromptResponse(prompt=prompt, quality=quality)
 
 
 # NOTE: This MUST be declared before /scenarios/{scenario_id} routes so FastAPI

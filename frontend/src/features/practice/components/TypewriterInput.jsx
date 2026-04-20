@@ -1,15 +1,16 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowsClockwise,
+  CircleNotch,
   Microphone,
   PauseCircle,
   SpeakerSlash,
   Sparkle,
+  Translate,
   WarningCircle,
 } from "@phosphor-icons/react";
-import {
-  getLessonStatusCopy,
-} from "@/features/practice/utils/lessonState";
+import { practiceApi } from "@/features/practice/api/practiceApi";
 
 const STATUS_COPY = {
   closed: "Preparing the conversation session.",
@@ -30,16 +31,19 @@ const TypewriterInput = ({
   onReconnect,
   disabled,
   error,
-  lessonState,
   hint,
   isHintLoading = false,
   onRequestHint,
+  userNativeLanguage = "vi",
 }) => {
+  const [translatedHint, setTranslatedHint] = useState("");
+  const [isTranslatingHint, setIsTranslatingHint] = useState(false);
+  const [hintTranslationError, setHintTranslationError] = useState("");
+
   const isRecording = recordingState === "recording";
   const isAssistantSpeaking = recordingState === "assistant";
   const isInterrupting = recordingState === "interrupting";
-  const lessonStatusCopy = getLessonStatusCopy({ lessonState, recordingState, connectionState });
-  const transcript = partialTranscript || lessonStatusCopy || STATUS_COPY[recordingState] || STATUS_COPY.idle;
+  const transcript = partialTranscript || STATUS_COPY[recordingState] || STATUS_COPY.idle;
   const buttonLabel =
     connectionState === "ready"
       ? isRecording
@@ -68,9 +72,6 @@ const TypewriterInput = ({
         : "bg-primary shadow-primary/30";
   const canRequestHint =
     Boolean(onRequestHint) &&
-    Boolean(lessonState?.lesson_id) &&
-    Boolean(lessonState?.current_objective?.objective_id) &&
-    !lessonState?.should_end &&
     recordingState !== "recording" &&
     recordingState !== "processing" &&
     recordingState !== "assistant";
@@ -80,6 +81,33 @@ const TypewriterInput = ({
       ? [hint.sample_answer]
       : [];
 
+  const handleTranslateHint = async () => {
+    if (!hint || translatedHint || isTranslatingHint) {
+      return;
+    }
+
+    setIsTranslatingHint(true);
+    setHintTranslationError("");
+    try {
+      const segments = [
+        hint.question ? `Question: ${hint.question}` : "",
+        hint.analysis_vi ? `Analysis: ${hint.analysis_vi}` : "",
+        hint.answer_strategy_vi ? `Strategy: ${hint.answer_strategy_vi}` : "",
+        sampleAnswers.length > 0 ? `Sample answers: ${sampleAnswers.join(" | ")}` : "",
+        hint.sample_answer_easy ? `Easy version: ${hint.sample_answer_easy}` : "",
+      ].filter(Boolean);
+      const response = await practiceApi.translate({
+        text: segments.join("\n"),
+        targetLanguage: userNativeLanguage,
+      });
+      setTranslatedHint(response.translated_text || "");
+    } catch {
+      setHintTranslationError("Không thể dịch gợi ý lúc này.");
+    } finally {
+      setIsTranslatingHint(false);
+    }
+  };
+
   return (
     <footer className="rounded-lg border border-zinc-200 bg-white shadow-[0_20px_54px_-42px_rgba(15,23,42,0.55)]">
       {hint ? (
@@ -88,9 +116,19 @@ const TypewriterInput = ({
           animate={{ opacity: 1, y: 0 }}
           className="border-b border-sky-100 bg-sky-50/80 p-3 text-sky-950"
         >
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">
-            <Sparkle weight="fill" size={12} />
-            Guided Hint
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">
+              <Sparkle weight="fill" size={12} />
+              Guided Hint
+            </div>
+            <button
+              onClick={handleTranslateHint}
+              disabled={isTranslatingHint}
+              className="inline-flex items-center gap-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-700 transition-colors hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isTranslatingHint ? <CircleNotch size={14} className="animate-spin" /> : <Translate size={14} />}
+              Translate
+            </button>
           </div>
           <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <div className="space-y-3">
@@ -136,6 +174,18 @@ const TypewriterInput = ({
               </div>
             </div>
           </div>
+          {translatedHint ? (
+            <div className="mt-3 rounded-lg border border-sky-200 bg-white/90 px-4 py-3">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-sky-700">
+                <Translate size={14} />
+                Translation
+              </div>
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-700">{translatedHint}</p>
+            </div>
+          ) : null}
+          {hintTranslationError ? (
+            <p className="mt-3 text-xs text-rose-600">{hintTranslationError}</p>
+          ) : null}
         </motion.div>
       ) : null}
 

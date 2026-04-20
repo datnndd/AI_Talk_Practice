@@ -11,14 +11,32 @@ import asyncio
 import logging
 import math
 import time
-from typing import AsyncIterator, Awaitable, Callable, Optional
+from collections.abc import Mapping
+from typing import Any, AsyncIterator, Awaitable, Callable, Optional
 
 from app.core.config import Settings
 from app.infra.contracts import ASRBase, LLMBase, Message, TTSBase, TTSConfig, TranscriptEvent, TranscriptType
 from app.infra.factory import create_asr, create_llm, create_tts
-from app.modules.sessions.services.lesson_runtime import chunk_text_for_stream
 
 logger = logging.getLogger(__name__)
+
+
+def chunk_text_for_stream(text: str, chunk_size: int = 48) -> list[str]:
+    words = text.split()
+    if not words:
+        return []
+    chunks: list[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if current and len(candidate) > chunk_size:
+            chunks.append(f"{current} ")
+            current = word
+        else:
+            current = candidate
+    if current:
+        chunks.append(current)
+    return chunks
 
 
 class ConversationSession:
@@ -43,7 +61,7 @@ class ConversationSession:
         self._on_audio_chunk: Optional[Callable] = None
         self._on_error: Optional[Callable] = None
         self._on_no_input: Optional[Callable[[str, dict], Awaitable[None]]] = None
-        self._on_user_message: Optional[Callable[[str], Awaitable[None]]] = None
+        self._on_user_message: Optional[Callable[[str], Awaitable[dict[str, Any] | None]]] = None
         self._on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None
         self._on_generate_reply: Optional[Callable[[str], Awaitable[str]]] = None
         self._on_generate_reply_stream: Optional[Callable[[str], AsyncIterator[str]]] = None
@@ -72,7 +90,7 @@ class ConversationSession:
         language: Optional[str] = None,
         voice: Optional[str] = None,
         on_no_input: Optional[Callable[[str, dict], Awaitable[None]]] = None,
-        on_user_message: Optional[Callable[[str], Awaitable[None]]] = None,
+        on_user_message: Optional[Callable[[str], Awaitable[dict[str, Any] | None]]] = None,
         on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None,
         on_generate_reply: Optional[Callable[[str], Awaitable[str]]] = None,
         on_generate_reply_stream: Optional[Callable[[str], AsyncIterator[str]]] = None,
@@ -96,7 +114,10 @@ class ConversationSession:
 
         try:
             self._asr = create_asr(self._config)
-            self._llm = llm_provider or create_llm(self._config)
+            if llm_provider is not None:
+                self._llm = llm_provider
+            elif not self._on_generate_reply and not self._on_generate_reply_stream:
+                self._llm = create_llm(self._config)
             self._tts = create_tts(self._config)
             logger.info("ConversationSession: all services initialized")
         except Exception as e:
@@ -245,10 +266,7 @@ class ConversationSession:
                             and event.type == TranscriptType.PARTIAL
                             and self._on_transcript
                         ):
-                            await self._on_transcript(
-                                event.text,
-                                event.type.value,
-                            )
+                            await self._on_transcript(event.text, event.type.value, None)
                 await asyncio.sleep(0.03)
         except asyncio.CancelledError:
             pass
@@ -386,12 +404,15 @@ class ConversationSession:
         self._latest_partial_transcript = text
         self._mark_turn_phase("asr_final_ready")
 
-        if self._on_transcript:
-            await self._on_transcript(text, TranscriptType.FINAL.value)
-
         self._messages.append(Message(role="user", content=text))
+        transcript_metadata: dict[str, Any] = {}
         if self._on_user_message:
-            await self._on_user_message(text)
+            persisted_payload = await self._on_user_message(text)
+            if isinstance(persisted_payload, Mapping):
+                transcript_metadata = dict(persisted_payload)
+
+        if self._on_transcript:
+            await self._on_transcript(text, TranscriptType.FINAL.value, transcript_metadata or None)
 
         # Run LLM → TTS pipeline in the background so the websocket
         # can still accept interrupt messages while the assistant speaks.

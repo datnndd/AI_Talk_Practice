@@ -15,8 +15,17 @@ from app.modules.sessions.models.message import Message
 from app.modules.sessions.models.session import Session
 from app.modules.scenarios.repository import ScenarioRepository
 from app.modules.sessions.repository import SessionRepository
-from app.modules.sessions.schemas.session import MessageCreate, SessionCreate, SessionFinishRequest
-from app.modules.sessions.services.hybrid_conversation.final_evaluation import SessionFinalEvaluationService
+from app.modules.sessions.schemas.lesson import LessonHintRead
+from app.modules.sessions.schemas.session import (
+    MessageCreate,
+    RealtimeCorrectionRequest,
+    RealtimeCorrectionResponse,
+    SessionCreate,
+    SessionFinishRequest,
+    SessionHintRequest,
+)
+from app.modules.sessions.services.conversation_support import ConversationHintService, RealtimeCorrectionService
+from app.modules.sessions.services.final_evaluation import SessionFinalEvaluationService
 
 logger = logging.getLogger(__name__)
 
@@ -116,11 +125,90 @@ class SessionService:
             audio_duration_ms=payload.audio_duration_ms,
             asr_metadata=payload.asr_metadata,
             corrections=[item.model_dump(exclude_none=True) for item in payload.corrections],
-            score=payload.score.model_dump(exclude_none=True) if payload.score else None,
         )
         await db.commit()
         logger.info("Added message id=%s to session id=%s", message.id, session.id)
         return message
+
+    @staticmethod
+    async def build_hint(
+        db: AsyncSession,
+        *,
+        session_id: int,
+        user_id: int,
+        payload: SessionHintRequest,
+        user_level: str | None = None,
+    ) -> LessonHintRead:
+        session = await SessionRepository.get_by_id_for_user(db, session_id, user_id, full=True)
+        if session is None:
+            raise NotFoundError("Session not found")
+
+        text = await SessionService._resolve_user_text(db, session=session, payload=payload)
+        llm = create_llm_for_role(settings, LLMRole.DIALOGUE)
+        try:
+            service = ConversationHintService(
+                llm=llm,
+                max_tokens=settings.lesson_hint_llm_max_tokens or 700,
+            )
+            return await service.build_hint(session=session, user_level=user_level, user_text=text)
+        finally:
+            await llm.close()
+
+    @staticmethod
+    async def correct_realtime(
+        db: AsyncSession,
+        *,
+        session_id: int,
+        user_id: int,
+        payload: RealtimeCorrectionRequest,
+    ) -> RealtimeCorrectionResponse:
+        session = await SessionRepository.get_by_id_for_user(db, session_id, user_id, full=True)
+        if session is None:
+            raise NotFoundError("Session not found")
+
+        message = None
+        if payload.message_id is not None:
+            message = await SessionRepository.get_message_for_session(
+                db,
+                session_id=session.id,
+                message_id=payload.message_id,
+            )
+            if message is None or message.role != "user":
+                raise BadRequestError("Message does not belong to this session or is not a learner message")
+
+        text = (payload.text or (message.content if message else "")).strip()
+        if not text:
+            raise BadRequestError("Provide message_id or text to correct")
+
+        llm = create_llm_for_role(settings, LLMRole.ANALYSIS)
+        try:
+            service = RealtimeCorrectionService(
+                llm=llm,
+                max_tokens=settings.analysis_llm_max_tokens or 700,
+            )
+            response = await service.correct(scenario_title=session.scenario.title, text=text)
+        finally:
+            await llm.close()
+
+        if message is None or not response.corrections:
+            return response
+
+        correction_dicts = [
+            item.model_dump(exclude_none=True, exclude={"id"})
+            for item in response.corrections
+        ]
+        created = await SessionRepository.add_corrections(
+            db,
+            message_id=message.id,
+            corrections=correction_dicts,
+        )
+        await db.commit()
+
+        by_index = list(response.corrections)
+        for index, correction in enumerate(created):
+            if index < len(by_index):
+                by_index[index] = by_index[index].model_copy(update={"id": correction.id})
+        return response.model_copy(update={"corrections": by_index, "persisted": True})
 
     @staticmethod
     async def end_session(
@@ -189,6 +277,21 @@ class SessionService:
         await SessionService._run_final_evaluation_if_needed(db, session=session)
 
     @staticmethod
+    async def _resolve_user_text(db: AsyncSession, *, session: Session, payload: SessionHintRequest) -> str | None:
+        if payload.text and payload.text.strip():
+            return payload.text.strip()
+        if payload.message_id is None:
+            return None
+        message = await SessionRepository.get_message_for_session(
+            db,
+            session_id=session.id,
+            message_id=payload.message_id,
+        )
+        if message is None or message.role != "user":
+            raise BadRequestError("Message does not belong to this session or is not a learner message")
+        return message.content.strip()
+
+    @staticmethod
     async def _finalize_session(
         db: AsyncSession,
         *,
@@ -208,43 +311,9 @@ class SessionService:
         merged_metadata.update(payload.metadata or {})
         session.session_metadata = merged_metadata
 
-        aggregate = await SessionRepository.aggregate_message_scores(db, session.id)
-        if aggregate is None:
-            return
-
-        relevance_score = payload.relevance_score if payload.relevance_score is not None else float(
-            aggregate["overall_score"]
-        )
-        skill_breakdown = {
-            "pronunciation": {"avg": aggregate["avg_pronunciation"]},
-            "fluency": {"avg": aggregate["avg_fluency"]},
-            "grammar": {"avg": aggregate["avg_grammar"]},
-            "vocabulary": {"avg": aggregate["avg_vocabulary"]},
-            "intonation": {"avg": aggregate["avg_intonation"]},
-        }
-        session.score = await SessionRepository.upsert_session_score(
-            db,
-            session_id=session.id,
-            values={
-                "avg_pronunciation": aggregate["avg_pronunciation"],
-                "avg_fluency": aggregate["avg_fluency"],
-                "avg_grammar": aggregate["avg_grammar"],
-                "avg_vocabulary": aggregate["avg_vocabulary"],
-                "avg_intonation": aggregate["avg_intonation"],
-                "relevance_score": relevance_score,
-                "overall_score": aggregate["overall_score"],
-                "scored_message_count": aggregate["scored_message_count"],
-                "skill_breakdown": skill_breakdown,
-                "feedback_summary": payload.feedback_summary,
-                "score_metadata": {"aggregated_at": _utcnow().isoformat()},
-            },
-        )
-
     @staticmethod
     async def _run_final_evaluation_if_needed(db: AsyncSession, *, session: Session) -> None:
-        metadata = session.session_metadata or {}
-        if metadata.get("conversation_engine") != "lesson_v1" and "hybrid_conversation" not in metadata:
-            return
+        llm = None
         try:
             llm = create_llm_for_role(settings, LLMRole.EVALUATION)
             service = SessionFinalEvaluationService(
@@ -269,3 +338,6 @@ class SessionService:
             metadata["final_evaluation"] = final_evaluation
             session.session_metadata = metadata
             await db.flush()
+        finally:
+            if llm is not None:
+                await llm.close()

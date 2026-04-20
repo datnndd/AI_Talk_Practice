@@ -20,15 +20,17 @@ def serialize_admin_scenario(
     latest_prompt_quality: PromptQualityAssessment | None = None,
     include_prompt_history: bool = True,
 ) -> ScenarioAdminRead:
+    metadata = scenario.scenario_metadata or {}
     return ScenarioAdminRead.model_validate(
         {
             "id": scenario.id,
             "title": scenario.title,
             "description": scenario.description,
-            "opening_message": scenario.opening_message,
             "category": scenario.category,
             "difficulty": scenario.difficulty,
             "ai_system_prompt": scenario.ai_system_prompt,
+            "ai_role": scenario.ai_role or metadata.get("persona") or metadata.get("partner_persona") or "",
+            "user_role": scenario.user_role or metadata.get("learner_role") or "",
             "learning_objectives": scenario.learning_objectives or [],
             "target_skills": scenario.target_skills or [],
             "tags": scenario.tags or [],
@@ -36,8 +38,7 @@ def serialize_admin_scenario(
             if scenario.estimated_duration
             else None,
             "mode": scenario.mode,
-            "is_ai_start_first": scenario.is_ai_start_first,
-            "metadata": scenario.scenario_metadata or {},
+            "metadata": metadata,
             "is_active": scenario.is_active,
             "deleted_at": scenario.deleted_at,
             "created_by": scenario.created_by,
@@ -57,6 +58,7 @@ def serialize_admin_scenario(
 def serialize_scenario(
     scenario: Scenario,
 ) -> ScenarioRead:
+    metadata = scenario.scenario_metadata or {}
     return ScenarioRead.model_validate(
         {
             "id": scenario.id,
@@ -64,15 +66,15 @@ def serialize_scenario(
             "description": scenario.description,
             "learning_objectives": scenario.learning_objectives,
             "ai_system_prompt": scenario.ai_system_prompt,
-            "opening_message": scenario.opening_message,
+            "ai_role": scenario.ai_role or metadata.get("persona") or metadata.get("partner_persona") or "",
+            "user_role": scenario.user_role or metadata.get("learner_role") or "",
             "category": scenario.category,
             "difficulty": scenario.difficulty,
             "target_skills": scenario.target_skills,
             "tags": scenario.tags,
             "estimated_duration": scenario.estimated_duration,
             "mode": scenario.mode,
-            "is_ai_start_first": scenario.is_ai_start_first,
-            "metadata": scenario.scenario_metadata or {},
+            "metadata": metadata,
             "is_active": scenario.is_active,
             "created_by": scenario.created_by,
             "created_at": scenario.created_at,

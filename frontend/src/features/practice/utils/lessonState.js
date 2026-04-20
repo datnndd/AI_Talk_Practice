@@ -5,6 +5,13 @@ export const appendUniqueMessage = (messages, nextMessage) => {
     return messages;
   }
 
+  if (nextMessage.serverMessageId) {
+    const existingIndex = messages.findIndex((message) => message.serverMessageId === nextMessage.serverMessageId);
+    if (existingIndex >= 0) {
+      return messages.map((message, index) => (index === existingIndex ? { ...message, ...nextMessage } : message));
+    }
+  }
+
   const nextRole = normalizeText(nextMessage.role);
   const nextContent = normalizeText(nextMessage.content);
   const lastMessage = messages[messages.length - 1];

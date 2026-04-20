@@ -16,11 +16,11 @@ from app.core.exceptions import AppError
 from app.core.security import decode_token
 from app.db.session import AsyncSessionLocal
 from app.infra.factory import ConversationLLMClients, create_conversation_llm_clients, create_llm
-from app.modules.sessions.schemas.session import MessageCreate, SessionCreate
+from app.modules.sessions.schemas.session import MessageCreate, RealtimeCorrectionRequest, SessionCreate
 from app.modules.auth.services.auth_service import AuthService
 from app.modules.sessions.services.conversation import ConversationSession
+from app.modules.sessions.services.conversation_support import ConversationReplyService, ConversationSummaryService
 from app.modules.sessions.services.session import SessionService
-from app.modules.sessions.services.hybrid_conversation import DialogueOrchestrator, build_scenario_definition
 
 logger = logging.getLogger(__name__)
 
@@ -65,11 +65,13 @@ async def websocket_conversation(websocket: WebSocket):
     conversation: ConversationSession | None = None
     session_id: int | None = None
     finalized_user_messages = 0
-    lesson_engine_enabled = False
     resume_enabled = False
     finalized_by_server = False
     timeout_task: asyncio.Task | None = None
     db_lock = asyncio.Lock()
+    runtime_llm_clients: ConversationLLMClients | None = None
+    reply_service: ConversationReplyService | None = None
+    summary_service: ConversationSummaryService | None = None
 
     async def send_json_safe(data: dict):
         try:
@@ -79,8 +81,11 @@ async def websocket_conversation(websocket: WebSocket):
         except Exception:
             logger.exception("Error sending WebSocket message")
 
-    async def on_transcript(text: str, transcript_type: str):
-        await send_json_safe({"type": f"transcript_{transcript_type}", "text": text})
+    async def on_transcript(text: str, transcript_type: str, metadata: dict | None = None):
+        payload = {"type": f"transcript_{transcript_type}", "text": text}
+        if metadata:
+            payload.update(metadata)
+        await send_json_safe(payload)
 
     async def on_llm_chunk(text: str, is_done: bool):
         await send_json_safe({"type": "llm_done" if is_done else "llm_chunk", "text": text})
@@ -108,34 +113,59 @@ async def websocket_conversation(websocket: WebSocket):
     async def persist_message(role: str, content: str):
         nonlocal finalized_user_messages
         if not session_id or not content.strip():
-            return
+            return None
         try:
             async with db_lock:
                 async with AsyncSessionLocal() as db_write:
-                    await SessionService.add_message(
+                    message = await SessionService.add_message(
                         db_write,
                         session_id=session_id,
                         user_id=active_user_id,
                         payload=SessionServiceMessageFactory.create(role=role, content=content.strip()),
                     )
-            if role == "user":
-                finalized_user_messages += 1
+                    await db_write.commit()
+                    if role == "user":
+                        finalized_user_messages += 1
+                        session_for_summary = await SessionService.get_by_id(
+                            db_write,
+                            session_id,
+                            active_user_id,
+                        )
+                        if summary_service and summary_service.should_summarize(session_for_summary):
+                            summary = await summary_service.summarize(session=session_for_summary)
+                            metadata = dict(session_for_summary.session_metadata or {})
+                            metadata["rolling_summary"] = summary
+                            metadata["conversation_engine"] = "realtime_v1"
+                            session_for_summary.session_metadata = metadata
+                            await db_write.commit()
+                        asyncio.create_task(_emit_realtime_correction(message.id, message.content))
+                    return {"message_id": message.id, "order_index": message.order_index}
         except Exception:
             logger.exception("Failed to persist websocket message")
+        return None
 
-    async def send_lesson_state_event(state):
-        payload = state.model_dump(mode="json")
-        await send_json_safe({"type": "lesson_state", "lesson": payload})
-        await send_json_safe({"type": "objective_progress", "progress": payload["progress"]})
-        if state.should_end:
+    async def _emit_realtime_correction(message_id: int, text: str) -> None:
+        if session_id is None or active_user_id is None:
+            return
+        try:
+            async with AsyncSessionLocal() as db_correction:
+                response = await SessionService.correct_realtime(
+                    db_correction,
+                    session_id=session_id,
+                    user_id=active_user_id,
+                    payload=RealtimeCorrectionRequest(message_id=message_id, text=text),
+                )
             await send_json_safe(
                 {
-                    "type": "conversation_end",
-                    "reason": state.end_reason,
-                    "message": state.completion_message,
-                    "lesson": payload,
+                    "type": "message_correction",
+                    "message_id": message_id,
+                    "corrected_text": response.corrected_text,
+                    "corrections": [item.model_dump(mode="json") for item in response.corrections],
+                    "persisted": response.persisted,
                 }
             )
+        except Exception:
+            logger.exception("Failed to emit realtime correction for message id=%s", message_id)
 
     active_user_id: int | None = None
 
@@ -264,7 +294,8 @@ async def websocket_conversation(websocket: WebSocket):
                         await websocket.close()
                         return
 
-                    request_metadata = msg.get("metadata") or {}
+                    request_metadata = dict(msg.get("metadata") or {})
+                    request_metadata["conversation_engine"] = "realtime_v1"
                     resume_enabled = bool(request_metadata.get("resume_enabled"))
                     resume_session_id = msg.get("session_id")
                     is_resume = resume_session_id is not None
@@ -308,56 +339,35 @@ async def websocket_conversation(websocket: WebSocket):
                     active_user_id = user.id
                     session_id = session.id
                     finalized_user_messages = len([item for item in session.messages if item.role == "user"])
-                    lesson_engine_enabled = request_metadata.get("conversation_engine") in (
-                        "lesson_v1",
-                        "hybrid_conversation",
-                    )
 
                     pending_finalize = _PENDING_RESUME_FINALIZE_TASKS.pop(session.id, None)
                     if pending_finalize is not None and not pending_finalize.done():
                         pending_finalize.cancel()
 
-                    system_prompt = session.scenario.ai_system_prompt
+                    runtime_llm_clients = _create_conversation_llm_clients()
+                    reply_service = ConversationReplyService(
+                        llm=runtime_llm_clients.dialogue,
+                        message_limit=settings.llm_history_message_limit,
+                    )
+                    summary_service = ConversationSummaryService(
+                        llm=runtime_llm_clients.analysis,
+                        max_tokens=settings.analysis_llm_max_tokens or 400,
+                        turn_interval=settings.conversation_summary_turn_interval,
+                        summary_max_chars=settings.conversation_summary_max_chars,
+                    )
 
-                    hybrid_orchestrator: DialogueOrchestrator | None = None
-                    orchestrator_llm_clients: ConversationLLMClients | None = None
-                    if lesson_engine_enabled:
-                        orchestrator_llm_clients = _create_conversation_llm_clients()
-                        scenario_definition = build_scenario_definition(
-                            session.scenario,
-                            user_level=user.level,
-                        )
-                        hybrid_orchestrator = DialogueOrchestrator.from_metadata(
-                            scenario=scenario_definition,
-                            llm_clients=orchestrator_llm_clients,
-                            metadata=session.session_metadata,
-                            max_facts=settings.conversation_memory_max_facts,
-                            recent_turn_limit=settings.conversation_recent_turn_limit,
-                            summary_max_chars=settings.conversation_summary_max_chars,
-                            repair_max_repeats=settings.conversation_repair_max_repeats,
-                        )
-
-                    async def persist_hybrid_metadata() -> None:
-                        if not hybrid_orchestrator:
-                            return
-                        async with db_lock:
-                            async with AsyncSessionLocal() as db_write:
-                                await SessionService.merge_session_metadata(
-                                    db_write,
-                                    session_id=session.id,
-                                    user_id=user.id,
-                                    metadata={"hybrid_conversation": hybrid_orchestrator.to_metadata()},
-                                )
-
-                    async def generate_reply_stream(text: str):
-                        if not hybrid_orchestrator:
-                            return
-
-                        async for chunk in hybrid_orchestrator.stream_turn(text):
+                    async def generate_reply_stream(_: str):
+                        async with AsyncSessionLocal() as db_reply:
+                            session_for_reply = await SessionService.get_by_id(
+                                db_reply,
+                                session.id,
+                                user.id,
+                            )
+                        async for chunk in reply_service.stream_reply(
+                            session=session_for_reply,
+                            user_preferences=dict(user.preferences or {}),
+                        ):
                             yield chunk
-
-                        await persist_hybrid_metadata()
-                        await send_lesson_state_event(hybrid_orchestrator.lesson_state(session_id=session.id))
 
                     conversation = ConversationSession(settings)
                     await conversation.initialize(
@@ -365,14 +375,12 @@ async def websocket_conversation(websocket: WebSocket):
                         on_llm_chunk=on_llm_chunk,
                         on_audio_chunk=on_audio_chunk,
                         on_error=on_error,
-                        system_prompt=system_prompt,
                         language=msg.get("language", settings.asr_language),
                         voice=msg.get("voice", settings.tts_voice),
                         on_no_input=on_no_input,
                         on_user_message=lambda text: persist_message("user", text),
                         on_assistant_message=lambda text: persist_message("assistant", text),
-                        on_generate_reply_stream=generate_reply_stream if lesson_engine_enabled else None,
-                        llm_provider=orchestrator_llm_clients.dialogue if orchestrator_llm_clients else None,
+                        on_generate_reply_stream=generate_reply_stream,
                     )
                     max_duration_seconds = session.scenario.estimated_duration
                     remaining_seconds = _remaining_session_seconds(session.started_at, max_duration_seconds)
@@ -395,18 +403,16 @@ async def websocket_conversation(websocket: WebSocket):
                         }
                     )
 
-                    if lesson_engine_enabled and hybrid_orchestrator:
-                        state = hybrid_orchestrator.lesson_state(session_id=session.id)
-                        await send_json_safe({"type": "lesson_started", "lesson": state.model_dump(mode="json")})
-                        await send_lesson_state_event(state)
-                        # Proactively speak the opening question so the assistant
-                        # starts the conversation — the user does not need to speak first.
-                        is_ai_start_first = hybrid_orchestrator.scenario.is_ai_start_first
-                        opening_text = hybrid_orchestrator.opening_message()
-                        if is_ai_start_first and opening_text and not is_resume:
-                            await conversation.speak_opening(opening_text)
-                            hybrid_orchestrator.record_assistant_turn(opening_text)
-                        await persist_hybrid_metadata()
+                    if conversation is not None and not is_resume:
+                        intro_text = (session.scenario.description or "").strip()
+                        if intro_text:
+                            await conversation.speak_opening(intro_text)
+                        opening_reply = await reply_service.generate_opening_reply(
+                            session=session,
+                            user_preferences=dict(user.preferences or {}),
+                        )
+                        if opening_reply:
+                            await conversation.speak_opening(opening_reply)
                     continue
 
                 if conversation is None:
@@ -443,8 +449,6 @@ async def websocket_conversation(websocket: WebSocket):
                     await send_json_safe({"type": "error", "message": f"Unknown message type: {msg_type}"})
             except AppError as exc:
                 payload = {"type": "error", "message": exc.detail}
-                if exc.code == "lesson_plan_generation_failed":
-                    payload["code"] = exc.code
                 if exc.extra:
                     payload["extra"] = exc.extra
                 await send_json_safe(payload)
@@ -467,6 +471,13 @@ async def websocket_conversation(websocket: WebSocket):
                 await conversation.close()
             except Exception:
                 logger.exception("Error closing conversation")
+
+        if runtime_llm_clients is not None:
+            for client in {runtime_llm_clients.analysis, runtime_llm_clients.dialogue, runtime_llm_clients.evaluation}:
+                try:
+                    await client.close()
+                except Exception:
+                    logger.exception("Error closing realtime LLM client")
 
         if session_id is not None and not finalized_by_server:
             try:

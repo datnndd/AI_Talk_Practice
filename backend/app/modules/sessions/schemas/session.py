@@ -37,31 +37,31 @@ class CorrectionRead(ORMModel):
     updated_at: datetime
 
 
-class MessageScoreCreate(BaseModel):
-    pronunciation_score: float = Field(ge=0, le=10)
-    fluency_score: float = Field(ge=0, le=10)
-    grammar_score: float = Field(ge=0, le=10)
-    vocabulary_score: float = Field(ge=0, le=10)
-    intonation_score: float = Field(ge=0, le=10)
-    overall_score: float = Field(ge=0, le=10)
-    mispronounced_words: Any | None = None
-    feedback: str | None = None
-    metadata: dict[str, Any] | None = None
+class RealtimeCorrectionItem(BaseModel):
+    id: int | None = None
+    original_text: str = ""
+    corrected_text: str = ""
+    explanation: str = ""
+    error_type: str = Field(default="grammar")
+    severity: str = Field(default="medium")
+    position_start: int | None = Field(default=None, ge=0)
+    position_end: int | None = Field(default=None, ge=0)
 
 
-class MessageScoreRead(ORMModel):
-    id: int
-    pronunciation_score: float
-    fluency_score: float
-    grammar_score: float
-    vocabulary_score: float
-    intonation_score: float
-    overall_score: float
-    mispronounced_words: Any | None = None
-    feedback: str | None = None
-    metadata: dict[str, Any] | None = None
-    created_at: datetime
-    updated_at: datetime
+class SessionHintRequest(BaseModel):
+    message_id: int | None = None
+    text: str | None = None
+
+
+class RealtimeCorrectionRequest(BaseModel):
+    message_id: int | None = None
+    text: str | None = None
+
+
+class RealtimeCorrectionResponse(BaseModel):
+    corrected_text: str
+    corrections: list[RealtimeCorrectionItem] = Field(default_factory=list)
+    persisted: bool = False
 
 
 class MessageCreate(BaseModel):
@@ -71,7 +71,6 @@ class MessageCreate(BaseModel):
     audio_duration_ms: int | None = Field(default=None, ge=0)
     asr_metadata: Any | None = None
     corrections: list[CorrectionCreate] = Field(default_factory=list)
-    score: MessageScoreCreate | None = None
 
 
 class MessageRead(ORMModel):
@@ -84,7 +83,6 @@ class MessageRead(ORMModel):
     audio_duration_ms: int | None = None
     asr_metadata: Any | None = None
     corrections: list[CorrectionRead] = Field(default_factory=list)
-    score: MessageScoreRead | None = None
     created_at: datetime
     updated_at: datetime
 

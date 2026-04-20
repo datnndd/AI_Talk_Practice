@@ -1,5 +1,4 @@
 import pytest
-from httpx import AsyncClient
 from app.core.security import create_access_token
 
 @pytest.mark.asyncio
@@ -38,21 +37,12 @@ async def test_api_session_lifecycle(client, test_user, test_session):
     msg_payload = {
         "role": "user",
         "content": "Hello, I have a reservation.",
-        "score": {
-            "pronunciation_score": 8.0,
-            "fluency_score": 8.0,
-            "grammar_score": 8.0,
-            "vocabulary_score": 8.0,
-            "intonation_score": 8.0,
-            "overall_score": 8.0
-        }
     }
     response = await client.post(f"/api/sessions/{test_session.id}/messages", json=msg_payload, headers=headers)
     assert response.status_code == 201
     data = response.json()
     assert data["content"] == "Hello, I have a reservation."
-    assert data["score"] is not None
-    assert data["score"]["overall_score"] == 8.0
+    assert "score" not in data
     
     # 2. Get Session (verify message is there)
     response = await client.get(f"/api/sessions/{test_session.id}", headers=headers)
@@ -68,8 +58,7 @@ async def test_api_session_lifecycle(client, test_user, test_session):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "completed"
-    assert data["score"] is not None
-    assert data["score"]["overall_score"] == 8.0
+    assert data["score"] is None
 
 @pytest.mark.asyncio
 async def test_api_get_session_not_found(client, test_user):

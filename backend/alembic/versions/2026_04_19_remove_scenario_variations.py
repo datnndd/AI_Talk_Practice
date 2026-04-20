@@ -34,6 +34,18 @@ def _has_index(inspector: sa.Inspector, table_name: str, index_name: str) -> boo
     return index_name in {index["name"] for index in inspector.get_indexes(table_name)}
 
 
+def _has_check_constraint(inspector: sa.Inspector, table_name: str, constraint_name: str) -> bool:
+    if not _has_table(inspector, table_name):
+        return False
+    return constraint_name in {constraint["name"] for constraint in inspector.get_check_constraints(table_name)}
+
+
+def _cleanup_sqlite_batch_temp_table(bind: sa.Connection, table_name: str) -> None:
+    if bind.dialect.name != "sqlite":
+        return
+    op.execute(sa.text(f'DROP TABLE IF EXISTS "_alembic_tmp_{table_name}"'))
+
+
 def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
@@ -41,6 +53,7 @@ def upgrade() -> None:
     if _has_column(inspector, "sessions", "variation_id"):
         if _has_index(inspector, "sessions", "ix_sessions_variation_id"):
             op.drop_index("ix_sessions_variation_id", table_name="sessions")
+        _cleanup_sqlite_batch_temp_table(bind, "sessions")
         with op.batch_alter_table("sessions") as batch_op:
             batch_op.drop_column("variation_id")
 
@@ -48,7 +61,10 @@ def upgrade() -> None:
         op.drop_table("scenario_variations")
 
     scenario_columns = {column["name"] for column in inspector.get_columns("scenarios")}
+    _cleanup_sqlite_batch_temp_table(bind, "scenarios")
     with op.batch_alter_table("scenarios") as batch_op:
+        if _has_check_constraint(inspector, "scenarios", "ck_scenarios_pre_gen_count_non_negative"):
+            batch_op.drop_constraint("ck_scenarios_pre_gen_count_non_negative", type_="check")
         if "pre_gen_count" in scenario_columns:
             batch_op.drop_column("pre_gen_count")
         if "is_pre_generated" in scenario_columns:
@@ -60,9 +76,14 @@ def downgrade() -> None:
     inspector = sa.inspect(bind)
 
     if not _has_column(inspector, "scenarios", "is_pre_generated"):
+        _cleanup_sqlite_batch_temp_table(bind, "scenarios")
         with op.batch_alter_table("scenarios") as batch_op:
             batch_op.add_column(sa.Column("is_pre_generated", sa.Boolean(), nullable=False, server_default=sa.text("0")))
             batch_op.add_column(sa.Column("pre_gen_count", sa.Integer(), nullable=False, server_default=sa.text("8")))
+            batch_op.create_check_constraint(
+                "ck_scenarios_pre_gen_count_non_negative",
+                sa.text("pre_gen_count >= 0"),
+            )
 
     if not _has_table(inspector, "scenario_variations"):
         op.create_table(
@@ -87,5 +108,6 @@ def downgrade() -> None:
         op.create_index("ix_scenario_variations_scenario_active", "scenario_variations", ["scenario_id", "is_active"])
 
     if not _has_column(inspector, "sessions", "variation_id"):
+        _cleanup_sqlite_batch_temp_table(bind, "sessions")
         with op.batch_alter_table("sessions") as batch_op:
             batch_op.add_column(sa.Column("variation_id", sa.Integer(), nullable=True))

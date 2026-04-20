@@ -50,6 +50,8 @@ class ScenarioService:
             description=body.description,
             learning_objectives=body.learning_objectives,
             ai_system_prompt=body.ai_system_prompt,
+            ai_role=body.ai_role,
+            user_role=body.user_role,
             category=body.category,
             difficulty=body.difficulty,
             target_skills=body.target_skills,
@@ -71,6 +73,10 @@ class ScenarioService:
         update_data = body.model_dump(exclude_unset=True)
         if "metadata" in update_data:
             update_data["scenario_metadata"] = update_data.pop("metadata")
+        if "ai_role" in update_data and update_data["ai_role"] is not None:
+            update_data["ai_role"] = update_data["ai_role"].strip()
+        if "user_role" in update_data and update_data["user_role"] is not None:
+            update_data["user_role"] = update_data["user_role"].strip()
 
         for key, value in update_data.items():
             setattr(scenario, key, value)

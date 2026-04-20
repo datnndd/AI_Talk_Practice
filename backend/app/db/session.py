@@ -42,10 +42,9 @@ def _ensure_sqlite_schema_compatibility_sync(sync_conn) -> None:
     missing_columns = []
 
     compatibility_columns = (
-        ("opening_message", "TEXT"),
-        ("is_ai_start_first", "BOOLEAN DEFAULT 1 NOT NULL"),
+        ("ai_role", "VARCHAR(500) DEFAULT '' NOT NULL"),
+        ("user_role", "VARCHAR(500) DEFAULT '' NOT NULL"),
         ("time_limit_minutes", "INTEGER"),
-        ("starter", "VARCHAR(10) DEFAULT 'AI' NOT NULL"),
     )
 
     for column_name, column_sql in compatibility_columns:

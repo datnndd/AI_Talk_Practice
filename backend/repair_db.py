@@ -3,10 +3,9 @@ import sqlite3
 
 
 NEEDED_SCENARIO_COLUMNS = {
-    "opening_message": "TEXT",
-    "is_ai_start_first": "BOOLEAN DEFAULT 1 NOT NULL",
+    "ai_role": "VARCHAR(500) DEFAULT '' NOT NULL",
+    "user_role": "VARCHAR(500) DEFAULT '' NOT NULL",
     "time_limit_minutes": "INTEGER",
-    "starter": "VARCHAR(10) DEFAULT 'AI' NOT NULL",
 }
 
 def repair():

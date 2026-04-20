@@ -22,11 +22,8 @@ from app.modules.scenarios.models.scenario import (
 # Sessions
 from app.modules.sessions.models.correction import Correction
 from app.modules.sessions.models.message import Message
-from app.modules.sessions.models.message_score import MessageScore
-from app.modules.sessions.models.phoneme_error import PhonemeError
 from app.modules.sessions.models.session import Session
 from app.modules.sessions.models.session_score import SessionScore
-from app.modules.sessions.models.word_error import WordError
 
 # Gamification
 from app.modules.gamification.models.achievement import Achievement
@@ -49,12 +46,10 @@ __all__ = [
     "GamificationSetting",
     "GemTransaction",
     "Message",
-    "MessageScore",
     "Notification",
     "NotificationReadState",
     "PaymentTransaction",
     "PaymentWebhookEvent",
-    "PhonemeError",
     "Scenario",
     "ScenarioPromptHistory",
     "Session",
@@ -62,5 +57,4 @@ __all__ = [
     "Subscription",
     "User",
     "UserAchievement",
-    "WordError",
 ]

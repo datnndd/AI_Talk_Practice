@@ -15,11 +15,15 @@ from app.modules.sessions.serializers import (
 from app.modules.sessions.schemas.session import (
     MessageCreate,
     MessageRead,
+    RealtimeCorrectionRequest,
+    RealtimeCorrectionResponse,
     SessionCreate,
     SessionFinishRequest,
+    SessionHintRequest,
     SessionListItem,
     SessionRead,
 )
+from app.modules.sessions.schemas.lesson import LessonHintRead
 from app.modules.sessions.services.session import SessionService
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
@@ -65,6 +69,32 @@ async def add_message(
 ):
     message = await SessionService.add_message(db, session_id=session_id, user_id=user.id, payload=body)
     return serialize_message(message)
+
+
+@router.post("/{session_id}/hint", response_model=LessonHintRead)
+async def build_session_hint(
+    session_id: int,
+    body: SessionHintRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await SessionService.build_hint(
+        db,
+        session_id=session_id,
+        user_id=user.id,
+        payload=body,
+        user_level=user.level,
+    )
+
+
+@router.post("/{session_id}/corrections", response_model=RealtimeCorrectionResponse)
+async def correct_session_message(
+    session_id: int,
+    body: RealtimeCorrectionRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await SessionService.correct_realtime(db, session_id=session_id, user_id=user.id, payload=body)
 
 
 @router.post("/{session_id}/end", response_model=SessionRead)

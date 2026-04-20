@@ -6,8 +6,6 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.modules.sessions.models.correction import Correction
 from app.modules.sessions.models.message import Message
-from app.modules.sessions.models.message_score import MessageScore
-from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.models.session import Session
 from app.modules.sessions.models.session_score import SessionScore
 
@@ -16,7 +14,6 @@ FULL_SESSION_LOAD = (
     joinedload(Session.scenario),
     joinedload(Session.score),
     selectinload(Session.messages).selectinload(Message.corrections),
-    selectinload(Session.messages).joinedload(Message.score),
 )
 
 
@@ -89,6 +86,21 @@ class SessionRepository:
         return int(result.scalar_one() or 0)
 
     @staticmethod
+    async def get_message_for_session(
+        db: AsyncSession,
+        *,
+        session_id: int,
+        message_id: int,
+    ) -> Message | None:
+        stmt = (
+            select(Message)
+            .options(selectinload(Message.corrections))
+            .where(Message.id == message_id, Message.session_id == session_id)
+        )
+        result = await db.execute(stmt)
+        return result.unique().scalar_one_or_none()
+
+    @staticmethod
     async def next_order_index(db: AsyncSession, session_id: int) -> int:
         stmt = select(func.coalesce(func.max(Message.order_index), 0) + 1).where(Message.session_id == session_id)
         result = await db.execute(stmt)
@@ -106,7 +118,6 @@ class SessionRepository:
         audio_duration_ms: int | None = None,
         asr_metadata: dict | list | str | None = None,
         corrections: list[dict] | None = None,
-        score: dict | None = None,
     ) -> Message:
         message = Message(
             session_id=session_id,
@@ -123,49 +134,30 @@ class SessionRepository:
         for correction_data in corrections or []:
             db.add(Correction(message_id=message.id, **correction_data))
 
-        if score:
-            score_payload = dict(score)
-            metadata = score_payload.pop("metadata", None)
-            db.add(MessageScore(message_id=message.id, score_metadata=metadata, **score_payload))
-
         await db.flush()
 
         stmt = (
             select(Message)
-            .options(selectinload(Message.corrections), joinedload(Message.score))
+            .options(selectinload(Message.corrections))
             .where(Message.id == message.id)
         )
         result = await db.execute(stmt)
         return result.unique().scalar_one()
 
     @staticmethod
-    async def aggregate_message_scores(db: AsyncSession, session_id: int) -> dict[str, float | int] | None:
-        stmt = (
-            select(
-                func.count(MessageScore.id).label("scored_message_count"),
-                func.avg(MessageScore.pronunciation_score).label("avg_pronunciation"),
-                func.avg(MessageScore.fluency_score).label("avg_fluency"),
-                func.avg(MessageScore.grammar_score).label("avg_grammar"),
-                func.avg(MessageScore.vocabulary_score).label("avg_vocabulary"),
-                func.avg(MessageScore.intonation_score).label("avg_intonation"),
-                func.avg(MessageScore.overall_score).label("overall_score"),
-            )
-            .join(Message, Message.id == MessageScore.message_id)
-            .where(Message.session_id == session_id, Message.role == "user")
-        )
-        row = (await db.execute(stmt)).mappings().one()
-        count = int(row["scored_message_count"] or 0)
-        if count == 0:
-            return None
-        return {
-            "scored_message_count": count,
-            "avg_pronunciation": float(row["avg_pronunciation"] or 0.0),
-            "avg_fluency": float(row["avg_fluency"] or 0.0),
-            "avg_grammar": float(row["avg_grammar"] or 0.0),
-            "avg_vocabulary": float(row["avg_vocabulary"] or 0.0),
-            "avg_intonation": float(row["avg_intonation"] or 0.0),
-            "overall_score": float(row["overall_score"] or 0.0),
-        }
+    async def add_corrections(
+        db: AsyncSession,
+        *,
+        message_id: int,
+        corrections: list[dict[str, object]],
+    ) -> list[Correction]:
+        created: list[Correction] = []
+        for correction_data in corrections:
+            correction = Correction(message_id=message_id, **correction_data)
+            db.add(correction)
+            created.append(correction)
+        await db.flush()
+        return created
 
     @staticmethod
     async def upsert_session_score(

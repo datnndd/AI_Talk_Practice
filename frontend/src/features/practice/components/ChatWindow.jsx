@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   ChatCenteredDots,
   CheckCircle,
+  Check,
   Microphone,
   Robot,
   Info,
@@ -10,7 +11,6 @@ import {
   Translate,
   CircleNotch,
 } from "@phosphor-icons/react";
-import ScenarioSidebar from "./ScenarioSidebar";
 import { practiceApi } from "../api/practiceApi";
 
 
@@ -25,7 +25,51 @@ const isCompletionNotice = (role, content) => {
   );
 };
 
-const MessageBubble = ({ content, role, isAI, isLive = false }) => {
+const RealtimeCorrectionCard = ({ correctedText, corrections = [] }) => {
+  if (!correctedText && corrections.length === 0) {
+    return null;
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm"
+    >
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">
+        <Check size={14} weight="bold" />
+        Correction
+      </div>
+      {correctedText ? (
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-emerald-950">{correctedText}</p>
+      ) : null}
+      {corrections.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          {corrections.map((item, index) => (
+            <div key={`${item.corrected_text || item.original_text}-${index}`} className="rounded-lg bg-white/85 px-3 py-2">
+              <p className="text-xs font-semibold text-zinc-700">
+                {(item.original_text || "").trim()} {"->"} {(item.corrected_text || "").trim()}
+              </p>
+              {item.explanation ? (
+                <p className="mt-1 text-xs leading-relaxed text-zinc-600">{item.explanation}</p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </motion.div>
+  );
+};
+
+const MessageBubble = ({
+  content,
+  role,
+  isAI,
+  isLive = false,
+  targetLanguage = "vi",
+  correctedText = "",
+  corrections = [],
+}) => {
   const isNotice = role === "notice" || role === "system";
   const isCompletion = isCompletionNotice(role, content);
   const alignClass = isNotice ? "mx-auto" : isAI ? "" : "ml-auto flex-row-reverse";
@@ -54,9 +98,9 @@ const MessageBubble = ({ content, role, isAI, isLive = false }) => {
     setIsTranslating(true);
     setTranslationError("");
     try {
-      const response = await practiceApi.translate({ text: content, targetLanguage: "vi" });
+      const response = await practiceApi.translate({ text: content, targetLanguage });
       setTranslation(response.translated_text);
-    } catch (err) {
+    } catch {
       setTranslationError("Không thể dịch nội dung này.");
     } finally {
       setIsTranslating(false);
@@ -115,6 +159,10 @@ const MessageBubble = ({ content, role, isAI, isLive = false }) => {
       {translationError && (
         <p className="text-xs text-red-500 ml-1">{translationError}</p>
       )}
+
+      {!isAI && !isLive ? (
+        <RealtimeCorrectionCard correctedText={correctedText} corrections={corrections} />
+      ) : null}
     </div>
   </motion.div>
   );
@@ -155,13 +203,19 @@ const ListeningBubble = () => (
 
 const ChatWindow = ({
   scenario,
-  lessonState,
   guidance,
   messages,
   assistantDraft,
   isListening = false,
+  userNativeLanguage = "vi",
 }) => {
   const endRef = useRef(null);
+  const currentQuestion = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant" && message.content)?.content
+    || scenario?.description
+    || guidance?.assignedTask
+    || "Đang khởi tạo buổi học...";
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -180,7 +234,7 @@ const ChatWindow = ({
                 Câu hỏi hiện tại
               </p>
               <p className="mt-0.5 truncate text-sm font-bold text-zinc-900">
-                {lessonState?.current_question || "Đang khởi tạo buổi học..."}
+                {currentQuestion}
               </p>
             </div>
           </div>
@@ -188,11 +242,6 @@ const ChatWindow = ({
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="block border-b border-zinc-100 bg-white/30 lg:hidden">
-          <div className="p-4">
-            <ScenarioSidebar scenario={scenario} lessonState={lessonState} guidance={guidance} />
-          </div>
-        </div>
         <div className="bg-zinc-50/30 px-5 py-6">
           {messages.length === 0 && !assistantDraft && !isListening ? (
             <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-dashed border-zinc-300 bg-white/80 p-8 text-center shadow-sm">
@@ -212,6 +261,9 @@ const ChatWindow = ({
                   content={message.content}
                   role={message.role}
                   isAI={message.role === "assistant"}
+                  targetLanguage={userNativeLanguage}
+                  correctedText={message.correctedText}
+                  corrections={message.corrections || []}
                 />
               ))}
 
@@ -220,7 +272,7 @@ const ChatWindow = ({
               ) : null}
 
               {assistantDraft ? (
-                <MessageBubble content={assistantDraft} role="assistant" isAI isLive />
+                <MessageBubble content={assistantDraft} role="assistant" isAI isLive targetLanguage={userNativeLanguage} />
               ) : null}
             </div>
           )}

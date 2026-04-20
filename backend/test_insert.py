@@ -2,6 +2,8 @@ import asyncio
 from app.db.session import AsyncSessionLocal
 from app.modules.users.repository import UserRepository
 
+__test__ = False
+
 async def test_insert():
     async with AsyncSessionLocal() as db:
         try:
