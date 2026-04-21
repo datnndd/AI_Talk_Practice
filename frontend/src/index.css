@@ -66,14 +66,19 @@
   --color-on-tertiary-fixed: #291800;
   
   /* Duolingo Design Tokens */
-  --color-duo-green: #34C700;
-  --color-duo-green-dark: #2ba300;
-  --color-duo-blue: #1cb0f6;
-  --color-duo-blue-dark: #1899d6;
-  --color-duo-gray: #e5e5e5;
-  --color-duo-text: #4b4b4b;
+  --color-duo-green: #58CC02;
+  --color-duo-green-dark: #46a302;
+  --color-duo-blue: #1CB0F6;
+  --color-duo-blue-dark: #1899D6;
+  --color-duo-orange: #FF9600;
+  --color-duo-orange-dark: #cc7800;
+  --color-duo-bee: #FFC800;
+  --color-duo-cardinal: #FF4B4B;
+  --color-duo-gray: #E5E5E5;
+  --color-duo-text: #4B4B4B;
   --color-duo-header-text: #777777;
-  --color-duo-muted: #afafaf;
+  --color-duo-muted: #AFAFAF;
+  --color-duo-border: #E5E5E5;
   
   --color-surface: #f9f9fc;
   --color-on-surface: #1a1c1e;
@@ -201,5 +206,30 @@
   /* Text balance for headlines */
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Duolingo UI Utilities */
+  .duo-button-primary {
+    @apply relative inline-flex items-center justify-center rounded-2xl border-2 border-b-4 border-[#2195d0] bg-[#1cb0f6] px-6 py-3 font-black uppercase tracking-wide text-white transition-all active:border-b-2 active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .duo-button-secondary {
+    @apply relative inline-flex items-center justify-center rounded-2xl border-2 border-b-4 border-[#e5e5e5] bg-white px-6 py-3 font-black uppercase tracking-wide text-[#afafaf] transition-all hover:bg-[#f7f7f7] active:border-b-2 active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .duo-button-green {
+    @apply relative inline-flex items-center justify-center rounded-2xl border-2 border-b-4 border-[#46a302] bg-[#58CC02] px-6 py-3 font-black uppercase tracking-wide text-white transition-all active:border-b-2 active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .duo-panel {
+    @apply rounded-2xl border-2 border-[#e5e5e5] p-6 bg-white;
+  }
+
+  .duo-input {
+    @apply w-full rounded-2xl border-2 border-[#e5e5e5] bg-[#f7f7f7] p-4 font-bold text-[#4b4b4b] transition-all focus:border-[#1cb0f6] focus:bg-white outline-none;
+  }
+
+  .duo-label {
+    @apply mb-2 block text-sm font-black uppercase tracking-wide text-[#777777];
   }
 }

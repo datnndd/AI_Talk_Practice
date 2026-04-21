@@ -63,6 +63,8 @@ async def lifespan(app: FastAPI):
     logger.info("AI Talk Practice - Realtime Conversation API")
     logger.info("=" * 60)
     logger.info(f"ASR Provider: {settings.asr_provider}")
+    if settings.asr_provider == "deepgram":
+        logger.info("ASR Failover: dashscope")
     logger.info(f"LLM Provider: {settings.llm_provider} ({settings.llm_model})")
     logger.info(f"TTS Provider: {settings.tts_provider}")
     logger.info(f"DashScope Region: {settings.dashscope_region}")
@@ -139,6 +141,8 @@ async def health_check():
         "config": {
             "llm_model": settings.llm_model,
             "asr_language": settings.asr_language,
+            "deepgram_asr_model": settings.deepgram_asr_model,
+            "dashscope_asr_model": settings.asr_model,
             "tts_voice": settings.tts_voice,
         },
     }
@@ -149,7 +153,8 @@ async def list_providers():
     return {
         "asr": {
             "current": settings.asr_provider,
-            "available": ["dashscope", "faster_whisper"],
+            "fallback": "dashscope" if settings.asr_provider == "deepgram" else None,
+            "available": ["deepgram", "dashscope"],
         },
         "llm": {
             "current": settings.llm_provider,
@@ -157,7 +162,7 @@ async def list_providers():
         },
         "tts": {
             "current": settings.tts_provider,
-            "available": ["dashscope", "kokoro"],
+            "available": ["dashscope"],
         },
     }
 

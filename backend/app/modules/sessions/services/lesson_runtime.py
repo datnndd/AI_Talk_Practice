@@ -21,11 +21,8 @@ from app.modules.sessions.schemas.lesson import (
 )
 from app.modules.sessions.services.lesson_prompts import (
     LESSON_HINT_SYSTEM_PROMPT,
-    LESSON_PLAN_SYSTEM_PROMPT,
     build_lesson_hint_user_prompt,
-    build_lesson_plan_user_prompt,
     parse_lesson_hint_response,
-    parse_lesson_plan_response,
 )
 
 logger = logging.getLogger(__name__)
@@ -163,7 +160,7 @@ def _metadata_opening(scenario: Scenario) -> str:
     return ""
 
 
-def _fallback_opening_message(*, scenario: Scenario, topic: str) -> str:
+def _fallback_opening_message(*, scenario: Scenario) -> str:
     configured = _metadata_opening(scenario)
     if configured:
         return configured
@@ -178,13 +175,11 @@ def _fallback_opening_message(*, scenario: Scenario, topic: str) -> str:
 def _build_objective_questions(
     *,
     index: int,
-    goal: str,
     scenario: Scenario,
-    topic: str,
     expected_points: list[str],
 ) -> tuple[str, list[str]]:
     if index == 0:
-        main_question = _fallback_opening_message(scenario=scenario, topic=topic)
+        main_question = _fallback_opening_message(scenario=scenario)
     else:
         main_question = "Could you tell me a little more about that?"
 
@@ -193,25 +188,6 @@ def _build_objective_questions(
         follow_ups.append("Could you give me a specific detail or an example to explain that further?")
     follow_ups.append("How would you express that naturally in a real-life situation?")
     return main_question, follow_ups[:3]
-
-
-def chunk_text_for_stream(text: str, chunk_size: int = 48) -> list[str]:
-    words = text.split()
-    if not words:
-        return []
-
-    chunks: list[str] = []
-    current = ""
-    for word in words:
-        candidate = f"{current} {word}".strip()
-        if current and len(candidate) > chunk_size:
-            chunks.append(f"{current} ")
-            current = word
-        else:
-            current = candidate
-    if current:
-        chunks.append(current)
-    return chunks
 
 
 @dataclass
@@ -452,21 +428,6 @@ class LessonRuntimeService:
         return package, state, hints
 
     @classmethod
-    async def create_lesson_package_dynamic(
-        cls,
-        *,
-        scenario: Scenario,
-        level: str | None,
-        llm: LLMBase | None,
-    ) -> LessonPackage:
-        # The AI-generated lesson dynamic process is deleted. Uses static definitions.
-        return cls.create_lesson_package(scenario=scenario, level=level)
-
-    @staticmethod
-    def _lesson_plan_max_tokens(llm: LLMBase) -> int:
-        config = getattr(llm, "_config", None)
-        return int(getattr(config, "lesson_plan_llm_max_tokens", 2400))
-
     @staticmethod
     def _lesson_hint_max_tokens(llm: LLMBase) -> int:
         config = getattr(llm, "_config", None)
@@ -503,7 +464,6 @@ class LessonRuntimeService:
         strict: bool = False,
     ) -> LessonPackage:
         topic = _title_case_topic(scenario)
-        assigned_task = _assigned_task(scenario)
         resolved_level = (level or "intermediate").strip()
         goals = plan.get("goals")
         if not isinstance(goals, list):
@@ -515,7 +475,7 @@ class LessonRuntimeService:
         if opening and _is_meta_opening(opening) and strict:
             raise LessonPlanGenerationError("The AI lesson plan opening was not a valid roleplay line.")
         elif opening and _is_meta_opening(opening):
-            opening = _fallback_opening_message(scenario=scenario, topic=topic)
+            opening = _fallback_opening_message(scenario=scenario)
         blueprints: list[ObjectiveBlueprint] = []
         goal_limit = _objective_count_for_level(resolved_level, len(goals))
         for index, item in enumerate(goals[:goal_limit]):
@@ -540,9 +500,7 @@ class LessonRuntimeService:
             if not main_question:
                 main_question, default_follow_ups = _build_objective_questions(
                     index=index,
-                    goal=goal,
                     scenario=scenario,
-                    topic=topic,
                     expected_points=expected_points,
                 )
                 follow_ups = follow_ups or default_follow_ups

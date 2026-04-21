@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     """Central configuration for all services. Loaded from .env file."""
 
     # --- Provider Selection ---
-    asr_provider: str = Field(default="dashscope", description="ASR provider: dashscope | faster_whisper")
+    asr_provider: str = Field(default="deepgram", description="ASR provider: deepgram | dashscope")
     llm_provider: str = Field(default="openai", description="LLM provider: openai-compatible")
-    tts_provider: str = Field(default="dashscope", description="TTS provider: dashscope | kokoro")
+    tts_provider: str = Field(default="dashscope", description="TTS provider: dashscope")
 
     # --- Database ---
     database_url: str = Field(
@@ -43,6 +43,7 @@ class Settings(BaseSettings):
 
     # --- API Keys ---
     dashscope_api_key: str | None = Field(default=None, description="DashScope API key")
+    deepgram_api_key: str | None = Field(default=None, description="Deepgram API key")
     openai_api_key: str | None = Field(default=None, description="OpenAI-compatible LLM API key")
     stripe_secret_key: str | None = Field(default=None, description="Stripe secret key")
     stripe_webhook_secret: str | None = Field(default=None, description="Stripe webhook signing secret")
@@ -150,7 +151,19 @@ class Settings(BaseSettings):
     # --- ASR Configuration ---
     asr_language: str = Field(default="en", description="ASR language code")
     asr_model: str = Field(default="qwen3-asr-flash-realtime", description="DashScope ASR model")
-    asr_model_local: str = Field(default="small", description="faster-whisper model size")
+    deepgram_asr_model: str = Field(default="nova-3", description="Deepgram ASR model")
+    deepgram_endpointing_ms: int = Field(
+        default=300,
+        description="Deepgram endpointing pause threshold in milliseconds",
+    )
+    deepgram_utterance_end_ms: int = Field(
+        default=1000,
+        description="Deepgram utterance end threshold in milliseconds",
+    )
+    deepgram_keepalive_seconds: float = Field(
+        default=3.0,
+        description="Deepgram websocket keepalive interval while streaming",
+    )
     asr_finalization_grace_ms: int = Field(
         default=700,
         description="Delay after ASR speech-end/final events before closing the turn, so trailing audio can arrive",
@@ -159,8 +172,6 @@ class Settings(BaseSettings):
         default=True,
         description="Send interim ASR transcripts to clients while the user is speaking.",
     )
-    asr_beam_size: int = Field(default=8, description="Beam size for local faster-whisper final transcription")
-    asr_best_of: int = Field(default=5, description="Best-of candidates for local faster-whisper transcription")
     asr_min_audio_ms: int = Field(
         default=200,
         description="Minimum recorded audio duration required before accepting a speech turn",
@@ -181,8 +192,6 @@ class Settings(BaseSettings):
     )
     tts_voice: str = Field(default="Cherry", description="DashScope TTS voice name")
     tts_language: str = Field(default="en", description="TTS language")
-    tts_voice_local: str = Field(default="af_heart", description="Kokoro voice ID")
-
     # --- DashScope Region ---
     dashscope_region: str = Field(default="intl", description="intl | cn")
 
@@ -198,6 +207,11 @@ class Settings(BaseSettings):
         if self.dashscope_region == "cn":
             return "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
         return "wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime"
+
+    @property
+    def deepgram_ws_url(self) -> str:
+        """WebSocket URL for Deepgram realtime speech-to-text."""
+        return "wss://api.deepgram.com/v1/listen"
 
     @property
     def llm_api_key(self) -> str | None:

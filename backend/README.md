@@ -6,9 +6,9 @@ Real-time AI conversation backend: **Microphone → ASR → LLM → TTS → Spea
 
 ```
 Browser (Mic) ──WebSocket──▶ FastAPI Backend
-                              ├── ASR: DashScope | faster-whisper
+                              ├── ASR: Deepgram Nova-3 -> DashScope Qwen fallback
                               ├── LLM: OpenAI-compatible
-                              └── TTS: DashScope | Kokoro
+                              └── TTS: DashScope
 ```
 
 ## Quick Start
@@ -18,6 +18,7 @@ Browser (Mic) ──WebSocket──▶ FastAPI Backend
 | Provider | Key | Get it at |
 |----------|-----|-----------|
 | **OpenAI-compatible LLM** | `OPENAI_API_KEY` | Your LLM gateway |
+| **Deepgram** (ASR) | `DEEPGRAM_API_KEY` | [Deepgram Console](https://console.deepgram.com/) |
 | **DashScope** (ASR/TTS) | `DASHSCOPE_API_KEY` | [Alibaba Cloud Model Studio](https://modelstudio.console.alibabacloud.com/) |
 
 ### 2. Setup & Run
@@ -34,10 +35,6 @@ nano .env
 # Run again:
 bash run.sh
 
-# For local models (faster-whisper, Kokoro):
-bash run.sh --local
-```
-
 ### 3. Test
 
 ```bash
@@ -52,17 +49,19 @@ curl http://localhost:8000/providers
 
 ```env
 # Switch providers by changing these:
-ASR_PROVIDER=dashscope          # dashscope | faster_whisper
+ASR_PROVIDER=deepgram           # deepgram | dashscope
 LLM_PROVIDER=openai             # openai-compatible
-TTS_PROVIDER=dashscope          # dashscope | kokoro
+TTS_PROVIDER=dashscope          # dashscope
 
 # API Keys
+DEEPGRAM_API_KEY=dg-xxx
 DASHSCOPE_API_KEY=sk-xxx
 OPENAI_API_KEY=sk-xxx
 
 # Models
 LLM_MODEL=ai-talk
 LLM_BASE_URL=https://rfij5ml.9router.com/v1
+DEEPGRAM_ASR_MODEL=nova-3
 ASR_MODEL=qwen3-asr-flash-realtime
 TTS_MODEL=qwen3-tts-flash-realtime-2025-09-18
 TTS_VOICE=Cherry

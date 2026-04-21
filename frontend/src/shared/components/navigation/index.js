@@ -1,5 +1,6 @@
 export { default as AuthHeader } from "./AuthHeader";
 export { default as BrandMark } from "./BrandMark";
+export { default as DuolingoSidebar } from "./DuolingoSidebar";
 export { default as FlowHeader } from "./FlowHeader";
 export { default as MobileNav } from "./MobileNav";
 export { default as SessionHeader } from "./SessionHeader";

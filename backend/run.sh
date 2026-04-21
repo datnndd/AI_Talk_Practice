@@ -27,12 +27,6 @@ source venv/bin/activate
 echo "📦 Installing dependencies..."
 pip install -r requirements.txt --quiet
 
-# Optional: install local model dependencies
-if [ "$1" == "--local" ]; then
-    echo "📦 Installing local model dependencies..."
-    pip install -r requirements-local.txt --quiet
-fi
-
 # Run migrations
 echo "🛠️  Checking and applying database migrations..."
 alembic upgrade head
