@@ -16,7 +16,14 @@ logger = logging.getLogger(__name__)
 if is_sqlite:
     from sqlalchemy.dialects import postgresql
     from sqlalchemy.types import JSON
-    postgresql.JSONB = JSON
+    # Mock JSONB for SQLite compatibility
+    setattr(postgresql, "JSONB", JSON)
+    import sys
+    # Also ensure any direct imports of JSONB from the module are redirected
+    if "sqlalchemy.dialects.postgresql.json" in sys.modules:
+        setattr(sys.modules["sqlalchemy.dialects.postgresql.json"], "JSONB", JSON)
+    if "sqlalchemy.dialects.postgresql" in sys.modules:
+        setattr(sys.modules["sqlalchemy.dialects.postgresql"], "JSONB", JSON)
 
 engine = create_async_engine(
     settings.database_url,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user, get_db
@@ -9,6 +9,8 @@ from app.modules.gamification.schemas import (
     GamificationDashboard,
     HeartPurchaseRequest,
     HeartPurchaseResponse,
+    LeaderboardPeriod,
+    LeaderboardRead,
     LessonCompleteRequest,
     LessonCompleteResponse,
 )
@@ -24,6 +26,16 @@ async def get_my_gamification(
     user: User = Depends(get_current_user),
 ):
     return await GamificationService.get_dashboard(db, user)
+
+
+@router.get("/leaderboard", response_model=LeaderboardRead)
+async def get_leaderboard(
+    period: LeaderboardPeriod = Query(default="weekly"),
+    limit: int = Query(default=5, ge=3, le=20),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await GamificationService.get_leaderboard(db, user, period=period, limit=limit)
 
 
 @router.patch("/daily-goal", response_model=GamificationDashboard)

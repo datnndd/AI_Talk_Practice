@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 
 LessonType = Literal["basic", "vocabulary", "listening", "reading", "writing", "speaking", "speaking_short"]
+LeaderboardPeriod = Literal["weekly", "all_time"]
 
 
 class AchievementRead(BaseModel):
@@ -89,3 +90,21 @@ class HeartPurchaseResponse(BaseModel):
 
 class DailyGoalUpdateRequest(BaseModel):
     daily_xp_goal: Literal[30, 50, 100, 150]
+
+
+class LeaderboardEntryRead(BaseModel):
+    user_id: int
+    rank: int
+    score: int
+    current_streak: int
+    display_name: str | None = None
+    email: str
+    avatar: str | None = None
+    target_language: str | None = None
+
+
+class LeaderboardRead(BaseModel):
+    period: LeaderboardPeriod
+    entries: list[LeaderboardEntryRead]
+    current_user: LeaderboardEntryRead
+    available_periods: list[LeaderboardPeriod] = Field(default_factory=lambda: ["weekly", "all_time"])

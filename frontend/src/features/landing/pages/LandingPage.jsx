@@ -1,19 +1,15 @@
-import Navbar from "@/features/landing/components/Navbar";
-import Hero from "@/features/landing/components/Hero";
-import BentoGrid from "@/features/landing/components/BentoGrid";
-import Testimonials from "@/features/landing/components/Testimonials";
-import CTA from "@/features/landing/components/CTA";
-import Footer from "@/features/landing/components/Footer";
+import LandingNavbar from "@/features/landing/components/LandingNavbar";
+import LandingHero from "@/features/landing/components/LandingHero";
+import LandingLanguageFooter from "@/features/landing/components/LandingLanguageFooter";
 
 const LandingPage = () => {
   return (
-    <div className="min-h-[100dvh] bg-[#f9fafb]">
-      <Navbar />
-      <Hero />
-      <BentoGrid />
-      <Testimonials />
-      <CTA />
-      <Footer />
+    <div className="min-h-screen flex flex-col bg-white overflow-x-hidden selection:bg-duo-green/10 selection:text-duo-green-dark">
+      <LandingNavbar />
+      <div className="flex-grow flex flex-col justify-center">
+        <LandingHero />
+      </div>
+      <LandingLanguageFooter />
     </div>
   );
 };

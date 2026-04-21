@@ -1,0 +1,150 @@
+<html lang="en"><head></head><body class="bg-white text-[#4b4b4b] antialiased">```html
+
+
+
+  <meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SpeakEasy AI - Practice Speaking</title>
+<!-- BEGIN: Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- END: Tailwind CSS CDN -->
+<!-- BEGIN: Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'duo-green': '#34C700',
+            'duo-green-dark': '#2ba300',
+            'duo-gray': '#e5e5e5',
+            'duo-text': '#4b4b4b',
+            'duo-header-text': '#777777',
+          },
+          fontFamily: {
+            sans: ['"DIN Next Round"', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+<!-- END: Tailwind Configuration -->
+<!-- BEGIN: Custom Styles -->
+<style data-purpose="layout-and-shadows">
+    /* Custom shadow for the secondary button to match the depth in the image */
+    .btn-secondary-shadow {
+      box-shadow: 0 4px 0 #e5e5e5;
+    }
+    .btn-secondary-shadow:active {
+      box-shadow: none;
+      transform: translateY(2px);
+    }
+    .btn-primary-shadow {
+      box-shadow: 0 4px 0 #2ba300;
+    }
+    .btn-primary-shadow:active {
+      box-shadow: none;
+      transform: translateY(2px);
+    }
+  </style>
+<!-- END: Custom Styles -->
+<!-- BEGIN: MainHeader -->
+<header class="max-w-7xl mx-auto px-6 lg:px-12 py-6 flex justify-between items-center" data-purpose="site-navigation">
+<!-- Logo Section -->
+<div class="flex items-center space-x-2 cursor-pointer">
+<div class="flex items-center" data-purpose="logo">
+<svg class="w-8 h-8 mr-2" fill="none" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M21 11.5C21 15.6421 17.1944 19 12.5 19C11.5284 19 10.6015 18.854 9.74233 18.5833L5 21V16.634C3.16339 15.2638 2 13.4866 2 11.5C2 7.35786 5.80558 4 10.5 4C15.1944 4 19 7.35786 19 11.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<circle cx="7" cy="11" fill="currentColor" r="1"></circle>
+<circle cx="11" cy="11" fill="currentColor" r="1"></circle>
+<circle cx="15" cy="11" fill="currentColor" r="1"></circle>
+</svg>
+<span class="text-2xl font-bold tracking-tight text-[#4b4b4b]">SpeakEasy AI</span>
+</div>
+</div>
+<!-- Language Selector -->
+<div class="hidden md:flex items-center space-x-1 text-sm font-bold text-duo-header-text uppercase tracking-wider cursor-pointer hover:text-gray-900 transition-colors">
+<span>Site Language: English</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: HeroSection -->
+<main class="max-w-7xl mx-auto px-6 lg:px-12 pt-12 pb-24 flex flex-col md:flex-row items-center justify-center gap-12 lg:gap-24" data-purpose="hero-content">
+<!-- Hero Illustration Column -->
+<div class="flex-1 flex justify-center items-center" data-purpose="hero-illustration">
+<!-- Using provided image placeholder per instructions -->
+<img alt="SpeakEasy AI Robot and Students Illustration" class="w-full max-w-lg object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpiUf0AyLa-PMnRkPUBWhO1TdAp2zeF1odcsgzLVQpvyFQCGJVwkLMSfImNdDMPLdFWLz5_sD1-Ios9rAOAjADOfdqahdJ8KAaiQaqgCcLRRlFOQ2UWevIAY556EUpLH1_fIhDhByhFepp-pFsgjpSaqncufhIzEalB3Y-R7rpL5KF_Omkyr3x022nAlIwBcJHyOjiJ37w1hp3d2kAtdsltuFFQ5MhgAqurHtMP02kbOcj-2Kub4gBW5qfyY-HBzcyuP_9-hZhQplc"/>
+</div>
+<!-- Hero Text and CTA Column -->
+<div class="flex-1 text-center md:text-left flex flex-col items-center md:items-start" data-purpose="hero-actions">
+<h1 class="text-4xl lg:text-5xl font-bold text-duo-text leading-tight mb-10 max-w-md">
+        The free, fun, and effective way to practice speaking!
+      </h1>
+<div class="w-full max-w-sm space-y-4">
+<!-- Primary Call to Action -->
+<button class="w-full bg-duo-green hover:bg-[#61da04] text-white font-bold py-4 rounded-2xl btn-primary-shadow transition-all uppercase tracking-wide text-sm" data-purpose="primary-cta">
+          Get Started
+        </button>
+<!-- Secondary Call to Action -->
+<button class="w-full bg-white hover:bg-gray-50 text-duo-text border-2 border-duo-gray font-bold py-4 rounded-2xl btn-secondary-shadow transition-all uppercase tracking-wide text-sm" data-purpose="secondary-cta">
+          I already have an account
+        </button>
+</div>
+</div>
+</main>
+<!-- END: HeroSection -->
+<!-- BEGIN: FooterLanguageBar -->
+<footer class="border-t border-gray-200 mt-auto" data-purpose="footer-navigation">
+<div class="max-w-7xl mx-auto px-4 py-8 relative">
+<!-- Carousel Arrows -->
+<button class="absolute left-4 top-1/2 -translate-y-1/2 text-[#D1D5DB] hover:text-gray-400 transition-colors">
+<svg class="w-8 h-8" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-[#D1D5DB] hover:text-gray-400 transition-colors">
+<svg class="w-8 h-8" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<!-- Language List -->
+<div class="flex flex-wrap justify-center items-center gap-8 md:gap-12 px-12">
+<!-- English -->
+<div class="flex items-center space-x-3 cursor-pointer group" data-purpose="language-item">
+<img alt="English Flag" class="w-8 h-6 rounded-sm shadow-sm object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtPmumt2IF66HX3P_PNGnNyZzS0F5ZXRiVCrUrLFNsIBSp_h9PGvirVHthw9EMUWWNgc_lXgO4O8zi8z3hclYMs538Gricea7sJ3lvk7C7KQB1q_c5CwBXKgLK9MXJUyhm0Rmf8v8tFTCQRCEa1lQt_AJipkNIF33TyJNGv7DHKFd_dBnXvJ6B7UfuHFdS0g5npH0fwj-5RskOGy797cZGCqiWA3omrBSOqQwBT_YIKEZzMj8_KuRdcoJltrnATyDV9nfuBLlsOW9f"/>
+<span class="text-sm font-medium text-duo-header-text group-hover:text-duo-text transition-colors uppercase">English</span>
+</div>
+<!-- Spanish -->
+<div class="flex items-center space-x-3 cursor-pointer group" data-purpose="language-item">
+<img alt="Spanish Flag" class="w-8 h-6 rounded-sm shadow-sm object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJPnlNR4xvG3L36mB1lq3fOmMzaLBUvvYMkiz0GXfzbO2aSH1ZIzWbC-1w9V8W7cZE1u4XUmwXVkIoa8y0Aa30tOa7TgK6nVFANaD-qFLq1xsNYsSfj31n7tBnRDctsggyKZdEBBmY4zslmEEWAAJh9u-3jhyiA9bU9y8Hd_upd-rktQOLIbDE_uQo1OOnD2gDVtHWVXi684ceIr6pXHxPV6KNPewMwUNcsnwACymL0lTqxRnKiHjE-8gPb8LA2jZhkbrgY4sf_yBE"/>
+<span class="text-sm font-medium text-duo-header-text group-hover:text-duo-text transition-colors uppercase">Spanish</span>
+</div>
+<!-- French -->
+<div class="flex items-center space-x-3 cursor-pointer group" data-purpose="language-item">
+<img alt="French Flag" class="w-8 h-6 rounded-sm shadow-sm object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnxxn-sj7gm-b70yvP9OWBtgO06SDbzqTUc4d0_7sIZOmvWwh_z3MhxK94BmY_HoQH6ddX-P2jKXWbco_ihqPK-3UdJHPakv8Tc8DvF8P004UO37Fb0aqJ6mP1kG7hHjIBy1WTyotNiWetyusFguzSsRWwUcHI3kSj32_aWCxScqquwLrOEur2IP1mJfaUQWeeuv_fYJpPO04qdzGuw0Q_YjBsRxAHMZzaGDLlsGUJ6ZiD2CFC0cHptkVLQ4A6aK-xEmoFSdLOXVWG"/>
+<span class="text-sm font-medium text-duo-header-text group-hover:text-duo-text transition-colors uppercase">French</span>
+</div>
+<!-- German -->
+<div class="flex items-center space-x-3 cursor-pointer group" data-purpose="language-item">
+<img alt="German Flag" class="w-8 h-6 rounded-sm shadow-sm object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmst9s34aEdz5uLTeA4l_97Q7350dLf5EBhoChOK8OqNwDrJwRjp58iMveGYOtgeUjMTN9QX4nde6oKlU_nVprLjL-2wgBGGZMMXdKfYCfzLqj6lNOlMJ5uVecT_jABy9JfeofQhdhm1HkfW9xvz4LypcmjViuJyC8YimQ8dzdUpcr1fYZQ9FtRcumF2vlrGAXIEsRp9eBDA7WMlCkx5JMIAP3Tl2mUdKTlMaB7Po157v7quRzsWCC7ARG5BWq5uVOJPrFLti11q74"/>
+<span class="text-sm font-medium text-duo-header-text group-hover:text-duo-text transition-colors uppercase">German</span>
+</div>
+<!-- Italian -->
+<div class="flex items-center space-x-3 cursor-pointer group" data-purpose="language-item">
+<img alt="Italian Flag" class="w-8 h-6 rounded-sm shadow-sm object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3YmhAix5F0np-srZjvpZRpxySmda4KFNUacmQ7slKL_oBORcbfM35rexEF_F7jmv1HDTSqeac9LgnjVq-636-ZEuOMo47klN6X93I26O3w-7KXAVw6SS7wI9V8cpVydcM8iltrsnw-uXnnA8pj2p4Dz0vJStGTL_8mQ2QooU7z-yz8MonLaxraMPZ-uEImbGVU9msJZYPO-YqO9hIZmK2xqbSa3qrcnrMHMeJdV8qhJoxLgw0RcXeFMAO01dZw8zcrKps-p9HieXv"/>
+<span class="text-sm font-medium text-duo-header-text group-hover:text-duo-text transition-colors uppercase">Italian</span>
+</div>
+<!-- Portuguese -->
+<div class="flex items-center space-x-3 cursor-pointer group" data-purpose="language-item">
+<img alt="Portuguese Flag" class="w-8 h-6 rounded-sm shadow-sm object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfbHMaH4mUxo3HI2nLtdLstM1mRh-Pm1MW5YOVL1a6lAQHXuM4VYTfXuvVojYz93X1h8n81M90MAYtr7QIzTy4HuRVzy8nu9qXn7d_sDQSeLbCGN32hJys9Mbq-Ipi0u42sleR1nmMSE_A43jcJwNkZFrKTv_9YS95fsg5nk4nhT7sqcKIO4CLqaGbEUCCCsjdo6daj5LsCMPikPNzDef9bP5byznVVyyjCSLGiPhot001or8iOgzAnwyNx-K89qnGUU8uopA8bEI-"/>
+<span class="text-sm font-medium text-duo-header-text group-hover:text-duo-text transition-colors uppercase">Portuguese</span>
+</div>
+</div>
+</div>
+</footer>
+<!-- END: FooterLanguageBar -->
+
+
+
+
+```</body></html><!-- MISSING_IMAGES:
+- Flag icons were substituted with placeholder flag-like emojis on colored backgrounds as the source image used generic flag icons.
+-->

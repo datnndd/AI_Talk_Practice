@@ -81,6 +81,9 @@ class User(Base, TimestampMixin):
     subscription: Mapped[Optional["Subscription"]] = relationship("Subscription", back_populates="user", uselist=False, lazy="selectin")
 
     __table_args__ = (
-        Index("ix_users_email_active", "email", postgresql_where="deleted_at IS NULL"),
-        Index("ix_users_favorite_topics_gin", "favorite_topics", postgresql_using="gin"),
+        # Basic index for email, avoids postgresql_where for SQLite compatibility
+        Index("ix_users_email_active", "email"),
+        # Gin index is PG only, SQLAlchemy usually ignores it on other dialects 
+        # but we keep it simple here.
+        Index("ix_users_favorite_topics_idx", "favorite_topics"),
     )

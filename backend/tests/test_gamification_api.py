@@ -2,7 +2,10 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.users.models.user import User
+from app.modules.users.models.subscription import Subscription
+from app.core.security import hash_password
 
 
 @pytest.mark.asyncio
@@ -118,3 +121,55 @@ async def test_pro_user_has_unlimited_hearts_and_sessions_do_not_consume_them(
     after = await admin_client.get("/api/gamification/me")
     assert after.json()["heart"]["is_unlimited"] is True
     assert after.json()["heart"]["current"] is None
+
+
+@pytest.mark.asyncio
+async def test_leaderboard_returns_real_weekly_and_all_time_data(test_client, db_session, test_user):
+    today = datetime.now(timezone.utc).date()
+
+    competitor = User(
+        email="leader@example.com",
+        password_hash=hash_password("leader123"),
+        display_name="Leaderboard Pro",
+        native_language="en",
+        target_language="de",
+        level="advanced",
+        total_xp=2000,
+        current_streak=9,
+        preferences={"is_admin": False},
+    )
+    db_session.add(competitor)
+    await db_session.flush()
+    db_session.add(Subscription(user_id=competitor.id, tier="FREE", status="active"))
+
+    test_user.total_xp = 1200
+    test_user.current_streak = 4
+
+    db_session.add_all(
+        [
+            DailyStat(user_id=test_user.id, date=today, xp_earned=120),
+            DailyStat(user_id=competitor.id, date=today, xp_earned=280),
+        ]
+    )
+    await db_session.commit()
+
+    weekly_response = await test_client.get("/api/gamification/leaderboard?period=weekly&limit=5")
+
+    assert weekly_response.status_code == 200
+    weekly_body = weekly_response.json()
+    assert weekly_body["period"] == "weekly"
+    assert weekly_body["entries"][0]["display_name"] == "Leaderboard Pro"
+    assert weekly_body["entries"][0]["score"] == 280
+    assert weekly_body["current_user"]["display_name"] == "Test User"
+    assert weekly_body["current_user"]["score"] == 120
+    assert weekly_body["current_user"]["rank"] == 2
+
+    all_time_response = await test_client.get("/api/gamification/leaderboard?period=all_time&limit=5")
+
+    assert all_time_response.status_code == 200
+    all_time_body = all_time_response.json()
+    assert all_time_body["period"] == "all_time"
+    assert all_time_body["entries"][0]["display_name"] == "Leaderboard Pro"
+    assert all_time_body["entries"][0]["score"] == 2000
+    assert all_time_body["current_user"]["score"] == 1200
+    assert all_time_body["available_periods"] == ["weekly", "all_time"]

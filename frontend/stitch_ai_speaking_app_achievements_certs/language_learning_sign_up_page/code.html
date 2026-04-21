@@ -1,0 +1,158 @@
+<html lang="en"><head></head><body class="min-h-screen flex items-center justify-center p-4 bg-[#fafafa]">```html
+
+
+
+  <meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create your profile - Duolingo Style</title>
+<!-- BEGIN: Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- END: Tailwind CSS CDN -->
+<!-- BEGIN: Custom Font Configuration -->
+<style data-purpose="typography">
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+    
+    body {
+      font-family: 'Nunito', sans-serif;
+      background-color: #ffffff;
+      color: #4b4b4b;
+    }
+
+    .font-din-round {
+      /* Mimicking the specific bold rounded font style */
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    /* Custom color for the primary blue button and links */
+    .text-duo-blue { color: #1cb0f6; }
+    .bg-duo-blue { background-color: #1cb0f6; }
+    .border-duo-blue { border-color: #1cb0f6; }
+    .hover-bg-duo-blue:hover { background-color: #1899d6; }
+  </style>
+<!-- END: Custom Font Configuration -->
+<style data-purpose="layout-adjustments">
+    /* Subtle shadows and specific border colors to match the image precisely */
+    .auth-card {
+      border: 2px solid #e5e5e5;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+    }
+
+    .input-field {
+      background-color: #f7f7f7;
+      border: 2px solid #e5e5e5;
+      transition: border-color 0.2s;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: #1cb0f6;
+      background-color: #fff;
+    }
+
+    .social-btn {
+      border: 2px solid #e5e5e5;
+      transition: background-color 0.2s;
+    }
+
+    .social-btn:hover {
+      background-color: #f7f7f7;
+    }
+
+    .login-btn-top {
+      border: 2px solid #e5e5e5;
+      color: #afafaf;
+      transition: all 0.2s;
+    }
+
+    .login-btn-top:hover {
+      background-color: #f7f7f7;
+      border-color: #d1d1d1;
+    }
+  </style>
+<!-- BEGIN: MainHeader -->
+<header class="fixed top-0 right-0 p-6">
+<button class="login-btn-top px-5 py-2 rounded-xl font-bold text-sm tracking-wider uppercase" data-purpose="login-navigation">
+      Login
+    </button>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: RegistrationCard -->
+<main class="w-full flex justify-center">
+<div class="auth-card bg-white rounded-[20px] p-8 flex flex-col items-center" data-purpose="registration-form-container">
+<h1 class="font-din-round text-[#3c3c3c] mb-8 text-[32px]">Create your profile</h1>
+<!-- BEGIN: SignUpForm -->
+<form action="#" class="w-full space-y-3" data-purpose="signup-form" method="POST">
+<!-- Name Input -->
+<div class="relative">
+<input class="input-field w-full px-4 py-3 rounded-xl font-semibold text-[#4b4b4b] placeholder-[#afafaf] focus:ring-0" data-purpose="input-name" placeholder="Name (optional)" type="text"/>
+</div>
+<!-- Email Input -->
+<div class="relative">
+<input class="input-field w-full px-4 py-3 rounded-xl font-semibold text-[#4b4b4b] placeholder-[#afafaf] focus:ring-0" data-purpose="input-email" placeholder="Email" type="email"/>
+</div>
+<!-- Password Input -->
+<div class="relative">
+<input class="input-field w-full px-4 py-3 rounded-xl font-semibold text-[#4b4b4b] placeholder-[#afafaf] focus:ring-0" data-purpose="input-password" placeholder="Password" type="password"/>
+<!-- Password Visibility Toggle Icon -->
+<div class="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer">
+<svg class="w-6 h-6 text-[#1cb0f6]" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+<!-- Create Account Button -->
+<div class="pt-2">
+<button class="bg-duo-blue hover-bg-duo-blue w-full py-3.5 rounded-xl text-white font-din-round text-sm tracking-widest uppercase shadow-[0_4px_0_0_#1899d6] active:shadow-none active:translate-y-[4px] transition-all" data-purpose="submit-button" type="submit">
+            Create Account
+          </button>
+</div>
+</form>
+<!-- END: SignUpForm -->
+<!-- BEGIN: Separator -->
+<div class="w-full flex items-center my-6" data-purpose="form-separator">
+<div class="flex-grow h-[2px] bg-[#e5e5e5]"></div>
+<span class="px-4 text-[#afafaf] font-bold text-sm tracking-widest">OR</span>
+<div class="flex-grow h-[2px] bg-[#e5e5e5]"></div>
+</div>
+<!-- END: Separator -->
+<!-- BEGIN: SocialLogins -->
+<div class="w-full flex gap-6 mb-8" data-purpose="social-auth-buttons">
+<!-- Google Button -->
+<button class="social-btn flex-1 flex items-center justify-center gap-3 py-2.5 rounded-xl font-bold text-[#4b4b4b] text-sm tracking-wider uppercase shadow-[0_2px_0_0_#e5e5e5] active:shadow-none active:translate-y-[2px] transition-all">
+<img alt="Google" class="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzHlwsf4boccvAWE3xeOv75XLy9eHnaVM6TgW_KvidApYRKsHrhcyTpxUEzoazwVvK9nZgMDo6SbKe0deJ9716nErkJZwbe4H_zWkAk6orbeyaX4m6bEdB3qUWrFg_hwPLbYZIM4Jr-Mw9IIaiITn6IGwJTpJF-CAVi9Czv3PWzGWdc6vSbw3NKXXmEYdRmgC3MYmpWzNSMxW7Zj8rNV3tkuJCAmb5C-OOM7QLfo3RXZ6entNMNfEjkZlCA1KNhenlaFbkUmTudrFZ"/>
+          Google
+        </button>
+<!-- Facebook Button -->
+<button class="social-btn flex-1 flex items-center justify-center gap-3 py-2.5 rounded-xl font-bold text-[#4b4b4b] text-sm tracking-wider uppercase shadow-[0_2px_0_0_#e5e5e5] active:shadow-none active:translate-y-[2px] transition-all">
+<img alt="Facebook" class="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcP858G6fXy_qSzjrwUnq51ItaGkn0SbxrOF-XUSdZ6UNnqNPoFbdpmx4Ti9Kof1SEnLjFsAuQ5X0F0uqGRFcUrWAbeWZNrM9cdJGrENtegeshBlXcxhs2cimzZkqZ-gInyit3CrIG_ZGY0qZvXVn0CGtdlT_46Ly4alEstNsiDtOJGi8ZMAfhiZOp75QG5fdwYgposoiirXSfl8X0D4XAGvDdaO_S3Aq4r0__W6JRDC3XgzXv2DvBmbQCM0C6o1YhiUK6JWuqL3dj"/>
+          Facebook
+        </button>
+</div>
+<!-- END: SocialLogins -->
+<!-- BEGIN: FooterText -->
+<footer class="text-center text-[13px] leading-relaxed text-[#afafaf] font-bold" data-purpose="card-footer">
+<p class="mb-4 px-2">
+          By signing in to Duolingo, you agree to our 
+          <a class="text-duo-blue hover:underline" href="#">Terms</a> and 
+          <a class="text-duo-blue hover:underline" href="#">Privacy Policy</a>.
+        </p>
+<p class="px-4 text-[11px] text-[#afafaf] font-semibold leading-tight">
+          This site is protected by reCAPTCHA Enterprise and the Google 
+          <a class="text-[#afafaf] underline" href="#">Privacy Policy</a> and 
+          <a class="text-[#afafaf] underline" href="#">Terms of Service</a> apply.
+        </p>
+</footer>
+<!-- END: FooterText -->
+</div>
+</main>
+<!-- END: RegistrationCard -->
+
+
+
+
+```</body></html><!-- MISSING_IMAGES:
+- TEMP_EYE_ICON_PLACEHOLDER: The eye icon used to toggle password visibility.
+- TEMP_GOOGLE_LOGO_PLACEHOLDER: The Google G logo for social authentication.
+- TEMP_FACEBOOK_LOGO_PLACEHOLDER: The Facebook F logo for social authentication.
+-->

@@ -4,6 +4,7 @@ import {
   CreditCard,
   HouseLine,
   Sparkle,
+  Trophy,
   SquaresFour,
   UserList,
   UserCircle,
@@ -17,6 +18,7 @@ export const publicNavItems = [
 
 export const learnerNavItems = [
   { label: "Dashboard", path: "/dashboard", icon: HouseLine },
+  { label: "Leaderboard", path: "/leaderboard", icon: Trophy },
   { label: "Topics", path: "/topics", icon: BookOpenText },
   { label: "Plan", path: "/subscription", icon: Crown },
   { label: "Profile", path: "/profile", icon: UserCircle },
@@ -24,6 +26,7 @@ export const learnerNavItems = [
 
 export const learnerTabItems = [
   { label: "Dashboard", path: "/dashboard", icon: HouseLine },
+  { label: "Leaderboard", path: "/leaderboard", icon: Trophy },
   { label: "Topics", path: "/topics", icon: BookOpenText },
   { label: "Plan", path: "/subscription", icon: Crown },
   { label: "Profile", path: "/profile", icon: UserCircle },

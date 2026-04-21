@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -16,6 +16,9 @@ from app.modules.gamification.schemas import (
     GamificationDashboard,
     GemRead,
     HeartRead,
+    LeaderboardEntryRead,
+    LeaderboardPeriod,
+    LeaderboardRead,
     LessonCompleteRequest,
     LessonCompleteResponse,
     RewardRead,
@@ -135,6 +138,81 @@ def _as_aware(value: datetime) -> datetime:
 
 
 class GamificationService:
+    @classmethod
+    async def get_leaderboard(
+        cls,
+        db: AsyncSession,
+        user: User,
+        *,
+        period: LeaderboardPeriod = "weekly",
+        limit: int = 5,
+    ) -> LeaderboardRead:
+        today = _today()
+        streak_expr = func.coalesce(User.current_streak, 0)
+
+        if period == "weekly":
+            week_start = today - timedelta(days=today.weekday())
+            weekly_scores = (
+                select(
+                    DailyStat.user_id.label("user_id"),
+                    func.coalesce(func.sum(DailyStat.xp_earned), 0).label("score"),
+                )
+                .where(DailyStat.date >= week_start, DailyStat.date <= today)
+                .group_by(DailyStat.user_id)
+                .subquery()
+            )
+            score_expr = func.coalesce(weekly_scores.c.score, 0)
+            source_stmt = (
+                select(
+                    User.id.label("user_id"),
+                    User.display_name.label("display_name"),
+                    User.email.label("email"),
+                    User.avatar.label("avatar"),
+                    User.target_language.label("target_language"),
+                    streak_expr.label("current_streak"),
+                    score_expr.label("score"),
+                    func.row_number()
+                    .over(order_by=(score_expr.desc(), streak_expr.desc(), User.id.asc()))
+                    .label("rank"),
+                )
+                .select_from(User)
+                .outerjoin(weekly_scores, weekly_scores.c.user_id == User.id)
+                .where(User.deleted_at.is_(None))
+            )
+        else:
+            score_expr = func.coalesce(User.total_xp, 0)
+            source_stmt = (
+                select(
+                    User.id.label("user_id"),
+                    User.display_name.label("display_name"),
+                    User.email.label("email"),
+                    User.avatar.label("avatar"),
+                    User.target_language.label("target_language"),
+                    streak_expr.label("current_streak"),
+                    score_expr.label("score"),
+                    func.row_number()
+                    .over(order_by=(score_expr.desc(), streak_expr.desc(), User.id.asc()))
+                    .label("rank"),
+                )
+                .select_from(User)
+                .where(User.deleted_at.is_(None))
+            )
+
+        ranked = source_stmt.subquery()
+
+        top_rows = (
+            await db.execute(select(ranked).where(ranked.c.rank <= limit).order_by(ranked.c.rank.asc()))
+        ).mappings().all()
+        current_row = (
+            await db.execute(select(ranked).where(ranked.c.user_id == user.id))
+        ).mappings().one()
+
+        return LeaderboardRead(
+            period=period,
+            entries=[cls._serialize_leaderboard_row(row) for row in top_rows],
+            current_user=cls._serialize_leaderboard_row(current_row),
+        )
+
     @classmethod
     async def get_dashboard(cls, db: AsyncSession, user: User) -> GamificationDashboard:
         await cls._ensure_catalog(db)
@@ -509,3 +587,16 @@ class GamificationService:
     ) -> UnlockedAchievementRead:
         serialized = cls._serialize_achievement(achievement)
         return UnlockedAchievementRead(**serialized.model_dump(), unlocked_at=unlocked_at)
+
+    @staticmethod
+    def _serialize_leaderboard_row(row: dict) -> LeaderboardEntryRead:
+        return LeaderboardEntryRead(
+            user_id=int(row["user_id"]),
+            rank=int(row["rank"]),
+            score=int(row["score"] or 0),
+            current_streak=int(row["current_streak"] or 0),
+            display_name=row["display_name"],
+            email=row["email"],
+            avatar=row["avatar"],
+            target_language=row["target_language"],
+        )

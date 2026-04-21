@@ -65,6 +65,16 @@
   --color-tertiary-fixed: #ffddb4;
   --color-on-tertiary-fixed: #291800;
   
+  /* Duolingo Design Tokens */
+  --color-duo-green: #34C700;
+  --color-duo-green-dark: #2ba300;
+  --color-duo-blue: #1cb0f6;
+  --color-duo-blue-dark: #1899d6;
+  --color-duo-gray: #e5e5e5;
+  --color-duo-text: #4b4b4b;
+  --color-duo-header-text: #777777;
+  --color-duo-muted: #afafaf;
+  
   --color-surface: #f9f9fc;
   --color-on-surface: #1a1c1e;
   --color-surface-variant: #e2e2e5;
