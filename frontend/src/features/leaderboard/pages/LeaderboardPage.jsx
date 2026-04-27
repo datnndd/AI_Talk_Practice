@@ -1,25 +1,43 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Clock, ShieldStar } from "@phosphor-icons/react";
 
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { getLeaderboardData } from "@/features/leaderboard/api/leaderboardApi";
 import LeaderboardList from "@/features/leaderboard/components/LeaderboardList";
-import LeaderboardPodium from "@/features/leaderboard/components/LeaderboardPodium";
+import "@/features/leaderboard/components/Leaderboard.css";
 
-const PERIOD_CONTENT = {
-  weekly: {
-    title: "Weekly Speaking Leaderboard",
-    subtitle: "Who practiced speaking the most this week?",
-  },
-  all_time: {
-    title: "All-time Speaking Leaderboard",
-    subtitle: "The most dedicated speakers across the entire platform.",
-  },
+const LEAGUE_COLORS = [
+  "#cd7f32",
+  "#9ca3af",
+  "#ffc800",
+  "#58cc02",
+  "#ff4b4b",
+  "#1cb0f6",
+  "#7848f4",
+];
+
+const LeagueProgression = () => {
+  const activeIndex = 4;
+
+  return (
+    <div className="league-progression">
+      {LEAGUE_COLORS.map((color, index) => (
+        <ShieldStar
+          key={index}
+          size={34}
+          weight="fill"
+          color={color}
+          className={`league-icon ${index === activeIndex ? "league-icon-active" : ""}`}
+        />
+      ))}
+    </div>
+  );
 };
 
 const LeaderboardPage = () => {
   const { user } = useAuth();
-  const [period, setPeriod] = useState("weekly");
+  const period = "weekly";
   const [data, setData] = useState({
     filters: [],
     activeFilter: "weekly",
@@ -28,7 +46,6 @@ const LeaderboardPage = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const periodContent = PERIOD_CONTENT[data.activeFilter] ?? PERIOD_CONTENT.weekly;
 
   useEffect(() => {
     let isMounted = true;
@@ -61,48 +78,22 @@ const LeaderboardPage = () => {
   }, [period, user?.id]);
 
   return (
-    <div className="mx-auto max-w-5xl px-2 text-[#191c1e]">
-      <main className="pb-12">
+    <div className="leaderboard-container">
+      <main className="w-full">
         <motion.section
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-14 text-center"
+          className="flex flex-col items-center"
         >
-          <h1 className="font-display text-4xl font-extrabold tracking-tight text-[#2b6c00] md:text-6xl">
-            {periodContent.title}
-          </h1>
-          <p className="mt-4 text-lg font-medium text-[#3f4a36]">
-            {periodContent.subtitle} <span role="img" aria-label="speaking">🗣️</span>
-            <span role="img" aria-label="fire">🔥</span>
+          <LeagueProgression />
+          <h1 className="league-title">Ruby League</h1>
+          <p className="league-subtitle">
+            Top 5 advance to the next league!
           </p>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            {data.filters.map((filter) => {
-              const isActive = filter.key === data.activeFilter;
-
-              return (
-                <button
-                  key={filter.key}
-                  type="button"
-                  onClick={() => {
-                    if (filter.enabled) {
-                      setPeriod(filter.key);
-                    }
-                  }}
-                  disabled={!filter.enabled}
-                  className={`rounded-full px-5 py-2.5 text-sm font-black uppercase tracking-[0.16em] transition ${
-                    isActive
-                      ? "bg-primary text-white shadow-lg shadow-primary/20"
-                      : filter.enabled
-                        ? "bg-white text-zinc-500 hover:bg-[#fbffe2] hover:text-[#2b6c00]"
-                        : "cursor-not-allowed bg-white/60 text-zinc-300"
-                  }`}
-                  aria-pressed={isActive}
-                >
-                  {filter.label}
-                </button>
-              );
-            })}
+          
+          <div className="league-timer">
+            <Clock size={20} weight="bold" />
+            1d 19h
           </div>
         </motion.section>
 
@@ -117,8 +108,7 @@ const LeaderboardPage = () => {
             <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
           </div>
         ) : (
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-            <LeaderboardPodium entries={data.entries} />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
             <LeaderboardList entries={data.entries} currentUser={data.currentUser} />
           </motion.div>
         )}

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
+import { ChartBar, House, Medal, Notebook, UserCircle } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { isRouteActive } from "./navigationData";
 
@@ -7,27 +8,28 @@ const MOBILE_NAV_ITEMS = [
   {
     label: "Learn",
     path: "/dashboard",
-    icon: "https://d35aaqx5ub95lt.cloudfront.net/vendor/784035717e2ff1d448c0f6cc4efc89fb.svg",
+    Icon: House,
   },
   {
     label: "Topics",
     path: "/topics",
-    icon: "https://d35aaqx5ub95lt.cloudfront.net/vendor/80a60f598d6a6b0493aeb4d7b93fc0e3.svg",
+    Icon: Notebook,
   },
   {
     label: "Leader",
     path: "/leaderboard",
-    icon: "https://d35aaqx5ub95lt.cloudfront.net/vendor/ca9178510134b4b0893dbac30b6670aa.svg",
+    Icon: Medal,
   },
   {
     label: "Plan",
     path: "/subscription",
-    icon: "https://d35aaqx5ub95lt.cloudfront.net/vendor/0e58a94dda219766d98c7796b910beee.svg",
+    Icon: ChartBar,
   },
   {
     label: "Profile",
     path: "/profile",
-    icon: "profile", // Special case for avatar
+    Icon: UserCircle,
+    usesAvatar: true,
   },
 ];
 
@@ -42,6 +44,7 @@ const MobileNav = () => {
       <div className="flex items-center justify-around px-2 py-3">
         {MOBILE_NAV_ITEMS.map((item) => {
           const isActive = isRouteActive(location.pathname, item.path);
+          const Icon = item.Icon;
           return (
             <Link key={item.label} to={item.path} className="flex-1">
               <motion.div
@@ -52,7 +55,7 @@ const MobileNav = () => {
                     : "text-[#afafaf]"
                 }`}
               >
-                {item.icon === "profile" ? (
+                {item.usesAvatar ? (
                   <div className={`h-7 w-7 overflow-hidden rounded-full border-2 ${isActive ? 'border-[#1cb0f6]' : 'border-[#e5e5e5]'}`}>
                     {user?.avatar ? (
                       <img src={user.avatar} alt="P" className="h-full w-full object-cover" />
@@ -63,7 +66,7 @@ const MobileNav = () => {
                     )}
                   </div>
                 ) : (
-                  <img src={item.icon} alt={item.label} className={`h-7 w-7 object-contain ${isActive ? '' : 'grayscale opacity-70'}`} />
+                  <Icon size={28} weight={isActive ? "fill" : "bold"} />
                 )}
                 <span className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-[#1cb0f6]' : 'text-[#afafaf]'}`}>
                   {item.label}

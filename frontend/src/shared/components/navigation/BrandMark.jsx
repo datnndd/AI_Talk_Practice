@@ -1,29 +1,33 @@
 import { Link } from "react-router-dom";
+import logo from "@/assets/buddy_talk_logo.jpg";
 
-const BrandMark = ({ to = "/", compact = false }) => {
+const BrandMark = ({ to = "/", compact = false, eyebrow = null, className = "" }) => {
   return (
-    <Link to={to} className="group inline-flex items-center gap-2">
-      <div className={`flex items-center text-duo-text transition duration-300 group-hover:scale-[1.03] ${compact ? 'scale-75 origin-left' : ''}`}>
-        <svg 
-          className="w-8 h-8 mr-2 text-duo-text" 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path 
-            d="M21 11.5C21 15.6421 17.1944 19 12.5 19C11.5284 19 10.6015 18.854 9.74233 18.5833L5 21V16.634C3.16339 15.2638 2 13.4866 2 11.5C2 7.35786 5.80558 4 10.5 4C15.1944 4 19 7.35786 19 11.5" 
-            stroke="currentColor" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth="2"
-          />
-          <circle cx="7" cy="11" fill="currentColor" r="1" />
-          <circle cx="11" cy="11" fill="currentColor" r="1" />
-          <circle cx="15" cy="11" fill="currentColor" r="1" />
-        </svg>
-        <span className="text-2xl font-bold tracking-tight text-duo-text">
-          SpeakEasy <span className="text-duo-green">AI</span>
-        </span>
+    <Link to={to} className={`group inline-flex items-center gap-3 ${className}`}>
+      <div className={`flex items-center transition duration-300 group-hover:scale-[1.03] ${compact ? 'scale-75 origin-left' : ''}`}>
+        <img 
+          src={logo} 
+          alt="Buddy Talk Logo" 
+          className="h-9 w-auto object-contain" 
+        />
+        
+        {!compact && (
+          <div className="ml-2 flex flex-col justify-center">
+            {eyebrow && (
+              <p className="mb-0.5 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 transition-colors">
+                {eyebrow}
+              </p>
+            )}
+            <div className="flex items-center text-2xl font-black tracking-tighter leading-none">
+              <p className="text-foreground transition-colors">
+                Buddy
+              </p>
+              <p className="ml-1 text-brand-green transition-colors">
+                Talk
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </Link>
   );

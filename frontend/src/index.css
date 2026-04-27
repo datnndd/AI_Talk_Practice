@@ -1,54 +1,81 @@
 @import "tailwindcss";
 
 :root {
-  --page-bg: #f5f7fb;
-  --page-fg: #101828;
-  --page-muted: #667085;
-  --page-subtle: #98a2b3;
-  --page-glow-1: rgba(0, 90, 182, 0.16);
-  --page-glow-2: rgba(22, 114, 223, 0.12);
-  --panel-bg: rgba(255, 255, 255, 0.88);
-  --panel-alt: rgba(247, 249, 252, 0.92);
-  --panel-border: rgba(15, 23, 42, 0.08);
-  --panel-shadow: 0 24px 60px -32px rgba(15, 23, 42, 0.28);
-  --nav-bg: rgba(255, 255, 255, 0.78);
-  --nav-text: #101828;
-  --nav-muted: #667085;
-  --chip-bg: rgba(0, 90, 182, 0.1);
-  --chip-text: #005ab6;
-  --chip-neutral-bg: rgba(15, 23, 42, 0.06);
-  --chip-neutral-text: #334155;
-  --success-bg: rgba(16, 185, 129, 0.12);
-  --success-text: #047857;
-  --warning-bg: rgba(245, 158, 11, 0.14);
-  --warning-text: #b45309;
+  --page-bg: #F8FAFC; 
+  --page-fg: #1A0F2E; /* Use the deep purple for contrast in light mode */
+  --page-muted: #64748B;
+  --page-subtle: #94A3B8;
+  --page-glow-1: rgba(167, 243, 208, 0.5); /* Soft Cyan glow */
+  --page-glow-2: rgba(147, 197, 253, 0.4); /* Light Blue highlight */
+  --panel-bg: rgba(255, 255, 255, 0.65);
+  --panel-alt: rgba(214, 238, 255, 0.4); /* Soft Sky Blue */
+  --panel-border: rgba(191, 227, 255, 0.3); /* Pastel Blue border */
+  --panel-shadow: 0 20px 50px -20px rgba(147, 197, 253, 0.2);
+  --nav-bg: rgba(248, 250, 252, 0.85);
+  --nav-text: #1A0F2E;
+  --nav-muted: #64748B;
+  --chip-bg: #DDFCE5; /* Mint Green */
+  --chip-text: #059669;
+  --chip-neutral-bg: #D6EEFF;
+  --chip-neutral-text: #0369A1;
+  --success-bg: #DDFCE5;
+  --success-text: #059669;
+  --warning-bg: #FEF3C7;
+  --warning-text: #D97706;
+  --color-promo-from: #58CC02;
+  --color-promo-to: #89E219;
 }
 
 [data-theme="dark"] {
-  --page-bg: #07111f;
-  --page-fg: #edf2f7;
-  --page-muted: #a0aec0;
-  --page-subtle: #718096;
-  --page-glow-1: rgba(32, 123, 255, 0.18);
-  --page-glow-2: rgba(14, 165, 233, 0.12);
-  --panel-bg: rgba(10, 18, 31, 0.82);
-  --panel-alt: rgba(15, 23, 42, 0.88);
-  --panel-border: rgba(148, 163, 184, 0.16);
-  --panel-shadow: 0 30px 80px -40px rgba(2, 6, 23, 0.95);
-  --nav-bg: rgba(7, 17, 31, 0.78);
-  --nav-text: #edf2f7;
-  --nav-muted: #cbd5e1;
-  --chip-bg: rgba(96, 165, 250, 0.18);
-  --chip-text: #bfdbfe;
-  --chip-neutral-bg: rgba(148, 163, 184, 0.12);
-  --chip-neutral-text: #e2e8f0;
-  --success-bg: rgba(16, 185, 129, 0.16);
-  --success-text: #6ee7b7;
-  --warning-bg: rgba(245, 158, 11, 0.18);
-  --warning-text: #fbbf24;
+  --page-bg: #1A0F2E; /* Deep Purple base */
+  --page-fg: #F8FAFC;
+  --page-muted: #94A3B8;
+  --page-subtle: #64748B;
+  --page-glow-1: rgba(108, 59, 255, 0.3); /* Violet Glow */
+  --page-glow-2: rgba(11, 26, 58, 0.6);  /* Indigo / Blue Night */
+  --panel-bg: rgba(26, 15, 46, 0.7);
+  --panel-alt: rgba(11, 26, 58, 0.4);
+  --panel-border: rgba(192, 132, 252, 0.2); /* Nebula Pink border */
+  --panel-shadow: 0 30px 100px -40px rgba(0, 0, 0, 0.9);
+  --nav-bg: rgba(11, 26, 58, 0.85);
+  --nav-text: #F8FAFC;
+  --nav-muted: #94A3B8;
+  --chip-bg: rgba(108, 59, 255, 0.2); /* Violet pulse */
+  --chip-text: #E0E7FF;
+  --chip-neutral-bg: rgba(11, 26, 58, 0.3);
+  --chip-neutral-text: #F8FAFC;
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --success-text: #A7F3D0;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-text: #FDE047;
+  --color-promo-from: #6C3BFF;
+  --color-promo-to: #C084FC;
 }
 
 @theme {
+  /* Dynamic App Theme Colors */
+  --color-background: var(--nav-bg);
+  --color-foreground: var(--page-fg);
+  --color-border: var(--panel-border);
+  --color-card: var(--panel-bg);
+  --color-card-foreground: var(--page-fg);
+  --color-muted: var(--panel-alt);
+  --color-muted-foreground: var(--page-subtle);
+  
+  /* Promo Colors */
+  --color-promo-from: var(--color-promo-from);
+  --color-promo-to: var(--color-promo-to);
+  
+  /* Sidebar Specific */
+  --color-sidebar-active: var(--chip-bg);
+  --color-sidebar-active-foreground: var(--chip-text);
+  --color-brand-purple: #7848f4;
+  --color-brand-purple-soft: #f4efff;
+  --color-brand-orange-soft: #fff6e9;
+  --color-difficulty-hard: #ff4b4b;
+  --color-difficulty-easy: #58cc02;
+  --color-primary-soft: #e5f5ff;
+
   --color-primary: #005ab6;
   --color-primary-container: #1672df;
   --color-on-primary-container: #fefcff;
@@ -65,20 +92,20 @@
   --color-tertiary-fixed: #ffddb4;
   --color-on-tertiary-fixed: #291800;
   
-  /* Duolingo Design Tokens */
-  --color-duo-green: #58CC02;
-  --color-duo-green-dark: #46a302;
-  --color-duo-blue: #1CB0F6;
-  --color-duo-blue-dark: #1899D6;
-  --color-duo-orange: #FF9600;
-  --color-duo-orange-dark: #cc7800;
-  --color-duo-bee: #FFC800;
-  --color-duo-cardinal: #FF4B4B;
-  --color-duo-gray: #E5E5E5;
-  --color-duo-text: #4B4B4B;
-  --color-duo-header-text: #777777;
-  --color-duo-muted: #AFAFAF;
-  --color-duo-border: #E5E5E5;
+  /* Brand Design Tokens */
+  --color-brand-green: #58CC02;
+  --color-brand-green-dark: #46a302;
+  --color-brand-blue: #1CB0F6;
+  --color-brand-blue-dark: #1899D6;
+  --color-brand-orange: #FF9600;
+  --color-brand-orange-dark: #cc7800;
+  --color-brand-gold: #FFC800;
+  --color-brand-red: #FF4B4B;
+  --color-brand-gray: #E5E5E5;
+  --color-brand-text: #4B4B4B;
+  --color-brand-muted-text: #777777;
+  --color-brand-muted: #AFAFAF;
+  --color-brand-border: #E5E5E5;
   
   --color-surface: #f9f9fc;
   --color-on-surface: #1a1c1e;
@@ -88,10 +115,9 @@
   --color-surface-container-low: #f3f3f6;
   --color-surface-container-lowest: #ffffff;
   
-  --color-outline: #727785;
-  --color-outline-variant: #c1c6d5;
+  --color-outline: var(--page-subtle);
+  --color-outline-variant: var(--panel-border);
   
-  --color-foreground: #1a1c1e;
   --color-zinc-950: #09090b;
 
   --font-sans: "Inter", "Public Sans", ui-sans-serif, system-ui, sans-serif;
@@ -137,6 +163,22 @@
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
 
+  /* Global theme transitions */
+  body, 
+  aside, 
+  nav, 
+  div, 
+  p, 
+  span, 
+  button, 
+  h1, h2, h3, h4, h5, h6 {
+    transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-tight text-balance;
   }
@@ -144,16 +186,49 @@
 
 @layer utilities {
   .app-page-shell {
-    background:
-      radial-gradient(circle at top left, var(--page-glow-1), transparent 28%),
-      radial-gradient(circle at bottom right, var(--page-glow-2), transparent 34%),
-      var(--page-bg);
+    position: relative;
+    z-index: 0;
+    min-height: 100vh;
+    color: var(--page-fg);
+    background-color: var(--page-bg);
+    /* Radial glows transition via variables */
+    background-image: 
+      radial-gradient(circle at 15% 25%, var(--page-glow-1), transparent 45%),
+      radial-gradient(circle at 85% 75%, var(--page-glow-2), transparent 50%),
+      radial-gradient(circle at 70% 30%, rgba(221, 252, 229, 0.2), transparent 40%);
+    background-attachment: fixed;
   }
 
-  .app-panel {
-    background-color: var(--panel-bg);
-    border: 1px solid var(--panel-border);
-    box-shadow: var(--panel-shadow);
+  /* Background Image Cross-fade Strategy */
+  .app-page-shell::before,
+  .app-page-shell::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    pointer-events: none;
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Light Background */
+  .app-page-shell::before {
+    background-image: url("./assets/cosmic-light.png");
+    opacity: 1;
+  }
+
+  [data-theme="dark"] .app-page-shell::before {
+    opacity: 0;
+  }
+
+  /* Dark Background */
+  .app-page-shell::after {
+    background-image: url("./assets/cosmic-dark.png");
+    z-index: -2;
+    opacity: 1;
   }
 
   .app-panel-soft {
@@ -208,28 +283,158 @@
     text-wrap: balance;
   }
 
-  /* Duolingo UI Utilities */
-  .duo-button-primary {
+  /* App UI Utilities */
+  .app-button-primary {
     @apply relative inline-flex items-center justify-center rounded-2xl border-2 border-b-4 border-[#2195d0] bg-[#1cb0f6] px-6 py-3 font-black uppercase tracking-wide text-white transition-all active:border-b-2 active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .duo-button-secondary {
+  .app-button-secondary {
     @apply relative inline-flex items-center justify-center rounded-2xl border-2 border-b-4 border-[#e5e5e5] bg-white px-6 py-3 font-black uppercase tracking-wide text-[#afafaf] transition-all hover:bg-[#f7f7f7] active:border-b-2 active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .duo-button-green {
+  .app-button-green {
     @apply relative inline-flex items-center justify-center rounded-2xl border-2 border-b-4 border-[#46a302] bg-[#58CC02] px-6 py-3 font-black uppercase tracking-wide text-white transition-all active:border-b-2 active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .duo-panel {
-    @apply rounded-2xl border-2 border-[#e5e5e5] p-6 bg-white;
+  .app-panel {
+    @apply rounded-2xl border p-6;
+    background-color: var(--panel-bg);
+    border-color: var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 
-  .duo-input {
-    @apply w-full rounded-2xl border-2 border-[#e5e5e5] bg-[#f7f7f7] p-4 font-bold text-[#4b4b4b] transition-all focus:border-[#1cb0f6] focus:bg-white outline-none;
+  .app-input {
+    @apply w-full rounded-2xl border p-4 font-bold transition-all outline-none;
+    background-color: var(--panel-alt);
+    border: 2px solid var(--panel-border);
+    color: var(--page-fg);
   }
 
-  .duo-label {
+  .app-input:focus {
+    border-color: #1cb0f6;
+    background-color: transparent;
+  }
+
+  .app-label {
     @apply mb-2 block text-sm font-black uppercase tracking-wide text-[#777777];
+  }
+
+  /* Course Sections & Progress Bar */
+  .app-progress-bar {
+    @apply relative h-[22px] w-full items-center rounded-full bg-[#e5e5e5];
+    --progress-color: #58cc02;
+  }
+
+  .app-progress-fill {
+    @apply absolute top-0 left-0 h-full rounded-full transition-all duration-700 ease-out;
+    background-color: var(--progress-color);
+  }
+
+  .app-progress-shine {
+    @apply absolute top-[3px] left-2 h-[4px] rounded-full bg-white/20;
+    width: calc(100% - 16px);
+  }
+
+  .app-progress-label {
+    @apply absolute inset-0 flex items-center justify-center text-[11px] font-black uppercase text-white drop-shadow-sm;
+  }
+
+  .section-card {
+    @apply relative flex min-h-[140px] w-full flex-col justify-between overflow-hidden rounded-2xl border-2 border-[#e5e5e5] bg-white p-6 transition-all;
+  }
+
+  .section-card-completed {
+    @apply border-[#58cc02] bg-white;
+  }
+
+  .section-badge {
+    @apply inline-flex items-center rounded-xl bg-[#e5e5e5] px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-[#777777];
+  }
+
+  .section-badge-active {
+    @apply bg-[#1cb0f6] text-white;
+  }
+
+  .character-bubble {
+    @apply relative rounded-2xl border-2 border-[#e5e5e5] bg-white p-4 text-sm font-bold text-[#4B4B4B] shadow-sm;
+  }
+
+  /* Dashboard UI Refinements */
+  .app-section-panel {
+    @apply flex items-center justify-between rounded-[20px] border-2 border-b-[4px] border-brand-border bg-white p-6 transition-all;
+  }
+  
+  .app-section-spacing {
+    @apply mb-4;
+  }
+
+  .app-section-content {
+    @apply flex flex-col gap-2;
+  }
+
+  .app-section-meta {
+    @apply inline-flex items-center rounded-xl px-0 py-1.5 text-[13px] font-black uppercase tracking-wider text-brand-blue border-0 outline-none cursor-default bg-transparent;
+  }
+
+  .app-section-title {
+    @apply text-2xl font-black text-brand-text leading-tight;
+  }
+
+  .app-section-status {
+    @apply flex items-center gap-2 mt-1;
+  }
+
+  .app-section-icon {
+    @apply h-6 w-6;
+  }
+
+  .app-section-success {
+    @apply text-[13px] font-black text-brand-green uppercase tracking-[0.02em];
+  }
+
+  .app-section-action {
+    @apply flex shrink-0 items-center justify-center pl-4;
+  }
+
+  .app-section-button {
+    @apply relative inline-flex items-center justify-center rounded-[16px] border-2 border-b-[4px] border-brand-border bg-white px-8 h-[50px] font-black uppercase tracking-wide text-brand-blue transition-all hover:bg-[#f7f7f7] active:border-b-2 active:translate-y-[2px];
+    box-shadow: none;
+  }
+
+  .section-active .app-section-panel {
+    @apply border-brand-blue border-b-brand-blue-dark bg-brand-blue text-white;
+  }
+
+  .section-active .app-section-title,
+  .section-active .app-section-meta,
+  .section-active .app-section-button-label {
+    @apply text-white;
+  }
+
+  .section-active .app-section-button {
+    @apply border-white/30 border-b-white/50 bg-white !text-brand-blue;
+  }
+
+  .section-completed .app-section-meta {
+    @apply text-brand-blue;
+  }
+
+  .section-completed .app-section-panel {
+    @apply border-brand-border bg-white;
+  }
+
+  /* Glass Overrides for Tailwind classes */
+  .bg-background {
+    background-color: var(--nav-bg) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .bg-card {
+    background-color: var(--panel-bg) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }

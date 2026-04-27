@@ -7,7 +7,7 @@ const LandingNavbar = () => {
       <BrandMark />
       
       {/* Language Selector */}
-      <div className="hidden md:flex items-center space-x-1 text-sm font-bold text-duo-header-text uppercase tracking-wider cursor-pointer hover:text-duo-text transition-colors">
+      <div className="hidden md:flex items-center space-x-1 text-sm font-bold text-brand-muted-text uppercase tracking-wider cursor-pointer hover:text-brand-text transition-colors">
         <span>Site Language: English</span>
         <CaretDown weight="bold" className="w-4 h-4" />
       </div>

@@ -26,7 +26,7 @@ const LandingHero = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-4xl lg:text-5xl font-bold text-duo-text leading-tight mb-10 max-w-md font-display"
+          className="text-4xl lg:text-5xl font-bold text-brand-text leading-tight mb-10 max-w-md font-display"
         >
           The free, fun, and effective way to practice speaking!
         </motion.h1>
@@ -40,7 +40,7 @@ const LandingHero = () => {
           {/* Primary Call to Action */}
           <button 
             onClick={() => navigate("/register")}
-            className="w-full bg-duo-green hover:bg-[#61da04] text-white font-bold py-4 rounded-xl shadow-[0_4px_0_#2ba300] active:shadow-none active:translate-y-[2px] transition-all uppercase tracking-wide text-sm font-sans"
+            className="w-full bg-brand-green hover:bg-[#61da04] text-white font-bold py-4 rounded-xl shadow-[0_4px_0_#2ba300] active:shadow-none active:translate-y-[2px] transition-all uppercase tracking-wide text-sm font-sans"
           >
             Get Started
           </button>
@@ -48,7 +48,7 @@ const LandingHero = () => {
           {/* Secondary Call to Action */}
           <button 
             onClick={() => navigate("/login")}
-            className="w-full bg-white hover:bg-gray-50 text-duo-text border-2 border-duo-gray font-bold py-4 rounded-xl shadow-[0_4px_0_#e5e5e5] active:shadow-none active:translate-y-[2px] transition-all uppercase tracking-wide text-sm font-sans"
+            className="w-full bg-white hover:bg-gray-50 text-brand-text border-2 border-brand-gray font-bold py-4 rounded-xl shadow-[0_4px_0_#e5e5e5] active:shadow-none active:translate-y-[2px] transition-all uppercase tracking-wide text-sm font-sans"
           >
             I already have an account
           </button>

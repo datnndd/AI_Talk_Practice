@@ -6,7 +6,7 @@ Real-time AI conversation backend: **Microphone → ASR → LLM → TTS → Spea
 
 ```
 Browser (Mic) ──WebSocket──▶ FastAPI Backend
-                              ├── ASR: Deepgram Nova-3 -> DashScope Qwen fallback
+                              ├── ASR: Deepgram Nova-3
                               ├── LLM: OpenAI-compatible
                               └── TTS: DashScope
 ```
@@ -19,7 +19,7 @@ Browser (Mic) ──WebSocket──▶ FastAPI Backend
 |----------|-----|-----------|
 | **OpenAI-compatible LLM** | `OPENAI_API_KEY` | Your LLM gateway |
 | **Deepgram** (ASR) | `DEEPGRAM_API_KEY` | [Deepgram Console](https://console.deepgram.com/) |
-| **DashScope** (ASR/TTS) | `DASHSCOPE_API_KEY` | [Alibaba Cloud Model Studio](https://modelstudio.console.alibabacloud.com/) |
+| **DashScope** (TTS) | `DASHSCOPE_API_KEY` | [Alibaba Cloud Model Studio](https://modelstudio.console.alibabacloud.com/) |
 
 ### 2. Setup & Run
 
@@ -49,7 +49,7 @@ curl http://localhost:8000/providers
 
 ```env
 # Switch providers by changing these:
-ASR_PROVIDER=deepgram           # deepgram | dashscope
+ASR_PROVIDER=deepgram           # deepgram
 LLM_PROVIDER=openai             # openai-compatible
 TTS_PROVIDER=dashscope          # dashscope
 
@@ -62,7 +62,6 @@ OPENAI_API_KEY=sk-xxx
 LLM_MODEL=ai-talk
 LLM_BASE_URL=https://rfij5ml.9router.com/v1
 DEEPGRAM_ASR_MODEL=nova-3
-ASR_MODEL=qwen3-asr-flash-realtime
 TTS_MODEL=qwen3-tts-flash-realtime-2025-09-18
 TTS_VOICE=Cherry
 ```

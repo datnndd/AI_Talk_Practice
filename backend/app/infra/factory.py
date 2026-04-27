@@ -2,7 +2,7 @@
 Provider factory: creates the appropriate service implementations based on config.
 
 To add a new provider:
-1. Implement the base class in services/asr/, llm/, or tts/
+1. Implement the base class in infra/asr/, infra/llm/, or infra/tts/
 2. Add the import and mapping here
 """
 
@@ -34,25 +34,13 @@ def create_asr(config: Settings) -> ASRBase:
     provider = config.asr_provider.lower()
 
     if provider == "deepgram":
-        from app.infra.asr.dashscope_asr import DashScopeASR
         from app.infra.asr.deepgram_asr import DeepgramASR
-        from app.infra.asr.failover_asr import FailoverASR
-        logger.info("Using Deepgram ASR (primary) with DashScope ASR fallback")
-        return FailoverASR(
-            primary=DeepgramASR(config),
-            secondary=DashScopeASR(config),
-            primary_name="deepgram",
-            secondary_name="dashscope",
-        )
-
-    if provider == "dashscope":
-        from app.infra.asr.dashscope_asr import DashScopeASR
-        logger.info("Using DashScope ASR (cloud API)")
-        return DashScopeASR(config)
+        logger.info("Using Deepgram ASR")
+        return DeepgramASR(config)
 
     raise ValueError(
         f"Unknown ASR provider: '{provider}'. "
-        f"Available: deepgram, dashscope"
+        f"Available: deepgram"
     )
 
 

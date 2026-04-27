@@ -449,11 +449,15 @@ const PracticeSession = () => {
         if (suppressAssistantStreamRef.current) {
           break;
         }
+        {
+          const finalAssistantText = payload.text || assistantDraftRef.current;
+
+          if (finalAssistantText) {
+            setMessages((current) => appendUniqueMessage(current, buildMessage("assistant", finalAssistantText)));
+          }
+        }
         assistantDraftRef.current = "";
         setAssistantDraft("");
-        if (payload.text) {
-          setMessages((current) => appendUniqueMessage(current, buildMessage("assistant", payload.text)));
-        }
         recordingStateRef.current = "assistant";
         setRecordingState("assistant");
         break;

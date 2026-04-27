@@ -1,58 +1,110 @@
-import { motion } from "framer-motion";
-import ProgressCircle from "@/features/dashboard/components/ProgressCircle";
-import StreakCard from "@/features/dashboard/components/StreakCard";
-import LessonStack from "@/features/dashboard/components/LessonStack";
-import QuickPracticeCard from "@/features/dashboard/components/QuickPracticeCard";
-import { useAuth } from "@/features/auth/context/AuthContext";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+
+import PlaylistSection from "@/features/dashboard/components/PlaylistSection";
+import { practiceApi } from "@/features/practice/api/practiceApi";
 
 const Dashboard = () => {
-  const { user, isSubscribed, subscriptionTier } = useAuth();
-  const displayName = user?.display_name || user?.email?.split("@")[0] || "Learner";
+  const [scenarios, setScenarios] = useState([]);
+  const [isLoadingScenarios, setIsLoadingScenarios] = useState(true);
+  const [scenarioError, setScenarioError] = useState("");
+  const surpriseScenario = useMemo(() => {
+    if (scenarios.length === 0) {
+      return null;
+    }
+
+    return scenarios[Math.floor(Math.random() * scenarios.length)];
+  }, [scenarios]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadScenarios = async () => {
+      setIsLoadingScenarios(true);
+      setScenarioError("");
+
+      try {
+        const data = await practiceApi.listScenarios();
+        if (isMounted) {
+          setScenarios(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setScenarioError(error?.response?.data?.detail || "Không thể tải danh sách kịch bản.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingScenarios(false);
+        }
+      }
+    };
+
+    void loadScenarios();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <header className="mb-12 flex items-end justify-between gap-6 px-2">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Daily Briefing</p>
-          <h1 className="mt-4 text-4xl font-black tracking-tight text-zinc-950 font-display md:text-5xl">
-            Good afternoon, <span className="text-primary italic">{displayName}</span>
-          </h1>
-          <p className="mt-3 text-xs font-bold uppercase tracking-widest text-zinc-500">
-            {isSubscribed
-              ? `Subscriber mode enabled. ${subscriptionTier} practice is unlocked.`
-              : "Free mode enabled. Browse topics and upgrade to start live AI practice."}
-          </p>
-        </motion.div>
+    <div className="space-y-10 px-8 pb-12 pt-4">
+      <section className="space-y-4">
+        <h2 className="text-xl font-extrabold uppercase tracking-wide text-foreground/80">
+          Role-Play Labs <span className="ml-1">🎭</span>
+        </h2>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <div className="group relative col-span-1 overflow-hidden rounded-2xl bg-[#1a1f4d] p-7 text-white shadow-md transition hover:shadow-lg md:col-span-2">
+            <div
+              className="pointer-events-none absolute inset-0 opacity-20"
+              style={{
+                backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)",
+                backgroundSize: "16px 16px",
+              }}
+            />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-2/3 bg-gradient-to-l from-[#2a3175]/60 to-transparent" />
+            <div className="relative z-10 flex h-full items-center justify-between gap-4">
+              <div className="space-y-4">
+                <h3 className="text-3xl font-extrabold leading-tight">Talk to AI Tutor</h3>
+                <p className="text-sm font-semibold text-white/70">Practice anytime, anywhere</p>
+                <Link
+                  to="/topics"
+                  className="inline-flex rounded-full bg-brand-purple px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-brand-purple/90 active:scale-95"
+                >
+                  Start Talking
+                </Link>
+              </div>
+              <div className="flex h-28 w-28 shrink-0 items-center justify-center text-7xl transition-transform select-none group-hover:scale-110">
+                🤖
+              </div>
+            </div>
+          </div>
 
-        <div className="hidden items-center -space-x-3 md:flex">
-          {[1, 2, 3].map((i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.1 }}
-              className="h-11 w-11 overflow-hidden rounded-full border-4 border-white shadow-sm"
+          <div className="flex flex-col gap-4 md:col-span-1">
+            <Link
+              to={surpriseScenario ? `/practice/${surpriseScenario.id}` : "/topics"}
+              className="group flex flex-1 items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition hover:border-brand-purple/40 hover:shadow-md active:scale-98"
             >
-              <img src={`https://i.pravatar.cc/150?u=${i}`} alt="Buddy" className="h-full w-full object-cover" />
-            </motion.div>
-          ))}
-          <div className="z-10 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-4 border-white bg-zinc-100 text-[10px] font-black text-zinc-400 shadow-sm transition-transform hover:scale-110">
-            +2
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-purple-soft text-2xl">🎁</div>
+              <div>
+                <p className="text-sm font-extrabold text-foreground">Surprise me</p>
+                <p className="text-xs font-semibold text-muted-foreground">Kịch bản ngẫu nhiên</p>
+              </div>
+            </Link>
+            <Link
+              to="/topics"
+              className="group flex flex-1 items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition hover:border-brand-purple/40 hover:shadow-md active:scale-98"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-orange-soft text-2xl">✨</div>
+              <div>
+                <p className="text-sm font-extrabold text-foreground">Browse scenarios</p>
+                <p className="text-xs font-semibold text-muted-foreground">Xem toàn bộ thư viện</p>
+              </div>
+            </Link>
           </div>
         </div>
-      </header>
+      </section>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="grid auto-rows-[160px] grid-cols-1 gap-6 md:grid-cols-12"
-      >
-        <ProgressCircle />
-        <StreakCard />
-        <QuickPracticeCard />
-        <LessonStack />
-      </motion.div>
+      <PlaylistSection scenarios={scenarios} isLoading={isLoadingScenarios} error={scenarioError} />
     </div>
   );
 };

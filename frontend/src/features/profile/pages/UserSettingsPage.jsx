@@ -39,7 +39,7 @@ const UserSettingsPage = () => {
     try {
       await updateProfile(formData);
       setMessage({ type: "success", text: "Profile updated successfully!" });
-    } catch (err) {
+    } catch {
       setMessage({ type: "error", text: "Failed to update profile. Please try again." });
     } finally {
       setIsSaving(false);
@@ -60,7 +60,7 @@ const UserSettingsPage = () => {
       });
       setMessage({ type: "success", text: "Password changed successfully!" });
       setPasswordData({ current_password: "", new_password: "", confirm_password: "" });
-    } catch (err) {
+    } catch {
       setMessage({ type: "error", text: "Failed to change password. check your current password." });
     } finally {
       setIsSaving(false);
@@ -132,10 +132,10 @@ const UserSettingsPage = () => {
                 </div>
                 <div className="flex-1 space-y-4">
                   <div>
-                    <label className="duo-label">Display Name</label>
+                    <label className="app-label">Display Name</label>
                     <input 
                       type="text" 
-                      className="duo-input" 
+                      className="app-input" 
                       value={formData.display_name}
                       onChange={(e) => setFormData({...formData, display_name: e.target.value})}
                     />
@@ -144,10 +144,10 @@ const UserSettingsPage = () => {
               </div>
 
               <div>
-                <label className="duo-label">Username (Handle)</label>
+                <label className="app-label">Username (Handle)</label>
                 <input 
                   type="text" 
-                  className="duo-input" 
+                  className="app-input" 
                   value={formData.handle}
                   onChange={(e) => setFormData({...formData, handle: e.target.value})}
                   placeholder="learner123"
@@ -159,7 +159,7 @@ const UserSettingsPage = () => {
                 <button 
                   type="submit" 
                   disabled={isSaving}
-                  className="duo-button-blue w-full sm:w-auto px-12"
+                  className="app-button-primary w-full sm:w-auto px-12"
                 >
                   {isSaving ? "Saving..." : "Save Changes"}
                 </button>
@@ -173,28 +173,28 @@ const UserSettingsPage = () => {
             
             <form onSubmit={handlePasswordChange} className="space-y-6">
               <div>
-                <label className="duo-label">Current Password</label>
+                <label className="app-label">Current Password</label>
                 <input 
                   type="password" 
-                  className="duo-input" 
+                  className="app-input" 
                   value={passwordData.current_password}
                   onChange={(e) => setPasswordData({...passwordData, current_password: e.target.value})}
                 />
               </div>
               <div>
-                <label className="duo-label">New Password</label>
+                <label className="app-label">New Password</label>
                 <input 
                   type="password" 
-                  className="duo-input" 
+                  className="app-input" 
                   value={passwordData.new_password}
                   onChange={(e) => setPasswordData({...passwordData, new_password: e.target.value})}
                 />
               </div>
               <div>
-                <label className="duo-label">Confirm New Password</label>
+                <label className="app-label">Confirm New Password</label>
                 <input 
                   type="password" 
-                  className="duo-input" 
+                  className="app-input" 
                   value={passwordData.confirm_password}
                   onChange={(e) => setPasswordData({...passwordData, confirm_password: e.target.value})}
                 />
@@ -204,7 +204,7 @@ const UserSettingsPage = () => {
                 <button 
                   type="submit" 
                   disabled={isSaving}
-                  className="duo-button-secondary w-full sm:w-auto"
+                  className="app-button-secondary w-full sm:w-auto"
                 >
                   Change Password
                 </button>

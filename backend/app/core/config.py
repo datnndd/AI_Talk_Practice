@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     """Central configuration for all services. Loaded from .env file."""
 
     # --- Provider Selection ---
-    asr_provider: str = Field(default="deepgram", description="ASR provider: deepgram | dashscope")
+    asr_provider: str = Field(default="deepgram", description="ASR provider: deepgram")
     llm_provider: str = Field(default="openai", description="LLM provider: openai-compatible")
     tts_provider: str = Field(default="dashscope", description="TTS provider: dashscope")
 
@@ -150,7 +150,6 @@ class Settings(BaseSettings):
 
     # --- ASR Configuration ---
     asr_language: str = Field(default="en", description="ASR language code")
-    asr_model: str = Field(default="qwen3-asr-flash-realtime", description="DashScope ASR model")
     deepgram_asr_model: str = Field(default="nova-3", description="Deepgram ASR model")
     deepgram_endpointing_ms: int = Field(
         default=300,

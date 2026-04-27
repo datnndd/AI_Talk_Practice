@@ -11,13 +11,13 @@ const languages = [
 
 const LandingLanguageFooter = () => {
   return (
-    <footer className="border-t border-duo-gray mt-auto bg-white py-8">
+    <footer className="border-t border-brand-gray mt-auto bg-white py-8">
       <div className="max-w-7xl mx-auto px-4 relative">
         {/* Carousel Arrows */}
-        <button className="absolute left-4 top-1/2 -translate-y-1/2 text-duo-muted hover:text-duo-text transition-colors">
+        <button className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-text transition-colors">
           <CaretLeft weight="bold" className="w-8 h-8" />
         </button>
-        <button className="absolute right-4 top-1/2 -translate-y-1/2 text-duo-muted hover:text-duo-text transition-colors">
+        <button className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-text transition-colors">
           <CaretRight weight="bold" className="w-8 h-8" />
         </button>
 
@@ -33,7 +33,7 @@ const LandingLanguageFooter = () => {
                 className="w-8 h-6 rounded shadow-sm object-cover transition-transform group-hover:scale-110" 
                 src={lang.icon}
               />
-              <span className="text-sm font-bold text-duo-header-text group-hover:text-duo-text transition-colors uppercase tracking-wider">
+              <span className="text-sm font-bold text-brand-muted-text group-hover:text-brand-text transition-colors uppercase tracking-wider">
                 {lang.name}
               </span>
             </div>

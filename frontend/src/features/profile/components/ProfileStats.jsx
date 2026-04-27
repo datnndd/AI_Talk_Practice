@@ -5,33 +5,37 @@ const ProfileStats = ({ stats }) => {
     {
       label: "Day streak",
       value: stats.streak || 0,
-      icon: "https://d35aaqx5ub95lt.cloudfront.net/images/icons/ba95e6081679d9d7e8c132da5cfce1ec.svg",
+      Icon: Fire,
+      color: "#ff9600",
     },
     {
       label: "Total XP",
       value: stats.totalXp || 0,
-      icon: "https://d35aaqx5ub95lt.cloudfront.net/images/profile/01ce3a817dd01842581c3d18debcbc46.svg",
+      Icon: Lightning,
+      color: "#1cb0f6",
     },
     {
       label: "Current league",
       value: stats.league || "Bronze",
-      icon: "https://d35aaqx5ub95lt.cloudfront.net/images/leagues/74d6ab6e5b6f92e7d16a4a6664d1fafd.svg",
+      Icon: Trophy,
+      color: "#ff4b4b",
     },
     {
       label: "Top 3 finishes",
       value: stats.topFinishes || 0,
-      icon: "https://d35aaqx5ub95lt.cloudfront.net/images/profile/3f97ae337724f7edb6dfbef23cd3a6e7.svg",
+      Icon: Medal,
+      color: "#ffc800",
     },
   ];
 
   return (
     <div className="grid grid-cols-2 gap-4">
-      {statItems.map((item) => (
+      {statItems.map(({ Icon, ...item }) => (
         <div 
           key={item.label}
           className="flex items-center gap-4 rounded-2xl border-2 border-[#e5e5e5] p-4 transition-transform hover:scale-[1.02]"
         >
-          <img src={item.icon} alt={item.label} className="h-10 w-10 shrink-0" />
+          <Icon size={40} weight="fill" color={item.color} className="shrink-0" />
           <div>
             <div className="text-xl font-black text-[#4b4b4b]">{item.value}</div>
             <div className="text-sm font-bold text-[#afafaf] uppercase tracking-wide">{item.label}</div>

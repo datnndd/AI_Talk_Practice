@@ -23,6 +23,12 @@ from app.modules.sessions.services.conversation_prompts import (
 logger = logging.getLogger(__name__)
 
 
+class ConversationSupportJSONError(ValueError):
+    def __init__(self, message: str, *, raw: str):
+        super().__init__(message)
+        self.raw = raw
+
+
 class HintPayload(BaseModel):
     analysis_vi: str
     answer_strategy_vi: str
@@ -284,13 +290,20 @@ class RealtimeCorrectionService:
         text: str,
     ) -> RealtimeCorrectionResponse:
         system_prompt = build_realtime_correction_prompt(scenario_title=scenario_title, text=text)
-        payload = await _collect_json(
-            self.llm,
-            model=CorrectionPayload,
-            system_prompt=system_prompt,
-            user_text=text,
-            max_tokens=self.max_tokens,
-        )
+        try:
+            payload = await _collect_json(
+                self.llm,
+                model=CorrectionPayload,
+                system_prompt=system_prompt,
+                user_text=text,
+                max_tokens=self.max_tokens,
+            )
+        except ConversationSupportJSONError as exc:
+            logger.warning(
+                "Realtime correction JSON was invalid after retry; using partial fallback for scenario=%s",
+                scenario_title,
+            )
+            payload = _fallback_correction_payload(raw=exc.raw, fallback_text=text)
         corrections = [_normalize_correction(item, fallback_text=text) for item in payload.corrections]
         return RealtimeCorrectionResponse(
             corrected_text=payload.corrected_text or text,
@@ -380,6 +393,35 @@ async def _collect_json(
     user_text: str,
     max_tokens: int,
 ) -> Any:
+    raw = await _collect_raw_response(
+        llm,
+        system_prompt=system_prompt,
+        user_text=user_text,
+        max_tokens=max_tokens,
+    )
+    try:
+        return model.model_validate(_parse_json_object(raw))
+    except ValueError:
+        logger.warning("Invalid %s JSON response on first attempt; retrying once", model.__name__)
+        retry_raw = await _collect_raw_response(
+            llm,
+            system_prompt=_build_json_repair_system_prompt(system_prompt),
+            user_text=_build_json_repair_user_text(user_text=user_text, invalid_json=raw),
+            max_tokens=max_tokens,
+        )
+        try:
+            return model.model_validate(_parse_json_object(retry_raw))
+        except ValueError as retry_exc:
+            raise ConversationSupportJSONError("Invalid conversation support JSON", raw=retry_raw or raw) from retry_exc
+
+
+async def _collect_raw_response(
+    llm: LLMBase,
+    *,
+    system_prompt: str,
+    user_text: str,
+    max_tokens: int,
+) -> str:
     chunks: list[str] = []
     async for chunk in llm.chat_stream(
         [Message(role="user", content=user_text.strip())],
@@ -387,7 +429,7 @@ async def _collect_json(
         max_tokens=max_tokens,
     ):
         chunks.append(chunk)
-    return model.model_validate(_parse_json_object("".join(chunks)))
+    return "".join(chunks)
 
 
 def _sorted_messages(session) -> list[Any]:
@@ -405,6 +447,50 @@ def _normalize_correction(item: RealtimeCorrectionItem, *, fallback_text: str) -
             "error_type": error_type,
             "severity": severity,
         }
+    )
+
+
+def _fallback_correction_payload(*, raw: str, fallback_text: str) -> CorrectionPayload:
+    corrected_text = _extract_json_string_field(raw, "corrected_text") or fallback_text
+    return CorrectionPayload(corrected_text=corrected_text, corrections=[])
+
+
+def _extract_json_string_field(raw: str, field_name: str) -> str | None:
+    match = re.search(
+        rf'"{re.escape(field_name)}"\s*:\s*"((?:\\.|[^"\\])*)"',
+        raw or "",
+        flags=re.DOTALL,
+    )
+    if not match:
+        return None
+    try:
+        return json.loads(f'"{match.group(1)}"')
+    except json.JSONDecodeError:
+        return None
+
+
+def _build_json_repair_system_prompt(system_prompt: str) -> str:
+    return "\n".join(
+        [
+            "Your previous answer was invalid or truncated JSON.",
+            "Return only one complete valid JSON object that follows the requested schema exactly.",
+            "Do not include markdown, explanations, or partial arrays/strings.",
+            system_prompt,
+        ]
+    )
+
+
+def _build_json_repair_user_text(*, user_text: str, invalid_json: str) -> str:
+    return "\n".join(
+        [
+            "Original user text:",
+            user_text.strip() or "(empty)",
+            "",
+            "Previous invalid JSON response:",
+            invalid_json.strip() or "(empty)",
+            "",
+            "Rewrite it as one complete valid JSON object.",
+        ]
     )
 
 

@@ -4,7 +4,7 @@ import LandingLanguageFooter from "@/features/landing/components/LandingLanguage
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-white overflow-x-hidden selection:bg-duo-green/10 selection:text-duo-green-dark">
+    <div className="min-h-screen flex flex-col bg-white overflow-x-hidden selection:bg-brand-green/10 selection:text-brand-green-dark">
       <LandingNavbar />
       <div className="flex-grow flex flex-col justify-center">
         <LandingHero />

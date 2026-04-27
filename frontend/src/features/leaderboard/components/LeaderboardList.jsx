@@ -1,112 +1,91 @@
-const formatXp = (xp) => `${Number(xp).toLocaleString("en-US")} XP`;
-const hasAvatar = (value) => typeof value === "string" && value.trim().length > 0;
-const formatRank = (rank) => (Number(rank) > 9999 ? "10k+" : rank);
+import { Link } from "react-router-dom";
+import { ArrowDown, Medal, Star } from "@phosphor-icons/react";
+import "./Leaderboard.css";
 
-const ActivityBars = ({ tone = "green" }) => {
-  const bars = tone === "green"
-    ? ["h-3 bg-[#58CC02]", "h-4 bg-[#58CC02]", "h-2 bg-[#58CC02]", "h-5 bg-[#8ff25b]", "h-3 bg-[#8ff25b]"]
-    : ["h-4 bg-[#58CC02]", "h-2 bg-[#58CC02]", "h-5 bg-[#58CC02]", "h-3 bg-[#8ff25b]"];
-
-  return (
-    <div className="flex gap-0.5">
-      {bars.map((barClass, index) => (
-        <div key={`${tone}-${index}`} className={`w-1 rounded-full ${barClass}`} />
-      ))}
-    </div>
-  );
+const MEDAL_COLORS = {
+  1: "#ffc800",
+  2: "#b8c2cc",
+  3: "#d97706",
 };
 
-const LeaderboardRow = ({ entry }) => (
-  <article
-    className="flex items-center gap-4 rounded-[1.75rem] bg-white px-4 py-5 shadow-[0px_10px_40px_rgba(49,60,15,0.04)] transition-colors duration-200 hover:bg-[#fbfdf6] md:gap-6 md:px-6"
-    data-testid={`leaderboard-row-${entry.rank}`}
-  >
-    <div className="w-8 text-2xl font-black text-zinc-600">{entry.rank}</div>
-
-    <div className="relative">
-      {hasAvatar(entry.avatar) ? (
-        <img src={entry.avatar} alt={entry.name} className="h-14 w-14 rounded-full object-cover" />
-      ) : (
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-lg font-black text-zinc-700">
-          {entry.name.charAt(0).toUpperCase()}
-        </div>
-      )}
-      <span className="absolute -bottom-1 -right-1 text-lg">{entry.country}</span>
-    </div>
-
-    <div className="min-w-0 flex-1">
-      <h4 className="truncate text-lg font-bold text-zinc-900">{entry.name}</h4>
-      <div className="flex items-center gap-3">
-        <ActivityBars />
-        <span className="text-sm font-bold text-zinc-500">{formatXp(entry.xp)}</span>
-      </div>
-    </div>
-
-    <div className="flex items-center gap-1 text-sm font-black text-[#ffb4b0]">
-      <span>🔥</span>
-      <span>{entry.streak}</span>
-    </div>
-  </article>
+const PromotionZone = () => (
+  <div className="zone-separator promotion-zone border-y-2 border-[#e5e5e5] my-2">
+    <Star size={18} weight="fill" className="zone-icon" />
+    Promotion Zone
+    <Star size={18} weight="fill" className="zone-icon" />
+  </div>
 );
 
-const CurrentUserRow = ({ entry }) => (
-  <article
-    className="flex items-center gap-4 rounded-[1.75rem] border-2 border-[#87fe45] bg-[#f5f7f1] px-4 py-6 ring-4 ring-[#87fe45]/20 md:gap-6 md:px-6"
-    data-testid="leaderboard-current-user"
-  >
-    <div className="w-12 text-xl font-black text-[#2b6c00]">{formatRank(entry.rank)}</div>
-
-    <div className="relative">
-      {entry.avatar ? (
-        <img src={entry.avatar} alt={entry.name} className="h-14 w-14 rounded-full object-cover" />
-      ) : (
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-lg font-black text-[#2b6c00]">
-          {entry.name.charAt(0).toUpperCase()}
-        </div>
-      )}
-      <span className="absolute -bottom-1 -right-1 text-lg">{entry.country}</span>
-    </div>
-
-    <div className="min-w-0 flex-1">
-      <h4 className="truncate text-lg font-bold text-zinc-900">
-      {entry.name}
-        {entry.encouragement ? (
-          <span className="ml-2 text-sm font-medium text-zinc-400">({entry.encouragement})</span>
-        ) : null}
-      </h4>
-      <div className="flex items-center gap-3">
-        <span className="text-[#58CC02]">✦</span>
-        <span className="text-sm font-bold text-zinc-500">{formatXp(entry.xp)}</span>
-      </div>
-    </div>
-
-    <div className="flex items-center gap-1 text-sm font-black text-zinc-500">
-      <span className="opacity-20">🔥</span>
-      <span>{entry.streak}</span>
-    </div>
-  </article>
+const DemotionZone = () => (
+  <div className="zone-separator demotion-zone border-y-2 border-[#e5e5e5] my-2">
+    <ArrowDown size={18} weight="bold" className="zone-icon" />
+    Demotion Zone
+    <ArrowDown size={18} weight="bold" className="zone-icon" />
+  </div>
 );
+
+const LeaderboardRow = ({ entry, isCurrentUser }) => {
+  const isMedalRank = entry.rank >= 1 && entry.rank <= 3;
+  
+  return (
+    <Link 
+      to={`/u/${entry.id}`} 
+      className={`leaderboard-row ${isCurrentUser ? "leaderboard-row-current" : ""}`}
+    >
+      <div className="rank-indicator">
+        {isMedalRank ? (
+          <Medal size={30} weight="fill" color={MEDAL_COLORS[entry.rank]} className="medal-icon" />
+        ) : (
+          entry.rank
+        )}
+      </div>
+      
+      <div className="user-avatar-container">
+        {entry.avatar ? (
+          <img src={entry.avatar} className="user-avatar" alt={entry.name} />
+        ) : (
+          <div className="user-avatar flex items-center justify-center bg-zinc-100 text-[#4b4b4b]">
+            {entry.name.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+
+      <div className="user-name truncate">{entry.name}</div>
+      
+      <div className="user-xp">{entry.xp} XP</div>
+    </Link>
+  );
+};
 
 const LeaderboardList = ({ entries = [], currentUser }) => {
+  const PROMOTION_THRESHOLD = 5;
+  const DEMOTION_START = 16; 
+
   return (
-    <section className="space-y-4">
-      {entries
-        .filter((entry) => entry.rank > 3)
-        .map((entry) => (
-          <LeaderboardRow key={entry.id} entry={entry} />
-        ))}
+    <div className="leaderboard-list">
+      {entries.map((entry, index) => {
+        const isCurrentUser = currentUser?.id === entry.id;
+        const elements = [];
 
-      <div className="py-4">
-        <div className="flex justify-center gap-2">
-          {[0, 1, 2].map((index) => (
-            <span key={index} className="h-2 w-2 rounded-full bg-[#becbb1]" />
-          ))}
-        </div>
-      </div>
+        if (index === PROMOTION_THRESHOLD) {
+          elements.push(<PromotionZone key="promotion-zone" />);
+        }
 
-      {currentUser ? <CurrentUserRow entry={currentUser} /> : null}
-    </section>
+        if (index === DEMOTION_START - 1) {
+          elements.push(<DemotionZone key="demotion-zone" />);
+        }
+
+        elements.push(
+          <LeaderboardRow 
+            key={entry.id || index} 
+            entry={entry} 
+            isCurrentUser={isCurrentUser} 
+          />
+        );
+
+        return elements;
+      })}
+    </div>
   );
 };
-
 export default LeaderboardList;
