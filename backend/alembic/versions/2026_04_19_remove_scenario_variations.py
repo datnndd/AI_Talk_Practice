@@ -78,7 +78,7 @@ def downgrade() -> None:
     if not _has_column(inspector, "scenarios", "is_pre_generated"):
         _cleanup_sqlite_batch_temp_table(bind, "scenarios")
         with op.batch_alter_table("scenarios") as batch_op:
-            batch_op.add_column(sa.Column("is_pre_generated", sa.Boolean(), nullable=False, server_default=sa.text("0")))
+            batch_op.add_column(sa.Column("is_pre_generated", sa.Boolean(), nullable=False, server_default=sa.false()))
             batch_op.add_column(sa.Column("pre_gen_count", sa.Integer(), nullable=False, server_default=sa.text("8")))
             batch_op.create_check_constraint(
                 "ck_scenarios_pre_gen_count_non_negative",
@@ -96,9 +96,9 @@ def downgrade() -> None:
             sa.Column("sample_prompt", sa.Text(), nullable=True),
             sa.Column("sample_conversation", sa.JSON(), nullable=False, server_default=sa.text("'[]'")),
             sa.Column("system_prompt_override", sa.Text(), nullable=True),
-            sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")),
-            sa.Column("is_pregenerated", sa.Boolean(), nullable=False, server_default=sa.text("0")),
-            sa.Column("is_approved", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+            sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
+            sa.Column("is_pregenerated", sa.Boolean(), nullable=False, server_default=sa.false()),
+            sa.Column("is_approved", sa.Boolean(), nullable=False, server_default=sa.false()),
             sa.Column("usage_count", sa.Integer(), nullable=False, server_default=sa.text("0")),
             sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),

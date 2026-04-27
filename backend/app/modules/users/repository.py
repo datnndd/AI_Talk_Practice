@@ -4,7 +4,6 @@ from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.gamification.models.user_achievement import UserAchievement
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 
@@ -23,8 +22,8 @@ class UserRepository:
     def _admin_query() -> Select[tuple[User]]:
         return select(User).options(
             selectinload(User.subscription),
+            selectinload(User.daily_checkins),
             selectinload(User.daily_stats),
-            selectinload(User.achievements).selectinload(UserAchievement.achievement),
         )
 
     @classmethod

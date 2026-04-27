@@ -1,18 +1,43 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { Link } from "react-router-dom";
 import { useTheme } from "@/shared/context/ThemeContext";
 import { Sun, Moon } from "@phosphor-icons/react";
+import { gamificationApi } from "@/features/gamification/api/gamificationApi";
 
 const TopBar = () => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
+  const [gamification, setGamification] = useState(null);
+  const [checkInError, setCheckInError] = useState("");
   
-  // Use real data if available, fallback to provided mock values
-  const level = user?.level || 51;
-  const streak = user?.streak || 1;
-  const gems = user?.gems || 685;
-  const lives = user?.lives || 5;
+  useEffect(() => {
+    let isMounted = true;
+    gamificationApi.getDashboard()
+      .then((data) => {
+        if (isMounted) setGamification(data);
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const checkIn = async () => {
+    setCheckInError("");
+    try {
+      const response = await gamificationApi.checkIn();
+      setGamification(response.dashboard);
+    } catch (error) {
+      setCheckInError(error?.response?.data?.detail || "Không thể điểm danh.");
+    }
+  };
+
+  const level = gamification?.xp?.level || 1;
+  const coins = gamification?.coin?.balance || 0;
+  const checkedInToday = Boolean(gamification?.check_in?.checked_in_today);
+  const checkInReward = gamification?.check_in?.today_coin_reward || 1;
   const initials = user?.display_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "D";
 
   return (
@@ -43,40 +68,26 @@ const TopBar = () => {
         
         <span className="h-6 w-px bg-border"></span>
         
-        {/* Streak */}
-        <button className="flex items-center gap-2 rounded-full px-3 py-1 transition-colors hover:bg-muted" type="button">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-flame h-5 w-5 fill-brand-orange text-brand-orange" aria-hidden="true">
-            <path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"></path>
-          </svg>
-          <div className="text-left leading-tight">
-            <p className="text-sm font-extrabold text-foreground">{streak}</p>
-            <p className="-mt-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Streak</p>
+        {/* Coins */}
+        <div className="flex items-center gap-2 px-3 py-1">
+          <span className="text-base leading-none">🪙</span>
+          <div className="leading-tight">
+            <p className="text-sm font-extrabold text-brand-blue">{coins.toLocaleString("en-US")}</p>
+            <p className="-mt-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Coin</p>
           </div>
+        </div>
+        
+        <span className="h-6 w-px bg-border"></span>
+        
+        <button
+          type="button"
+          disabled={checkedInToday}
+          onClick={checkIn}
+          title={checkInError || (checkedInToday ? "Đã điểm danh hôm nay" : `Điểm danh +${checkInReward} Coin`)}
+          className="rounded-full bg-brand-green px-3 py-1.5 text-xs font-black text-white transition hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground"
+        >
+          {checkedInToday ? "Đã điểm danh" : `+${checkInReward} Coin`}
         </button>
-        
-        <span className="h-6 w-px bg-border"></span>
-        
-        {/* Gems */}
-        <div className="flex items-center gap-2 px-3 py-1">
-          <span className="text-base leading-none">💎</span>
-          <div className="leading-tight">
-            <p className="text-sm font-extrabold text-brand-blue">{gems}</p>
-            <p className="-mt-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Gems</p>
-          </div>
-        </div>
-        
-        <span className="h-6 w-px bg-border"></span>
-        
-        {/* Lives */}
-        <div className="flex items-center gap-2 px-3 py-1">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-heart h-5 w-5 fill-brand-red text-brand-red" aria-hidden="true">
-            <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"></path>
-          </svg>
-          <div className="leading-tight">
-            <p className="text-sm font-extrabold text-brand-red">{lives}</p>
-            <p className="-mt-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">Lives</p>
-          </div>
-        </div>
       </div>
 
       {/* Actions & Profile */}

@@ -1,13 +1,13 @@
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
-import { ChartBar, House, Medal, Notebook, UserCircle } from "@phosphor-icons/react";
+import { House, Medal, Notebook, Storefront, UserCircle } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { isRouteActive } from "./navigationData";
 
 const MOBILE_NAV_ITEMS = [
   {
     label: "Learn",
-    path: "/dashboard",
+    path: "/learn",
     Icon: House,
   },
   {
@@ -21,9 +21,9 @@ const MOBILE_NAV_ITEMS = [
     Icon: Medal,
   },
   {
-    label: "Plan",
-    path: "/subscription",
-    Icon: ChartBar,
+    label: "Shop",
+    path: "/shop",
+    Icon: Storefront,
   },
   {
     label: "Profile",

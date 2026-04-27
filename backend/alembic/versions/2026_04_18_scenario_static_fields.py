@@ -22,7 +22,7 @@ def upgrade() -> None:
     # Use batch_alter_table for SQLite compatibility
     with op.batch_alter_table("scenarios") as batch_op:
         batch_op.add_column(sa.Column("opening_message", sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column("is_ai_start_first", sa.Boolean(), nullable=False, server_default=sa.text("1")))
+        batch_op.add_column(sa.Column("is_ai_start_first", sa.Boolean(), nullable=False, server_default=sa.true()))
 
 
 def downgrade() -> None:

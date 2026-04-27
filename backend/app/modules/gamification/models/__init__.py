@@ -1,7 +1,6 @@
-from app.modules.gamification.models.achievement import Achievement
 from app.modules.gamification.models.daily_stat import DailyStat
+from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.gamification_setting import GamificationSetting
-from app.modules.gamification.models.gem_transaction import GemTransaction
-from app.modules.gamification.models.user_achievement import UserAchievement
+from app.modules.gamification.models.coin_transaction import CoinTransaction
 
-__all__ = ["Achievement", "DailyStat", "GamificationSetting", "GemTransaction", "UserAchievement"]
+__all__ = ["CoinTransaction", "DailyCheckin", "DailyStat", "GamificationSetting"]

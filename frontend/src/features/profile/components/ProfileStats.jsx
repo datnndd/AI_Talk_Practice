@@ -1,11 +1,11 @@
-import { Fire, Lightning, Trophy, Medal } from "@phosphor-icons/react";
+import { CalendarCheck, Coins, Lightning, Star } from "@phosphor-icons/react";
 
 const ProfileStats = ({ stats }) => {
   const statItems = [
     {
-      label: "Day streak",
-      value: stats.streak || 0,
-      Icon: Fire,
+      label: "Level",
+      value: stats.level || 1,
+      Icon: Star,
       color: "#ff9600",
     },
     {
@@ -15,15 +15,15 @@ const ProfileStats = ({ stats }) => {
       color: "#1cb0f6",
     },
     {
-      label: "Current league",
-      value: stats.league || "Bronze",
-      Icon: Trophy,
+      label: "Coin",
+      value: stats.coin || 0,
+      Icon: Coins,
       color: "#ff4b4b",
     },
     {
-      label: "Top 3 finishes",
-      value: stats.topFinishes || 0,
-      Icon: Medal,
+      label: "Check-in streak",
+      value: stats.checkInStreak || 0,
+      Icon: CalendarCheck,
       color: "#ffc800",
     },
   ];

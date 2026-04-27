@@ -9,7 +9,6 @@ from app.modules.users.schemas.admin_user import (
     AdminUserBalanceAdjustmentRequest,
     AdminUserListResponse,
     AdminUserRead,
-    AdminUserResetStreakRequest,
     AdminUserSubscriptionUpdateRequest,
     AdminUserUpdateRequest,
 )
@@ -79,18 +78,6 @@ async def toggle_admin_user_access(
     actor: User = Depends(require_admin_user),
 ):
     user = await AdminUserService.toggle_admin_access(db, actor=actor, user_id=user_id)
-    rules = await get_effective_rules(db)
-    return serialize_admin_user(user, rules)
-
-
-@router.post("/{user_id}/gamification/reset-streak", response_model=AdminUserRead)
-async def reset_admin_user_streak(
-    user_id: int,
-    body: AdminUserResetStreakRequest,
-    db: AsyncSession = Depends(get_db),
-    actor: User = Depends(require_admin_user),
-):
-    user = await AdminUserService.reset_streak(db, actor=actor, user_id=user_id, body=body)
     rules = await get_effective_rules(db)
     return serialize_admin_user(user, rules)
 

@@ -76,16 +76,11 @@ const LeaderboardPodiumCard = ({ entry, hero = false }) => {
         {formatXp(entry.xp)}
       </div>
 
-      {hero ? (
-        <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/40 px-4 py-2 text-sm font-bold text-[#693a00] backdrop-blur-sm">
-          <span className="text-[#ff6a55]">🔥</span>
-          {entry.streak.toLocaleString("en-US")} Day Streak
-        </div>
-      ) : (
+      {!hero ? (
         <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-zinc-200">
           <div className={`h-full rounded-full ${accent.bar}`} style={{ width: `${entry.progress}%` }} />
         </div>
-      )}
+      ) : null}
     </article>
   );
 };

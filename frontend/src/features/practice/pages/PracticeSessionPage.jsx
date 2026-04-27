@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, WarningCircle } from "@phosphor-icons/react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import ChatWindow from "@/features/practice/components/ChatWindow";
 import ScenarioSidebar from "@/features/practice/components/ScenarioSidebar";
@@ -41,8 +41,10 @@ const upsertMessageCorrection = (messages, payload) => messages.map((message) =>
 const PracticeSession = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const scenarioId = Number(id);
+  const initialSessionId = Number(searchParams.get("sessionId"));
 
   const [scenario, setScenario] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,6 +90,7 @@ const PracticeSession = () => {
   const reconnectTimerRef = useRef(null);
   const isAutoReconnectingRef = useRef(false);
   const isNavigatingToResultRef = useRef(false);
+  const initialSessionIdRef = useRef(Number.isFinite(initialSessionId) && initialSessionId > 0 ? initialSessionId : null);
 
   const buildMessage = (role, content, options = {}) => {
     const {
@@ -539,6 +542,7 @@ const PracticeSession = () => {
   const connectSocket = useCallback((options = true) => {
     const resetConversation = typeof options === "boolean" ? options : options.resetConversation !== false;
     const shouldResume = typeof options === "object" && options.resume && sessionIdRef.current;
+    const resumeSessionId = shouldResume ? sessionIdRef.current : initialSessionIdRef.current;
     const token = window.localStorage.getItem("access_token");
     if (!token) {
       setSessionError("Missing access token. Please sign in again.");
@@ -557,10 +561,10 @@ const PracticeSession = () => {
       setMessages([]);
       setAssistantDraft("");
       setPartialTranscript("");
-      setSessionId(null);
+      setSessionId(resumeSessionId || null);
       setSessionEnded(false);
       setAnalysisResultUrl("");
-      sessionIdRef.current = null;
+      sessionIdRef.current = resumeSessionId || null;
       setDurationSeconds(0);
       setLessonHint(null);
       sessionStartAtRef.current = null;
@@ -590,8 +594,9 @@ const PracticeSession = () => {
           resume_enabled: true,
         },
       };
-      if (shouldResume) {
-        startMessage.session_id = sessionIdRef.current;
+      if (resumeSessionId) {
+        startMessage.session_id = resumeSessionId;
+        initialSessionIdRef.current = null;
       }
       socket.send(JSON.stringify(startMessage));
     };

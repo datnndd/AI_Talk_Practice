@@ -86,7 +86,7 @@ const BentoGrid = () => {
              </div>
              <div className="px-4">
                <h3 className="text-xl font-black font-display mb-2 text-zinc-900">Gamified progress</h3>
-               <p className="text-zinc-500 font-medium leading-relaxed">Earn streaks, unlock achievements, and visualize your fluency growth with data.</p>
+               <p className="text-zinc-500 font-medium leading-relaxed">Earn streaks, track XP, and visualize your fluency growth with data.</p>
             </div>
           </div>
 

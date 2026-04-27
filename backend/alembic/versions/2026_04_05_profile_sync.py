@@ -64,7 +64,7 @@ def upgrade() -> None:
         if 'daily_goal' not in current_columns:
             batch_op.add_column(sa.Column('daily_goal', sa.SmallInteger(), nullable=True))
         if 'is_onboarding_completed' not in current_columns:
-            batch_op.add_column(sa.Column('is_onboarding_completed', sa.Boolean(), server_default='0', nullable=False))
+            batch_op.add_column(sa.Column('is_onboarding_completed', sa.Boolean(), server_default=sa.false(), nullable=False))
         
         # Preferences & Lifecycle
         if 'preferences' not in current_columns:

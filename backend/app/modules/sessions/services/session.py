@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.infra.factory import LLMRole, create_llm_for_role
-from app.modules.gamification.services import GamificationService
 from app.modules.sessions.models.message import Message
 from app.modules.sessions.models.session import Session
 from app.modules.scenarios.repository import ScenarioRepository
@@ -82,8 +81,6 @@ class SessionService:
 
         session_metadata: dict[str, Any] = dict(payload.metadata or {})
         session_metadata["mode"] = payload.mode or scenario.mode
-
-        await GamificationService.consume_speaking_heart(db, user_id)
 
         session = await SessionRepository.create_session(
             db,

@@ -7,17 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.modules.admin.services.audit_log_service import AdminAuditLogService
-from app.modules.gamification.models.gem_transaction import GemTransaction
+from app.modules.gamification.models.coin_transaction import CoinTransaction
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 from app.modules.users.repository import UserRepository
 from app.modules.users.schemas.admin_user import (
     AdminUserBalanceAdjustmentRequest,
-    AdminUserResetStreakRequest,
     AdminUserSubscriptionUpdateRequest,
     AdminUserUpdateRequest,
 )
-from app.modules.users.serializers import user_has_unlimited_hearts, user_is_admin
+from app.modules.users.serializers import user_is_admin
 
 logger = logging.getLogger(__name__)
 
@@ -109,44 +108,6 @@ class AdminUserService:
         return await AdminUserService.get_user(db, user.id)
 
     @staticmethod
-    async def reset_streak(
-        db: AsyncSession,
-        *,
-        actor: User,
-        user_id: int,
-        body: AdminUserResetStreakRequest,
-    ) -> User:
-        user = await AdminUserService.get_user(db, user_id)
-        before = {
-            "current_streak": user.current_streak,
-            "longest_streak": user.longest_streak,
-            "last_completed_lesson_date": user.last_completed_lesson_date.isoformat()
-            if user.last_completed_lesson_date
-            else None,
-        }
-        user.current_streak = 0
-        user.last_completed_lesson_date = None
-        after = {
-            "current_streak": user.current_streak,
-            "longest_streak": user.longest_streak,
-            "last_completed_lesson_date": None,
-        }
-        AdminAuditLogService.record(
-            db,
-            actor_user_id=actor.id,
-            action="user.streak_reset",
-            entity_type="user",
-            entity_id=user.id,
-            target_user_id=user.id,
-            before=before,
-            after=after,
-            reason=body.reason,
-        )
-        await db.commit()
-        logger.info("Admin id=%s reset streak for user id=%s", actor.id, user.id)
-        return await AdminUserService.get_user(db, user.id)
-
-    @staticmethod
     async def adjust_balance(
         db: AsyncSession,
         *,
@@ -156,43 +117,29 @@ class AdminUserService:
     ) -> User:
         user = await AdminUserService.get_user(db, user_id)
         before = {
-            "gem_balance": user.gem_balance,
-            "heart_balance": user.heart_balance,
-            "heart_max": user.heart_max,
-            "heart_is_unlimited": user_has_unlimited_hearts(user),
+            "coin_balance": user.coin_balance,
         }
 
-        if body.gem_delta is not None:
-            new_gem_balance = (user.gem_balance or 0) + body.gem_delta
-            if new_gem_balance < 0:
-                raise BadRequestError("Gem balance cannot be negative.")
-            user.gem_balance = new_gem_balance
-            if body.gem_delta != 0:
+        if body.coin_delta is not None:
+            new_coin_balance = (user.coin_balance or 0) + body.coin_delta
+            if new_coin_balance < 0:
+                raise BadRequestError("Coin balance cannot be negative.")
+            user.coin_balance = new_coin_balance
+            if body.coin_delta != 0:
                 db.add(
-                    GemTransaction(
+                    CoinTransaction(
                         user_id=user.id,
                         type="admin_adjustment",
-                        amount=body.gem_delta,
-                        balance_after=user.gem_balance,
+                        amount=body.coin_delta,
+                        balance_after=user.coin_balance,
                         reference_type="admin_user",
                         reference_id=str(actor.id),
                         transaction_metadata={"reason": body.reason},
                     )
                 )
 
-        if body.heart_delta is not None:
-            if user_has_unlimited_hearts(user):
-                raise BadRequestError("Pro users have unlimited Hearts.")
-            new_heart_balance = (user.heart_balance or 0) + body.heart_delta
-            if new_heart_balance < 0 or new_heart_balance > (user.heart_max or 5):
-                raise BadRequestError("Heart balance must stay between 0 and the user's Heart max.")
-            user.heart_balance = new_heart_balance
-
         after = {
-            "gem_balance": user.gem_balance,
-            "heart_balance": user.heart_balance,
-            "heart_max": user.heart_max,
-            "heart_is_unlimited": user_has_unlimited_hearts(user),
+            "coin_balance": user.coin_balance,
         }
         AdminAuditLogService.record(
             db,

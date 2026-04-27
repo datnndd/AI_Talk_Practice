@@ -38,13 +38,6 @@ def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
-    if _has_table(inspector, "achievements"):
-        with op.batch_alter_table("achievements") as batch_op:
-            if not _has_column(inspector, "achievements", "is_active"):
-                batch_op.add_column(sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")))
-            if not _has_column(inspector, "achievements", "deleted_at"):
-                batch_op.add_column(sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True))
-
     if not _has_table(inspector, "gamification_settings"):
         op.create_table(
             "gamification_settings",
@@ -144,9 +137,3 @@ def downgrade() -> None:
     if _has_table(inspector, "gamification_settings"):
         op.drop_table("gamification_settings")
 
-    if _has_table(inspector, "achievements"):
-        with op.batch_alter_table("achievements") as batch_op:
-            if _has_column(inspector, "achievements", "deleted_at"):
-                batch_op.drop_column("deleted_at")
-            if _has_column(inspector, "achievements", "is_active"):
-                batch_op.drop_column("is_active")

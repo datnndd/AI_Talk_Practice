@@ -67,10 +67,10 @@ const Dashboard = () => {
                 <h3 className="text-3xl font-extrabold leading-tight">Talk to AI Tutor</h3>
                 <p className="text-sm font-semibold text-white/70">Practice anytime, anywhere</p>
                 <Link
-                  to="/topics"
+                  to="/learn"
                   className="inline-flex rounded-full bg-brand-purple px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-brand-purple/90 active:scale-95"
                 >
-                  Start Talking
+                  Start Learning
                 </Link>
               </div>
               <div className="flex h-28 w-28 shrink-0 items-center justify-center text-7xl transition-transform select-none group-hover:scale-110">

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
-from app.modules.gamification.settings import GamificationRules, XP_PER_LEVEL, default_rules
+from app.modules.gamification.settings import GamificationRules, default_rules, level_progress_from_total_xp
 from app.modules.users.models.user import User
 from app.modules.users.schemas.admin_user import AdminUserRead
 from app.modules.users.schemas.user import UserRead
@@ -13,57 +13,27 @@ def user_is_admin(user: User) -> bool:
     return bool(preferences.get("is_admin") or preferences.get("role") == "admin")
 
 
-def user_has_unlimited_hearts(user: User) -> bool:
-    subscription = getattr(user, "subscription", None)
-    return bool(subscription and subscription.tier in {"PRO", "ENTERPRISE"} and subscription.status == "active")
-
-
 def _admin_gamification_payload(user: User, rules: GamificationRules) -> dict[str, object]:
     today = datetime.now(timezone.utc).date()
     today_stat = next((item for item in getattr(user, "daily_stats", []) if item.date == today), None)
-    is_unlimited = user_has_unlimited_hearts(user)
-    next_refill_at = None
-    if not is_unlimited and (user.heart_balance or 0) < (user.heart_max or 5):
-        last_refill = user.last_heart_refill_at or datetime.now(timezone.utc)
-        if last_refill.tzinfo is None:
-            last_refill = last_refill.replace(tzinfo=timezone.utc)
-        next_refill_at = last_refill + timedelta(minutes=rules.heart_refill_minutes)
-
-    unlocked = []
-    for user_achievement in getattr(user, "achievements", []):
-        achievement = user_achievement.achievement
-        unlocked.append(
-            {
-                "code": achievement.code,
-                "name": achievement.name,
-                "description": achievement.description,
-                "gem_reward": achievement.gem_reward,
-                "icon": achievement.icon_url,
-                "unlocked_at": user_achievement.unlocked_at,
-            }
-        )
-
     total_xp = user.total_xp or 0
+    progress = level_progress_from_total_xp(total_xp)
+    today_checkin = next((item for item in getattr(user, "daily_checkins", []) if item.date == today), None)
     return {
-        "streak": {
-            "current": user.current_streak or 0,
-            "longest": user.longest_streak or 0,
-            "last_completed_lesson_date": user.last_completed_lesson_date,
-        },
         "xp": {
             "total": total_xp,
             "today": today_stat.xp_earned if today_stat else 0,
-            "level": (total_xp // XP_PER_LEVEL) + 1,
-            "level_progress": total_xp % XP_PER_LEVEL,
+            "level": progress.level,
+            "level_progress": progress.level_progress,
+            "level_size": progress.level_size,
+            "xp_to_next_level": progress.xp_to_next_level,
         },
-        "gem": {"balance": user.gem_balance or 0},
-        "heart": {
-            "current": None if is_unlimited else user.heart_balance,
-            "max": user.heart_max or 5,
-            "is_unlimited": is_unlimited,
-            "next_refill_at": next_refill_at,
+        "coin": {"balance": user.coin_balance or 0},
+        "check_in": {
+            "checked_in_today": today_checkin is not None,
+            "current_streak": today_checkin.streak_day if today_checkin else 0,
+            "today_coin_reward": today_checkin.coin_earned if today_checkin else 0,
         },
-        "achievements": {"unlocked": unlocked},
     }
 
 

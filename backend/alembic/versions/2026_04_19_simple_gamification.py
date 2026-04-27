@@ -57,21 +57,6 @@ def upgrade() -> None:
             if not _has_column(inspector, "users", column_name):
                 batch_op.add_column(column)
 
-    if not _has_table(inspector, "achievements"):
-        op.create_table(
-            "achievements",
-            sa.Column("id", sa.Integer(), primary_key=True),
-            sa.Column("code", sa.String(length=50), nullable=False, unique=True),
-            sa.Column("name", sa.String(length=100), nullable=False),
-            sa.Column("description", sa.String(length=255), nullable=False),
-            sa.Column("icon_url", sa.String(length=500), nullable=True),
-            sa.Column("gem_reward", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("condition", sa.JSON(), nullable=False),
-        )
-    elif not _has_column(inspector, "achievements", "gem_reward"):
-        with op.batch_alter_table("achievements") as batch_op:
-            batch_op.add_column(sa.Column("gem_reward", sa.Integer(), nullable=False, server_default="0"))
-
     if not _has_table(inspector, "daily_stats"):
         op.create_table(
             "daily_stats",
@@ -83,7 +68,7 @@ def upgrade() -> None:
             sa.Column("lessons_completed", sa.Integer(), nullable=False, server_default="0"),
             sa.Column("speaking_lessons_completed", sa.Integer(), nullable=False, server_default="0"),
             sa.Column("vocabulary_lessons_completed", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("daily_goal_met", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+            sa.Column("daily_goal_met", sa.Boolean(), nullable=False, server_default=sa.false()),
             sa.Column("avg_score", sa.Float(), nullable=True),
             sa.Column("recordings_count", sa.Integer(), nullable=False, server_default="0"),
             sa.UniqueConstraint("user_id", "date"),
@@ -96,24 +81,12 @@ def upgrade() -> None:
             "vocabulary_lessons_completed": sa.Column(
                 "vocabulary_lessons_completed", sa.Integer(), nullable=False, server_default="0"
             ),
-            "daily_goal_met": sa.Column("daily_goal_met", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+            "daily_goal_met": sa.Column("daily_goal_met", sa.Boolean(), nullable=False, server_default=sa.false()),
         }
         with op.batch_alter_table("daily_stats") as batch_op:
             for column_name, column in daily_stat_columns.items():
                 if not _has_column(inspector, "daily_stats", column_name):
                     batch_op.add_column(column)
-
-    if not _has_table(inspector, "user_achievements"):
-        op.create_table(
-            "user_achievements",
-            sa.Column("id", sa.Integer(), primary_key=True),
-            sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=True),
-            sa.Column("achievement_id", sa.Integer(), sa.ForeignKey("achievements.id"), nullable=True),
-            sa.Column("unlocked_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-            sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-            sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-            sa.UniqueConstraint("user_id", "achievement_id"),
-        )
 
     if not _has_table(inspector, "gem_transactions"):
         op.create_table(
@@ -151,10 +124,6 @@ def downgrade() -> None:
             ):
                 if _has_column(inspector, "daily_stats", column_name):
                     batch_op.drop_column(column_name)
-
-    if _has_column(inspector, "achievements", "gem_reward"):
-        with op.batch_alter_table("achievements") as batch_op:
-            batch_op.drop_column("gem_reward")
 
     with op.batch_alter_table("users") as batch_op:
         for column_name in (

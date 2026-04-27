@@ -52,6 +52,6 @@ def downgrade() -> None:
 
     with op.batch_alter_table("scenarios") as batch_op:
         if not _has_column(inspector, "scenarios", "is_ai_start_first"):
-            batch_op.add_column(sa.Column("is_ai_start_first", sa.Boolean(), nullable=False, server_default=sa.text("1")))
+            batch_op.add_column(sa.Column("is_ai_start_first", sa.Boolean(), nullable=False, server_default=sa.true()))
         if not _has_column(inspector, "scenarios", "starter"):
             batch_op.add_column(sa.Column("starter", sa.String(length=10), nullable=True, server_default="AI"))

@@ -21,7 +21,6 @@ class Settings(BaseSettings):
 
     # --- Database ---
     database_url: str = Field(
-        default="sqlite+aiosqlite:///./ai_talk_practice.db",
         description="Async database connection URL",
     )
 
@@ -48,9 +47,17 @@ class Settings(BaseSettings):
     stripe_secret_key: str | None = Field(default=None, description="Stripe secret key")
     stripe_webhook_secret: str | None = Field(default=None, description="Stripe webhook signing secret")
     google_translate_api_key: str | None = Field(default=None, description="Google Cloud Translation API v2 Key")
+    azure_speech_key: str | None = Field(default=None, description="Azure Speech Service key")
+    azure_speech_region: str | None = Field(default=None, description="Azure Speech Service region")
+    azure_speech_language: str = Field(default="en-US", description="Azure Speech assessment language")
+    dictionary_db_path: str | None = Field(default=None, description="Path to offline minhqnd dictionary SQLite database")
+    dictionary_audio_cache_dir: str = Field(
+        default="./dictionary_audio_cache",
+        description="Directory used to cache dictionary pronunciation audio",
+    )
 
     # --- Payment / Billing ---
-    frontend_url: str = Field(default="http://localhost:5173", description="Public frontend base URL")
+    frontend_url: str = Field(description="Public frontend base URL")
     payment_pro_duration_days: int = Field(default=30, description="Subscription duration in days after a successful payment")
     payment_pro_amount_usd_cents: int = Field(default=9900, description="Stripe price for PRO plan in cents")
 
@@ -191,14 +198,49 @@ class Settings(BaseSettings):
     )
     tts_voice: str = Field(default="Cherry", description="DashScope TTS voice name")
     tts_language: str = Field(default="en", description="TTS language")
+    qwen_vc_enrollment_model: str = Field(
+        default="qwen-voice-enrollment",
+        description="DashScope voice enrollment model",
+    )
+    qwen_vc_target_model: str = Field(
+        default="qwen3-tts-vc-2026-01-22",
+        description="DashScope Qwen voice-clone synthesis target model",
+    )
+    qwen_vc_fingerprint_salt: str = Field(
+        default="future-voice-demo",
+        description="Salt used before hashing landing-page trial fingerprints",
+    )
+    qwen_vc_trial_ttl_seconds: int = Field(
+        default=86400,
+        description="Seconds to keep a used landing-page future voice fingerprint in memory",
+    )
+    qwen_vc_source_audio_ttl_seconds: int = Field(
+        default=300,
+        description="Seconds to expose temporary source audio for DashScope enrollment",
+    )
+    qwen_vc_max_audio_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        description="Maximum landing-page future voice WAV upload size",
+    )
+    qwen_vc_max_audio_seconds: float = Field(
+        default=60.0,
+        description="Maximum landing-page future voice recording duration",
+    )
+    qwen_vc_min_sample_rate: int = Field(
+        default=24000,
+        description="Minimum WAV sample rate accepted for landing-page future voice",
+    )
     # --- DashScope Region ---
     dashscope_region: str = Field(default="intl", description="intl | cn")
+    backend_public_url: str = Field(
+        description="Public backend base URL used for temporary audio URLs",
+    )
 
     # --- Server ---
     host: str = Field(default="0.0.0.0")
     port: int = Field(default=8000)
     is_debug: bool = Field(default=False)
-    cors_origins: list[str] = Field(default=["*"])
+    cors_origins: list[str] = Field(description="Allowed browser origins")
 
     @property
     def dashscope_ws_url(self) -> str:

@@ -67,7 +67,7 @@ move("api/v1/ws.py", "modules/sessions/routers/ws.py")
 (BASE_DIR / "modules/sessions/routers/__init__.py").touch()
 
 # 6. Gamification
-for gm in ["achievement.py", "user_achievement.py", "daily_stat.py"]:
+for gm in ["daily_stat.py"]:
     move(f"models/{gm}", f"modules/gamification/models/{gm}")
 (BASE_DIR / "modules/gamification/models/__init__.py").touch()
 

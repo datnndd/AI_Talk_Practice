@@ -8,6 +8,8 @@ import {
   SquaresFour,
   UserList,
   UserCircle,
+  GraduationCap,
+  Storefront,
 } from "@phosphor-icons/react";
 
 export const publicNavItems = [
@@ -18,16 +20,20 @@ export const publicNavItems = [
 
 export const learnerNavItems = [
   { label: "Dashboard", path: "/dashboard", icon: HouseLine },
+  { label: "Learn", path: "/learn", icon: GraduationCap },
   { label: "Leaderboard", path: "/leaderboard", icon: Trophy },
   { label: "Topics", path: "/topics", icon: BookOpenText },
+  { label: "Shop", path: "/shop", icon: Storefront },
   { label: "Plan", path: "/subscription", icon: Crown },
   { label: "Profile", path: "/profile", icon: UserCircle },
 ];
 
 export const learnerTabItems = [
   { label: "Dashboard", path: "/dashboard", icon: HouseLine },
+  { label: "Learn", path: "/learn", icon: GraduationCap },
   { label: "Leaderboard", path: "/leaderboard", icon: Trophy },
   { label: "Topics", path: "/topics", icon: BookOpenText },
+  { label: "Shop", path: "/shop", icon: Storefront },
   { label: "Plan", path: "/subscription", icon: Crown },
   { label: "Profile", path: "/profile", icon: UserCircle },
 ];
@@ -40,6 +46,7 @@ export const adminNavItems = [
 export const adminWorkspaceNavItems = [
   { label: "Users", path: "/admin/users", icon: UserList },
   { label: "Scenarios", path: "/admin/scenarios", icon: SquaresFour },
+  { label: "Curriculum", path: "/admin/curriculum", icon: GraduationCap },
   { label: "Payments", path: "/admin/payments", icon: CreditCard },
 ];
 

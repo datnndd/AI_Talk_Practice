@@ -5,11 +5,23 @@ import BrandMark from "./BrandMark";
 const NAV_ITEMS = [
   {
     label: "Học tập",
-    path: "/dashboard",
+    path: "/learn",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-house h-5 w-5" aria-hidden="true">
         <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
         <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+      </svg>
+    ),
+  },
+  {
+    label: "Dashboard",
+    path: "/dashboard",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-dashboard h-5 w-5" aria-hidden="true">
+        <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+        <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+        <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+        <rect width="7" height="5" x="3" y="16" rx="1"></rect>
       </svg>
     ),
   },
@@ -38,6 +50,23 @@ const NAV_ITEMS = [
         <path d="M4 22h16"></path>
         <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"></path>
         <path d="M6 9H4.5a1 1 0 0 1 0-5H6"></path>
+      </svg>
+    ),
+  },
+  {
+    label: "Cửa hàng",
+    path: "/shop",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-store h-5 w-5" aria-hidden="true">
+        <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path>
+        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+        <path d="M15 22v-6a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v6"></path>
+        <path d="M2 7h20"></path>
+        <path d="M22 7v3a2 2 0 0 1-4 0V7"></path>
+        <path d="M18 7v3a2 2 0 0 1-4 0V7"></path>
+        <path d="M14 7v3a2 2 0 0 1-4 0V7"></path>
+        <path d="M10 7v3a2 2 0 0 1-4 0V7"></path>
+        <path d="M6 7v3a2 2 0 0 1-4 0V7"></path>
       </svg>
     ),
   },
@@ -88,7 +117,7 @@ const AppSidebar = () => {
       </nav>
 
       <div className="mt-auto pt-6">
-        <button className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-promo-from to-promo-to px-4 py-3 text-sm font-extrabold text-white shadow-md transition hover:opacity-90 active:scale-95">
+        <Link to="/shop" className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-promo-from to-promo-to px-4 py-3 text-sm font-extrabold text-white shadow-md transition hover:opacity-90 active:scale-95">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles h-4 w-4" aria-hidden="true">
             <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
             <path d="M20 2v4"></path>
@@ -96,7 +125,7 @@ const AppSidebar = () => {
             <circle cx="4" cy="20" r="2"></circle>
           </svg>
           Upgrade Pro
-        </button>
+        </Link>
       </div>
     </aside>
   );

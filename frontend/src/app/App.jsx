@@ -16,10 +16,14 @@ const ProfileSettingsPage = lazy(() => import("@/features/profile/pages/ProfileS
 const UserSettingsPage = lazy(() => import("@/features/profile/pages/UserSettingsPage"));
 const LeaderboardPage = lazy(() => import("@/features/leaderboard/pages/LeaderboardPage"));
 const DashboardPage = lazy(() => import("@/features/dashboard/pages/DashboardPage"));
+const LearnPage = lazy(() => import("@/features/curriculum/pages/LearnPage"));
+const LessonPlayerPage = lazy(() => import("@/features/curriculum/pages/LessonPlayerPage"));
 const AdminUsersPage = lazy(() => import("@/features/admin-users/pages/AdminUsersPage"));
 const AdminScenariosPage = lazy(() => import("@/features/admin-scenarios/pages/AdminScenariosPage"));
 const AdminPaymentsPage = lazy(() => import("@/features/admin-payments/pages/AdminPaymentsPage"));
+const AdminCurriculumPage = lazy(() => import("@/features/curriculum/pages/AdminCurriculumPage"));
 const SubscriptionPage = lazy(() => import("@/features/subscription/pages/SubscriptionPage"));
+const ShopPage = lazy(() => import("@/features/gamification/pages/ShopPage"));
 
 const RouteFallback = () => (
   <div className="flex min-h-[100dvh] items-center justify-center bg-zinc-50">
@@ -52,11 +56,15 @@ function App() {
         <Route path="/settings" element={<PrivateRoute>{withAppLayout(<UserSettingsPage />)}</PrivateRoute>} />
         <Route path="/leaderboard" element={<PrivateRoute>{withAppLayout(<LeaderboardPage />)}</PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute>{withAppLayout(<DashboardPage />)}</PrivateRoute>} />
+        <Route path="/learn" element={<PrivateRoute>{withAppLayout(<LearnPage />)}</PrivateRoute>} />
+        <Route path="/learn/lessons/:lessonId" element={<PrivateRoute>{withAppLayout(<LessonPlayerPage />)}</PrivateRoute>} />
+        <Route path="/shop" element={<PrivateRoute>{withAppLayout(<ShopPage />)}</PrivateRoute>} />
         <Route path="/subscription" element={<PrivateRoute>{withAppLayout(<SubscriptionPage />)}</PrivateRoute>} />
         
         {/* Admin Routes */}
         <Route path="/admin/users" element={<PrivateRoute requireAdmin>{withSuspense(<AdminUsersPage />)}</PrivateRoute>} />
         <Route path="/admin/scenarios" element={<PrivateRoute requireAdmin>{withSuspense(<AdminScenariosPage />)}</PrivateRoute>} />
+        <Route path="/admin/curriculum" element={<PrivateRoute requireAdmin>{withSuspense(<AdminCurriculumPage />)}</PrivateRoute>} />
         <Route path="/admin/payments" element={<PrivateRoute requireAdmin>{withSuspense(<AdminPaymentsPage />)}</PrivateRoute>} />
       </Routes>
     </Router>

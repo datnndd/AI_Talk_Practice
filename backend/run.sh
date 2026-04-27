@@ -34,9 +34,8 @@ alembic upgrade head
 # Start server
 echo ""
 echo "🚀 Starting AI Talk Practice Backend..."
-echo "   WebSocket: ws://localhost:8000/ws/conversation"
-echo "   Health:    http://localhost:8000/"
-echo "   Providers: http://localhost:8000/providers"
+echo "   Host:      0.0.0.0"
+echo "   Port:      8000"
 echo ""
 
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

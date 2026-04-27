@@ -18,7 +18,6 @@ const normalizeEntry = (entry, currentUserId, topScore) => ({
   rank: entry.rank,
   name: getDisplayName(entry),
   xp: entry.score,
-  streak: entry.current_streak,
   country: COUNTRY_BY_LANGUAGE[entry.target_language] ?? "🌍",
   avatar: entry.avatar ?? "",
   progress: topScore > 0 ? Math.max(12, Math.round((entry.score / topScore) * 100)) : 0,

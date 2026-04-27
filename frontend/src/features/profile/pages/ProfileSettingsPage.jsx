@@ -1,22 +1,28 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Gear, PencilSimple } from "@phosphor-icons/react";
 
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { gamificationApi } from "@/features/gamification/api/gamificationApi";
 import ProfileStats from "../components/ProfileStats";
-import ProfileAchievements from "../components/ProfileAchievements";
 
 const ProfileSettingsPage = () => {
   const { user } = useAuth();
+  const [gamification, setGamification] = useState(null);
+
+  useEffect(() => {
+    gamificationApi.getDashboard().then(setGamification).catch(() => {});
+  }, []);
 
   const displayName = user?.display_name || user?.email?.split("@")[0] || "Learner";
   const username = user?.preferences?.handle || user?.email?.split("@")[0]?.toLowerCase() || "learner";
   const joinedDate = "May 2024";
 
   const stats = {
-    streak: user?.streak || 0,
-    totalXp: user?.total_xp || 10876,
-    league: user?.current_league || "Ruby",
-    topFinishes: user?.top_finishes || 3,
+    level: gamification?.xp?.level || 1,
+    totalXp: gamification?.xp?.total || 0,
+    coin: gamification?.coin?.balance || 0,
+    checkInStreak: gamification?.check_in?.current_streak || 0,
   };
 
   return (
@@ -74,15 +80,6 @@ const ProfileSettingsPage = () => {
         <section>
           <h2 className="mb-4 text-2xl font-black text-[#4b4b4b]">Statistics</h2>
           <ProfileStats stats={stats} />
-        </section>
-
-        {/* Achievements Section */}
-        <section>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-2xl font-black text-[#4b4b4b]">Achievements</h2>
-            <Link to="/profile/achievements" className="text-sm font-black uppercase text-[#1cb0f6] hover:brightness-90">View all</Link>
-          </div>
-          <ProfileAchievements />
         </section>
       </div>
 

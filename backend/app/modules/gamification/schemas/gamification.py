@@ -6,97 +6,81 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-LessonType = Literal["basic", "vocabulary", "listening", "reading", "writing", "speaking", "speaking_short"]
 LeaderboardPeriod = Literal["weekly", "all_time"]
-
-
-class AchievementRead(BaseModel):
-    code: str
-    name: str
-    description: str
-    gem_reward: int
-    icon: str | None = None
-
-
-class UnlockedAchievementRead(AchievementRead):
-    unlocked_at: datetime
-
-
-class StreakRead(BaseModel):
-    current: int
-    longest: int
-    last_completed_lesson_date: date | None = None
 
 
 class XPRead(BaseModel):
     total: int
     today: int
-    daily_goal: int
     level: int
     level_progress: int
-    level_size: int = 1000
-    daily_goal_met: bool
+    level_size: int
+    xp_to_next_level: int
 
 
-class GemRead(BaseModel):
+class CoinRead(BaseModel):
     balance: int
 
 
-class HeartRead(BaseModel):
-    current: int | None
-    max: int
-    is_unlimited: bool
-    next_refill_at: datetime | None = None
-
-
-class AchievementSummaryRead(BaseModel):
-    available: list[AchievementRead]
-    unlocked: list[UnlockedAchievementRead]
+class CheckInRead(BaseModel):
+    checked_in_today: bool
+    current_streak: int
+    today_coin_reward: int
 
 
 class GamificationDashboard(BaseModel):
-    streak: StreakRead
     xp: XPRead
-    gem: GemRead
-    heart: HeartRead
-    achievements: AchievementSummaryRead
+    coin: CoinRead
+    check_in: CheckInRead
 
 
 class RewardRead(BaseModel):
     xp_earned: int
-    gem_earned: int
-
-
-class LessonCompleteRequest(BaseModel):
-    lesson_type: LessonType
-    score: float | None = Field(default=None, ge=0, le=100)
+    coin_earned: int
+    levels_gained: int = 0
+    level_coin_reward: int = 0
 
 
 class LessonCompleteResponse(BaseModel):
     reward: RewardRead
-    unlocked_achievements: list[UnlockedAchievementRead]
     dashboard: GamificationDashboard
 
 
-class HeartPurchaseRequest(BaseModel):
-    hearts: Literal[1, 5]
-
-
-class HeartPurchaseResponse(BaseModel):
-    hearts_added: int
-    gem_spent: int
+class CheckInResponse(BaseModel):
+    date: date
+    streak_day: int
+    coin_earned: int
     dashboard: GamificationDashboard
 
 
-class DailyGoalUpdateRequest(BaseModel):
-    daily_xp_goal: Literal[30, 50, 100, 150]
+class ShopItemRead(BaseModel):
+    code: str
+    name: str
+    description: str
+    price_coin: int
+    type: str
+    duration_days: int | None = None
+
+
+class ShopRead(BaseModel):
+    items: list[ShopItemRead]
+
+
+class ShopPurchaseRequest(BaseModel):
+    item_code: str = Field(min_length=1, max_length=80)
+
+
+class ShopPurchaseResponse(BaseModel):
+    item: ShopItemRead
+    coin_spent: int
+    subscription_expires_at: datetime | None = None
+    dashboard: GamificationDashboard
 
 
 class LeaderboardEntryRead(BaseModel):
     user_id: int
     rank: int
     score: int
-    current_streak: int
     display_name: str | None = None
     email: str
     avatar: str | None = None

@@ -41,13 +41,12 @@ async def send_email(to_email: str, subject: str, body: str) -> None:
 
 async def send_verification_email(to_email: str, token: str) -> None:
     subject = "Verify your AI Talk Practice Account"
-    # Basic URL, usually this comes from frontend env config
-    link = f"http://localhost:3000/auth/verify?token={token}"
+    link = f"{settings.frontend_url.rstrip('/')}/auth/verify?token={token}"
     body = f"Please verify your email by clicking the link: {link}"
     await send_email(to_email, subject, body)
 
 async def send_password_reset_email(to_email: str, token: str) -> None:
     subject = "Reset your AI Talk Practice Password"
-    link = f"http://localhost:3000/auth/reset-password?token={token}"
+    link = f"{settings.frontend_url.rstrip('/')}/auth/reset-password?token={token}"
     body = f"You requested a password reset. Click here to reset it: {link}\nIf you did not request this, ignore this email."
     await send_email(to_email, subject, body)

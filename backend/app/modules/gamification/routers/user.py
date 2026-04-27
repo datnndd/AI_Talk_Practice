@@ -5,14 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user, get_db
 from app.modules.gamification.schemas import (
-    DailyGoalUpdateRequest,
+    CheckInResponse,
     GamificationDashboard,
-    HeartPurchaseRequest,
-    HeartPurchaseResponse,
     LeaderboardPeriod,
     LeaderboardRead,
-    LessonCompleteRequest,
-    LessonCompleteResponse,
+    ShopPurchaseRequest,
+    ShopPurchaseResponse,
+    ShopRead,
 )
 from app.modules.gamification.services import GamificationService
 from app.modules.users.models.user import User
@@ -38,29 +37,25 @@ async def get_leaderboard(
     return await GamificationService.get_leaderboard(db, user, period=period, limit=limit)
 
 
-@router.patch("/daily-goal", response_model=GamificationDashboard)
-async def update_daily_goal(
-    body: DailyGoalUpdateRequest,
+@router.post("/check-in", response_model=CheckInResponse)
+async def check_in(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await GamificationService.update_daily_goal(db, user, body.daily_xp_goal)
+    return await GamificationService.check_in(db, user)
 
 
-@router.post("/lessons/complete", response_model=LessonCompleteResponse)
-async def complete_lesson(
-    body: LessonCompleteRequest,
+@router.get("/shop", response_model=ShopRead)
+async def get_shop(
+    _: User = Depends(get_current_user),
+):
+    return GamificationService.get_shop()
+
+
+@router.post("/shop/purchase", response_model=ShopPurchaseResponse)
+async def purchase_shop_item(
+    body: ShopPurchaseRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await GamificationService.complete_lesson(db, user, body)
-
-
-@router.post("/hearts/purchase", response_model=HeartPurchaseResponse)
-async def purchase_hearts(
-    body: HeartPurchaseRequest,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    hearts_added, gem_spent, dashboard = await GamificationService.purchase_hearts(db, user, body.hearts)
-    return HeartPurchaseResponse(hearts_added=hearts_added, gem_spent=gem_spent, dashboard=dashboard)
+    return await GamificationService.purchase_shop_item(db, user, body.item_code)

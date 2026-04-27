@@ -80,17 +80,12 @@ class AdminUserSubscriptionUpdateRequest(BaseModel):
     tier: Literal["FREE", "PRO", "ENTERPRISE"]
 
 
-class AdminUserResetStreakRequest(BaseModel):
-    reason: str | None = Field(default=None, max_length=500)
-
-
 class AdminUserBalanceAdjustmentRequest(BaseModel):
-    gem_delta: int | None = None
-    heart_delta: int | None = None
+    coin_delta: int | None = None
     reason: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
     def validate_non_empty_payload(self) -> "AdminUserBalanceAdjustmentRequest":
-        if self.gem_delta is None and self.heart_delta is None:
-            raise ValueError("gem_delta or heart_delta must be provided")
+        if self.coin_delta is None:
+            raise ValueError("coin_delta must be provided")
         return self

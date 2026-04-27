@@ -25,12 +25,22 @@ from app.modules.sessions.models.message import Message
 from app.modules.sessions.models.session import Session
 from app.modules.sessions.models.session_score import SessionScore
 
+# Curriculum
+from app.modules.curriculum.models import (
+    DictionaryTerm,
+    ExerciseAttempt,
+    LearningLevel,
+    Lesson,
+    LessonExercise,
+    UserExerciseProgress,
+    UserLessonProgress,
+)
+
 # Gamification
-from app.modules.gamification.models.achievement import Achievement
+from app.modules.gamification.models.coin_transaction import CoinTransaction
+from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.gamification.models.gamification_setting import GamificationSetting
-from app.modules.gamification.models.gem_transaction import GemTransaction
-from app.modules.gamification.models.user_achievement import UserAchievement
 
 # Admin
 from app.modules.admin.models.audit_log import AdminAuditLog
@@ -40,12 +50,17 @@ from app.modules.notifications.models.notification import Notification, Notifica
 
 __all__ = [
     "AdminAuditLog",
-    "Achievement",
+    "CoinTransaction",
     "Correction",
+    "DailyCheckin",
     "DailyStat",
+    "DictionaryTerm",
+    "ExerciseAttempt",
     "GamificationSetting",
-    "GemTransaction",
     "Message",
+    "LearningLevel",
+    "Lesson",
+    "LessonExercise",
     "Notification",
     "NotificationReadState",
     "PaymentTransaction",
@@ -56,5 +71,6 @@ __all__ = [
     "SessionScore",
     "Subscription",
     "User",
-    "UserAchievement",
+    "UserExerciseProgress",
+    "UserLessonProgress",
 ]

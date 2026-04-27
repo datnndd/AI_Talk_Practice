@@ -15,7 +15,6 @@ import app.db.models  # noqa: E402,F401
 from app.api.router import api_router, ws_router  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.exceptions import setup_exception_handlers  # noqa: E402
-from app.db.session import ensure_sqlite_schema_compatibility  # noqa: E402
 
 # ─── Logging ────────────────────────────────────────────────────────────────
 
@@ -67,8 +66,6 @@ async def lifespan(app: FastAPI):
     logger.info(f"TTS Provider: {settings.tts_provider}")
     logger.info(f"DashScope Region: {settings.dashscope_region}")
     logger.info("=" * 60)
-    await ensure_sqlite_schema_compatibility()
-
     yield
     
     # Shutdown logic if any
@@ -95,21 +92,9 @@ setup_exception_handlers(app)
 
 
 # CORS configuration
-# NOTE: allow_credentials=True requires explicit origins — wildcard "*" is rejected by browsers
-_cors_origins = settings.cors_origins
-if "*" in _cors_origins:
-    # In development, include common localhost ports explicitly
-    _cors_origins = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-    ]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
