@@ -85,11 +85,7 @@ def _keyword_tokens(text: str) -> list[str]:
 
 
 def _title_case_topic(scenario: Scenario) -> str:
-    metadata = scenario.scenario_metadata or {}
-    return (
-        str(metadata.get("topic") or metadata.get("conversation_topic") or scenario.title or "Conversation")
-        .strip()
-    )
+    return str(scenario.title or "Conversation").strip()
 
 
 def _assigned_task(scenario: Scenario) -> str:
@@ -101,8 +97,7 @@ def _assigned_task(scenario: Scenario) -> str:
 
 
 def _persona(scenario: Scenario) -> str:
-    metadata = scenario.scenario_metadata or {}
-    return str(metadata.get("persona") or metadata.get("partner_persona") or "Friendly speaking partner").strip()
+    return str(scenario.ai_role or "Friendly speaking partner").strip()
 
 
 def _max_follow_ups_for_level(level: str) -> int:
@@ -151,20 +146,7 @@ def _is_meta_opening(text: str) -> bool:
     return any(fragment in normalized for fragment in META_OPENING_FRAGMENTS)
 
 
-def _metadata_opening(scenario: Scenario) -> str:
-    metadata = scenario.scenario_metadata or {}
-    for key in ("opening_message", "opening_line", "initial_message", "first_message", "start_message"):
-        value = metadata.get(key)
-        if isinstance(value, str) and value.strip() and not _is_meta_opening(value):
-            return value.strip()
-    return ""
-
-
 def _fallback_opening_message(*, scenario: Scenario) -> str:
-    configured = _metadata_opening(scenario)
-    if configured:
-        return configured
-
     persona = _persona(scenario)
     if persona and persona.lower() != "friendly speaking partner":
         return "Hello! How can I help you today?"
@@ -285,9 +267,9 @@ def _fallback_blueprints(
     assigned_task: str,
     level: str | None,
 ) -> list[ObjectiveBlueprint]:
-    # Strictly use admin defined objectives. 
+    # Strictly use admin defined tasks.
     # If none are provided, the goal is just the scenario itself.
-    goals = _normalize_list(scenario.learning_objectives)
+    goals = _normalize_list(scenario.tasks)
     if not goals:
         goals = ["Hoàn thành cuộc hội thoại dựa trên tình huống"]
 
@@ -302,9 +284,7 @@ def _fallback_blueprints(
         )
         main_question, follow_ups = _build_objective_questions(
             index=index,
-            goal=resolved_goal,
             scenario=scenario,
-            topic=topic,
             expected_points=expected_points,
         )
         blueprints.append(
@@ -427,7 +407,6 @@ class LessonRuntimeService:
         hints: dict[str, Any] = {}
         return package, state, hints
 
-    @classmethod
     @staticmethod
     def _lesson_hint_max_tokens(llm: LLMBase) -> int:
         config = getattr(llm, "_config", None)

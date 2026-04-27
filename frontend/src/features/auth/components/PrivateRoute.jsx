@@ -1,8 +1,8 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 
-const PrivateRoute = ({ children, requireAdmin = false, requireSubscription = false }) => {
-  const { isAuthenticated, isLoading, user, isSubscribed } = useAuth();
+const PrivateRoute = ({ children, requireAdmin = false }) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -18,10 +18,6 @@ const PrivateRoute = ({ children, requireAdmin = false, requireSubscription = fa
 
   if (requireAdmin && !user?.is_admin) {
     return <Navigate to="/dashboard" replace />;
-  }
-
-  if (requireSubscription && !user?.is_admin && !isSubscribed) {
-    return <Navigate to="/subscription" replace />;
   }
 
   return children;

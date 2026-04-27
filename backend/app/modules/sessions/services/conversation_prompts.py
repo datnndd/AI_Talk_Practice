@@ -9,12 +9,12 @@ def build_dialogue_system_prompt(
     scenario: Any,
     rolling_summary: str,
     recent_turns: str,
-    target_skills: list[str] | None = None,
     user_preferences: dict[str, Any] | None = None,
     extra_instruction: str | None = None,
 ) -> str:
-    target_skill_text = ", ".join(item.strip() for item in (target_skills or []) if item and item.strip())
     preference_text = json.dumps(user_preferences or {}, ensure_ascii=False)[:1200] or "{}"
+    tasks = [str(item).strip() for item in (getattr(scenario, "tasks", None) or []) if str(item).strip()]
+    task_text = "\n".join(f"{index}. {task}" for index, task in enumerate(tasks, start=1)) or "Help the learner sustain a natural conversation."
 
     parts: list[str] = []
     if scenario.ai_system_prompt and scenario.ai_system_prompt.strip():
@@ -27,8 +27,8 @@ def build_dialogue_system_prompt(
             f"Situation details: {scenario.description}",
             f"AI role: {getattr(scenario, 'ai_role', '') or 'Conversation partner'}",
             f"Learner role: {getattr(scenario, 'user_role', '') or 'English learner'}",
-            f"Learning objectives: {', '.join(scenario.learning_objectives or []) or 'Help the learner sustain a natural conversation.'}",
-            f"Target skills: {target_skill_text or 'fluency, grammar, vocabulary'}",
+            "Learner tasks required before ending:",
+            task_text,
             f"Rolling session summary: {rolling_summary or 'No summary yet.'}",
             f"Learner profile signals: {preference_text}",
             f"Recent turns:\n{recent_turns or 'No prior turns.'}",
@@ -133,8 +133,7 @@ def build_full_assessment_prompt(
     *,
     scenario_title: str,
     scenario_description: str,
-    learning_objectives: Any,
-    target_skills: Any,
+    tasks: Any,
     rolling_summary: str,
 ) -> str:
     return "\n".join(
@@ -145,8 +144,7 @@ def build_full_assessment_prompt(
             "Use numeric scores from 0 to 10.",
             f"Scenario: {scenario_title}",
             f"Scenario description: {scenario_description}",
-            f"Learning objectives: {learning_objectives or []}",
-            f"Target skills: {target_skills or []}",
+            f"Learner tasks: {tasks or []}",
             f"Rolling summary: {rolling_summary or 'None'}",
             "JSON schema: {",
             '  "pronunciation_score": 0.0,',

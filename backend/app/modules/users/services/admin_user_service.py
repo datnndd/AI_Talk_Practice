@@ -6,7 +6,6 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.modules.admin.services.audit_log_service import AdminAuditLogService
 from app.modules.gamification.models.coin_transaction import CoinTransaction
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
@@ -116,9 +115,6 @@ class AdminUserService:
         body: AdminUserBalanceAdjustmentRequest,
     ) -> User:
         user = await AdminUserService.get_user(db, user_id)
-        before = {
-            "coin_balance": user.coin_balance,
-        }
 
         if body.coin_delta is not None:
             new_coin_balance = (user.coin_balance or 0) + body.coin_delta
@@ -138,20 +134,6 @@ class AdminUserService:
                     )
                 )
 
-        after = {
-            "coin_balance": user.coin_balance,
-        }
-        AdminAuditLogService.record(
-            db,
-            actor_user_id=actor.id,
-            action="user.balance_adjusted",
-            entity_type="user",
-            entity_id=user.id,
-            target_user_id=user.id,
-            before=before,
-            after=after,
-            reason=body.reason,
-        )
         await db.commit()
         logger.info("Admin id=%s adjusted gamification balance for user id=%s", actor.id, user.id)
         return await AdminUserService.get_user(db, user.id)
@@ -175,11 +157,6 @@ class AdminUserService:
             subscription = Subscription(user_id=user.id)
             db.add(subscription)
 
-        before = {
-            "tier": subscription.tier,
-            "status": subscription.status,
-            "expires_at": subscription.expires_at.isoformat() if subscription.expires_at else None,
-        }
         subscription.tier = tier
         subscription.status = "active"
         subscription.features = PLAN_FEATURES[tier]
@@ -197,21 +174,6 @@ class AdminUserService:
         else:
             subscription.expires_at = None
 
-        after = {
-            "tier": subscription.tier,
-            "status": subscription.status,
-            "expires_at": subscription.expires_at.isoformat() if subscription.expires_at else None,
-        }
-        AdminAuditLogService.record(
-            db,
-            actor_user_id=actor.id,
-            action="user.subscription_updated",
-            entity_type="subscription",
-            entity_id=user.id,
-            target_user_id=user.id,
-            before=before,
-            after=after,
-        )
         await db.commit()
         logger.info("Admin updated subscription tier=%s for user id=%s", tier, user.id)
         return await AdminUserService.get_user(db, user.id)
@@ -231,16 +193,6 @@ class AdminUserService:
         if user.deleted_at is None:
             user.deleted_at = datetime.now(timezone.utc)
 
-        AdminAuditLogService.record(
-            db,
-            actor_user_id=actor.id,
-            action="user.locked",
-            entity_type="user",
-            entity_id=user.id,
-            target_user_id=user.id,
-            before={"deleted_at": None},
-            after={"deleted_at": user.deleted_at.isoformat() if user.deleted_at else None},
-        )
         await db.commit()
         logger.info("Admin id=%s deactivated user id=%s", actor.id, user.id)
         return await AdminUserService.get_user(db, user.id)
@@ -253,18 +205,7 @@ class AdminUserService:
         user_id: int,
     ) -> User:
         user = await AdminUserService.get_user(db, user_id)
-        before = {"deleted_at": user.deleted_at.isoformat() if user.deleted_at else None}
         user.deleted_at = None
-        AdminAuditLogService.record(
-            db,
-            actor_user_id=actor.id,
-            action="user.unlocked",
-            entity_type="user",
-            entity_id=user.id,
-            target_user_id=user.id,
-            before=before,
-            after={"deleted_at": None},
-        )
         await db.commit()
         logger.info("Restored user id=%s", user.id)
         return await AdminUserService.get_user(db, user.id)
@@ -282,6 +223,7 @@ class AdminUserService:
     def _set_admin_access(user: User, is_admin: bool) -> None:
         preferences = dict(user.preferences or {})
         preferences["is_admin"] = is_admin
+        user.role = "admin" if is_admin else "user"
         if is_admin:
             preferences["role"] = "admin"
         elif preferences.get("role") == "admin":

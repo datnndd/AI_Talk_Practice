@@ -181,7 +181,6 @@ class ConversationReplyService:
             scenario=session.scenario,
             rolling_summary=session_rolling_summary(session),
             recent_turns=session_recent_turns_text(session, limit=self.message_limit * 2),
-            target_skills=list(session.target_skills or session.scenario.target_skills or []),
             user_preferences=user_preferences,
             extra_instruction=extra_instruction,
         )
@@ -349,8 +348,7 @@ class ConversationFinalEvaluationBuilder:
         system_prompt = build_full_assessment_prompt(
             scenario_title=session.scenario.title,
             scenario_description=session.scenario.description,
-            learning_objectives=session.scenario.learning_objectives or [],
-            target_skills=session.target_skills or session.scenario.target_skills or [],
+            tasks=session.scenario.tasks or [],
             rolling_summary=session_rolling_summary(session),
         )
         compact_messages = session_full_turns_text(session)

@@ -33,8 +33,6 @@ class Session(Base, TimestampMixin):
     Design notes:
     - `session_metadata` JSONB captures runtime context that doesn't need its own
       column: {"asr_engine": "dashscope", "tts_voice": "...", ...}
-    - `target_skills` JSONB overrides Scenario.target_skills for this specific
-      session (e.g., user selected "focus on pronunciation today").
     - `deleted_at` soft-delete: sessions are never hard-deleted for audit trail.
     - `messages` lazy="select" — ALWAYS load via selectinload() in queries, not
       implicitly, to prevent N+1 across session lists.
@@ -62,10 +60,6 @@ class Session(Base, TimestampMixin):
     )
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     duration_seconds: Mapped[Optional[int]] = mapped_column(Integer)
-
-    # ── Session-level overrides ───────────────────────────────────────────────
-    # Overrides Scenario.target_skills for this session
-    target_skills: Mapped[Optional[Any]] = mapped_column(JSONB)
 
     # ── Runtime metadata ─────────────────────────────────────────────────────
     # {"asr_engine": "dashscope", "tts_voice": "...", "llm_model": "ai-talk"}

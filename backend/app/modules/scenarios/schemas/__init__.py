@@ -8,14 +8,11 @@ from .admin_scenario import (
     ScenarioAdminRead,
     ScenarioAdminUpdate,
     ScenarioListResponse,
-    SuggestSkillsRequest,
-    SuggestSkillsResponse,
     GenerateDefaultPromptRequest,
     GenerateDefaultPromptResponse,
     BulkScenarioActionRequest,
     BulkScenarioActionResponse,
     PromptQualityAssessment,
-    PromptHistoryRead,
 )
 
 __all__ = [
@@ -26,12 +23,9 @@ __all__ = [
     "ScenarioAdminRead",
     "ScenarioAdminUpdate",
     "ScenarioListResponse",
-    "SuggestSkillsRequest",
-    "SuggestSkillsResponse",
     "GenerateDefaultPromptRequest",
     "GenerateDefaultPromptResponse",
     "BulkScenarioActionRequest",
     "BulkScenarioActionResponse",
     "PromptQualityAssessment",
-    "PromptHistoryRead",
 ]

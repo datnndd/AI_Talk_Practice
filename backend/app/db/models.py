@@ -14,10 +14,7 @@ from app.modules.payments.models.payment_transaction import PaymentTransaction
 from app.modules.payments.models.payment_webhook_event import PaymentWebhookEvent
 
 # Scenarios
-from app.modules.scenarios.models.scenario import (
-    Scenario,
-    ScenarioPromptHistory,
-)
+from app.modules.scenarios.models.scenario import Scenario
 
 # Sessions
 from app.modules.sessions.models.correction import Correction
@@ -42,14 +39,10 @@ from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.gamification.models.gamification_setting import GamificationSetting
 
-# Admin
-from app.modules.admin.models.audit_log import AdminAuditLog
-
 # Notifications
 from app.modules.notifications.models.notification import Notification, NotificationReadState
 
 __all__ = [
-    "AdminAuditLog",
     "CoinTransaction",
     "Correction",
     "DailyCheckin",
@@ -66,7 +59,6 @@ __all__ = [
     "PaymentTransaction",
     "PaymentWebhookEvent",
     "Scenario",
-    "ScenarioPromptHistory",
     "Session",
     "SessionScore",
     "Subscription",

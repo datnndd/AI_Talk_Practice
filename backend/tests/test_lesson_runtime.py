@@ -23,20 +23,16 @@ class HintLLM:
         yield self.response
 
 
-def make_scenario(*, learning_objectives=None, metadata=None):
+def make_scenario(*, tasks=None):
     return Scenario(
         id=123,
         title="Restaurant roleplay",
         description="Order a meal and respond politely.",
-        learning_objectives=learning_objectives or ["ordering food", "asking for the bill"],
+        tasks=tasks or ["ordering food", "asking for the bill"],
         ai_system_prompt="You are a waiter.",
+        ai_role="Polite waiter",
         category="daily-life",
         difficulty="easy",
-        scenario_metadata=metadata or {
-            "topic": "Restaurant conversation",
-            "assigned_task": "You are in a cafe. Order your food and keep the conversation polite.",
-            "persona": "Polite waiter",
-        },
     )
 
 
@@ -80,7 +76,7 @@ def test_lesson_runtime_generates_package_and_advances():
 
 
 def test_lesson_hint_fallback_explains_current_question():
-    scenario = make_scenario(learning_objectives=["ordering food"])
+    scenario = make_scenario(tasks=["ordering food"])
     package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
     state = LessonRuntimeService.initial_state(package)
     state.last_question = "What would you like to order today?"
@@ -102,7 +98,7 @@ def test_lesson_hint_fallback_explains_current_question():
 
 @pytest.mark.asyncio
 async def test_lesson_hint_dynamic_sends_current_question_to_llm():
-    scenario = make_scenario(learning_objectives=["ordering food"])
+    scenario = make_scenario(tasks=["ordering food"])
     package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
     state = LessonRuntimeService.initial_state(package)
     state.last_question = "Would you like that hot or iced?"
@@ -138,7 +134,7 @@ async def test_lesson_hint_dynamic_sends_current_question_to_llm():
 
 @pytest.mark.asyncio
 async def test_lesson_hint_dynamic_invalid_json_can_fallback():
-    scenario = make_scenario(learning_objectives=["ordering food"])
+    scenario = make_scenario(tasks=["ordering food"])
     package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
     state = LessonRuntimeService.initial_state(package)
     state.last_question = "What would you like to order today?"
@@ -162,7 +158,7 @@ async def test_lesson_hint_dynamic_invalid_json_can_fallback():
 
 
 def test_lesson_hint_cache_key_uses_question_and_follow_up_index():
-    scenario = make_scenario(learning_objectives=["ordering food"])
+    scenario = make_scenario(tasks=["ordering food"])
     package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
     state = LessonRuntimeService.initial_state(package)
     state.last_question = "What would you like to order today?"
@@ -198,19 +194,15 @@ def test_lesson_hint_cache_key_uses_question_and_follow_up_index():
 
 def test_lesson_package_uses_prompt_generated_goals_by_level():
     scenario = make_scenario(
-        learning_objectives=[
+        tasks=[
             "Professional vocabulary",
             "past tense narration",
             "expressing strengths and experience",
         ],
-        metadata={
-            "topic": "Job interview",
-            "assigned_task": "You are interviewing for a product role.",
-            "persona": "Hiring manager",
-        },
     )
     scenario.title = "Job Interview - Tell Me About Yourself"
     scenario.category = "business"
+    scenario.ai_role = "Hiring manager"
     scenario.ai_system_prompt = "You are an interviewer hiring a candidate. Ask one question at a time."
     plan = {
         "opening_message": "Welcome. Could you introduce yourself and explain what role you want?",
@@ -290,15 +282,11 @@ def test_lesson_package_uses_prompt_generated_useful_phrases():
 
 def test_prompt_generated_follow_up_avoids_generic_teacher_prompt():
     scenario = make_scenario(
-        learning_objectives=["Professional vocabulary"],
-        metadata={
-            "topic": "Job interview",
-            "assigned_task": "You are interviewing for a product role.",
-            "persona": "Hiring manager",
-        },
+        tasks=["Professional vocabulary"],
     )
     scenario.title = "Job Interview - Tell Me About Yourself"
     scenario.category = "business"
+    scenario.ai_role = "Hiring manager"
     scenario.ai_system_prompt = "You are an interviewer hiring a candidate."
     plan = {
         "opening_message": "Welcome. What role are you interviewing for?",
@@ -361,16 +349,12 @@ def test_meta_opening_from_plan_is_replaced_with_roleplay_line():
 
 def test_fallback_contextualizes_vague_vocabulary_objectives():
     scenario = make_scenario(
-        learning_objectives=["Professional vocabulary"],
-        metadata={
-            "topic": "Job interview",
-            "assigned_task": "You are interviewing for a product role.",
-            "persona": "Hiring manager",
-        },
+        tasks=["Professional vocabulary"],
     )
     scenario.title = "Job Interview - Tell Me About Yourself"
     scenario.category = "business"
     scenario.description = "Introduce yourself to a hiring manager for a product role."
+    scenario.ai_role = "Hiring manager"
     scenario.ai_system_prompt = "You are an interviewer hiring a candidate."
 
     package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
@@ -382,7 +366,7 @@ def test_fallback_contextualizes_vague_vocabulary_objectives():
         state=state,
     )
 
-    assert package.objectives[0].goal == "Use precise phrases for Job interview"
+    assert package.objectives[0].goal == "Use precise phrases for Job Interview - Tell Me About Yourself"
     assert "professional vocabulary" not in package.objectives[0].goal.lower()
-    assert state_read.lesson_goals == ["Use precise phrases for Job interview"]
+    assert state_read.lesson_goals == ["Use precise phrases for Job Interview - Tell Me About Yourself"]
     assert package.objectives[0].expected_points

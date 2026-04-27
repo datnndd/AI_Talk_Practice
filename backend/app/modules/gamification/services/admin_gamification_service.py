@@ -6,7 +6,6 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.admin.services.audit_log_service import AdminAuditLogService
 from app.modules.gamification.schemas.admin_gamification import (
     AdminGamificationOverviewRead,
     GamificationSettingsRead,
@@ -89,15 +88,6 @@ class AdminGamificationService:
             value=values["daily_checkin_coin_rewards"],
             actor_id=actor.id,
             description="Tiered Coin rewards granted by daily check-in streak day",
-        )
-        AdminAuditLogService.record(
-            db,
-            actor_user_id=actor.id,
-            action="gamification.settings_updated",
-            entity_type="gamification_settings",
-            before=_settings_payload(before),
-            after=values,
-            reason=body.reason,
         )
         await db.commit()
         return await cls.get_settings(db)

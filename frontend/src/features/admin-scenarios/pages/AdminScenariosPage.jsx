@@ -1,10 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
-import { CheckSquareOffset, FadersHorizontal, PencilSimple, Plus, Trash, ArrowCounterClockwise } from "@phosphor-icons/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ArrowCounterClockwise,
+  CheckSquareOffset,
+  FadersHorizontal,
+  PencilSimple,
+  Plus,
+  Trash,
+} from "@phosphor-icons/react";
+
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
-import PromptQualityBadge from "@/features/admin-scenarios/components/PromptQualityBadge";
 import ScenarioEditorModal from "@/features/admin-scenarios/components/ScenarioEditorModal";
 import { adminApi } from "@/features/admin-scenarios/api/adminScenariosApi";
-import { useTheme } from "@/shared/context/ThemeContext";
 
 const DEFAULT_FILTERS = {
   search: "",
@@ -16,58 +22,43 @@ const DEFAULT_FILTERS = {
   page_size: 12,
 };
 
-const metadataString = (metadata, keys) => {
-  if (!metadata || typeof metadata !== "object") {
-    return "";
-  }
-
-  for (const key of keys) {
-    const value = metadata[key];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-
-  return "";
+const formatMinutes = (value) => {
+  const minutes = Number(value || 0);
+  return `${minutes} min`;
 };
 
-const metadataList = (metadata, keys) => {
-  if (!metadata || typeof metadata !== "object") {
-    return [];
-  }
+const StatusBadge = ({ children, tone = "zinc" }) => {
+  const tones = {
+    emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+    amber: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+    rose: "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
+    zinc: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  };
 
-  for (const key of keys) {
-    const value = metadata[key];
-    if (Array.isArray(value)) {
-      const items = value
-        .filter((item) => typeof item === "string")
-        .map((item) => item.trim())
-        .filter(Boolean);
-      if (items.length > 0) {
-        return items;
-      }
-    }
-  }
-
-  return [];
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${tones[tone]}`}>
+      {children}
+    </span>
+  );
 };
 
 const AdminScenarios = () => {
-  const { theme, toggleTheme } = useTheme();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [scenarios, setScenarios] = useState([]);
   const [total, setTotal] = useState(0);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedScenarioId, setSelectedScenarioId] = useState(null);
-  const [selectedScenario, setSelectedScenario] = useState(null);
-  const [promptHistory, setPromptHistory] = useState([]);
   const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
   const [editingScenario, setEditingScenario] = useState(null);
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(true);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isSavingScenario, setIsSavingScenario] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+
+  const selectedScenario = useMemo(
+    () => scenarios.find((scenario) => scenario.id === selectedScenarioId) || scenarios[0] || null,
+    [scenarios, selectedScenarioId],
+  );
 
   const updateFilter = (field, value) => {
     setFilters((current) => ({
@@ -77,22 +68,6 @@ const AdminScenarios = () => {
     }));
   };
 
-  const loadScenarioDetail = useCallback(async (scenarioId) => {
-    setIsLoadingDetail(true);
-    try {
-      const [scenario, history] = await Promise.all([
-        adminApi.getScenario(scenarioId),
-        adminApi.getPromptHistory(scenarioId),
-      ]);
-      setSelectedScenario(scenario);
-      setPromptHistory(history);
-    } catch (detailError) {
-      setError(detailError?.response?.data?.detail || "Failed to load scenario details.");
-    } finally {
-      setIsLoadingDetail(false);
-    }
-  }, []);
-
   const loadScenarios = useCallback(async () => {
     setIsLoadingScenarios(true);
     setError("");
@@ -100,18 +75,11 @@ const AdminScenarios = () => {
       const data = await adminApi.listScenarios(filters);
       setScenarios(data.items);
       setTotal(data.total);
-
-      if (data.items.length === 0) {
-        setSelectedScenarioId(null);
-        setSelectedScenario(null);
-        return;
-      }
-
       setSelectedScenarioId((current) => {
         if (current && data.items.some((item) => item.id === current)) {
           return current;
         }
-        return data.items[0].id;
+        return data.items[0]?.id || null;
       });
     } catch (loadError) {
       setError(loadError?.response?.data?.detail || "Failed to load scenarios.");
@@ -124,32 +92,14 @@ const AdminScenarios = () => {
     void loadScenarios();
   }, [loadScenarios]);
 
-  useEffect(() => {
-    if (selectedScenarioId) {
-      void loadScenarioDetail(selectedScenarioId);
-    }
-  }, [loadScenarioDetail, selectedScenarioId]);
-
   const openCreateScenario = () => {
     setEditingScenario(null);
     setIsScenarioModalOpen(true);
   };
 
-  const openEditScenario = async (scenario = selectedScenario) => {
+  const openEditScenario = (scenario = selectedScenario) => {
     if (!scenario) return;
-    setSelectedScenarioId(scenario.id);
-    // Fetch the fresh detail directly instead of relying on stale selectedScenario state
-    try {
-      const [freshScenario, history] = await Promise.all([
-        adminApi.getScenario(scenario.id),
-        adminApi.getPromptHistory(scenario.id),
-      ]);
-      setSelectedScenario(freshScenario);
-      setPromptHistory(history);
-      setEditingScenario({ ...freshScenario });
-    } catch {
-      setEditingScenario({ ...scenario });
-    }
+    setEditingScenario({ ...scenario });
     setIsScenarioModalOpen(true);
   };
 
@@ -157,25 +107,20 @@ const AdminScenarios = () => {
     setIsSavingScenario(true);
     setError("");
     try {
-      const saved = editingScenario
-        ? await adminApi.updateScenario(editingScenario.id, payload)
-        : await adminApi.createScenario(payload);
+      if (editingScenario) {
+        await adminApi.updateScenario(editingScenario.id, payload);
+      } else {
+        await adminApi.createScenario(payload);
+      }
       setNotice(editingScenario ? "Scenario updated." : "Scenario created.");
       setIsScenarioModalOpen(false);
-      setSelectedScenarioId(saved.id);
       await loadScenarios();
-      await loadScenarioDetail(saved.id);
     } catch (saveError) {
       setError(saveError?.response?.data?.detail || "Failed to save scenario.");
       throw saveError;
     } finally {
       setIsSavingScenario(false);
     }
-  };
-
-  const handleSuggestSkills = async (payload) => {
-    const data = await adminApi.suggestSkills(payload);
-    return data.suggested_skills;
   };
 
   const handleGenerateDefaultPrompt = async (payload) => {
@@ -198,7 +143,6 @@ const AdminScenarios = () => {
       await adminApi.restoreScenario(scenarioId);
       setNotice("Scenario restored.");
       await loadScenarios();
-      await loadScenarioDetail(scenarioId);
     } catch (restoreError) {
       setError(restoreError?.response?.data?.detail || "Failed to restore scenario.");
     }
@@ -209,7 +153,6 @@ const AdminScenarios = () => {
       await adminApi.toggleScenario(scenarioId);
       setNotice("Scenario visibility updated.");
       await loadScenarios();
-      await loadScenarioDetail(scenarioId);
     } catch (toggleError) {
       setError(toggleError?.response?.data?.detail || "Failed to toggle scenario.");
     }
@@ -232,18 +175,11 @@ const AdminScenarios = () => {
 
   const totalPages = Math.max(1, Math.ceil(total / filters.page_size));
   const selectedCount = selectedIds.length;
-  const summaryCards = [
-    { label: "Scenarios", value: total },
-    { label: "Selected", value: selectedCount },
-    { label: "Usage", value: selectedScenario?.usage_count || 0 },
-  ];
 
   return (
     <AdminShell
-      theme={theme}
-      onToggleTheme={toggleTheme}
       title="Scenario Admin Panel"
-      subtitle="Manage reusable speaking scenarios and prompt history for teachers and content operators."
+      subtitle="Manage reusable speaking scenarios with a master-detail workflow and contextual actions."
     >
       <div className="space-y-6">
         {(notice || error) && (
@@ -258,34 +194,24 @@ const AdminScenarios = () => {
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {summaryCards.map((card) => (
-            <div key={card.label} className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                {card.label}
-              </p>
-              <p className="mt-3 font-display text-4xl font-black tracking-tight">{card.value}</p>
-            </div>
-          ))}
-        </div>
-
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]" id="scenario-library">
-          <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]" id="scenario-library">
+          <div className="min-w-0 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Scenario Library</p>
-                <h2 className="mt-1 font-display text-3xl font-black tracking-tight">Scenario Management</h2>
+                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Master List</p>
+                <h2 className="mt-1 font-display text-3xl font-black tracking-tight">Scenarios</h2>
+                <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                  {total} total, {selectedCount} selected
+                </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={openCreateScenario}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:-translate-y-0.5"
-                >
-                  <Plus size={16} />
-                  New Scenario
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={openCreateScenario}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:-translate-y-0.5"
+              >
+                <Plus size={16} />
+                New Scenario
+              </button>
             </div>
 
             <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -325,7 +251,7 @@ const AdminScenarios = () => {
               </label>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap items-center gap-2">
               {[
                 ["activate", "Activate"],
                 ["deactivate", "Deactivate"],
@@ -344,12 +270,12 @@ const AdminScenarios = () => {
             </div>
 
             <div className="mt-5 overflow-hidden rounded-[24px] border border-zinc-200 dark:border-zinc-800">
-              <div className="grid grid-cols-[48px_minmax(0,1.5fr)_120px_120px_120px_150px] gap-3 bg-zinc-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.24em] text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+              <div className="grid grid-cols-[44px_minmax(0,1fr)_92px_100px] gap-3 bg-zinc-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
                 <button
                   type="button"
                   onClick={() =>
                     setSelectedIds((current) =>
-                      current.length === scenarios.length ? [] : scenarios.map((item) => item.id)
+                      current.length === scenarios.length ? [] : scenarios.map((item) => item.id),
                     )
                   }
                   className="text-left"
@@ -357,10 +283,8 @@ const AdminScenarios = () => {
                   <CheckSquareOffset size={18} />
                 </button>
                 <span>Scenario</span>
-                <span>Difficulty</span>
                 <span>Usage</span>
                 <span>Status</span>
-                <span className="text-right">Actions</span>
               </div>
 
               <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -368,19 +292,24 @@ const AdminScenarios = () => {
                   <div className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">Loading scenarios...</div>
                 )}
 
+                {!isLoadingScenarios && scenarios.length === 0 && (
+                  <div className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">No scenarios found.</div>
+                )}
+
                 {!isLoadingScenarios &&
                   scenarios.map((scenario) => {
-                    const isSelected = selectedScenarioId === scenario.id;
                     const isChecked = selectedIds.includes(scenario.id);
+                    const isSelected = selectedScenario?.id === scenario.id;
+
                     return (
                       <div
                         key={scenario.id}
                         data-testid={`scenario-row-${scenario.id}`}
-                        className={`grid grid-cols-[48px_minmax(0,1.5fr)_120px_120px_120px_150px] gap-3 px-4 py-4 text-sm transition ${
-                          isSelected ? "bg-primary/5 dark:bg-primary/10" : ""
+                        className={`grid grid-cols-[44px_minmax(0,1fr)_92px_100px] gap-3 px-4 py-4 text-sm transition ${
+                          isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-zinc-50 dark:hover:bg-zinc-950/60"
                         }`}
                       >
-                        <label className="flex items-center">
+                        <label className="flex items-start pt-1">
                           <input
                             type="checkbox"
                             checked={isChecked}
@@ -388,7 +317,7 @@ const AdminScenarios = () => {
                               setSelectedIds((current) =>
                                 event.target.checked
                                   ? [...new Set([...current, scenario.id])]
-                                  : current.filter((item) => item !== scenario.id)
+                                  : current.filter((item) => item !== scenario.id),
                               )
                             }
                           />
@@ -398,76 +327,24 @@ const AdminScenarios = () => {
                           onClick={() => setSelectedScenarioId(scenario.id)}
                           className="min-w-0 text-left"
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold text-zinc-900 dark:text-zinc-100">{scenario.title}</p>
-                              <p className="mt-1 line-clamp-2 text-xs text-zinc-500 dark:text-zinc-400">
-                                {scenario.description}
-                              </p>
-                              <div className="mt-2 flex flex-wrap gap-1.5">
-                                {(scenario.tags || []).slice(0, 3).map((tag) => (
-                                  <span
-                                    key={tag}
-                                    className="rounded-full bg-zinc-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-                                  >
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                            <PromptQualityBadge quality={scenario.latest_prompt_quality} compact />
+                          <p className="truncate font-semibold text-zinc-900 dark:text-zinc-100">{scenario.title}</p>
+                          <p className="mt-1 line-clamp-2 text-xs text-zinc-500 dark:text-zinc-400">
+                            {scenario.description}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <StatusBadge>{scenario.difficulty}</StatusBadge>
+                            {scenario.is_pro && <StatusBadge tone="amber">VIP</StatusBadge>}
+                            {(scenario.tags || []).slice(0, 2).map((tag) => (
+                              <StatusBadge key={tag}>{tag}</StatusBadge>
+                            ))}
                           </div>
                         </button>
-                        <div className="flex items-center text-zinc-600 dark:text-zinc-300">{scenario.difficulty}</div>
                         <div className="flex items-center text-zinc-600 dark:text-zinc-300">{scenario.usage_count}</div>
                         <div className="flex flex-col justify-center gap-1">
-                          <span
-                            className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
-                              scenario.is_active
-                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-                                : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                            }`}
-                          >
+                          <StatusBadge tone={scenario.is_active ? "emerald" : "zinc"}>
                             {scenario.is_active ? "Active" : "Inactive"}
-                          </span>
-                          {scenario.deleted_at && (
-                            <span className="rounded-full bg-rose-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
-                              Deleted
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-end gap-3">
-                          <button
-                            type="button"
-                            onClick={() => openEditScenario(scenario)}
-                            className="text-xs font-bold text-primary"
-                          >
-                            <PencilSimple size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleScenario(scenario.id)}
-                            className="text-xs font-bold text-zinc-600 dark:text-zinc-300"
-                          >
-                            Toggle
-                          </button>
-                          {scenario.deleted_at ? (
-                            <button
-                              type="button"
-                              onClick={() => handleRestoreScenario(scenario.id)}
-                              className="text-xs font-bold text-emerald-600 dark:text-emerald-300"
-                            >
-                              <ArrowCounterClockwise size={16} />
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteScenario(scenario.id)}
-                              className="text-xs font-bold text-rose-600 dark:text-rose-300"
-                            >
-                              <Trash size={16} />
-                            </button>
-                          )}
+                          </StatusBadge>
+                          {scenario.deleted_at && <StatusBadge tone="rose">Deleted</StatusBadge>}
                         </div>
                       </div>
                     );
@@ -500,127 +377,134 @@ const AdminScenarios = () => {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Scenario Detail</p>
-              {isLoadingDetail && (
-                <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">Loading selected scenario...</p>
-              )}
-              {!isLoadingDetail && selectedScenario && (
-                <>
-                  {(() => {
-                    const metadata = selectedScenario.metadata || {};
-                    const lessonTopic = metadataString(metadata, ["topic", "conversation_topic"]);
-                    const assignedTask = metadataString(metadata, ["assigned_task", "task", "user_goal", "goal"]);
-                    const persona = metadataString(metadata, ["persona", "partner_persona"]);
-                    const endCondition = metadataString(metadata, ["end_condition", "completion_signal", "wrap_up_cue"]);
-                    const evaluationFocus = metadataList(metadata, ["evaluation_focus", "success_criteria", "rubric"]);
+          <aside className="min-w-0 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 xl:sticky xl:top-28 xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Detail</p>
 
-                    return (
-                      <>
-                  <h3 className="mt-1 font-display text-3xl font-black tracking-tight">{selectedScenario.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">{selectedScenario.description}</p>
+            {!selectedScenario ? (
+              <div className="mt-6 rounded-[24px] bg-zinc-50 p-5 text-sm text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+                Select a scenario to inspect details and actions.
+              </div>
+            ) : (
+              <div className="mt-2 space-y-5">
+                <div>
+                  <h3 className="font-display text-3xl font-black tracking-tight">{selectedScenario.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    {selectedScenario.description}
+                  </p>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {(selectedScenario.target_skills || []).map((skill) => (
-                      <span
-                        key={skill}
-                        className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-primary"
+                    <StatusBadge tone={selectedScenario.is_active ? "emerald" : "zinc"}>
+                      {selectedScenario.is_active ? "Active" : "Inactive"}
+                    </StatusBadge>
+                    {selectedScenario.deleted_at && <StatusBadge tone="rose">Deleted</StatusBadge>}
+                    {selectedScenario.is_pro ? <StatusBadge tone="amber">VIP only</StatusBadge> : <StatusBadge>Free</StatusBadge>}
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    ["Category", selectedScenario.category],
+                    ["Difficulty", selectedScenario.difficulty],
+                    ["Usage", selectedScenario.usage_count],
+                    ["Duration", formatMinutes(selectedScenario.estimated_duration_minutes)],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-950">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                        {label}
+                      </p>
+                      <p className="mt-1 truncate text-sm font-semibold">{value || "Not set"}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                    Roles
+                  </p>
+                  <div className="mt-3 space-y-3 text-sm">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                        AI
+                      </p>
+                      <p className="mt-1 font-semibold">{selectedScenario.ai_role || "Not set"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                        Learner
+                      </p>
+                      <p className="mt-1 font-semibold">{selectedScenario.user_role || "Not set"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                    Learner Tasks
+                  </p>
+                  {(selectedScenario.tasks || []).length > 0 ? (
+                    <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
+                      {selectedScenario.tasks.map((task) => (
+                        <li key={task}>{task}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">No learner tasks configured.</p>
+                  )}
+                </div>
+
+                <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                    Contextual Actions
+                  </p>
+                  <div className="mt-4 grid gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEditScenario(selectedScenario)}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5"
+                    >
+                      <PencilSimple size={16} />
+                      Edit Scenario
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleScenario(selectedScenario.id)}
+                      disabled={Boolean(selectedScenario.deleted_at)}
+                      className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      {selectedScenario.is_active ? "Deactivate" : "Activate"}
+                    </button>
+                    {selectedScenario.deleted_at ? (
+                      <button
+                        type="button"
+                        onClick={() => handleRestoreScenario(selectedScenario.id)}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 px-4 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-300 dark:hover:bg-emerald-500/10"
                       >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-5 grid gap-3 md:grid-cols-2">
-                    <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                        Max conversation time
-                      </p>
-                      <p className="mt-2 text-sm font-semibold">
-                        {selectedScenario.estimated_duration_minutes || 0} minutes
-                      </p>
-                    </div>
-                    <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                        Mode
-                      </p>
-                      <p className="mt-2 text-sm font-semibold">
-                        {selectedScenario.mode}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-5 rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                      Lesson Setup
-                    </p>
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <div className="rounded-[20px] bg-white px-4 py-3 dark:bg-zinc-900">
-                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                          Topic
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                          {lessonTopic || "Uses scenario title"}
-                        </p>
-                      </div>
-                      <div className="rounded-[20px] bg-white px-4 py-3 dark:bg-zinc-900">
-                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                          Partner Persona
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                          {persona || "Friendly speaking partner"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-3 rounded-[20px] bg-white px-4 py-3 dark:bg-zinc-900">
-                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                        Assigned Task
-                      </p>
-                      <p className="mt-1 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
-                        {assignedTask || "Uses scenario description as the learner task."}
-                      </p>
-                    </div>
-                    <div className="mt-3 rounded-[20px] bg-white px-4 py-3 dark:bg-zinc-900">
-                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                        End Condition
-                      </p>
-                      <p className="mt-1 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
-                        {endCondition || "Lesson ends when the learner covers the objectives clearly enough."}
-                      </p>
-                    </div>
-                    {evaluationFocus.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {evaluationFocus.map((item) => (
-                          <span
-                            key={item}
-                            className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-                          >
-                            {item}
-                          </span>
-                        ))}
-                      </div>
+                        <ArrowCounterClockwise size={16} />
+                        Restore
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteScenario(selectedScenario.id)}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                      >
+                        <Trash size={16} />
+                        Soft-delete
+                      </button>
                     )}
                   </div>
-                  <div className="mt-5">
-                    <PromptQualityBadge quality={selectedScenario.latest_prompt_quality} />
-                  </div>
-                      </>
-                    );
-                  })()}
-                </>
-              )}
-            </div>
-          </div>
+                </div>
+              </div>
+            )}
+          </aside>
         </section>
-
       </div>
 
       {isScenarioModalOpen && (
         <ScenarioEditorModal
           key={editingScenario?.id || "new-scenario"}
           scenario={editingScenario}
-          promptHistory={promptHistory}
           onClose={() => setIsScenarioModalOpen(false)}
           onSubmit={handleSaveScenario}
-          onSuggestSkills={handleSuggestSkills}
           onGeneratePrompt={handleGenerateDefaultPrompt}
           isSaving={isSavingScenario}
         />

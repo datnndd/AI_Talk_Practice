@@ -2,18 +2,21 @@ import { CreditCard, Moon, Sun, SquaresFour, SignOut, UserList } from "@phosphor
 import { useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { useTheme } from "@/shared/context/ThemeContext";
 import { BrandMark } from "@/shared/components/navigation";
 
 const defaultNavItems = [
   { label: "Users", icon: UserList, to: "/admin/users" },
-  { label: "Scenario Library", icon: SquaresFour, anchor: "#scenario-library" },
+  { label: "Scenario Library", icon: SquaresFour, to: "/admin/scenarios" },
   { label: "Payments", icon: CreditCard, to: "/admin/payments" },
 ];
 
-const AdminShell = ({ title, subtitle, theme, onToggleTheme, navItems = defaultNavItems, children }) => {
+const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
 
   const initials = useMemo(() => {
     const seed = user?.display_name || user?.email || "A";
@@ -21,21 +24,22 @@ const AdminShell = ({ title, subtitle, theme, onToggleTheme, navItems = defaultN
   }, [user]);
 
   return (
-    <div className={theme === "dark" ? "dark" : ""}>
-      <div className="min-h-screen bg-zinc-100 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-50">
+    <div className="app-page-shell min-h-[100dvh] font-sans antialiased text-[var(--page-fg)]">
+      <div className="min-h-screen text-zinc-900 transition-colors dark:text-zinc-50">
         <div className="grid min-h-screen lg:grid-cols-[260px_minmax(0,1fr)]">
-          <aside className="hidden border-r border-zinc-200 bg-white/80 p-6 backdrop-blur lg:block dark:border-zinc-800 dark:bg-zinc-900/80">
+          <aside className="sticky top-0 hidden h-screen border-r border-border bg-background p-6 backdrop-blur lg:flex lg:flex-col">
             <div className="mb-8">
               <BrandMark eyebrow="Admin Studio" />
             </div>
 
-            <div className="space-y-1">
+            <nav className="space-y-1">
               {navItems.map((item) => {
                 const ItemIcon = item.icon;
+                const isActive = item.to ? location.pathname === item.to : location.hash === item.anchor;
                 const className = `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                  item.to && location.pathname === item.to
-                    ? "bg-primary/10 text-primary dark:bg-primary/15 dark:text-white"
-                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+                  isActive
+                    ? "border border-primary/30 bg-primary/15 text-primary shadow-sm shadow-primary/10 dark:border-primary/40 dark:bg-primary/20 dark:text-white"
+                    : "border border-transparent text-zinc-600 hover:border-zinc-200 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-white"
                 }`;
                 if (item.to) {
                   return (
@@ -52,18 +56,10 @@ const AdminShell = ({ title, subtitle, theme, onToggleTheme, navItems = defaultN
                   </a>
                 );
               })}
-            </div>
-
-            <div className="mt-8 rounded-[28px] bg-gradient-to-br from-primary to-[#1d7df3] p-5 text-white shadow-xl shadow-primary/20">
-              <p className="text-[11px] font-black uppercase tracking-[0.25em] text-white/70">Workflow</p>
-              <h3 className="mt-3 font-display text-2xl font-black tracking-tight">Reusable speaking practice.</h3>
-              <p className="mt-3 text-sm leading-6 text-white/80">
-                Create strong scenario prompts once, then refine them through prompt history.
-              </p>
-            </div>
+            </nav>
 
             <div className="mt-auto pt-8">
-              <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-sm font-black text-white dark:bg-zinc-100 dark:text-zinc-900">
                     {initials}
@@ -89,48 +85,49 @@ const AdminShell = ({ title, subtitle, theme, onToggleTheme, navItems = defaultN
           </aside>
 
           <div className="min-w-0">
-            <header className="sticky top-0 z-30 px-4 pt-4 md:px-8">
-              <div className="rounded-[30px] border border-zinc-200/80 bg-white/80 px-5 py-5 shadow-[0_24px_48px_-32px_rgba(15,23,42,0.25)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">Teacher Workspace</p>
-                    <h1 className="mt-1 font-display text-3xl font-black tracking-tight md:text-4xl">{title}</h1>
-                    <p className="mt-2 max-w-3xl text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={onToggleTheme}
-                    className="inline-flex items-center justify-center gap-2 self-start rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:-translate-y-0.5 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                  >
-                    {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-                    {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                  </button>
+            <header className="sticky top-0 z-30 border-b border-border bg-background px-4 py-3 backdrop-blur md:px-8">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <h1 className="truncate font-display text-xl font-black tracking-tight md:text-2xl">{title}</h1>
+                  {subtitle ? (
+                    <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>
+                  ) : null}
                 </div>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  aria-label="Chuyển chế độ sáng/tối"
+                  title="Chuyển chế độ sáng/tối"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground/70 transition-colors hover:bg-muted"
+                >
+                  {isDark ? <Sun size={20} weight="bold" /> : <Moon size={20} weight="bold" />}
+                </button>
+              </div>
 
-                <div className="mt-4 flex flex-wrap gap-2 lg:hidden">
-                  {navItems.map((item) => {
-                    const ItemIcon = item.icon;
-                    const className = `inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] transition ${
-                      item.to && location.pathname === item.to
-                        ? "border-primary/30 bg-primary/10 text-primary dark:border-primary/30 dark:bg-primary/15 dark:text-white"
-                        : "border-zinc-200 bg-white text-zinc-600 hover:text-primary dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                    }`;
-                    if (item.to) {
-                      return (
-                        <Link key={item.label} to={item.to} className={className}>
-                          <ItemIcon size={14} />
-                          {item.label}
-                        </Link>
-                      );
-                    }
+              <div className="mt-3 flex flex-wrap gap-2 lg:hidden">
+                {navItems.map((item) => {
+                  const ItemIcon = item.icon;
+                  const isActive = item.to ? location.pathname === item.to : location.hash === item.anchor;
+                  const className = `inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] transition ${
+                    isActive
+                      ? "border-primary/30 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/20 dark:text-white"
+                      : "border-zinc-200 bg-white text-zinc-600 hover:text-primary dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                  }`;
+                  if (item.to) {
                     return (
-                      <a key={item.label} href={item.anchor} className={className}>
+                      <Link key={item.label} to={item.to} className={className}>
                         <ItemIcon size={14} />
                         {item.label}
-                      </a>
+                      </Link>
                     );
-                  })}
-                </div>
+                  }
+                  return (
+                    <a key={item.label} href={item.anchor} className={className}>
+                      <ItemIcon size={14} />
+                      {item.label}
+                    </a>
+                  );
+                })}
               </div>
             </header>
 

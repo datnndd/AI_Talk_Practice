@@ -45,9 +45,6 @@ const getScenarioImage = (scenario) =>
   scenario?.image_url
     || scenario?.thumbnail_url
     || scenario?.cover_url
-    || scenario?.metadata?.image_url
-    || scenario?.metadata?.thumbnail_url
-    || scenario?.metadata?.cover_url
     || fallbackScenarioImage;
 
 const groupScenariosByDifficulty = (scenarios) =>
@@ -97,11 +94,9 @@ const ScenarioCard = ({ scenario, group }) => (
         <span className="truncate font-medium text-gray-700 dark:text-gray-300">
           {formatCategory(scenario.category)}
         </span>
-        {scenario.mode ? (
-          <span className="shrink-0 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold uppercase text-primary">
-            {scenario.mode}
-          </span>
-        ) : null}
+        <span className="shrink-0 rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-bold uppercase text-primary">
+          {scenario.tasks?.length || 0} tasks
+        </span>
       </div>
     </div>
   </Link>

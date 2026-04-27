@@ -16,7 +16,7 @@ const compactItems = (items = [], limit = 5) => {
 };
 
 const ScenarioSidebar = ({ scenario, guidance }) => {
-  const focusItems = compactItems(scenario?.learning_objectives || guidance?.evaluationFocus, 10);
+  const focusItems = compactItems(scenario?.tasks || guidance?.evaluationFocus, 10);
 
   return (
     <aside className="flex flex-col gap-5 overflow-y-auto rounded-lg border border-zinc-200 bg-white p-5 shadow-[0_20px_54px_-42px_rgba(15,23,42,0.55)]">

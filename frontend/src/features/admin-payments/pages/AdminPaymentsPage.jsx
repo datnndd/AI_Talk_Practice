@@ -3,7 +3,6 @@ import { ArrowClockwise, CheckCircle, CreditCard, MagnifyingGlass, ProhibitInset
 
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
 import { adminPaymentsApi } from "@/features/admin-payments/api/adminPaymentsApi";
-import { useTheme } from "@/shared/context/ThemeContext";
 
 const DEFAULT_FILTERS = {
   status: "",
@@ -15,7 +14,7 @@ const DEFAULT_FILTERS = {
 const adminNavItems = [
   { label: "Users", icon: UserList, to: "/admin/users" },
   { label: "Scenario Library", icon: SquaresFour, to: "/admin/scenarios" },
-  { label: "Transactions", icon: CreditCard, anchor: "#transaction-library" },
+  { label: "Transactions", icon: CreditCard, to: "/admin/payments" },
 ];
 
 const formatCurrency = (amount, currency) => {
@@ -41,7 +40,6 @@ const formatDateTime = (value) => {
 };
 
 const AdminPaymentsPage = () => {
-  const { theme, toggleTheme } = useTheme();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [overview, setOverview] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -160,8 +158,6 @@ const AdminPaymentsPage = () => {
 
   return (
     <AdminShell
-      theme={theme}
-      onToggleTheme={toggleTheme}
       navItems={adminNavItems}
       title="Payment Operations"
       subtitle="Monitor Stripe transactions, inspect payment state, and handle manual admin approval or cancellation when support workflows require intervention."

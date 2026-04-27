@@ -363,11 +363,10 @@ async def websocket_conversation(websocket: WebSocket):
                                 session = await SessionService.start_session(
                                     db_start,
                                     user_id=user.id,
+                                    user=user,
                                     payload=SessionCreate(
                                         scenario_id=scenario_id,
-                                        mode=msg.get("mode"),
                                         metadata=request_metadata,
-                                        target_skills=msg.get("target_skills"),
                                     ),
                                 )
                     active_user_id = user.id
@@ -435,7 +434,6 @@ async def websocket_conversation(websocket: WebSocket):
                             "type": "session_started",
                             "session_id": session.id,
                             "scenario_id": session.scenario_id,
-                            "mode": session.session_metadata.get("mode"),
                             "language": msg.get("language", settings.asr_language),
                             "voice": msg.get("voice", settings.tts_voice),
                             "max_duration_seconds": max_duration_seconds,

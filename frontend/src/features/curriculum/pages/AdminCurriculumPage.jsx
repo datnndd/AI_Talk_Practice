@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Sparkle } from "@phosphor-icons/react";
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
 import { adminCurriculumApi } from "@/features/curriculum/api/curriculumApi";
-import { useTheme } from "@/shared/context/ThemeContext";
 
 const EMPTY_CONTENT = {
   vocab_pronunciation: { words: [{ word: "hello", meaning_vi: "xin chào" }] },
@@ -17,7 +16,6 @@ const EMPTY_CONTENT = {
 const pretty = (value) => JSON.stringify(value, null, 2);
 
 const AdminCurriculumPage = () => {
-  const { theme, toggleTheme } = useTheme();
   const [levels, setLevels] = useState([]);
   const [selectedLevelId, setSelectedLevelId] = useState(null);
   const [selectedLessonId, setSelectedLessonId] = useState(null);
@@ -64,6 +62,7 @@ const AdminCurriculumPage = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
@@ -149,8 +148,6 @@ const AdminCurriculumPage = () => {
 
   return (
     <AdminShell
-      theme={theme}
-      onToggleTheme={toggleTheme}
       title="Curriculum Admin"
       subtitle="Build levels, lessons, and exercise sequences for locked learning progress."
     >

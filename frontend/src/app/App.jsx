@@ -50,7 +50,7 @@ function App() {
         {/* Protected Routes */}
         <Route path="/onboarding" element={<PrivateRoute>{withSuspense(<OnboardingPage />)}</PrivateRoute>} />
         <Route path="/topics" element={<PrivateRoute>{withAppLayout(<PracticeTopicPage />)}</PrivateRoute>} />
-        <Route path="/practice/:id" element={<PrivateRoute requireSubscription>{withSuspense(<PracticeSessionPage />)}</PrivateRoute>} />
+        <Route path="/practice/:id" element={<PrivateRoute>{withSuspense(<PracticeSessionPage />)}</PrivateRoute>} />
         <Route path="/sessions/:id/result" element={<PrivateRoute>{withAppLayout(<SessionResultPage />)}</PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute>{withAppLayout(<ProfileSettingsPage />)}</PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute>{withAppLayout(<UserSettingsPage />)}</PrivateRoute>} />

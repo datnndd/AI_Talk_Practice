@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError
 from app.infra.factory import LLMRole, create_llm_for_role
 from app.modules.sessions.models.message import Message
 from app.modules.sessions.models.session import Session
@@ -25,6 +25,8 @@ from app.modules.sessions.schemas.session import (
 )
 from app.modules.sessions.services.conversation_support import ConversationHintService, RealtimeCorrectionService
 from app.modules.sessions.services.final_evaluation import SessionFinalEvaluationService
+from app.modules.scenarios.services.scenario_service import user_is_vip
+from app.modules.users.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,7 @@ class SessionService:
         *,
         user_id: int,
         payload: SessionCreate,
+        user: User | None = None,
     ) -> Session:
         scenario = await ScenarioRepository.get_by_id(
             db,
@@ -72,22 +75,16 @@ class SessionService:
         if scenario is None or scenario.deleted_at is not None or not scenario.is_active:
             logger.warning("Attempted to start session for inactive or missing scenario_id=%s", payload.scenario_id)
             raise NotFoundError("Scenario not found")
-
-        # Basic validation for target_skills
-        if payload.target_skills and scenario.target_skills:
-            unsupported = [s for s in payload.target_skills if s not in scenario.target_skills]
-            if unsupported:
-                logger.info("User requested additional target skills for session: %s", unsupported)
+        if scenario.is_pro and not user_is_vip(user):
+            raise ForbiddenError("This scenario requires VIP access")
 
         session_metadata: dict[str, Any] = dict(payload.metadata or {})
-        session_metadata["mode"] = payload.mode or scenario.mode
 
         session = await SessionRepository.create_session(
             db,
             user_id=user_id,
             scenario_id=scenario.id,
             status="active",
-            target_skills=payload.target_skills or scenario.target_skills,
             session_metadata=session_metadata,
         )
         await db.commit()

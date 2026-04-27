@@ -1,10 +1,8 @@
-import { useMemo, useState } from "react";
-import { X, Sparkle, ClockCounterClockwise, BracketsCurly } from "@phosphor-icons/react";
-import JsonEditorField from "./JsonEditorField";
-import ListEditorField from "./ListEditorField";
-import PromptQualityBadge from "./PromptQualityBadge";
+import { useState } from "react";
+import { Sparkle, X } from "@phosphor-icons/react";
 
-const prettyJson = (value, fallback) => JSON.stringify(value ?? fallback, null, 2);
+import ListEditorField from "./ListEditorField";
+
 const prettyList = (value) => (Array.isArray(value) ? value.join("\n") : "");
 const parseListInput = (value = "") =>
   value
@@ -12,172 +10,63 @@ const parseListInput = (value = "") =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-const STRUCTURED_METADATA_KEYS = [
-  "topic",
-  "conversation_topic",
-  "assigned_task",
-  "task",
-  "user_goal",
-  "goal",
-  "persona",
-  "partner_persona",
-  "ai_role",
-  "user_role",
-  "evaluation_focus",
-  "success_criteria",
-  "rubric",
-  "suggested_responses",
-  "stuck_help",
-  "response_hints",
-  "end_condition",
-  "completion_signal",
-  "wrap_up_cue",
-  "target_turns",
-];
-
-const stripStructuredMetadata = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
-  return Object.fromEntries(
-    Object.entries(value).filter(([key]) => !STRUCTURED_METADATA_KEYS.includes(key)),
-  );
-};
-
-const metadataString = (metadata, keys) => {
-  if (!metadata || typeof metadata !== "object") {
-    return "";
-  }
-
-  for (const key of keys) {
-    const value = metadata[key];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-
-  return "";
-};
-
-const metadataList = (metadata, keys) => {
-  if (!metadata || typeof metadata !== "object") {
-    return [];
-  }
-
-  for (const key of keys) {
-    const value = metadata[key];
-    if (Array.isArray(value)) {
-      const items = value
-        .map((item) => (typeof item === "string" ? item.trim() : ""))
-        .filter(Boolean);
-      if (items.length > 0) {
-        return items;
-      }
-    }
-    if (typeof value === "string" && value.trim()) {
-      return parseListInput(value);
-    }
-  }
-
-  return [];
-};
-
 const createInitialState = (scenario) => ({
   title: scenario?.title || "",
   description: scenario?.description || "",
   category: scenario?.category || "travel",
   difficulty: scenario?.difficulty || "medium",
+  ai_role: scenario?.ai_role || "",
+  user_role: scenario?.user_role || "",
+  tasks: prettyList(scenario?.tasks),
   ai_system_prompt: scenario?.ai_system_prompt || "",
-  ai_role: scenario?.ai_role || metadataString(scenario?.metadata, ["ai_role", "persona", "partner_persona"]),
-  user_role: scenario?.user_role || metadataString(scenario?.metadata, ["user_role", "learner_role"]),
-  estimated_duration_minutes: scenario?.estimated_duration_minutes || 10,
-  mode: scenario?.mode || "conversation",
-  is_active: scenario?.is_active ?? true,
-  change_note: "",
-  learning_objectives: prettyList(scenario?.learning_objectives),
-  target_skills: prettyList(scenario?.target_skills),
   tags: prettyList(scenario?.tags),
-  topic: metadataString(scenario?.metadata, ["topic", "conversation_topic"]),
-  assigned_task: metadataString(scenario?.metadata, ["assigned_task", "task", "user_goal", "goal"]),
-  evaluation_focus: prettyList(metadataList(scenario?.metadata, ["evaluation_focus", "success_criteria", "rubric"])),
-  suggested_responses: prettyList(metadataList(scenario?.metadata, ["suggested_responses", "stuck_help", "response_hints"])),
-  end_condition: metadataString(scenario?.metadata, ["end_condition", "completion_signal", "wrap_up_cue"]),
-  target_turns: scenario?.metadata?.target_turns ? String(scenario.metadata.target_turns) : "",
-  metadata: prettyJson(stripStructuredMetadata(scenario?.metadata), {}),
+  estimated_duration_minutes: scenario?.estimated_duration_minutes || 10,
+  is_active: scenario?.is_active ?? true,
+  is_pro: scenario?.is_pro ?? false,
 });
 
 const ScenarioEditorModal = ({
   scenario,
-  promptHistory = [],
   onClose,
   onSubmit,
-  onSuggestSkills,
   onGeneratePrompt,
   isSaving,
 }) => {
   const [form, setForm] = useState(() => createInitialState(scenario));
-  const [jsonError, setJsonError] = useState("");
+  const [formError, setFormError] = useState("");
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(() => Boolean(scenario?.metadata && Object.keys(scenario.metadata).length));
 
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
-  const objectiveCount = useMemo(() => parseListInput(form.learning_objectives).length, [form.learning_objectives]);
-  const skillCount = useMemo(() => parseListInput(form.target_skills).length, [form.target_skills]);
-  const tagCount = useMemo(() => parseListInput(form.tags).length, [form.tags]);
-  const evaluationFocusCount = useMemo(() => parseListInput(form.evaluation_focus).length, [form.evaluation_focus]);
-  const responseHintCount = useMemo(() => parseListInput(form.suggested_responses).length, [form.suggested_responses]);
-  const roleLength = `${form.ai_role} ${form.user_role}`.trim().length;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     try {
       if (!form.ai_system_prompt.trim()) {
-        setJsonError("Generate or enter a system prompt before saving.");
+        setFormError("Generate or enter a system prompt before saving.");
         return;
       }
-      const metadata = JSON.parse(form.metadata || "{}");
-      const evaluationFocus = parseListInput(form.evaluation_focus);
-      const suggestedResponses = parseListInput(form.suggested_responses);
+
       const payload = {
-        ...form,
-        estimated_duration_minutes: Number(form.estimated_duration_minutes),
-        learning_objectives: parseListInput(form.learning_objectives),
-        target_skills: parseListInput(form.target_skills),
-        tags: parseListInput(form.tags),
-        ai_system_prompt: form.ai_system_prompt.trim(),
+        title: form.title.trim(),
+        description: form.description.trim(),
+        category: form.category.trim(),
+        difficulty: form.difficulty,
         ai_role: form.ai_role.trim(),
         user_role: form.user_role.trim(),
-        metadata: {
-          ...metadata,
-          ...(form.topic.trim() ? { topic: form.topic.trim() } : {}),
-          ...(form.assigned_task.trim() ? { assigned_task: form.assigned_task.trim() } : {}),
-          ...(evaluationFocus.length > 0 ? { evaluation_focus: evaluationFocus } : {}),
-          ...(suggestedResponses.length > 0 ? { suggested_responses: suggestedResponses } : {}),
-          ...(form.end_condition.trim() ? { end_condition: form.end_condition.trim() } : {}),
-          ...(form.target_turns.trim() ? { target_turns: Number(form.target_turns) } : {}),
-        },
+        tasks: parseListInput(form.tasks),
+        ai_system_prompt: form.ai_system_prompt.trim(),
+        tags: parseListInput(form.tags),
+        estimated_duration_minutes: Number(form.estimated_duration_minutes),
+        is_active: form.is_active,
+        is_pro: form.is_pro,
       };
-      delete payload.topic;
-      delete payload.assigned_task;
-      delete payload.evaluation_focus;
-      delete payload.suggested_responses;
-      delete payload.end_condition;
-      delete payload.target_turns;
-      setJsonError("");
+
+      setFormError("");
       await onSubmit(payload);
     } catch (error) {
-      setJsonError(error.message || "JSON fields must be valid before saving.");
+      setFormError(error.message || "Please check the form before saving.");
     }
-  };
-
-  const handleSkillSuggestion = async () => {
-    const suggested = await onSuggestSkills({
-      description: form.description,
-      category: form.category,
-    });
-    updateField("target_skills", prettyList(suggested));
   };
 
   const handleGeneratePrompt = async () => {
@@ -188,14 +77,12 @@ const ScenarioEditorModal = ({
         description: form.description,
         ai_role: form.ai_role.trim(),
         user_role: form.user_role.trim(),
-        mode: form.mode,
-        learning_objectives: parseListInput(form.learning_objectives),
-        target_skills: parseListInput(form.target_skills),
+        tasks: parseListInput(form.tasks),
       });
       updateField("ai_system_prompt", generated.prompt || "");
-      setJsonError("");
+      setFormError("");
     } catch (error) {
-      setJsonError(error?.response?.data?.detail || error.message || "Failed to generate default prompt.");
+      setFormError(error?.response?.data?.detail || error.message || "Failed to generate default prompt.");
     } finally {
       setIsGeneratingPrompt(false);
     }
@@ -203,7 +90,7 @@ const ScenarioEditorModal = ({
 
   return (
     <div className="fixed inset-0 z-[120] bg-zinc-950/60 p-3 backdrop-blur md:p-6">
-      <div className="mx-auto flex h-full max-w-7xl flex-col overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="mx-auto flex h-full max-w-5xl flex-col overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">
@@ -216,79 +103,62 @@ const ScenarioEditorModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-2xl border border-zinc-200 p-2 text-zinc-500 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="rounded-xl border border-zinc-200 p-2 text-zinc-500 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <form onSubmit={handleSubmit} className="grid min-h-0 flex-1">
           <div className="min-h-0 overflow-y-auto p-5 md:p-6">
-            <div className="space-y-6">
-              <section className="rounded-[28px] border border-zinc-200 bg-zinc-50/70 p-5 dark:border-zinc-800 dark:bg-zinc-900/60">
-                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Overview</p>
-                    <h3 className="mt-1 font-display text-2xl font-black tracking-tight">What is this scenario about?</h3>
-                    <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                      Start with the learner situation and the outcome they should reach. Keep it clear enough for another admin to understand in 10 seconds.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                    <span className="rounded-full bg-white px-3 py-1.5 dark:bg-zinc-950">{form.mode}</span>
-                    <span className="rounded-full bg-white px-3 py-1.5 dark:bg-zinc-950">{form.difficulty}</span>
-                    <span className="rounded-full bg-white px-3 py-1.5 dark:bg-zinc-950">{form.estimated_duration_minutes} min</span>
-                  </div>
+            <div className="space-y-5">
+              {formError ? (
+                <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+                  {formError}
                 </div>
+              ) : null}
 
-                <div className="mt-5 grid gap-5 xl:grid-cols-2">
-                  <label className="block space-y-2 xl:col-span-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Title
-                    </span>
+              <section className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="block space-y-2 md:col-span-2">
+                    <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Title</span>
                     <input
                       required
                       value={form.title}
                       onChange={(event) => updateField("title", event.target.value)}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                      placeholder="Example: Missing reservation at hotel check-in"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      placeholder="Hotel check-in problem"
                     />
                   </label>
 
-                  <label className="block space-y-2 xl:col-span-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Scenario Brief
-                    </span>
+                  <label className="block space-y-2 md:col-span-2">
+                    <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Scenario brief</span>
                     <textarea
                       required
                       value={form.description}
                       onChange={(event) => updateField("description", event.target.value)}
-                      rows={5}
-                      className="w-full rounded-[24px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                      placeholder="Describe the learner context, who they are speaking with, the tension in the situation, and the outcome they should reach."
+                      rows={4}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      placeholder="Describe the situation the learner will face."
                     />
                   </label>
 
                   <label className="block space-y-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Category
-                    </span>
+                    <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Category</span>
                     <input
                       value={form.category}
                       onChange={(event) => updateField("category", event.target.value)}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                      placeholder="travel, work, daily-life..."
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      placeholder="travel"
                     />
                   </label>
 
                   <label className="block space-y-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Difficulty
-                    </span>
+                    <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Difficulty</span>
                     <select
                       value={form.difficulty}
                       onChange={(event) => updateField("difficulty", event.target.value)}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
                     >
                       <option value="easy">Easy</option>
                       <option value="medium">Medium</option>
@@ -298,358 +168,122 @@ const ScenarioEditorModal = ({
                 </div>
               </section>
 
-              <section className="rounded-[28px] border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Learning Setup</p>
-                  <h3 className="mt-1 font-display text-2xl font-black tracking-tight">How should practice behave?</h3>
-                  <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                    These fields shape the lesson structure and make the scenario easier to find later. Enter each item on a new line or separate with commas.
-                  </p>
+              <section className="grid gap-4 md:grid-cols-2">
+                <label className="block space-y-2">
+                  <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">AI role</span>
+                  <input
+                    value={form.ai_role}
+                    onChange={(event) => updateField("ai_role", event.target.value)}
+                    className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                    placeholder="Hotel front desk agent"
+                  />
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Learner role</span>
+                  <input
+                    value={form.user_role}
+                    onChange={(event) => updateField("user_role", event.target.value)}
+                    className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                    placeholder="Traveler checking in"
+                  />
+                </label>
+              </section>
+
+              <section>
+                <ListEditorField
+                  label="Nhiệm vụ người học cần hoàn thành"
+                  value={form.tasks}
+                  onChange={(value) => updateField("tasks", value)}
+                  helperText="Mỗi dòng là một nhiệm vụ. Hội thoại chỉ nên kết thúc khi người học đã hoàn thành các nhiệm vụ này."
+                  placeholder={"Nói tên của bạn\nNói tuổi của bạn\nNói quê quán của bạn"}
+                  rows={6}
+                />
+              </section>
+
+              <section className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">System prompt</p>
+                    <p className="mt-1 text-sm text-zinc-500">Prompt mà AI sẽ dùng trong kịch bản này.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGeneratePrompt}
+                    disabled={isGeneratingPrompt}
+                    className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    <Sparkle size={14} />
+                    {isGeneratingPrompt ? "Generating..." : "Generate"}
+                  </button>
                 </div>
+                <textarea
+                  value={form.ai_system_prompt}
+                  onChange={(event) => updateField("ai_system_prompt", event.target.value)}
+                  rows={9}
+                  className="w-full rounded-xl border border-zinc-200 bg-zinc-950 px-4 py-4 font-mono text-sm text-emerald-200 outline-none transition focus:border-primary dark:border-zinc-700"
+                  placeholder="Generate or write the system prompt before saving."
+                />
+              </section>
 
-                <div className="mt-5 grid gap-5 xl:grid-cols-2">
-                  <label className="block space-y-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Mode
-                    </span>
-                    <select
-                      value={form.mode}
-                      onChange={(event) => updateField("mode", event.target.value)}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                    >
-                      {["conversation", "roleplay", "debate", "interview", "presentation"].map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+              <section className="grid gap-4 md:grid-cols-2">
+                <ListEditorField
+                  label="Tags"
+                  value={form.tags}
+                  onChange={(value) => updateField("tags", value)}
+                  helperText="Dùng cho tìm kiếm và lọc."
+                  placeholder={"travel\nhotel\nbeginner"}
+                  rows={3}
+                />
 
+                <div className="space-y-4">
                   <label className="block space-y-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Max conversation time (minutes)
-                    </span>
+                    <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Max time</span>
                     <input
                       type="number"
                       min="1"
                       max="180"
                       value={form.estimated_duration_minutes}
                       onChange={(event) => updateField("estimated_duration_minutes", event.target.value)}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
                     />
-                    <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-                      The live conversation ends automatically when this limit is reached.
-                    </p>
                   </label>
 
-                  <ListEditorField
-                    label="Learning Objectives"
-                    value={form.learning_objectives}
-                    onChange={(value) => updateField("learning_objectives", value)}
-                    helperText="Teacher-facing goals for this scenario."
-                    placeholder={"Clarify a problem politely\nAsk follow-up questions\nConfirm key details"}
-                  />
-
-                  <ListEditorField
-                    label="Target Skills"
-                    value={form.target_skills}
-                    onChange={(value) => updateField("target_skills", value)}
-                    helperText="What should this practice improve?"
-                    placeholder={"fluency\ngrammar\nvocabulary"}
-                  />
-
-                  <div className="xl:col-span-2">
-                    <ListEditorField
-                      label="Tags"
-                      value={form.tags}
-                      onChange={(value) => updateField("tags", value)}
-                      helperText="Used for filtering, search, and content discovery."
-                      placeholder={"travel\nhotel\nproblem-solving"}
-                      rows={3}
+                  <label className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+                    <input
+                      type="checkbox"
+                      checked={form.is_active}
+                      onChange={(event) => updateField("is_active", event.target.checked)}
                     />
-                  </div>
+                    <span className="text-sm font-semibold">Active</span>
+                  </label>
 
-                  <div className="grid gap-4 xl:col-span-2 md:grid-cols-2">
-                    <label className="flex items-center gap-3 rounded-[24px] border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-                      <input
-                        type="checkbox"
-                        checked={form.is_active}
-                        onChange={(event) => updateField("is_active", event.target.checked)}
-                      />
-                      <span className="text-sm font-semibold">Active</span>
-                    </label>
-                  </div>
+                  <label className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+                    <input
+                      type="checkbox"
+                      checked={form.is_pro}
+                      onChange={(event) => updateField("is_pro", event.target.checked)}
+                    />
+                    <span className="text-sm font-semibold">VIP only</span>
+                  </label>
                 </div>
               </section>
 
-              <section className="rounded-[28px] border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Role-play Conversation</p>
-                    <h3 className="mt-1 font-display text-2xl font-black tracking-tight">Define the situation and roles</h3>
-                    <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                      These fields feed the default prompt template. Define the situation and roles first, then generate and confirm the system prompt below.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSkillSuggestion}
-                    className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                  >
-                    <Sparkle size={14} />
-                    Suggest skills
-                  </button>
-                </div>
-
-                <div className="mt-5 grid gap-5 xl:grid-cols-2">
-                  <label className="block space-y-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Lesson Topic
-                    </span>
-                    <input
-                      value={form.topic}
-                      onChange={(event) => updateField("topic", event.target.value)}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                      placeholder="Hotel check-in problem solving"
-                    />
-                  </label>
-
-                  <label className="block space-y-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      AI Role
-                    </span>
-                    <input
-                      value={form.ai_role}
-                      onChange={(event) => updateField("ai_role", event.target.value)}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                      placeholder="Friendly hotel front desk agent"
-                    />
-                  </label>
-
-                  <label className="block space-y-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      User Role
-                    </span>
-                    <input
-                      value={form.user_role}
-                      onChange={(event) => updateField("user_role", event.target.value)}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                      placeholder="Traveler whose reservation cannot be found"
-                    />
-                  </label>
-
-                  <label className="block space-y-2 xl:col-span-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Assigned Task
-                    </span>
-                    <textarea
-                      value={form.assigned_task}
-                      onChange={(event) => updateField("assigned_task", event.target.value)}
-                      rows={3}
-                      className="w-full rounded-[24px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                      placeholder="Explain the reservation problem, confirm your booking details, and ask for a solution."
-                    />
-                  </label>
-
-                  <ListEditorField
-                    label="Evaluation Focus"
-                    value={form.evaluation_focus}
-                    onChange={(value) => updateField("evaluation_focus", value)}
-                    helperText="What the lesson should check for across the conversation."
-                    placeholder={"Explain the issue clearly\nConfirm key details\nAsk for a practical solution"}
-                  />
-
-                  <ListEditorField
-                    label="Suggested Responses"
-                    value={form.suggested_responses}
-                    onChange={(value) => updateField("suggested_responses", value)}
-                    helperText="Short starter lines shown when the learner is stuck."
-                    placeholder={"I have a reservation under...\nThere seems to be a problem with...\nCould you help me solve this?"}
-                  />
-
-                  <label className="block space-y-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      End Condition
-                    </span>
-                    <input
-                      value={form.end_condition}
-                      onChange={(event) => updateField("end_condition", event.target.value)}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                      placeholder="End once the learner explains the issue and confirms the next step."
-                    />
-                  </label>
-
-                  <label className="block space-y-2">
-                    <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                      Target User Turns
-                    </span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={form.target_turns}
-                      onChange={(event) => updateField("target_turns", event.target.value)}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                      placeholder="6"
-                    />
-                  </label>
-
-                </div>
-              </section>
-
-              <section className="rounded-[28px] border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">System Prompt</p>
-                    <h3 className="mt-1 font-display text-2xl font-black tracking-tight">Confirm the prompt the AI will use</h3>
-                    <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                      Generate the default prompt from the current scenario details, then review or refine it before saving.
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleGeneratePrompt}
-                      disabled={isGeneratingPrompt}
-                      className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                    >
-                      <Sparkle size={14} />
-                      {isGeneratingPrompt ? "Generating..." : "Generate Default Prompt"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowAdvanced((current) => !current)}
-                      className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                    >
-                      <BracketsCurly size={14} />
-                      {showAdvanced ? "Hide advanced" : "Show advanced"}
-                    </button>
-                  </div>
-                </div>
-
-                <label className="mt-5 block space-y-2">
-                  <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                    Confirmed System Prompt
-                  </span>
-                  <textarea
-                    value={form.ai_system_prompt}
-                    onChange={(event) => updateField("ai_system_prompt", event.target.value)}
-                    rows={10}
-                    className="w-full rounded-[24px] border border-zinc-200 bg-zinc-950 px-4 py-4 font-mono text-sm text-emerald-200 outline-none transition focus:border-primary dark:border-zinc-700"
-                    placeholder="Generate the default prompt or write a custom prompt here before saving."
-                  />
-                </label>
-
-                <label className="mt-5 block space-y-2">
-                  <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                    Change Note
-                  </span>
-                  <input
-                    value={form.change_note}
-                    onChange={(event) => updateField("change_note", event.target.value)}
-                    className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-                    placeholder="Why did this prompt or scenario change?"
-                  />
-                </label>
-
-                {showAdvanced && (
-                  <div className="mt-5">
-                    <JsonEditorField
-                      label="Advanced Metadata"
-                      value={form.metadata}
-                      onChange={(value) => updateField("metadata", value)}
-                      placeholder='{"vocabulary_focus":"booking issues","lesson_flags":{"beta":true}}'
-                      helperText="Optional extension bag for custom flags or niche scenario settings. Common lesson fields are edited above."
-                    />
-                  </div>
-                )}
-              </section>
             </div>
           </div>
 
-          <aside className="min-h-0 overflow-y-auto border-t border-zinc-200 bg-zinc-50/80 p-5 dark:border-zinc-800 dark:bg-zinc-900/50 lg:border-l lg:border-t-0">
-            <PromptQualityBadge quality={scenario?.latest_prompt_quality} />
-
-            {jsonError && (
-              <div className="mt-4 rounded-[24px] bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
-                {jsonError}
-              </div>
-            )}
-
-            <div className="mt-5 rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                Scenario Snapshot
-              </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                {[
-                  ["Objectives", objectiveCount],
-                  ["Skills", skillCount],
-                  ["Tags", tagCount],
-                  ["Eval focus", evaluationFocusCount],
-                  ["Help lines", responseHintCount],
-                  ["Role chars", roleLength],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-900">
-                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                      {label}
-                    </p>
-                    <p className="mt-1 text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-100">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-              <div className="flex items-center gap-2">
-                <ClockCounterClockwise size={16} className="text-zinc-500" />
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                  Prompt History
-                </p>
-              </div>
-              <div className="mt-4 space-y-3">
-                {promptHistory.length === 0 && (
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">No prompt revisions yet.</p>
-                )}
-                {promptHistory.map((entry) => (
-                  <div key={entry.id} className="rounded-[22px] border border-zinc-200 p-3 dark:border-zinc-800">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold">{entry.change_note || "Prompt update"}</p>
-                      <span className="rounded-full bg-zinc-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                        {entry.quality_score ?? "NA"}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                      {new Date(entry.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                Admin Notes
-              </p>
-              <ul className="mt-3 space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
-                <li>Keep scenarios reusable across many learners.</li>
-                <li>Use clear role names so the role-play prompt stays grounded.</li>
-                <li>Use metadata only for advanced flags and vocabulary hints.</li>
-              </ul>
-            </div>
-          </aside>
-
-          <div className="flex items-center justify-between gap-3 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800 lg:col-span-2">
+          <div className="flex items-center justify-between gap-3 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="rounded-2xl bg-primary px-5 py-3 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-primary px-5 py-3 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? "Saving..." : scenario ? "Save Scenario" : "Create Scenario"}
             </button>

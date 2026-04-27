@@ -50,26 +50,6 @@ def upgrade() -> None:
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         )
 
-    if not _has_table(inspector, "admin_audit_logs"):
-        op.create_table(
-            "admin_audit_logs",
-            sa.Column("id", sa.Integer(), primary_key=True),
-            sa.Column("actor_user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-            sa.Column("action", sa.String(length=80), nullable=False),
-            sa.Column("entity_type", sa.String(length=80), nullable=False),
-            sa.Column("entity_id", sa.String(length=80), nullable=True),
-            sa.Column("target_user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=True),
-            sa.Column("before", sa.JSON(), nullable=True),
-            sa.Column("after", sa.JSON(), nullable=True),
-            sa.Column("reason", sa.String(length=500), nullable=True),
-            sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-            sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        )
-    if not _has_index(inspector, "admin_audit_logs", "ix_admin_audit_logs_created_at"):
-        op.create_index("ix_admin_audit_logs_created_at", "admin_audit_logs", ["created_at"])
-    if not _has_index(inspector, "admin_audit_logs", "ix_admin_audit_logs_actor_created"):
-        op.create_index("ix_admin_audit_logs_actor_created", "admin_audit_logs", ["actor_user_id", "created_at"])
-
     if not _has_table(inspector, "notifications"):
         op.create_table(
             "notifications",
@@ -126,13 +106,6 @@ def downgrade() -> None:
         op.drop_index("ix_notifications_recipient_created", table_name="notifications")
     if _has_table(inspector, "notifications"):
         op.drop_table("notifications")
-
-    if _has_index(inspector, "admin_audit_logs", "ix_admin_audit_logs_actor_created"):
-        op.drop_index("ix_admin_audit_logs_actor_created", table_name="admin_audit_logs")
-    if _has_index(inspector, "admin_audit_logs", "ix_admin_audit_logs_created_at"):
-        op.drop_index("ix_admin_audit_logs_created_at", table_name="admin_audit_logs")
-    if _has_table(inspector, "admin_audit_logs"):
-        op.drop_table("admin_audit_logs")
 
     if _has_table(inspector, "gamification_settings"):
         op.drop_table("gamification_settings")

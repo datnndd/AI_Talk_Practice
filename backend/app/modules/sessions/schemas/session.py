@@ -106,12 +106,7 @@ class SessionScoreRead(ORMModel):
 
 class SessionCreate(BaseModel):
     scenario_id: int
-    mode: str | None = Field(
-        default=None,
-        pattern=r"^(conversation|roleplay|debate|interview|presentation)$",
-    )
     metadata: dict[str, Any] = Field(default_factory=dict)
-    target_skills: list[str] | None = None
 
 
 class SessionFinishRequest(BaseModel):
@@ -127,7 +122,6 @@ class SessionListItem(ORMModel):
     scenario_id: int
     scenario_title: str
     status: str
-    mode: str
     duration_seconds: int | None = None
     started_at: datetime
     ended_at: datetime | None = None
@@ -139,11 +133,9 @@ class SessionRead(ORMModel):
     user_id: int
     scenario_id: int
     status: str
-    mode: str
     started_at: datetime
     ended_at: datetime | None = None
     duration_seconds: int | None = None
-    target_skills: Any | None = None
     metadata: dict[str, Any] | None = None
     scenario: ScenarioRead
     messages: list[MessageRead] = Field(default_factory=list)

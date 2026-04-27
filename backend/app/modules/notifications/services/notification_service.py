@@ -6,7 +6,6 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
-from app.modules.admin.services.audit_log_service import AdminAuditLogService
 from app.modules.notifications.models.notification import Notification, NotificationReadState
 from app.modules.notifications.schemas.notification import AdminNotificationCreateRequest, NotificationRead
 from app.modules.users.models.user import User
@@ -57,18 +56,6 @@ class NotificationService:
 
         db.add_all(notifications)
         await db.flush()
-        AdminAuditLogService.record(
-            db,
-            actor_user_id=actor.id,
-            action="notification.sent",
-            entity_type="notification",
-            entity_id=",".join(str(item.id) for item in notifications),
-            after={
-                "audience": body.audience,
-                "recipient_user_ids": body.recipient_user_ids,
-                "title": body.title,
-            },
-        )
         await db.commit()
         for notification in notifications:
             await db.refresh(notification)

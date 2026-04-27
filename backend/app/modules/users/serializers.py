@@ -10,7 +10,16 @@ from app.modules.users.schemas.user import UserRead
 
 def user_is_admin(user: User) -> bool:
     preferences = user.preferences or {}
-    return bool(preferences.get("is_admin") or preferences.get("role") == "admin")
+    return bool(user.role == "admin" or preferences.get("is_admin") or preferences.get("role") == "admin")
+
+
+def user_role(user: User) -> str:
+    if user.role:
+        return user.role
+    preferences = user.preferences or {}
+    if preferences.get("role") == "admin" or preferences.get("is_admin"):
+        return "admin"
+    return "user"
 
 
 def _admin_gamification_payload(user: User, rules: GamificationRules) -> dict[str, object]:
@@ -42,6 +51,7 @@ def _build_user_payload(user: User) -> dict[str, object]:
         "id": user.id,
         "email": user.email,
         "auth_provider": user.auth_provider,
+        "role": user_role(user),
         "has_password": bool(user.password_hash),
         "is_admin": user_is_admin(user),
         "display_name": user.display_name,

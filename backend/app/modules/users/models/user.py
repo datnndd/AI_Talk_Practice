@@ -27,6 +27,7 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     auth_provider: Mapped[str] = mapped_column(String(20), server_default="local")
+    role: Mapped[str] = mapped_column(String(20), default="user", server_default="user")
     google_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True)
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 

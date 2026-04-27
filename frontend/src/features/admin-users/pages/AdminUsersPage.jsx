@@ -13,7 +13,6 @@ import {
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { adminUsersApi } from "@/features/admin-users/api/adminUsersApi";
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
-import { useTheme } from "@/shared/context/ThemeContext";
 
 const DEFAULT_FILTERS = {
   search: "",
@@ -25,7 +24,7 @@ const DEFAULT_FILTERS = {
 };
 
 const adminNavItems = [
-  { label: "User Directory", icon: UserList, anchor: "#user-directory" },
+  { label: "User Directory", icon: UserList, to: "/admin/users" },
   { label: "Scenarios", icon: SquaresFour, to: "/admin/scenarios" },
   { label: "Payments", icon: CrownSimple, to: "/admin/payments" },
 ];
@@ -124,7 +123,6 @@ const FieldLabel = ({ children }) => (
 
 const AdminUsersPage = () => {
   const { user: currentUser } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
@@ -254,8 +252,6 @@ const AdminUsersPage = () => {
     <AdminShell
       title="User Operations"
       subtitle="Search learners, inspect account state, edit profile metadata, and control operational access without leaving the admin workspace."
-      theme={theme}
-      onToggleTheme={toggleTheme}
       navItems={adminNavItems}
     >
       <div className="space-y-6">

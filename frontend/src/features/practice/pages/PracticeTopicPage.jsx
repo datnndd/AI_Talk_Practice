@@ -100,7 +100,8 @@ const PracticeTopic = () => {
           level: scenario.difficulty.charAt(0).toUpperCase() + scenario.difficulty.slice(1),
           duration: "10 mins",
           category: formatCategoryLabel(scenario.category),
-          isLocked: !isSubscribed,
+          isLocked: Boolean(scenario.is_pro) && !isSubscribed,
+          isPro: Boolean(scenario.is_pro),
           // UI properties
           icon, iconBg, iconColor, badgeStyles, size, bg,
           ...(scenario.category === "travel" && { overlay: () => <AirplaneTilt weight="fill" size={240} className="text-primary" /> }),
@@ -132,9 +133,7 @@ const PracticeTopic = () => {
             Choose Your Topic
           </h1>
           <p className="text-lg font-medium text-zinc-500">
-            {isSubscribed
-              ? "Select a scenario to start your immersive AI conversation practice."
-              : "Browse subscriber-only scenarios and upgrade when you are ready to start live AI practice."}
+            Select a scenario to start your immersive AI conversation practice.
           </p>
         </motion.div>
 
@@ -145,11 +144,11 @@ const PracticeTopic = () => {
           className="flex gap-2"
         >
           <Link
-            to={isSubscribed ? "/topics" : "/subscription"}
+            to="/topics"
             className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-white shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
           >
             <Lightning weight="fill" />
-            {isSubscribed ? "Quick Start" : "Upgrade to Practice"}
+            Quick Start
           </Link>
         </motion.div>
       </header>
@@ -163,7 +162,7 @@ const PracticeTopic = () => {
         >
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-700">Free plan</p>
           <p className="mt-2 text-sm font-medium leading-7 text-amber-900">
-            Topic browsing is available on Free. Live conversation sessions are currently reserved for active subscribers.
+            Free scenarios are available now. VIP scenarios are marked and require an active subscription.
           </p>
         </motion.div>
       )}

@@ -123,6 +123,7 @@ class UserRead(ORMModel):
     id: int
     email: str
     auth_provider: str | None = None
+    role: str = "user"
     has_password: bool = False
     is_admin: bool = False
     display_name: str | None = None

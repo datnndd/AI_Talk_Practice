@@ -10,30 +10,15 @@ from app.modules.scenarios.schemas import (
     BulkScenarioActionResponse,
     GenerateDefaultPromptRequest,
     GenerateDefaultPromptResponse,
-    PromptHistoryRead,
     ScenarioAdminCreate,
     ScenarioAdminRead,
     ScenarioAdminUpdate,
     ScenarioListResponse,
-    SuggestSkillsRequest,
-    SuggestSkillsResponse,
 )
-from app.modules.scenarios.serializers import (
-    serialize_admin_prompt_history,
-    serialize_admin_scenario,
-)
+from app.modules.scenarios.serializers import serialize_admin_scenario
 from app.modules.scenarios.services.admin_scenario_service import AdminScenarioService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-
-@router.post("/scenarios/suggest-skills", response_model=SuggestSkillsResponse)
-async def suggest_skills(
-    body: SuggestSkillsRequest,
-    _: User = Depends(require_admin_user),
-):
-    suggested = AdminScenarioService.suggest_target_skills(body.description, body.category)
-    return SuggestSkillsResponse(suggested_skills=suggested)
 
 
 @router.post("/scenarios/generate-default-prompt", response_model=GenerateDefaultPromptResponse)
@@ -46,14 +31,12 @@ async def generate_default_prompt(
         description=body.description,
         ai_role=body.ai_role,
         user_role=body.user_role,
-        mode=body.mode,
-        learning_objectives=body.learning_objectives,
-        target_skills=body.target_skills,
+        tasks=body.tasks,
     )
     quality = AdminScenarioService.assess_prompt_quality(
         prompt=prompt,
         description=body.description,
-        target_skills=body.target_skills,
+        tasks=body.tasks,
     )
     return GenerateDefaultPromptResponse(prompt=prompt, quality=quality)
 
@@ -96,12 +79,6 @@ async def list_admin_scenarios(
         serialize_admin_scenario(
             scenario,
             usage_count=usage_counts.get(scenario.id, 0),
-            latest_prompt_quality=AdminScenarioService.assess_prompt_quality(
-                prompt=scenario.ai_system_prompt,
-                description=scenario.description,
-                target_skills=scenario.target_skills or [],
-            ),
-            include_prompt_history=False,
         )
         for scenario in scenarios
     ]
@@ -119,30 +96,6 @@ async def create_admin_scenario(
     return serialize_admin_scenario(
         scenario,
         usage_count=usage_count,
-        latest_prompt_quality=AdminScenarioService.assess_prompt_quality(
-            prompt=scenario.ai_system_prompt,
-            description=scenario.description,
-            target_skills=scenario.target_skills or [],
-        ),
-    )
-
-
-@router.get("/scenarios/{scenario_id}", response_model=ScenarioAdminRead)
-async def get_admin_scenario(
-    scenario_id: int,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    scenario = await AdminScenarioService.get_scenario(db, scenario_id)
-    usage_count = await AdminScenarioService.get_scenario_usage_count(db, scenario.id)
-    return serialize_admin_scenario(
-        scenario,
-        usage_count=usage_count,
-        latest_prompt_quality=AdminScenarioService.assess_prompt_quality(
-            prompt=scenario.ai_system_prompt,
-            description=scenario.description,
-            target_skills=scenario.target_skills or [],
-        ),
     )
 
 
@@ -158,11 +111,6 @@ async def update_admin_scenario(
     return serialize_admin_scenario(
         scenario,
         usage_count=usage_count,
-        latest_prompt_quality=AdminScenarioService.assess_prompt_quality(
-            prompt=scenario.ai_system_prompt,
-            description=scenario.description,
-            target_skills=scenario.target_skills or [],
-        ),
     )
 
 
@@ -177,11 +125,6 @@ async def delete_admin_scenario(
     return serialize_admin_scenario(
         scenario,
         usage_count=usage_count,
-        latest_prompt_quality=AdminScenarioService.assess_prompt_quality(
-            prompt=scenario.ai_system_prompt,
-            description=scenario.description,
-            target_skills=scenario.target_skills or [],
-        ),
     )
 
 
@@ -196,11 +139,6 @@ async def restore_admin_scenario(
     return serialize_admin_scenario(
         scenario,
         usage_count=usage_count,
-        latest_prompt_quality=AdminScenarioService.assess_prompt_quality(
-            prompt=scenario.ai_system_prompt,
-            description=scenario.description,
-            target_skills=scenario.target_skills or [],
-        ),
     )
 
 
@@ -215,19 +153,4 @@ async def toggle_admin_scenario(
     return serialize_admin_scenario(
         scenario,
         usage_count=usage_count,
-        latest_prompt_quality=AdminScenarioService.assess_prompt_quality(
-            prompt=scenario.ai_system_prompt,
-            description=scenario.description,
-            target_skills=scenario.target_skills or [],
-        ),
     )
-
-
-@router.get("/scenarios/{scenario_id}/prompt-history", response_model=list[PromptHistoryRead])
-async def get_prompt_history(
-    scenario_id: int,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    scenario = await AdminScenarioService.get_scenario(db, scenario_id)
-    return [serialize_admin_prompt_history(item) for item in scenario.prompt_history]

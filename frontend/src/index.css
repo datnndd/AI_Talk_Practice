@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --page-bg: #F8FAFC; 
   --page-fg: #1A0F2E; /* Use the deep purple for contrast in light mode */

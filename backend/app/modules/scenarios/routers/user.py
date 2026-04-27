@@ -29,8 +29,12 @@ async def list_scenarios(
 
 
 @router.get("/{scenario_id}", response_model=ScenarioRead)
-async def get_scenario(scenario_id: int, db: AsyncSession = Depends(get_db)):
-    scenario = await ScenarioService.get_by_id(db, scenario_id)
+async def get_scenario(
+    scenario_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    scenario = await ScenarioService.get_by_id(db, scenario_id, user=user, enforce_access=True)
     return serialize_scenario(scenario)
 
 

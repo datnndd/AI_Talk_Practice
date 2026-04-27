@@ -11,12 +11,12 @@ def test_assess_prompt_quality_high_quality():
         "Avoid using technical jargon unless explained. Do not break character."
     )
     description = "A coffee shop scenario where the user orders a drink."
-    target_skills = ["pronunciation", "vocabulary", "small_talk"]
+    tasks = ["Order a coffee", "Ask about the price"]
     
     assessment = AdminScenarioService.assess_prompt_quality(
         prompt=prompt,
         description=description,
-        target_skills=target_skills
+        tasks=tasks,
     )
     
     assert isinstance(assessment, PromptQualityAssessment)
@@ -28,12 +28,12 @@ def test_assess_prompt_quality_low_quality():
     """Test assess_prompt_quality with a low-quality prompt."""
     prompt = "Order a coffee."
     description = "Coffee shop."
-    target_skills = ["vocabulary"]
+    tasks = ["Order a coffee"]
     
     assessment = AdminScenarioService.assess_prompt_quality(
         prompt=prompt,
         description=description,
-        target_skills=target_skills
+        tasks=tasks,
     )
     
     assert assessment.score < 50
@@ -41,14 +41,15 @@ def test_assess_prompt_quality_low_quality():
     assert len(assessment.warnings) > 0
     assert any("too short" in w.lower() for w in assessment.warnings)
 
-def test_suggest_target_skills_uses_category_and_keywords():
-    """Target skill suggestions remain available without variation generation."""
-
-    skills = AdminScenarioService.suggest_target_skills(
-        "The learner needs to present clearly and respond with correct grammar.",
-        category="interview",
+def test_generate_default_prompt_includes_tasks():
+    prompt = AdminScenarioService.generate_default_prompt(
+        title="Introduce Yourself",
+        description="The learner introduces basic personal information.",
+        ai_role="Friendly teacher",
+        user_role="New learner",
+        tasks=["Say your name", "Say your age", "Say where you are from"],
     )
 
-    assert "presentation" in skills
-    assert "grammar" in skills
-    assert "fluency" in skills
+    assert "Say your name" in prompt
+    assert "Say your age" in prompt
+    assert "Say where you are from" in prompt

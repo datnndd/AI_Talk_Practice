@@ -23,7 +23,13 @@ const TopicCard = ({ card }) => {
               {card.isLocked && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-amber-700">
                   <Crown weight="fill" size={12} />
-                  Subscriber
+                  VIP
+                </span>
+              )}
+              {!card.isLocked && card.isPro && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-amber-700">
+                  <Crown weight="fill" size={12} />
+                  VIP
                 </span>
               )}
               <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] border ${card.badgeStyles || 'bg-zinc-50 text-zinc-500 border-zinc-100'}`}>

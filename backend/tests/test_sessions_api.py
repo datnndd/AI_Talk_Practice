@@ -14,14 +14,12 @@ async def test_api_start_session_ignores_legacy_variation_payload(client, test_u
         "variation_parameters": {"topic": "delay"},
         "prefer_pregenerated": True,
         "create_variation_if_missing": True,
-        "mode": "debate",
     }
     response = await client.post("/api/sessions", json=payload, headers=headers)
     assert response.status_code == 201
     data = response.json()
     assert data["scenario_id"] == test_scenario.id
     assert data["status"] == "active"
-    assert data["mode"] == "debate"
     assert "variation_id" not in data
     assert "variation_seed" not in data
     assert "variation" not in data
@@ -68,3 +66,35 @@ async def test_api_get_session_not_found(client, test_user):
     
     response = await client.get("/api/sessions/99999", headers=headers)
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_free_user_cannot_start_pro_scenario(client, db_session, test_user, test_scenario):
+    test_scenario.is_pro = True
+    await db_session.commit()
+
+    token = create_access_token(test_user.id)
+    response = await client.post(
+        "/api/sessions",
+        json={"scenario_id": test_scenario.id},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "This scenario requires VIP access"
+
+
+@pytest.mark.asyncio
+async def test_vip_user_can_start_pro_scenario(client, db_session, test_admin_user, test_scenario):
+    test_scenario.is_pro = True
+    await db_session.commit()
+
+    token = create_access_token(test_admin_user.id)
+    response = await client.post(
+        "/api/sessions",
+        json={"scenario_id": test_scenario.id},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["scenario_id"] == test_scenario.id

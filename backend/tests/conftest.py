@@ -184,9 +184,7 @@ async def test_scenario(db_session):
         ai_system_prompt="You are a helpful airline agent.",
         category="travel",
         difficulty="medium",
-        mode="roleplay",
-        learning_objectives=["order food", "ask about specials"],
-        target_skills=["pronunciation", "vocabulary"],
+        tasks=["Say your name", "Ask about your flight", "Confirm your gate"],
         tags=["airport", "travel"]
     )
     db_session.add(scenario)
@@ -203,8 +201,7 @@ async def test_session(db_session, test_user, test_scenario):
         user_id=test_user.id,
         scenario_id=test_scenario.id,
         status="active",
-        target_skills=test_scenario.target_skills,
-        session_metadata={"mode": "roleplay"}
+        session_metadata={}
     )
     db_session.add(session)
     await db_session.flush()

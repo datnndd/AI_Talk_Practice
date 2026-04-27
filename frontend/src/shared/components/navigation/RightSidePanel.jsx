@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { BookOpen, Hexagon, Star } from '@phosphor-icons/react';
+import { useEffect, useMemo, useState } from 'react';
+import { BookOpen, CheckCircle, Fire, Hexagon, Star } from '@phosphor-icons/react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { gamificationApi } from '@/features/gamification/api/gamificationApi';
 import './RightSidePanel.css';
@@ -7,16 +7,44 @@ import './RightSidePanel.css';
 const RightSidePanel = () => {
   const { user } = useAuth();
   const [gamification, setGamification] = useState(null);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [checkInMessage, setCheckInMessage] = useState("");
 
   useEffect(() => {
     gamificationApi.getDashboard().then(setGamification).catch(() => {});
   }, []);
+
+  const checkIn = gamification?.check_in;
+  const streakLabel = useMemo(() => {
+    const streak = checkIn?.current_streak || 0;
+    return `${streak} day${streak === 1 ? "" : "s"}`;
+  }, [checkIn?.current_streak]);
+
+  const handleCheckIn = async () => {
+    if (checkIn?.checked_in_today || isCheckingIn) {
+      return;
+    }
+
+    setIsCheckingIn(true);
+    setCheckInMessage("");
+
+    try {
+      const response = await gamificationApi.checkIn();
+      setGamification(response.dashboard);
+      setCheckInMessage(`+${response.coin_earned} Coin`);
+    } catch (error) {
+      setCheckInMessage(error?.response?.data?.detail || "Check-in failed");
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
   
   const stats = {
     courses: user?.preferences?.courses_count || 51,
     level: gamification?.xp?.level || 1,
     coins: gamification?.coin?.balance || 0,
     xp: gamification?.xp?.total || 0,
+    streak: checkIn?.current_streak || 0,
   };
 
   return (
@@ -26,6 +54,48 @@ const RightSidePanel = () => {
         <div className="stat-item">
           <BookOpen size={24} weight="fill" className="text-[#afafaf]" />
           <span className="stat-value text-[#afafaf]">{stats.courses}</span>
+        </div>
+
+        <div className="stat-item group relative">
+          <Fire size={24} weight="fill" className="text-[#ff9600]" />
+          <span className="stat-value text-[#ff9600]">{stats.streak}</span>
+          <div className="pointer-events-none absolute left-1/2 top-9 z-50 -translate-x-1/2 opacity-0 transition group-hover:pointer-events-auto group-hover:opacity-100">
+            <div className="streak-popover p-4">
+              <div className="streak-popover-arrow" />
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-[#afafaf]">Daily streak</p>
+                  <p className="mt-1 text-2xl font-black text-[#ff9600]">{streakLabel}</p>
+                </div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fff3df]">
+                  <Fire size={26} weight="fill" className="text-[#ff9600]" />
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-lg bg-[#f7f7f7] p-3">
+                <div className="flex items-center justify-between text-sm font-extrabold">
+                  <span className="text-[#777777]">
+                    {checkIn?.checked_in_today ? "Checked in today" : "Today reward"}
+                  </span>
+                  <span className="text-[#1cb0f6]">+{checkIn?.today_coin_reward || 0} Coin</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCheckIn}
+                disabled={checkIn?.checked_in_today || isCheckingIn}
+                className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#ff9600] px-3 text-sm font-black text-white transition hover:bg-[#f28b00] disabled:cursor-default disabled:bg-[#e5e5e5] disabled:text-[#777777]"
+              >
+                {checkIn?.checked_in_today ? <CheckCircle size={18} weight="fill" /> : null}
+                {checkIn?.checked_in_today ? "Done for today" : isCheckingIn ? "Checking in..." : "Check in"}
+              </button>
+
+              {checkInMessage ? (
+                <p className="mt-2 text-center text-xs font-extrabold text-[#58cc02]">{checkInMessage}</p>
+              ) : null}
+            </div>
+          </div>
         </div>
 
         <div className="stat-item">

@@ -57,11 +57,6 @@ def serialize_session_score(score: SessionScore) -> SessionScoreRead:
     )
 
 
-def _session_mode(session: Session) -> str:
-    metadata = session.session_metadata or {}
-    return metadata.get("mode") or session.scenario.mode
-
-
 def serialize_session_list_item(session: Session) -> SessionListItem:
     return SessionListItem.model_validate(
         {
@@ -69,7 +64,6 @@ def serialize_session_list_item(session: Session) -> SessionListItem:
             "scenario_id": session.scenario_id,
             "scenario_title": session.scenario.title,
             "status": session.status,
-            "mode": _session_mode(session),
             "duration_seconds": session.duration_seconds,
             "started_at": session.started_at,
             "ended_at": session.ended_at,
@@ -85,11 +79,9 @@ def serialize_session(session: Session) -> SessionRead:
             "user_id": session.user_id,
             "scenario_id": session.scenario_id,
             "status": session.status,
-            "mode": _session_mode(session),
             "started_at": session.started_at,
             "ended_at": session.ended_at,
             "duration_seconds": session.duration_seconds,
-            "target_skills": session.target_skills,
             "metadata": session.session_metadata or {},
             "scenario": serialize_scenario(session.scenario),
             "messages": [serialize_message(item) for item in session.messages],

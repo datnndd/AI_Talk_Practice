@@ -189,7 +189,7 @@ async def test_shop_pro_ticket_purchase_requires_and_spends_coin(test_client, db
 async def test_speaking_session_start_does_not_require_gamification_currency(test_client, test_scenario):
     response = await test_client.post(
         "/api/sessions",
-        json={"scenario_id": test_scenario.id, "mode": "roleplay"},
+        json={"scenario_id": test_scenario.id},
     )
 
     assert response.status_code == 201

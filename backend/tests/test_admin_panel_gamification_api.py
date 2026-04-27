@@ -41,11 +41,6 @@ async def test_admin_user_detail_includes_gamification_and_admin_coin_adjustment
     ).all()
     assert any(row.type == "admin_adjustment" and row.amount == 15 for row in transactions)
 
-    audit = await admin_client.get("/api/admin/audit-logs")
-    assert audit.status_code == 200
-    actions = [item["action"] for item in audit.json()["items"]]
-    assert "user.balance_adjusted" in actions
-
 
 @pytest.mark.asyncio
 async def test_admin_gamification_settings_manage_level_and_checkin_coin_rewards(

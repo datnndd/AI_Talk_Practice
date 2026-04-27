@@ -58,14 +58,6 @@ test.describe('Admin Scenario Management', () => {
       });
     });
 
-    const promptQuality = (score: number) => ({
-      score,
-      is_acceptable: score >= 70,
-      warnings: [],
-      suggestions: [],
-      recommended_target_skills: [],
-    });
-
     const scenarioList = {
       items: [
         {
@@ -73,30 +65,30 @@ test.describe('Admin Scenario Management', () => {
           title: 'Airport Check-in',
           description: 'Practice check-in process',
           is_active: true,
-          latest_prompt_quality: promptQuality(92),
           category: 'travel',
           difficulty: 'medium',
           usage_count: 5,
-          target_skills: ['Vocabulary', 'Politeness'],
           tags: ['airport'],
+          tasks: ['Confirm booking', 'Ask about baggage'],
+          ai_role: 'Airline check-in agent',
+          user_role: 'Traveler at airport',
           estimated_duration_minutes: 12,
-          mode: 'roleplay',
-          metadata: {},
+          is_pro: false,
         },
         {
           id: 2,
           title: 'Coffee Shop',
           description: 'Ordering coffee',
           is_active: false,
-          latest_prompt_quality: promptQuality(75),
           category: 'daily',
           difficulty: 'easy',
           usage_count: 2,
-          target_skills: ['Vocabulary'],
           tags: ['coffee'],
+          tasks: ['Ask for coffee'],
+          ai_role: 'Barista',
+          user_role: 'Customer',
           estimated_duration_minutes: 8,
-          mode: 'conversation',
-          metadata: {},
+          is_pro: false,
         },
       ],
       total: 2,
@@ -126,16 +118,6 @@ test.describe('Admin Scenario Management', () => {
         return;
       }
 
-      if (path === '/api/admin/scenarios/1' && request.method() === 'GET') {
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(scenarioList.items[0]) });
-        return;
-      }
-
-      if (path === '/api/admin/scenarios/1/prompt-history' && request.method() === 'GET') {
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
-        return;
-      }
-
       await route.fallback();
     });
   });
@@ -144,8 +126,7 @@ test.describe('Admin Scenario Management', () => {
     await page.goto('/admin/scenarios');
     await expect(page.getByTestId('scenario-row-1')).toContainText('Airport Check-in');
     await expect(page.getByTestId('scenario-row-2')).toContainText('Coffee Shop');
-    await expect(page.getByTestId('scenario-row-1')).toContainText('Prompt 92');
-    await expect(page.getByTestId('scenario-row-2')).toContainText('Prompt 75');
+    await expect(page.locator('text=/Prompt \\d+/')).toHaveCount(0);
   });
 
   test('performs bulk activation', async ({ page }) => {
@@ -157,8 +138,11 @@ test.describe('Admin Scenario Management', () => {
     await expect(page.locator('text=Scenarios updated')).toBeVisible();
   });
 
-  test('loads scenario detail', async ({ page }) => {
+  test('selects a scenario and opens edit modal from contextual actions', async ({ page }) => {
     await page.goto('/admin/scenarios');
-    await expect(page.locator('text=Scenario Detail')).toBeVisible();
+    await page.getByTestId('scenario-row-1').getByText('Airport Check-in').click();
+    await expect(page.locator('text=Airline check-in agent')).toBeVisible();
+    await page.click('button:has-text("Edit Scenario")');
+    await expect(page.locator('text=Edit Scenario')).toBeVisible();
   });
 });

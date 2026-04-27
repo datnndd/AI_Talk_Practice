@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from sqlalchemy import Select, String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.modules.scenarios.models.scenario import Scenario, ScenarioPromptHistory
+from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.models.session import Session
 
 
@@ -76,9 +75,6 @@ class ScenarioRepository:
         stmt = (
             cls._scenario_query(include_deleted=include_deleted)
             .outerjoin(session_counts, session_counts.c.scenario_id == Scenario.id)
-            .options(
-                selectinload(Scenario.prompt_history),
-            )
             .order_by(
                 func.coalesce(session_counts.c.usage_count, 0).desc(),
                 Scenario.updated_at.desc(),
@@ -140,9 +136,6 @@ class ScenarioRepository:
         stmt = (
             cls._scenario_query(include_deleted=include_deleted)
             .where(Scenario.id == scenario_id)
-            .options(
-                selectinload(Scenario.prompt_history),
-            )
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
@@ -153,20 +146,3 @@ class ScenarioRepository:
         db.add(scenario)
         await db.flush()
         return scenario
-
-    @staticmethod
-    async def create_prompt_history(db: AsyncSession, **values: object) -> ScenarioPromptHistory:
-        history = ScenarioPromptHistory(**values)
-        db.add(history)
-        await db.flush()
-        return history
-
-    @staticmethod
-    async def list_prompt_history(db: AsyncSession, scenario_id: int) -> list[ScenarioPromptHistory]:
-        stmt = (
-            select(ScenarioPromptHistory)
-            .where(ScenarioPromptHistory.scenario_id == scenario_id)
-            .order_by(ScenarioPromptHistory.created_at.desc(), ScenarioPromptHistory.id.desc())
-        )
-        result = await db.execute(stmt)
-        return list(result.scalars().all())

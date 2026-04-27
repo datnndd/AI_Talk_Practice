@@ -38,19 +38,6 @@ class PromptQualityAssessment(BaseModel):
     is_acceptable: bool
     warnings: list[str] = Field(default_factory=list)
     suggestions: list[str] = Field(default_factory=list)
-    recommended_target_skills: list[str] = Field(default_factory=list)
-
-
-class PromptHistoryRead(ORMModel):
-    id: int
-    scenario_id: int
-    previous_prompt: str
-    new_prompt: str
-    change_note: str | None = None
-    quality_score: int | None = None
-    changed_by: int | None = None
-    created_at: datetime
-    updated_at: datetime
 
 
 class ScenarioAdminBase(BaseModel):
@@ -61,28 +48,16 @@ class ScenarioAdminBase(BaseModel):
     ai_system_prompt: str = ""
     ai_role: str = Field(default="", max_length=500)
     user_role: str = Field(default="", max_length=500)
-    learning_objectives: list[str] = Field(default_factory=list)
-    target_skills: list[str] = Field(default_factory=list)
+    tasks: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     estimated_duration_minutes: int | None = Field(default=10, ge=1, le=180)
-    mode: str = Field(
-        default="conversation",
-        pattern=r"^(conversation|roleplay|debate|interview|presentation)$",
-    )
-    metadata: dict[str, Any] = Field(default_factory=dict)
     is_active: bool = True
-    change_note: str | None = Field(default=None, max_length=255)
+    is_pro: bool = False
 
-    @field_validator("learning_objectives", "target_skills", "tags", mode="before")
+    @field_validator("tasks", "tags", mode="before")
     @classmethod
     def parse_list_fields(cls, value: Any) -> list[str]:
         return _normalize_string_list(value)
-
-    @field_validator("metadata", mode="before")
-    @classmethod
-    def parse_metadata(cls, value: Any) -> dict[str, Any]:
-        parsed = _parse_jsonish(value)
-        return parsed or {}
 
 
 class ScenarioAdminCreate(ScenarioAdminBase):
@@ -97,32 +72,18 @@ class ScenarioAdminUpdate(BaseModel):
     ai_system_prompt: str | None = None
     ai_role: str | None = Field(default=None, max_length=500)
     user_role: str | None = Field(default=None, max_length=500)
-    learning_objectives: list[str] | None = None
-    target_skills: list[str] | None = None
+    tasks: list[str] | None = None
     tags: list[str] | None = None
     estimated_duration_minutes: int | None = Field(default=None, ge=1, le=180)
-    mode: str | None = Field(
-        default=None,
-        pattern=r"^(conversation|roleplay|debate|interview|presentation)$",
-    )
-    metadata: dict[str, Any] | None = None
     is_active: bool | None = None
-    change_note: str | None = Field(default=None, max_length=255)
+    is_pro: bool | None = None
 
-    @field_validator("learning_objectives", "target_skills", "tags", mode="before")
+    @field_validator("tasks", "tags", mode="before")
     @classmethod
     def parse_optional_list_fields(cls, value: Any) -> list[str] | None:
         if value is None:
             return None
         return _normalize_string_list(value)
-
-    @field_validator("metadata", mode="before")
-    @classmethod
-    def parse_optional_metadata(cls, value: Any) -> dict[str, Any] | None:
-        if value is None:
-            return None
-        parsed = _parse_jsonish(value)
-        return parsed or {}
 
 
 class ScenarioAdminRead(ORMModel):
@@ -134,18 +95,13 @@ class ScenarioAdminRead(ORMModel):
     ai_system_prompt: str
     ai_role: str = ""
     user_role: str = ""
-    learning_objectives: list[str] = Field(default_factory=list)
-    target_skills: list[str] = Field(default_factory=list)
+    tasks: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     estimated_duration_minutes: int | None = None
-    mode: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
     is_active: bool
+    is_pro: bool
     deleted_at: datetime | None = None
-    created_by: int | None = None
     usage_count: int = 0
-    latest_prompt_quality: PromptQualityAssessment | None = None
-    prompt_history: list[PromptHistoryRead] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
@@ -157,28 +113,14 @@ class ScenarioListResponse(BaseModel):
     page_size: int
 
 
-class SuggestSkillsRequest(BaseModel):
-    description: str = Field(min_length=10)
-    category: str | None = Field(default=None, max_length=50)
-
-
-class SuggestSkillsResponse(BaseModel):
-    suggested_skills: list[str]
-
-
 class GenerateDefaultPromptRequest(BaseModel):
     title: str = Field(min_length=3, max_length=200)
     description: str = Field(min_length=20)
     ai_role: str = Field(default="", max_length=500)
     user_role: str = Field(default="", max_length=500)
-    mode: str = Field(
-        default="conversation",
-        pattern=r"^(conversation|roleplay|debate|interview|presentation)$",
-    )
-    learning_objectives: list[str] = Field(default_factory=list)
-    target_skills: list[str] = Field(default_factory=list)
+    tasks: list[str] = Field(default_factory=list)
 
-    @field_validator("learning_objectives", "target_skills", mode="before")
+    @field_validator("tasks", mode="before")
     @classmethod
     def parse_prompt_list_fields(cls, value: Any) -> list[str]:
         return _normalize_string_list(value)

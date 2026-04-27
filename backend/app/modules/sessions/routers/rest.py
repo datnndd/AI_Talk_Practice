@@ -35,7 +35,7 @@ async def start_session(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    session = await SessionService.start_session(db, user_id=user.id, payload=body)
+    session = await SessionService.start_session(db, user_id=user.id, user=user, payload=body)
     return serialize_session(session)
 
 

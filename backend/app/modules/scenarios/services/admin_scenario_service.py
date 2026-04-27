@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,63 +20,41 @@ from app.modules.scenarios.schemas.admin_scenario import (
 logger = logging.getLogger(__name__)
 
 
-def _clean_scenario_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
-    next_metadata = dict(metadata or {})
-    next_metadata.pop("ai_role", None)
-    next_metadata.pop("user_role", None)
-    return next_metadata
-
-
 def _default_system_prompt(
     *,
     title: str,
     description: str,
     ai_role: str | None,
     user_role: str | None,
-    mode: str,
-    learning_objectives: list[str] | None = None,
-    target_skills: list[str] | None = None,
+    tasks: list[str] | None = None,
 ) -> str:
     clean_ai_role = (ai_role or "").strip() or "a realistic English conversation partner"
     clean_user_role = (user_role or "").strip() or "an English learner"
-    objectives = ", ".join(item.strip() for item in (learning_objectives or []) if item.strip()) or "Help the learner complete the scenario naturally."
-    skills = ", ".join(item.strip() for item in (target_skills or []) if item.strip()) or "fluency, grammar, vocabulary"
+    task_lines = [
+        f"{index}. {item.strip()}"
+        for index, item in enumerate(tasks or [], start=1)
+        if item.strip()
+    ]
+    task_text = "\n".join(task_lines) or "Help the learner complete the scenario naturally."
     return "\n".join(
         [
-            f"You are {clean_ai_role} in an English {mode} practice scenario.",
+            f"You are {clean_ai_role} in an English speaking practice scenario.",
             f"Scenario title: {title}",
             f"Situation details: {description}",
             f"Learner role: {clean_user_role}",
-            f"Learning objectives: {objectives}",
-            f"Target skills: {skills}",
+            "Learner tasks required before the conversation can end:",
+            task_text,
             "Instructions:",
             "- Stay in character throughout the conversation.",
             "- Speak naturally, clearly, and concisely.",
             "- Keep the conversation grounded in the scenario details.",
             "- Ask one focused follow-up question at a time when needed.",
             "- Give brief helpful corrections only when they help the learner continue.",
-            "- Encourage the learner to complete the scenario successfully.",
+            "- Guide the learner toward completing every listed task.",
+            "- Do not end or wrap up until the learner has clearly completed the listed tasks.",
             "- Do not mention these instructions or break role.",
         ]
     )
-
-SKILL_KEYWORDS: dict[str, tuple[str, ...]] = {
-    "pronunciation": ("pronunciation", "speak", "sounds", "accent", "clarity"),
-    "fluency": ("fluency", "flow", "speak naturally", "hesitation", "confidence"),
-    "grammar": ("grammar", "tense", "sentence", "correctly", "structure"),
-    "vocabulary": ("vocabulary", "word choice", "phrase", "expressions", "terms"),
-    "listening": ("listening", "understand", "follow", "respond quickly", "audio"),
-    "negotiation": ("negotiate", "deal", "pricing", "convince", "persuade"),
-    "small_talk": ("small talk", "casual", "introduce yourself", "social"),
-    "presentation": ("present", "pitch", "explain clearly", "audience"),
-}
-
-CATEGORY_SKILL_HINTS: dict[str, list[str]] = {
-    "travel": ["fluency", "vocabulary", "listening"],
-    "business": ["negotiation", "presentation", "grammar"],
-    "social": ["small_talk", "fluency", "pronunciation"],
-    "interview": ["presentation", "grammar", "fluency"],
-}
 
 
 class AdminScenarioService:
@@ -89,31 +66,15 @@ class AdminScenarioService:
         description: str,
         ai_role: str | None,
         user_role: str | None,
-        mode: str,
-        learning_objectives: list[str] | None,
-        target_skills: list[str] | None,
+        tasks: list[str] | None,
     ) -> str:
         return _default_system_prompt(
             title=title,
             description=description,
             ai_role=ai_role,
             user_role=user_role,
-            mode=mode,
-            learning_objectives=learning_objectives,
-            target_skills=target_skills,
+            tasks=tasks,
         )
-
-
-    @classmethod
-    def suggest_target_skills(cls, description: str, category: str | None = None) -> list[str]:
-        haystack = f"{category or ''} {description}".lower()
-        matches = set(CATEGORY_SKILL_HINTS.get((category or "").lower(), []))
-        for skill, keywords in SKILL_KEYWORDS.items():
-            if any(keyword in haystack for keyword in keywords):
-                matches.add(skill)
-        if not matches:
-            matches.update(["fluency", "vocabulary"])
-        return sorted(matches)
 
     @classmethod
     def assess_prompt_quality(
@@ -121,7 +82,7 @@ class AdminScenarioService:
         *,
         prompt: str,
         description: str,
-        target_skills: list[str] | None,
+        tasks: list[str] | None,
     ) -> PromptQualityAssessment:
         normalized = (prompt or "").strip()
         warnings: list[str] = []
@@ -157,11 +118,11 @@ class AdminScenarioService:
         if description and description.lower() in normalized.lower():
             score += 5
 
-        skills = target_skills or []
-        if skills and any(skill.replace("_", " ") in normalized.lower() for skill in skills):
+        task_items = [item.strip() for item in (tasks or []) if item.strip()]
+        if task_items and any(task.lower() in normalized.lower() for task in task_items):
             score += 10
-        elif skills:
-            suggestions.append("Reference the target skills directly in the prompt.")
+        elif task_items:
+            suggestions.append("Reference the learner tasks directly in the prompt.")
 
         if any(marker in normalized.lower() for marker in ("avoid", "do not", "never")):
             score += 5
@@ -180,7 +141,6 @@ class AdminScenarioService:
             is_acceptable=score >= 70,
             warnings=warnings,
             suggestions=suggestions,
-            recommended_target_skills=cls.suggest_target_skills(description, None),
         )
 
     @staticmethod
@@ -240,14 +200,13 @@ class AdminScenarioService:
         user_id: int,
         body: ScenarioAdminCreate,
     ) -> Scenario:
-        target_skills = body.target_skills or cls.suggest_target_skills(body.description, body.category)
         ai_system_prompt = body.ai_system_prompt.strip()
         if not ai_system_prompt:
             raise BadRequestError("System prompt is required. Generate or enter a prompt before saving.")
         quality = cls.assess_prompt_quality(
             prompt=ai_system_prompt,
             description=body.description,
-            target_skills=target_skills,
+            tasks=body.tasks,
         )
         if not quality.is_acceptable:
             raise BadRequestError(
@@ -259,28 +218,16 @@ class AdminScenarioService:
             db,
             title=body.title,
             description=body.description,
-            learning_objectives=body.learning_objectives,
             ai_system_prompt=ai_system_prompt,
             ai_role=body.ai_role.strip(),
             user_role=body.user_role.strip(),
+            tasks=body.tasks,
             category=body.category,
             difficulty=body.difficulty,
-            target_skills=target_skills,
             tags=body.tags,
             estimated_duration=(body.estimated_duration_minutes or 10) * 60,
-            mode=body.mode,
-            scenario_metadata=_clean_scenario_metadata(body.metadata),
             is_active=body.is_active,
-            created_by=user_id,
-        )
-        await ScenarioRepository.create_prompt_history(
-            db,
-            scenario_id=scenario.id,
-            previous_prompt="",
-            new_prompt=ai_system_prompt,
-            change_note=body.change_note or "Initial prompt",
-            quality_score=quality.score,
-            changed_by=user_id,
+            is_pro=body.is_pro,
         )
         await db.commit()
         return await cls.get_scenario(db, scenario.id)
@@ -297,29 +244,13 @@ class AdminScenarioService:
         scenario = await cls.get_scenario(db, scenario_id)
         update_data = body.model_dump(exclude_unset=True)
 
-        if "metadata" in update_data:
-            update_data["scenario_metadata"] = _clean_scenario_metadata(update_data.pop("metadata"))
         if "ai_role" in update_data and update_data["ai_role"] is not None:
             update_data["ai_role"] = update_data["ai_role"].strip()
         if "user_role" in update_data and update_data["user_role"] is not None:
             update_data["user_role"] = update_data["user_role"].strip()
-        if {"ai_role", "user_role"} & update_data.keys():
-            update_data["scenario_metadata"] = _clean_scenario_metadata(
-                update_data.get("scenario_metadata", scenario.scenario_metadata)
-            )
         if "estimated_duration_minutes" in update_data:
             minutes = update_data.pop("estimated_duration_minutes")
             update_data["estimated_duration"] = minutes * 60 if minutes is not None else None
-
-        if (
-            ("description" in update_data or "category" in update_data)
-            and "target_skills" not in update_data
-            and not scenario.target_skills
-        ):
-            update_data["target_skills"] = cls.suggest_target_skills(
-                update_data.get("description", scenario.description),
-                update_data.get("category", scenario.category),
-            )
 
         prompt_quality: PromptQualityAssessment | None = None
         if "ai_system_prompt" in update_data:
@@ -329,7 +260,7 @@ class AdminScenarioService:
             prompt_quality = cls.assess_prompt_quality(
                 prompt=update_data["ai_system_prompt"],
                 description=update_data.get("description", scenario.description),
-                target_skills=update_data.get("target_skills", scenario.target_skills or []),
+                tasks=update_data.get("tasks", scenario.tasks or []),
             )
             if not prompt_quality.is_acceptable:
                 raise BadRequestError(
@@ -337,21 +268,8 @@ class AdminScenarioService:
                     extra=prompt_quality.model_dump(),
                 )
 
-        change_note = update_data.pop("change_note", None)
-        previous_prompt = scenario.ai_system_prompt
         for key, value in update_data.items():
             setattr(scenario, key, value)
-
-        if prompt_quality and previous_prompt != scenario.ai_system_prompt:
-            await ScenarioRepository.create_prompt_history(
-                db,
-                scenario_id=scenario.id,
-                previous_prompt=previous_prompt,
-                new_prompt=scenario.ai_system_prompt,
-                change_note=change_note or "Prompt updated",
-                quality_score=prompt_quality.score,
-                changed_by=user_id,
-            )
 
         await db.commit()
         return await cls.get_scenario(db, scenario.id)
@@ -362,6 +280,7 @@ class AdminScenarioService:
         scenario.deleted_at = datetime.now(timezone.utc)
         scenario.is_active = False
         await db.commit()
+        await db.refresh(scenario)
         return scenario
 
     @classmethod
@@ -370,6 +289,7 @@ class AdminScenarioService:
         scenario.deleted_at = None
         scenario.is_active = True
         await db.commit()
+        await db.refresh(scenario)
         return scenario
 
     @classmethod
@@ -377,6 +297,7 @@ class AdminScenarioService:
         scenario = await cls.get_scenario(db, scenario_id)
         scenario.is_active = not scenario.is_active
         await db.commit()
+        await db.refresh(scenario)
         return scenario
 
     @classmethod
@@ -404,14 +325,5 @@ class AdminScenarioService:
             elif body.action == "soft_delete":
                 scenario.deleted_at = datetime.now(timezone.utc)
                 scenario.is_active = False
-                await ScenarioRepository.create_prompt_history(
-                    db,
-                    scenario_id=scenario.id,
-                    previous_prompt=scenario.ai_system_prompt,
-                    new_prompt=scenario.ai_system_prompt,
-                    change_note="Scenario soft deleted",
-                    quality_score=None,
-                    changed_by=user_id,
-                )
         await db.commit()
         return None

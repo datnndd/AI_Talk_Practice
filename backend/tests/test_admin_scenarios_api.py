@@ -32,7 +32,7 @@ async def test_admin_route_requires_admin(client, test_user):
 
 
 @pytest.mark.asyncio
-async def test_admin_can_create_scenario_and_prompt_history(client, db_session):
+async def test_admin_can_create_scenario(client, db_session):
     admin = await _create_admin_user(db_session)
     token = create_access_token(admin.id)
 
@@ -46,12 +46,9 @@ async def test_admin_can_create_scenario_and_prompt_history(client, db_session):
             "coach the learner with brief corrections, and keep the conversation focused on "
             "solving the missing reservation issue without breaking roleplay."
         ),
-        "learning_objectives": ["clarify a booking issue", "ask for confirmation details"],
-        "target_skills": ["fluency", "grammar"],
+        "tasks": ["Say your name", "Explain the missing reservation", "Ask for the next step"],
         "tags": ["hotel", "travel", "problem-solving"],
         "estimated_duration_minutes": 12,
-        "mode": "roleplay",
-        "metadata": {"persona": "front desk"},
     }
 
     response = await client.post(
@@ -62,13 +59,12 @@ async def test_admin_can_create_scenario_and_prompt_history(client, db_session):
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["title"] == payload["title"]
-    assert body["learning_objectives"] == payload["learning_objectives"]
+    assert body["tasks"] == payload["tasks"]
     assert body["estimated_duration_minutes"] == 12
     assert "variation_count" not in body
     assert "active_variation_count" not in body
     assert "variations" not in body
-    assert len(body["prompt_history"]) == 1
-    assert body["prompt_history"][0]["quality_score"] >= 70
+    assert "prompt_history" not in body
 
 
 @pytest.mark.asyncio
@@ -81,9 +77,7 @@ async def test_admin_can_generate_default_prompt_and_create_scenario_with_roles(
         "description": "Learner is at a busy coffee shop where an order is delayed and must politely ask for an update without sounding impatient.",
         "ai_role": "Busy but friendly barista",
         "user_role": "Customer waiting for a coffee order",
-        "mode": "roleplay",
-        "learning_objectives": ["ask for an order update", "respond politely to a delay"],
-        "target_skills": ["fluency", "vocabulary"],
+        "tasks": ["Ask for an order update", "Respond politely to a delay"],
     }
 
     prompt_response = await client.post(
@@ -97,6 +91,7 @@ async def test_admin_can_generate_default_prompt_and_create_scenario_with_roles(
     assert "Coffee Shop Delay" in generated_prompt
     assert "Busy but friendly barista" in generated_prompt
     assert "Customer waiting for a coffee order" in generated_prompt
+    assert "Ask for an order update" in generated_prompt
 
     payload = {
         **prompt_request,
@@ -137,3 +132,33 @@ async def test_admin_variation_endpoints_are_removed(client, db_session, test_sc
         headers={"Authorization": f"Bearer {token}"},
     )
     assert list_response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_admin_scenario_detail_endpoint_is_removed(client, db_session, test_scenario):
+    admin = await _create_admin_user(db_session)
+    token = create_access_token(admin.id)
+
+    response = await client.get(
+        f"/api/admin/scenarios/{test_scenario.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 405
+
+
+@pytest.mark.asyncio
+async def test_admin_can_toggle_scenario_active(client, db_session, test_scenario):
+    admin = await _create_admin_user(db_session)
+    token = create_access_token(admin.id)
+
+    response = await client.post(
+        f"/api/admin/scenarios/{test_scenario.id}/toggle-active",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["id"] == test_scenario.id
+    assert body["is_active"] is False
+    assert body["updated_at"]

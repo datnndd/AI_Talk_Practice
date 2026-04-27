@@ -5,10 +5,6 @@ export const adminApi = {
     const { data } = await httpClient.get("/admin/scenarios", { params });
     return data;
   },
-  getScenario: async (scenarioId) => {
-    const { data } = await httpClient.get(`/admin/scenarios/${scenarioId}`);
-    return data;
-  },
   createScenario: async (payload) => {
     const { data } = await httpClient.post("/admin/scenarios", payload);
     return data;
@@ -29,20 +25,12 @@ export const adminApi = {
     const { data } = await httpClient.post(`/admin/scenarios/${scenarioId}/toggle-active`);
     return data;
   },
-  suggestSkills: async (payload) => {
-    const { data } = await httpClient.post("/admin/scenarios/suggest-skills", payload);
-    return data;
-  },
   generateDefaultPrompt: async (payload) => {
     const { data } = await httpClient.post("/admin/scenarios/generate-default-prompt", payload);
     return data;
   },
   bulkAction: async (payload) => {
     const { data } = await httpClient.post("/admin/scenarios/bulk-actions", payload);
-    return data;
-  },
-  getPromptHistory: async (scenarioId) => {
-    const { data } = await httpClient.get(`/admin/scenarios/${scenarioId}/prompt-history`);
     return data;
   },
 };

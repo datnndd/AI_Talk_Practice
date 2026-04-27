@@ -621,9 +621,9 @@ class CurriculumService:
         session = await SessionService.start_session(
             db,
             user_id=user.id,
+            user=user,
             payload=SessionCreate(
                 scenario_id=scenario_id,
-                mode="conversation",
                 metadata=metadata,
             ),
         )

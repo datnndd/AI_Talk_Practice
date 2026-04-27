@@ -17,7 +17,7 @@ def _scenario():
         description="Ask politely about a delayed coffee order.",
         user_role="Customer",
         ai_role="Barista",
-        learning_objectives=["Ask for an update", "Stay polite"],
+        tasks=["Ask for an update", "Stay polite"],
         ai_system_prompt="Stay warm and concise.",
     )
 
@@ -27,7 +27,6 @@ def test_dialogue_prompt_includes_roles_summary_and_recent_turns():
         scenario=_scenario(),
         rolling_summary="Learner already greeted the barista.",
         recent_turns="Learner: Hi, my drink is late.\nAssistant: Let me check your order.",
-        target_skills=["fluency", "grammar"],
         user_preferences={"native_language": "vi"},
         extra_instruction="Trả lời lịch sự, khép lại cuộc trò chuyện một cách tự nhiên",
     )
@@ -35,6 +34,7 @@ def test_dialogue_prompt_includes_roles_summary_and_recent_turns():
     assert "Stay warm and concise." in prompt
     assert "AI role: Barista" in prompt
     assert "Learner role: Customer" in prompt
+    assert "Ask for an update" in prompt
     assert "Rolling session summary: Learner already greeted the barista." in prompt
     assert "Recent turns:" in prompt
     assert "Trả lời lịch sự, khép lại cuộc trò chuyện một cách tự nhiên" in prompt
@@ -84,8 +84,7 @@ def test_full_assessment_prompt_includes_score_contract():
     prompt = build_full_assessment_prompt(
         scenario_title="Coffee Shop Delay",
         scenario_description="Ask politely about a delayed coffee order.",
-        learning_objectives=["ask for update"],
-        target_skills=["fluency"],
+        tasks=["ask for update"],
         rolling_summary="Learner asked politely and clarified the order.",
     )
 
