@@ -196,8 +196,9 @@ async def test_speaking_session_start_does_not_require_gamification_currency(tes
 
 
 @pytest.mark.asyncio
-async def test_leaderboard_returns_real_weekly_and_all_time_data(test_client, db_session, test_user):
+async def test_leaderboard_returns_current_week_xp_by_default(test_client, db_session, test_user):
     today = datetime.now(timezone.utc).date()
+    previous_week = today - timedelta(days=today.weekday() + 1)
 
     competitor = User(
         email="leader@example.com",
@@ -216,16 +217,19 @@ async def test_leaderboard_returns_real_weekly_and_all_time_data(test_client, db
     db_session.add_all(
         [
             DailyStat(user_id=test_user.id, date=today, xp_earned=120),
+            DailyStat(user_id=test_user.id, date=previous_week, xp_earned=900),
             DailyStat(user_id=competitor.id, date=today, xp_earned=280),
+            DailyStat(user_id=competitor.id, date=previous_week, xp_earned=10),
         ]
     )
     await db_session.commit()
 
-    weekly_response = await test_client.get("/api/gamification/leaderboard?period=weekly&limit=5")
+    weekly_response = await test_client.get("/api/gamification/leaderboard?limit=5")
 
     assert weekly_response.status_code == 200
     weekly_body = weekly_response.json()
     assert weekly_body["period"] == "weekly"
+    assert weekly_body["available_periods"] == ["weekly"]
     assert weekly_body["entries"][0]["display_name"] == "Leaderboard Pro"
     assert weekly_body["entries"][0]["score"] == 280
     assert weekly_body["current_user"]["display_name"] == "Test User"
@@ -234,9 +238,4 @@ async def test_leaderboard_returns_real_weekly_and_all_time_data(test_client, db
 
     all_time_response = await test_client.get("/api/gamification/leaderboard?period=all_time&limit=5")
 
-    assert all_time_response.status_code == 200
-    all_time_body = all_time_response.json()
-    assert all_time_body["period"] == "all_time"
-    assert all_time_body["entries"][0]["display_name"] == "Leaderboard Pro"
-    assert all_time_body["entries"][0]["score"] == 2000
-    assert all_time_body["current_user"]["score"] == 1200
+    assert all_time_response.status_code == 422

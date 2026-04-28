@@ -63,45 +63,30 @@ class GamificationService:
     ) -> LeaderboardRead:
         today = _today()
 
-        if period == "weekly":
-            week_start = today - timedelta(days=today.weekday())
-            weekly_scores = (
-                select(
-                    DailyStat.user_id.label("user_id"),
-                    func.coalesce(func.sum(DailyStat.xp_earned), 0).label("score"),
-                )
-                .where(DailyStat.date >= week_start, DailyStat.date <= today)
-                .group_by(DailyStat.user_id)
-                .subquery()
+        week_start = today - timedelta(days=today.weekday())
+        weekly_scores = (
+            select(
+                DailyStat.user_id.label("user_id"),
+                func.coalesce(func.sum(DailyStat.xp_earned), 0).label("score"),
             )
-            score_expr = func.coalesce(weekly_scores.c.score, 0)
-            source_stmt = (
-                select(
-                    User.id.label("user_id"),
-                    User.display_name.label("display_name"),
-                    User.email.label("email"),
-                    User.avatar.label("avatar"),
-                    score_expr.label("score"),
-                    func.row_number().over(order_by=(score_expr.desc(), User.id.asc())).label("rank"),
-                )
-                .select_from(User)
-                .outerjoin(weekly_scores, weekly_scores.c.user_id == User.id)
-                .where(User.deleted_at.is_(None))
+            .where(DailyStat.date >= week_start, DailyStat.date <= today)
+            .group_by(DailyStat.user_id)
+            .subquery()
+        )
+        score_expr = func.coalesce(weekly_scores.c.score, 0)
+        source_stmt = (
+            select(
+                User.id.label("user_id"),
+                User.display_name.label("display_name"),
+                User.email.label("email"),
+                User.avatar.label("avatar"),
+                score_expr.label("score"),
+                func.row_number().over(order_by=(score_expr.desc(), User.id.asc())).label("rank"),
             )
-        else:
-            score_expr = func.coalesce(User.total_xp, 0)
-            source_stmt = (
-                select(
-                    User.id.label("user_id"),
-                    User.display_name.label("display_name"),
-                    User.email.label("email"),
-                    User.avatar.label("avatar"),
-                    score_expr.label("score"),
-                    func.row_number().over(order_by=(score_expr.desc(), User.id.asc())).label("rank"),
-                )
-                .select_from(User)
-                .where(User.deleted_at.is_(None))
-            )
+            .select_from(User)
+            .outerjoin(weekly_scores, weekly_scores.c.user_id == User.id)
+            .where(User.deleted_at.is_(None))
+        )
 
         ranked = source_stmt.subquery()
         top_rows = (

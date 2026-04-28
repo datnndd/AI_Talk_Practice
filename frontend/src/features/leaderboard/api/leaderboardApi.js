@@ -33,9 +33,6 @@ export const getLeaderboardData = async ({ period = "weekly", currentUserId }) =
   return {
     filters: [
       { key: "weekly", label: "Weekly", enabled: true },
-      { key: "all_time", label: "All-time", enabled: true },
-      { key: "friends", label: "Friends", enabled: false },
-      { key: "global", label: "Global", enabled: false },
     ],
     activeFilter: data.period,
     entries: data.entries.map((entry) => normalizeEntry(entry, currentUserId, topScore)),

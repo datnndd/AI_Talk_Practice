@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-LeaderboardPeriod = Literal["weekly", "all_time"]
+LeaderboardPeriod = Literal["weekly"]
 
 
 class XPRead(BaseModel):
@@ -90,4 +90,4 @@ class LeaderboardRead(BaseModel):
     period: LeaderboardPeriod
     entries: list[LeaderboardEntryRead]
     current_user: LeaderboardEntryRead
-    available_periods: list[LeaderboardPeriod] = Field(default_factory=lambda: ["weekly", "all_time"])
+    available_periods: list[LeaderboardPeriod] = Field(default_factory=lambda: ["weekly"])

@@ -38,6 +38,7 @@ const LeagueProgression = () => {
 const LeaderboardPage = () => {
   const { user } = useAuth();
   const period = "weekly";
+  const resetLabel = getWeeklyResetLabel();
   const [data, setData] = useState({
     filters: [],
     activeFilter: "weekly",
@@ -88,12 +89,12 @@ const LeaderboardPage = () => {
           <LeagueProgression />
           <h1 className="league-title">Ruby League</h1>
           <p className="league-subtitle">
-            Top 5 advance to the next league!
+            Weekly XP leaderboard resets every Monday.
           </p>
           
           <div className="league-timer">
             <Clock size={20} weight="bold" />
-            1d 19h
+            {resetLabel}
           </div>
         </motion.section>
 
@@ -115,6 +116,22 @@ const LeaderboardPage = () => {
       </main>
     </div>
   );
+};
+
+const getWeeklyResetLabel = () => {
+  const now = new Date();
+  const nextMonday = new Date(now);
+  const daysUntilMonday = (8 - now.getDay()) % 7 || 7;
+  nextMonday.setDate(now.getDate() + daysUntilMonday);
+  nextMonday.setHours(0, 0, 0, 0);
+
+  const diffMs = Math.max(0, nextMonday.getTime() - now.getTime());
+  const totalHours = Math.ceil(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+
+  if (days <= 0) return `${hours}h until reset`;
+  return `${days}d ${hours}h until reset`;
 };
 
 export default LeaderboardPage;
