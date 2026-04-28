@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError
-from app.modules.curriculum.models import Lesson
+from app.modules.curriculum.models import Unit
 from app.modules.gamification.models.coin_transaction import CoinTransaction
 from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
@@ -131,7 +131,7 @@ class GamificationService:
         db: AsyncSession,
         *,
         user: User,
-        lesson: Lesson,
+        lesson: Unit,
     ) -> LessonCompleteResponse:
         await cls._ensure_user_state(user)
         rules = await get_effective_rules(db)

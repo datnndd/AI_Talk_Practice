@@ -3,6 +3,7 @@ import {
   ArrowClockwise,
   CrownSimple,
   FloppyDiskBack,
+  GraduationCap,
   MagnifyingGlass,
   ProhibitInset,
   Sparkle,
@@ -26,6 +27,7 @@ const DEFAULT_FILTERS = {
 const adminNavItems = [
   { label: "User Directory", icon: UserList, to: "/admin/users" },
   { label: "Scenarios", icon: SquaresFour, to: "/admin/scenarios" },
+  { label: "Curriculum", icon: GraduationCap, to: "/admin/curriculum" },
   { label: "Payments", icon: CrownSimple, to: "/admin/payments" },
 ];
 

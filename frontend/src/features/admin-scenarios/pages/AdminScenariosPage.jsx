@@ -11,6 +11,7 @@ import {
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
 import ScenarioEditorModal from "@/features/admin-scenarios/components/ScenarioEditorModal";
 import { adminApi } from "@/features/admin-scenarios/api/adminScenariosApi";
+import { getApiErrorMessage } from "@/shared/api/httpClient";
 
 const DEFAULT_FILTERS = {
   search: "",
@@ -82,7 +83,7 @@ const AdminScenarios = () => {
         return data.items[0]?.id || null;
       });
     } catch (loadError) {
-      setError(loadError?.response?.data?.detail || "Failed to load scenarios.");
+      setError(getApiErrorMessage(loadError, "Failed to load scenarios."));
     } finally {
       setIsLoadingScenarios(false);
     }
@@ -116,7 +117,7 @@ const AdminScenarios = () => {
       setIsScenarioModalOpen(false);
       await loadScenarios();
     } catch (saveError) {
-      setError(saveError?.response?.data?.detail || "Failed to save scenario.");
+      setError(getApiErrorMessage(saveError, "Failed to save scenario."));
       throw saveError;
     } finally {
       setIsSavingScenario(false);
@@ -134,7 +135,7 @@ const AdminScenarios = () => {
       setNotice("Scenario soft-deleted.");
       await loadScenarios();
     } catch (deleteError) {
-      setError(deleteError?.response?.data?.detail || "Failed to delete scenario.");
+      setError(getApiErrorMessage(deleteError, "Failed to delete scenario."));
     }
   };
 
@@ -144,7 +145,7 @@ const AdminScenarios = () => {
       setNotice("Scenario restored.");
       await loadScenarios();
     } catch (restoreError) {
-      setError(restoreError?.response?.data?.detail || "Failed to restore scenario.");
+      setError(getApiErrorMessage(restoreError, "Failed to restore scenario."));
     }
   };
 
@@ -154,7 +155,7 @@ const AdminScenarios = () => {
       setNotice("Scenario visibility updated.");
       await loadScenarios();
     } catch (toggleError) {
-      setError(toggleError?.response?.data?.detail || "Failed to toggle scenario.");
+      setError(getApiErrorMessage(toggleError, "Failed to toggle scenario."));
     }
   };
 
@@ -169,7 +170,7 @@ const AdminScenarios = () => {
       setSelectedIds([]);
       await loadScenarios();
     } catch (bulkError) {
-      setError(bulkError?.response?.data?.detail || "Bulk action failed.");
+      setError(getApiErrorMessage(bulkError, "Bulk action failed."));
     }
   };
 

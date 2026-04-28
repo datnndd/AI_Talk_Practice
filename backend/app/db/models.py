@@ -24,13 +24,13 @@ from app.modules.sessions.models.session_score import SessionScore
 
 # Curriculum
 from app.modules.curriculum.models import (
-    DictionaryTerm,
-    ExerciseAttempt,
-    LearningLevel,
+    DictionaryAudioCache,
+    LearningSection,
     Lesson,
-    LessonExercise,
-    UserExerciseProgress,
+    LessonAttempt,
+    Unit,
     UserLessonProgress,
+    UserUnitProgress,
 )
 
 # Gamification
@@ -47,13 +47,12 @@ __all__ = [
     "Correction",
     "DailyCheckin",
     "DailyStat",
-    "DictionaryTerm",
-    "ExerciseAttempt",
+    "DictionaryAudioCache",
     "GamificationSetting",
     "Message",
-    "LearningLevel",
+    "LearningSection",
     "Lesson",
-    "LessonExercise",
+    "LessonAttempt",
     "Notification",
     "NotificationReadState",
     "PaymentTransaction",
@@ -62,7 +61,8 @@ __all__ = [
     "Session",
     "SessionScore",
     "Subscription",
+    "Unit",
     "User",
-    "UserExerciseProgress",
     "UserLessonProgress",
+    "UserUnitProgress",
 ]

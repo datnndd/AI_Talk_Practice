@@ -15,7 +15,7 @@ const ConversationExerciseLauncher = ({ exercise, onAttempt }) => {
     setIsStarting(true);
     setError("");
     try {
-      const response = await curriculumApi.startConversationExercise(exercise.id);
+      const response = await curriculumApi.startConversationLesson(exercise.id);
       setSession(response);
       setSessionId(String(response.session_id));
     } catch (err) {
@@ -29,7 +29,7 @@ const ConversationExerciseLauncher = ({ exercise, onAttempt }) => {
     setIsScoring(true);
     setError("");
     try {
-      const response = await curriculumApi.attemptExercise(exercise.id, {
+      const response = await curriculumApi.attemptLesson(exercise.id, {
         session_id: Number(sessionId),
         answer: { session_id: Number(sessionId) },
       });
@@ -73,7 +73,7 @@ const ConversationExerciseLauncher = ({ exercise, onAttempt }) => {
       {session && (
         <div className="space-y-3 rounded-xl border border-border bg-card p-4">
           <p className="text-sm font-semibold text-muted-foreground">
-            Session #{session.session_id}. Sau khi hoàn tất, bấm chấm điểm để hoàn thành exercise.
+            Session #{session.session_id}. Sau khi hoàn tất, bấm chấm điểm để hoàn thành lesson.
           </p>
           <div className="flex flex-wrap gap-2">
             <input

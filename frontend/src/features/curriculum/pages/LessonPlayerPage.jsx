@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle, Circle } from "@phosphor-icons/react";
 import { curriculumApi } from "@/features/curriculum/api/curriculumApi";
-import VocabularyPronunciationExercise from "@/features/curriculum/components/VocabularyPronunciationExercise";
-import ClozeDictationExercise from "@/features/curriculum/components/ClozeDictationExercise";
-import SentencePronunciationExercise from "@/features/curriculum/components/SentencePronunciationExercise";
-import ConversationExerciseLauncher from "@/features/curriculum/components/ConversationExerciseLauncher";
+
+const VocabularyPronunciationExercise = lazy(() => import("@/features/curriculum/components/VocabularyPronunciationExercise"));
+const ClozeDictationExercise = lazy(() => import("@/features/curriculum/components/ClozeDictationExercise"));
+const SentencePronunciationExercise = lazy(() => import("@/features/curriculum/components/SentencePronunciationExercise"));
+const ConversationExerciseLauncher = lazy(() => import("@/features/curriculum/components/ConversationExerciseLauncher"));
+const WordAudioChoiceExercise = lazy(() => import("@/features/curriculum/components/WordAudioChoiceExercise"));
 
 const renderExercise = (exercise, onAttempt) => {
   if (exercise.type === "vocab_pronunciation") {
@@ -20,49 +22,52 @@ const renderExercise = (exercise, onAttempt) => {
   if (exercise.type === "interactive_conversation") {
     return <ConversationExerciseLauncher exercise={exercise} onAttempt={onAttempt} />;
   }
+  if (exercise.type === "word_audio_choice") {
+    return <WordAudioChoiceExercise exercise={exercise} onAttempt={onAttempt} />;
+  }
   return <p className="text-sm text-muted-foreground">Unsupported exercise type.</p>;
 };
 
 const LessonPlayerPage = () => {
-  const { lessonId } = useParams();
-  const [lesson, setLesson] = useState(null);
+  const { unitId } = useParams();
+  const [unit, setUnit] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [rewardNotice, setRewardNotice] = useState("");
 
-  const loadLesson = useCallback(async () => {
+  const loadUnit = useCallback(async () => {
     setIsLoading(true);
     setError("");
     try {
-      const data = await curriculumApi.getLesson(lessonId);
-      setLesson(data);
-      const firstOpen = data.exercises.findIndex((item) => item.progress?.status !== "completed");
+      const data = await curriculumApi.getUnit(unitId);
+      setUnit(data);
+      const firstOpen = data.lessons.findIndex((item) => item.progress?.status !== "completed");
       setActiveIndex(firstOpen >= 0 ? firstOpen : 0);
     } catch (err) {
-      setError(err?.response?.data?.detail || "Không thể tải bài học.");
+      setError(err?.response?.data?.detail || "Không thể tải unit.");
     } finally {
       setIsLoading(false);
     }
-  }, [lessonId]);
+  }, [unitId]);
 
   useEffect(() => {
-    void loadLesson();
-  }, [loadLesson]);
+    void loadUnit();
+  }, [loadUnit]);
 
-  const activeExercise = useMemo(() => lesson?.exercises?.[activeIndex], [lesson, activeIndex]);
+  const activeExercise = useMemo(() => unit?.lessons?.[activeIndex], [unit, activeIndex]);
 
   const handleAttempt = (result) => {
     if (result.reward) {
       setRewardNotice(`+${result.reward.xp_earned || 0} XP · +${result.reward.coin_earned || 0} Coin`);
     }
-    setLesson((current) => {
+    setUnit((current) => {
       if (!current) return current;
       return {
         ...current,
-        progress_status: result.lesson_completed ? "completed" : current.progress_status,
-        exercises: current.exercises.map((exercise) =>
-          exercise.id === result.exercise_id
+        progress_status: result.unit_completed ? "completed" : current.progress_status,
+        lessons: current.lessons.map((exercise) =>
+          exercise.id === result.lesson_id
             ? { ...exercise, progress: result.progress }
             : exercise
         ),
@@ -76,14 +81,14 @@ const LessonPlayerPage = () => {
     return <div className="p-8 text-sm font-semibold text-muted-foreground">Đang tải bài học...</div>;
   }
 
-  if (error || !lesson) {
+  if (error || !unit) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-10">
         <Link to="/learn" className="inline-flex items-center gap-2 text-sm font-bold text-primary">
           <ArrowLeft size={16} /> Quay lại lộ trình
         </Link>
         <div className="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-          {error || "Bài học không tồn tại."}
+          {error || "Unit không tồn tại."}
         </div>
       </div>
     );
@@ -96,11 +101,11 @@ const LessonPlayerPage = () => {
           <ArrowLeft size={16} /> Lộ trình
         </Link>
         <div className="rounded-xl border border-border bg-card p-4">
-          <h1 className="text-2xl font-black text-zinc-950">{lesson.title}</h1>
-          {lesson.description && <p className="mt-2 text-sm leading-6 text-muted-foreground">{lesson.description}</p>}
+          <h1 className="text-2xl font-black text-zinc-950">{unit.title}</h1>
+          {unit.description && <p className="mt-2 text-sm leading-6 text-muted-foreground">{unit.description}</p>}
         </div>
         <div className="space-y-2">
-          {lesson.exercises.map((exercise, index) => {
+          {unit.lessons.map((exercise, index) => {
             const completed = exercise.progress?.status === "completed";
             return (
               <button
@@ -122,7 +127,7 @@ const LessonPlayerPage = () => {
       <main className="rounded-xl border border-border bg-card p-5 shadow-sm">
         {rewardNotice && (
           <div className="mb-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">
-            Hoàn thành bài học: {rewardNotice}
+                Hoàn thành unit: {rewardNotice}
           </div>
         )}
         {activeExercise && (
@@ -135,18 +140,20 @@ const LessonPlayerPage = () => {
                 <h2 className="mt-1 text-2xl font-black text-zinc-950">{activeExercise.title}</h2>
               </div>
               <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-600">
-                Pass {Math.round(activeExercise.pass_score)} · +{lesson.xp_reward || 0} XP · +{lesson.coin_reward || 0} Coin
+                Pass {Math.round(activeExercise.pass_score)} · +{unit.xp_reward || 0} XP · +{unit.coin_reward || 0} Coin
               </span>
             </div>
-            {renderExercise(activeExercise, handleAttempt)}
+            <Suspense fallback={<div className="py-6 text-sm font-semibold text-muted-foreground">Đang tải nội dung bài...</div>}>
+              {renderExercise(activeExercise, handleAttempt)}
+            </Suspense>
             <div className="mt-8 flex justify-end">
               <button
                 type="button"
-                disabled={!canGoNext || activeIndex >= lesson.exercises.length - 1}
-                onClick={() => setActiveIndex((current) => Math.min(current + 1, lesson.exercises.length - 1))}
+                disabled={!canGoNext || activeIndex >= unit.lessons.length - 1}
+                onClick={() => setActiveIndex((current) => Math.min(current + 1, unit.lessons.length - 1))}
                 className="rounded-xl bg-zinc-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Bài tập tiếp theo
+                Lesson tiếp theo
               </button>
             </div>
           </>

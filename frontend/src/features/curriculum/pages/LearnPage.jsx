@@ -45,40 +45,40 @@ const LearnPage = () => {
       {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div>}
 
       <div className="space-y-8">
-        {(data?.levels || []).map((level) => (
-          <section key={level.id} className="space-y-4">
+        {(data?.sections || []).map((section) => (
+          <section key={section.id} className="space-y-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
-                <h2 className="text-2xl font-black text-zinc-950">{level.title}</h2>
-                {level.description && <p className="mt-1 text-sm text-muted-foreground">{level.description}</p>}
+                <h2 className="text-2xl font-black text-zinc-950">{section.title}</h2>
+                {section.description && <p className="mt-1 text-sm text-muted-foreground">{section.description}</p>}
               </div>
               <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black uppercase text-zinc-600">
-                {level.code}
+                {section.cefr_level || section.code}
               </span>
             </div>
             <div className="grid gap-3">
-              {level.lessons.map((lesson) => {
-                const completed = lesson.progress_status === "completed";
-                const Icon = lesson.is_locked ? LockKey : completed ? CheckCircle : PlayCircle;
+              {section.units.map((unit) => {
+                const completed = unit.progress_status === "completed";
+                const Icon = unit.is_locked ? LockKey : completed ? CheckCircle : PlayCircle;
                 return (
                   <Link
-                    key={lesson.id}
-                    to={lesson.is_locked ? "#" : `/learn/lessons/${lesson.id}`}
+                    key={unit.id}
+                    to={unit.is_locked ? "#" : `/learn/units/${unit.id}`}
                     className={`flex items-center gap-4 rounded-xl border p-4 transition ${
-                      lesson.is_locked
+                      unit.is_locked
                         ? "cursor-not-allowed border-zinc-200 bg-zinc-50 text-zinc-400"
                         : "border-border bg-card hover:border-primary/40 hover:shadow-sm"
                     }`}
                   >
                     <Icon size={26} weight="fill" className={completed ? "text-emerald-600" : "text-primary"} />
                     <div className="min-w-0 flex-1">
-                      <p className="font-black text-zinc-950">{lesson.title}</p>
+                      <p className="font-black text-zinc-950">{unit.title}</p>
                       <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                        {lesson.estimated_minutes || 10} phút · {lesson.progress_status.replace("_", " ")}
+                        {unit.progress_status.replace("_", " ")}
                       </p>
                     </div>
-                    {lesson.best_score != null && (
-                      <span className="text-sm font-black text-emerald-600">{Math.round(lesson.best_score)}</span>
+                    {unit.best_score != null && (
+                      <span className="text-sm font-black text-emerald-600">{Math.round(unit.best_score)}</span>
                     )}
                   </Link>
                 );

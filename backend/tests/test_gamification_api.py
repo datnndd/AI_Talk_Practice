@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from app.modules.curriculum.models import LearningLevel, Lesson, LessonExercise, UserExerciseProgress
+from app.modules.curriculum.models import LearningSection, Lesson, Unit
 from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.users.models.subscription import Subscription
@@ -11,29 +11,29 @@ from app.core.security import hash_password
 
 
 async def _seed_reward_lesson(db_session, *, xp_reward=50, coin_reward=2):
-    level = LearningLevel(code="a1", title="A1", order_index=0)
-    db_session.add(level)
+    section = LearningSection(code="a1", title="A1", order_index=0)
+    db_session.add(section)
     await db_session.flush()
-    lesson = Lesson(
-        level_id=level.id,
+    unit = Unit(
+        section_id=section.id,
         title="Reward lesson",
         order_index=0,
         xp_reward=xp_reward,
         coin_reward=coin_reward,
     )
-    db_session.add(lesson)
+    db_session.add(unit)
     await db_session.flush()
-    exercise = LessonExercise(
-        lesson_id=lesson.id,
+    lesson = Lesson(
+        unit_id=unit.id,
         type="cloze_dictation",
         title="Cloze",
         order_index=0,
         content={"passage": "I drink ___.", "blanks": [{"answer": "coffee"}]},
         pass_score=80,
     )
-    db_session.add(exercise)
+    db_session.add(lesson)
     await db_session.commit()
-    return lesson, exercise
+    return unit, lesson
 
 
 @pytest.mark.asyncio
@@ -54,23 +54,23 @@ async def test_gamification_dashboard_initializes_simple_defaults(test_client):
 
 @pytest.mark.asyncio
 async def test_lesson_completion_awards_configured_xp_coin_once(test_client, db_session, test_user):
-    _, exercise = await _seed_reward_lesson(db_session, xp_reward=75, coin_reward=6)
+    _, lesson = await _seed_reward_lesson(db_session, xp_reward=75, coin_reward=6)
 
     response = await test_client.post(
-        f"/api/exercises/{exercise.id}/attempt",
+        f"/api/lessons/{lesson.id}/attempt",
         json={"answer": {"blanks": ["coffee"]}},
     )
 
     assert response.status_code == 201
     body = response.json()
-    assert body["lesson_completed"] is True
+    assert body["unit_completed"] is True
     assert body["reward"]["reward"]["xp_earned"] == 75
     assert body["reward"]["reward"]["coin_earned"] == 6
     assert body["reward"]["dashboard"]["xp"]["total"] == 75
     assert body["reward"]["dashboard"]["coin"]["balance"] == 6
 
     retry = await test_client.post(
-        f"/api/exercises/{exercise.id}/attempt",
+        f"/api/lessons/{lesson.id}/attempt",
         json={"answer": {"blanks": ["coffee"]}},
     )
     assert retry.status_code == 201
@@ -82,7 +82,7 @@ async def test_lesson_completion_awards_configured_xp_coin_once(test_client, db_
 
 @pytest.mark.asyncio
 async def test_level_curve_and_level_coin_rewards(test_client, admin_client, db_session, test_user):
-    _, exercise = await _seed_reward_lesson(db_session, xp_reward=250, coin_reward=0)
+    _, lesson = await _seed_reward_lesson(db_session, xp_reward=250, coin_reward=0)
     settings = await admin_client.put(
         "/api/admin/gamification/settings",
         json={"level_coin_rewards": {"2": 10, "3": 20}, "reason": "level rewards"},
@@ -90,7 +90,7 @@ async def test_level_curve_and_level_coin_rewards(test_client, admin_client, db_
     assert settings.status_code == 200
 
     response = await test_client.post(
-        f"/api/exercises/{exercise.id}/attempt",
+        f"/api/lessons/{lesson.id}/attempt",
         json={"answer": {"blanks": ["coffee"]}},
     )
 

@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user, get_db
-from app.modules.curriculum.serializers import serialize_level, serialize_lesson
+from app.modules.curriculum.serializers import serialize_section, serialize_unit
 from app.modules.curriculum.schemas import (
     CurriculumTreeRead,
-    ExerciseAttemptRead,
-    ExerciseAttemptRequest,
-    LessonRead,
-    StartConversationExerciseRequest,
-    StartConversationExerciseResponse,
+    LessonAttemptRead,
+    LessonAttemptRequest,
+    StartConversationLessonRequest,
+    StartConversationLessonResponse,
+    UnitRead,
 )
-from app.modules.curriculum.services import CurriculumService, DictionaryService
+from app.modules.curriculum.services import CurriculumService, DictionaryApiService
 from app.modules.users.models.user import User
 
 router = APIRouter(tags=["curriculum"])
@@ -24,61 +24,68 @@ async def get_curriculum(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    levels, lesson_progress, exercise_progress, unlocked, current_lesson_id = await CurriculumService.curriculum_tree(
+    sections, unit_progress, lesson_progress, unlocked, current_unit_id = await CurriculumService.curriculum_tree(
         db,
         user.id,
     )
     return CurriculumTreeRead(
-        levels=[
-            serialize_level(
-                level,
+        sections=[
+            serialize_section(
+                section,
+                unit_progress=unit_progress,
                 lesson_progress=lesson_progress,
-                exercise_progress=exercise_progress,
-                unlocked_lesson_ids=unlocked,
+                unlocked_unit_ids=unlocked,
             )
-            for level in levels
+            for section in sections
         ],
-        current_lesson_id=current_lesson_id,
+        current_unit_id=current_unit_id,
     )
 
 
-@router.get("/lessons/{lesson_id}", response_model=LessonRead)
-async def get_lesson(
+@router.get("/units/{unit_id}", response_model=UnitRead)
+async def get_unit(
+    unit_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    unit, lesson_progress, is_unlocked, unit_progress = await CurriculumService.get_user_unit(
+        db,
+        user_id=user.id,
+        unit_id=unit_id,
+    )
+    return serialize_unit(
+        unit,
+        unit_progress=unit_progress,
+        lesson_progress=lesson_progress,
+        is_locked=not is_unlocked,
+        include_lessons=True,
+    )
+
+
+@router.post("/lessons/{lesson_id}/attempt", response_model=LessonAttemptRead, status_code=status.HTTP_201_CREATED)
+async def attempt_lesson(
     lesson_id: int,
+    body: LessonAttemptRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    lesson, exercise_progress, _ = await CurriculumService.get_user_lesson(db, user_id=user.id, lesson_id=lesson_id)
-    _, lesson_progress, _, unlocked, _ = await CurriculumService.curriculum_tree(db, user.id)
-    return serialize_lesson(
-        lesson,
-        lesson_progress=lesson_progress.get(lesson.id),
-        exercise_progress=exercise_progress,
-        is_locked=lesson.id not in unlocked,
-        include_exercises=True,
-    )
+    return await CurriculumService.attempt_lesson(db, user=user, lesson_id=lesson_id, payload=body)
 
 
-@router.post("/exercises/{exercise_id}/attempt", response_model=ExerciseAttemptRead, status_code=status.HTTP_201_CREATED)
-async def attempt_exercise(
-    exercise_id: int,
-    body: ExerciseAttemptRequest,
+@router.post("/lessons/{lesson_id}/start-conversation", response_model=StartConversationLessonResponse)
+async def start_conversation_lesson(
+    lesson_id: int,
+    body: StartConversationLessonRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await CurriculumService.attempt_exercise(db, user=user, exercise_id=exercise_id, payload=body)
+    return await CurriculumService.start_conversation_lesson(db, user=user, lesson_id=lesson_id, payload=body)
 
 
-@router.post("/exercises/{exercise_id}/start-conversation", response_model=StartConversationExerciseResponse)
-async def start_conversation_exercise(
-    exercise_id: int,
-    body: StartConversationExerciseRequest,
+@router.get("/curriculum/dictionary/audio")
+async def dictionary_audio(
+    word: str = Query(min_length=1),
+    lang: str = Query(default="en", min_length=2, max_length=10),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
-    return await CurriculumService.start_conversation_exercise(db, user=user, exercise_id=exercise_id, payload=body)
-
-
-@router.get("/curriculum/dictionary/audio/{word}")
-async def dictionary_audio(word: str):
-    return await DictionaryService.get_or_fetch_audio(word)
+    return await DictionaryApiService.get_audio_response(db, word=word, language=lang)

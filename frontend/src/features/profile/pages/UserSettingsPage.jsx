@@ -3,6 +3,17 @@ import { Link, useNavigate } from "react-router-dom";
 import { CaretLeft, Camera, ShieldCheck, User as UserIcon, SignOut, Trash } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 
+const toCommaText = (value) => {
+  if (!value) return "";
+  if (Array.isArray(value)) return value.join(", ");
+  return String(value);
+};
+
+const toNullableString = (value) => {
+  const trimmed = String(value || "").trim();
+  return trimmed || null;
+};
+
 const UserSettingsPage = () => {
   const { user, updateProfile, changePassword, logout } = useAuth();
   const navigate = useNavigate();
@@ -11,6 +22,14 @@ const UserSettingsPage = () => {
     display_name: user?.display_name || "",
     avatar: user?.avatar || "",
     handle: user?.preferences?.handle || "",
+    age: user?.age || "",
+    native_language: user?.native_language || "vi",
+    target_language: user?.target_language || "en",
+    level: user?.level || "beginner",
+    daily_goal: user?.daily_goal || 15,
+    learning_purpose: toCommaText(user?.learning_purpose),
+    favorite_topics: toCommaText(user?.favorite_topics),
+    main_challenge: user?.main_challenge || "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -28,6 +47,14 @@ const UserSettingsPage = () => {
         display_name: user.display_name || "",
         avatar: user.avatar || "",
         handle: user.preferences?.handle || "",
+        age: user.age || "",
+        native_language: user.native_language || "vi",
+        target_language: user.target_language || "en",
+        level: user.level || "beginner",
+        daily_goal: user.daily_goal || 15,
+        learning_purpose: toCommaText(user.learning_purpose),
+        favorite_topics: toCommaText(user.favorite_topics),
+        main_challenge: user.main_challenge || "",
       });
     }
   }, [user]);
@@ -37,10 +64,25 @@ const UserSettingsPage = () => {
     setIsSaving(true);
     setMessage({ type: "", text: "" });
     try {
-      await updateProfile(formData);
-      setMessage({ type: "success", text: "Profile updated successfully!" });
+      await updateProfile({
+        display_name: toNullableString(formData.display_name),
+        avatar: toNullableString(formData.avatar),
+        age: formData.age === "" ? null : Number(formData.age),
+        native_language: toNullableString(formData.native_language),
+        target_language: toNullableString(formData.target_language),
+        level: toNullableString(formData.level),
+        daily_goal: formData.daily_goal === "" ? null : Number(formData.daily_goal),
+        learning_purpose: toNullableString(formData.learning_purpose),
+        favorite_topics: toNullableString(formData.favorite_topics),
+        main_challenge: toNullableString(formData.main_challenge),
+        preferences: {
+          ...(user?.preferences || {}),
+          handle: toNullableString(formData.handle),
+        },
+      });
+      setMessage({ type: "success", text: "Đã cập nhật hồ sơ." });
     } catch {
-      setMessage({ type: "error", text: "Failed to update profile. Please try again." });
+      setMessage({ type: "error", text: "Không thể cập nhật hồ sơ. Vui lòng thử lại." });
     } finally {
       setIsSaving(false);
     }
@@ -58,10 +100,10 @@ const UserSettingsPage = () => {
         current_password: passwordData.current_password,
         new_password: passwordData.new_password,
       });
-      setMessage({ type: "success", text: "Password changed successfully!" });
+      setMessage({ type: "success", text: "Đã đổi mật khẩu." });
       setPasswordData({ current_password: "", new_password: "", confirm_password: "" });
     } catch {
-      setMessage({ type: "error", text: "Failed to change password. check your current password." });
+      setMessage({ type: "error", text: "Không thể đổi mật khẩu. Kiểm tra lại mật khẩu hiện tại." });
     } finally {
       setIsSaving(false);
     }
@@ -80,14 +122,14 @@ const UserSettingsPage = () => {
           <Link to="/profile" className="p-2 rounded-xl hover:bg-[#f7f7f7] text-[#afafaf] transition-colors">
             <CaretLeft size={24} weight="bold" />
           </Link>
-          <h1 className="text-2xl font-black text-[#4b4b4b]">Settings</h1>
+          <h1 className="text-2xl font-black text-[#4b4b4b]">Cài đặt hồ sơ</h1>
         </div>
         <button 
           onClick={handleLogout}
           className="flex items-center gap-2 text-sm font-black uppercase text-[#ff4b4b] hover:brightness-90 px-4 py-2"
         >
           <SignOut size={20} weight="bold" />
-          Logout
+          Đăng xuất
         </button>
       </div>
 
@@ -102,11 +144,11 @@ const UserSettingsPage = () => {
         <div className="lg:col-span-1 space-y-2">
           <button className="flex w-full items-center gap-4 rounded-xl border-2 border-b-4 border-[#84d8ff] bg-[#ddf4ff] p-4 text-left font-black uppercase text-[#1cb0f6] transition-all">
             <UserIcon size={24} weight="bold" />
-            Account
+            Tài khoản
           </button>
           <button className="flex w-full items-center gap-4 rounded-xl border-2 border-transparent p-4 text-left font-black uppercase text-[#afafaf] transition-all hover:bg-[#f7f7f7]">
             <ShieldCheck size={24} weight="bold" />
-            Privacy
+            Quyền riêng tư
           </button>
         </div>
 
@@ -114,7 +156,7 @@ const UserSettingsPage = () => {
         <div className="lg:col-span-2 space-y-12">
           {/* Account Form */}
           <section className="space-y-6">
-            <h2 className="text-xl font-black text-[#4b4b4b]">Account Information</h2>
+            <h2 className="text-xl font-black text-[#4b4b4b]">Thông tin tài khoản</h2>
             
             <form onSubmit={handleProfileUpdate} className="space-y-6">
               <div className="flex flex-col gap-6 sm:flex-row sm:items-end">
@@ -132,7 +174,7 @@ const UserSettingsPage = () => {
                 </div>
                 <div className="flex-1 space-y-4">
                   <div>
-                    <label className="app-label">Display Name</label>
+                    <label className="app-label">Tên hiển thị</label>
                     <input 
                       type="text" 
                       className="app-input" 
@@ -152,7 +194,117 @@ const UserSettingsPage = () => {
                   onChange={(e) => setFormData({...formData, handle: e.target.value})}
                   placeholder="learner123"
                 />
-                <p className="mt-2 text-xs font-bold text-[#afafaf]">This is your unique handle used for leaderboards and friends.</p>
+                <p className="mt-2 text-xs font-bold text-[#afafaf]">Tên định danh được lưu trong preferences.handle.</p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="app-label">Avatar URL</label>
+                  <input
+                    type="url"
+                    className="app-input"
+                    value={formData.avatar}
+                    onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                    placeholder="https://..."
+                  />
+                </div>
+                <div>
+                  <label className="app-label">Tuổi</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="120"
+                    className="app-input"
+                    value={formData.age}
+                    onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="app-label">Ngôn ngữ gốc</label>
+                  <input
+                    type="text"
+                    className="app-input"
+                    value={formData.native_language}
+                    onChange={(e) => setFormData({ ...formData, native_language: e.target.value })}
+                    placeholder="vi"
+                  />
+                </div>
+                <div>
+                  <label className="app-label">Ngôn ngữ học</label>
+                  <input
+                    type="text"
+                    className="app-input"
+                    value={formData.target_language}
+                    onChange={(e) => setFormData({ ...formData, target_language: e.target.value })}
+                    placeholder="en"
+                  />
+                </div>
+                <div>
+                  <label className="app-label">Trình độ</label>
+                  <select
+                    className="app-input"
+                    value={formData.level}
+                    onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                  >
+                    <option value="beginner">beginner</option>
+                    <option value="intermediate">intermediate</option>
+                    <option value="advanced">advanced</option>
+                    <option value="A1">A1</option>
+                    <option value="A2">A2</option>
+                    <option value="B1">B1</option>
+                    <option value="B2">B2</option>
+                    <option value="C1">C1</option>
+                    <option value="C2">C2</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="app-label">Mục tiêu mỗi ngày (phút)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="1440"
+                  className="app-input"
+                  value={formData.daily_goal}
+                  onChange={(e) => setFormData({ ...formData, daily_goal: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="app-label">Mục tiêu học</label>
+                <input
+                  type="text"
+                  className="app-input"
+                  value={formData.learning_purpose}
+                  onChange={(e) => setFormData({ ...formData, learning_purpose: e.target.value })}
+                  placeholder="Du lịch, công việc, phỏng vấn..."
+                />
+              </div>
+
+              <div>
+                <label className="app-label">Chủ đề yêu thích</label>
+                <input
+                  type="text"
+                  className="app-input"
+                  value={formData.favorite_topics}
+                  onChange={(e) => setFormData({ ...formData, favorite_topics: e.target.value })}
+                  placeholder="Travel, Business, Daily conversation"
+                />
+                <p className="mt-2 text-xs font-bold text-[#afafaf]">Ngăn cách nhiều chủ đề bằng dấu phẩy.</p>
+              </div>
+
+              <div>
+                <label className="app-label">Thử thách chính</label>
+                <textarea
+                  className="app-input min-h-28"
+                  value={formData.main_challenge}
+                  onChange={(e) => setFormData({ ...formData, main_challenge: e.target.value })}
+                  placeholder="Ví dụ: phát âm chưa tự nhiên, thiếu từ vựng..."
+                />
               </div>
 
               <div className="pt-4">
@@ -161,7 +313,7 @@ const UserSettingsPage = () => {
                   disabled={isSaving}
                   className="app-button-primary w-full sm:w-auto px-12"
                 >
-                  {isSaving ? "Saving..." : "Save Changes"}
+                  {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
                 </button>
               </div>
             </form>
@@ -169,11 +321,11 @@ const UserSettingsPage = () => {
 
           {/* Password Form */}
           <section className="space-y-6 pt-12 border-t-2 border-[#e5e5e5]">
-            <h2 className="text-xl font-black text-[#4b4b4b]">Security</h2>
+            <h2 className="text-xl font-black text-[#4b4b4b]">Bảo mật</h2>
             
             <form onSubmit={handlePasswordChange} className="space-y-6">
               <div>
-                <label className="app-label">Current Password</label>
+                <label className="app-label">Mật khẩu hiện tại</label>
                 <input 
                   type="password" 
                   className="app-input" 
@@ -182,7 +334,7 @@ const UserSettingsPage = () => {
                 />
               </div>
               <div>
-                <label className="app-label">New Password</label>
+                <label className="app-label">Mật khẩu mới</label>
                 <input 
                   type="password" 
                   className="app-input" 
@@ -191,7 +343,7 @@ const UserSettingsPage = () => {
                 />
               </div>
               <div>
-                <label className="app-label">Confirm New Password</label>
+                <label className="app-label">Nhập lại mật khẩu mới</label>
                 <input 
                   type="password" 
                   className="app-input" 
@@ -206,7 +358,7 @@ const UserSettingsPage = () => {
                   disabled={isSaving}
                   className="app-button-secondary w-full sm:w-auto"
                 >
-                  Change Password
+                  Đổi mật khẩu
                 </button>
               </div>
             </form>
@@ -214,11 +366,11 @@ const UserSettingsPage = () => {
 
           {/* Danger Zone */}
           <section className="space-y-6 pt-12 border-t-2 border-[#e5e5e5]">
-             <h2 className="text-xl font-black text-[#ff4b4b]">Danger Zone</h2>
-             <p className="text-sm font-bold text-[#afafaf]">Once you delete your account, there is no going back. Please be certain.</p>
+             <h2 className="text-xl font-black text-[#ff4b4b]">Vùng nguy hiểm</h2>
+             <p className="text-sm font-bold text-[#afafaf]">Sau khi xóa tài khoản, dữ liệu không thể khôi phục.</p>
              <button className="flex items-center gap-2 rounded-xl border-2 border-b-4 border-[#ff4b4b]/20 bg-white px-6 py-3 font-black uppercase tracking-wide text-[#ff4b4b] hover:bg-[#fff0f0] active:border-b-2 active:translate-y-[2px] transition-all">
                 <Trash size={20} weight="bold" />
-                Delete Account
+                Xóa tài khoản
              </button>
           </section>
         </div>

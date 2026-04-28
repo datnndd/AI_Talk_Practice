@@ -42,21 +42,8 @@ const TopBar = () => {
 
   return (
     <div className="flex items-center gap-6 px-8 py-4 bg-background border-b border-border sticky top-0 z-40">
-      {/* Search Bar */}
-      <div className="relative mr-auto max-w-md flex-1">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true">
-          <path d="m21 21-4.34-4.34"></path>
-          <circle cx="11" cy="11" r="8"></circle>
-        </svg>
-        <input 
-          type="text" 
-          placeholder="Nhập từ khóa để tìm kiếm..." 
-          className="h-10 w-full rounded-full border border-border bg-card pl-11 pr-4 text-sm outline-none focus:border-primary transition-all"
-        />
-      </div>
-
       {/* Stats Area */}
-      <div className="flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1.5 shadow-sm">
+      <div className="ml-auto flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1.5 shadow-sm">
         {/* Level */}
         <div className="flex items-center gap-2 px-3 py-1">
           <span className="text-lg leading-none">⭐</span>

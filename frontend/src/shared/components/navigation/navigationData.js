@@ -19,23 +19,23 @@ export const publicNavItems = [
 ];
 
 export const learnerNavItems = [
-  { label: "Dashboard", path: "/dashboard", icon: HouseLine },
-  { label: "Learn", path: "/learn", icon: GraduationCap },
-  { label: "Leaderboard", path: "/leaderboard", icon: Trophy },
-  { label: "Topics", path: "/topics", icon: BookOpenText },
-  { label: "Shop", path: "/shop", icon: Storefront },
-  { label: "Plan", path: "/subscription", icon: Crown },
-  { label: "Profile", path: "/profile", icon: UserCircle },
+  { label: "Tổng quan", path: "/dashboard", icon: HouseLine },
+  { label: "Học tập", path: "/learn", icon: GraduationCap },
+  { label: "Bảng xếp hạng", path: "/leaderboard", icon: Trophy },
+  { label: "Thực hành", path: "/topics", icon: BookOpenText },
+  { label: "Cửa hàng", path: "/shop", icon: Storefront },
+  { label: "Gói học", path: "/subscription", icon: Crown },
+  { label: "Hồ sơ", path: "/profile", icon: UserCircle },
 ];
 
 export const learnerTabItems = [
-  { label: "Dashboard", path: "/dashboard", icon: HouseLine },
-  { label: "Learn", path: "/learn", icon: GraduationCap },
-  { label: "Leaderboard", path: "/leaderboard", icon: Trophy },
-  { label: "Topics", path: "/topics", icon: BookOpenText },
-  { label: "Shop", path: "/shop", icon: Storefront },
-  { label: "Plan", path: "/subscription", icon: Crown },
-  { label: "Profile", path: "/profile", icon: UserCircle },
+  { label: "Tổng quan", path: "/dashboard", icon: HouseLine },
+  { label: "Học tập", path: "/learn", icon: GraduationCap },
+  { label: "Bảng xếp hạng", path: "/leaderboard", icon: Trophy },
+  { label: "Thực hành", path: "/topics", icon: BookOpenText },
+  { label: "Cửa hàng", path: "/shop", icon: Storefront },
+  { label: "Gói học", path: "/subscription", icon: Crown },
+  { label: "Hồ sơ", path: "/profile", icon: UserCircle },
 ];
 
 export const adminNavItems = [

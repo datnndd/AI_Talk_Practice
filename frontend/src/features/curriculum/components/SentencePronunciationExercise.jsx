@@ -5,18 +5,20 @@ import { createRecorder } from "@/features/curriculum/utils/audioRecorder";
 
 const SentencePronunciationExercise = ({ exercise, onAttempt }) => {
   const [recording, setRecording] = useState(false);
-  const [transcript, setTranscript] = useState(exercise.content?.reference_text || "");
   const [feedback, setFeedback] = useState(exercise.progress?.state?.last_feedback || null);
   const [error, setError] = useState("");
   const recorderRef = useRef(null);
 
   const submitAudio = async (audioBase64) => {
-    const response = await curriculumApi.attemptExercise(exercise.id, {
-      audio_base64: audioBase64,
-      answer: { transcript },
-    });
-    setFeedback(response.feedback);
-    onAttempt(response);
+    try {
+      const response = await curriculumApi.attemptLesson(exercise.id, {
+        audio_base64: audioBase64,
+      });
+      setFeedback(response.feedback);
+      onAttempt(response);
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Không thể chấm phát âm. Vui lòng thử lại.");
+    }
   };
 
   const toggleRecording = async () => {
@@ -42,14 +44,6 @@ const SentencePronunciationExercise = ({ exercise, onAttempt }) => {
         <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Câu mẫu</p>
         <p className="mt-2 text-xl font-black leading-8 text-zinc-950">{exercise.content?.reference_text}</p>
       </div>
-      <label className="block space-y-2">
-        <span className="text-xs font-bold text-muted-foreground">Transcript fallback khi chạy local không có Azure</span>
-        <input
-          value={transcript}
-          onChange={(event) => setTranscript(event.target.value)}
-          className="w-full rounded-xl border border-border px-4 py-3 text-sm font-semibold outline-none focus:border-primary"
-        />
-      </label>
       <button
         type="button"
         onClick={toggleRecording}

@@ -57,7 +57,7 @@ function App() {
         <Route path="/leaderboard" element={<PrivateRoute>{withAppLayout(<LeaderboardPage />)}</PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute>{withAppLayout(<DashboardPage />)}</PrivateRoute>} />
         <Route path="/learn" element={<PrivateRoute>{withAppLayout(<LearnPage />)}</PrivateRoute>} />
-        <Route path="/learn/lessons/:lessonId" element={<PrivateRoute>{withAppLayout(<LessonPlayerPage />)}</PrivateRoute>} />
+        <Route path="/learn/units/:unitId" element={<PrivateRoute>{withAppLayout(<LessonPlayerPage />)}</PrivateRoute>} />
         <Route path="/shop" element={<PrivateRoute>{withAppLayout(<ShopPage />)}</PrivateRoute>} />
         <Route path="/subscription" element={<PrivateRoute>{withAppLayout(<SubscriptionPage />)}</PrivateRoute>} />
         

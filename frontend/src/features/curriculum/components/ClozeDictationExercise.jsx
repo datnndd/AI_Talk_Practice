@@ -13,7 +13,7 @@ const ClozeDictationExercise = ({ exercise, onAttempt }) => {
     setIsSubmitting(true);
     setError("");
     try {
-      const response = await curriculumApi.attemptExercise(exercise.id, { answer: { blanks: answers } });
+      const response = await curriculumApi.attemptLesson(exercise.id, { answer: { blanks: answers } });
       setResult(response.feedback);
       onAttempt(response);
     } catch (err) {

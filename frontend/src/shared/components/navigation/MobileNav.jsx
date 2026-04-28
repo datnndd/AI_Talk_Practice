@@ -6,17 +6,17 @@ import { isRouteActive } from "./navigationData";
 
 const MOBILE_NAV_ITEMS = [
   {
-    label: "Learn",
+    label: "Học",
     path: "/learn",
     Icon: House,
   },
   {
-    label: "Topics",
+    label: "Luyện",
     path: "/topics",
     Icon: Notebook,
   },
   {
-    label: "Leader",
+    label: "BXH",
     path: "/leaderboard",
     Icon: Medal,
   },
@@ -26,7 +26,7 @@ const MOBILE_NAV_ITEMS = [
     Icon: Storefront,
   },
   {
-    label: "Profile",
+    label: "Hồ sơ",
     path: "/profile",
     Icon: UserCircle,
     usesAvatar: true,

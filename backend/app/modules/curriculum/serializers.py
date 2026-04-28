@@ -1,14 +1,45 @@
 from __future__ import annotations
 
-from app.modules.curriculum.models import LearningLevel, Lesson, LessonExercise, UserExerciseProgress, UserLessonProgress
-from app.modules.curriculum.schemas import LearningLevelRead, LessonExerciseRead, LessonRead, ProgressSummary
+from urllib.parse import urlencode
+
+from app.modules.curriculum.models import LearningSection, Lesson, Unit, UserLessonProgress, UserUnitProgress
+from app.modules.curriculum.schemas import LearningSectionRead, LessonRead, ProgressSummary, UnitRead
 
 
-def serialize_exercise(
-    exercise: LessonExercise,
+def dictionary_audio_url(word: str, language: str = "en") -> str:
+    query = urlencode({"word": word, "lang": language or "en"})
+    return f"/api/curriculum/dictionary/audio?{query}"
+
+
+def _enriched_lesson_content(lesson: Lesson) -> dict:
+    content = dict(lesson.content or {})
+    if lesson.type != "word_audio_choice":
+        return content
+
+    language = content.get("language") or "en"
+    enriched_options = []
+    for option in content.get("options") or []:
+        if not isinstance(option, dict):
+            continue
+        word = str(option.get("word") or "").strip()
+        enriched_options.append(
+            {
+                **option,
+                "audio_url": dictionary_audio_url(word, language) if word else None,
+                "source": "dict.minhqnd.com",
+            }
+        )
+    content["language"] = language
+    content["options"] = enriched_options
+    return content
+
+
+def serialize_lesson(
+    lesson: Lesson,
     *,
-    progress: UserExerciseProgress | None = None,
-) -> LessonExerciseRead:
+    progress: UserLessonProgress | None = None,
+    include_content: bool = True,
+) -> LessonRead:
     progress_read = None
     if progress is not None:
         progress_read = ProgressSummary(
@@ -17,88 +48,99 @@ def serialize_exercise(
             attempt_count=progress.attempt_count or 0,
             state=dict(progress.state or {}),
         )
-    return LessonExerciseRead.model_validate(
-        {
-            "id": exercise.id,
-            "lesson_id": exercise.lesson_id,
-            "type": exercise.type,
-            "title": exercise.title,
-            "order_index": exercise.order_index,
-            "content": exercise.content or {},
-            "pass_score": exercise.pass_score,
-            "is_required": exercise.is_required,
-            "is_active": exercise.is_active,
-            "progress": progress_read,
-            "created_at": exercise.created_at,
-            "updated_at": exercise.updated_at,
-        }
-    )
-
-
-def serialize_lesson(
-    lesson: Lesson,
-    *,
-    lesson_progress: UserLessonProgress | None = None,
-    exercise_progress: dict[int, UserExerciseProgress] | None = None,
-    is_locked: bool = False,
-    include_exercises: bool = True,
-) -> LessonRead:
-    exercises = lesson.__dict__.get("exercises", [])
     return LessonRead.model_validate(
         {
             "id": lesson.id,
-            "level_id": lesson.level_id,
+            "unit_id": lesson.unit_id,
+            "type": lesson.type,
             "title": lesson.title,
-            "description": lesson.description,
             "order_index": lesson.order_index,
-            "estimated_minutes": lesson.estimated_minutes,
-            "xp_reward": lesson.xp_reward,
-            "coin_reward": lesson.coin_reward,
+            "content": _enriched_lesson_content(lesson) if include_content else {},
+            "pass_score": lesson.pass_score,
+            "is_required": lesson.is_required,
             "is_active": lesson.is_active,
-            "is_locked": is_locked,
-            "progress_status": lesson_progress.status if lesson_progress else "not_started",
-            "best_score": lesson_progress.best_score if lesson_progress else None,
-            "exercises": [
-                serialize_exercise(item, progress=(exercise_progress or {}).get(item.id))
-                for item in sorted(exercises, key=lambda exercise: (exercise.order_index, exercise.id))
-                if include_exercises and item.is_active
-            ],
+            "progress": progress_read,
             "created_at": lesson.created_at,
             "updated_at": lesson.updated_at,
         }
     )
 
 
-def serialize_level(
-    level: LearningLevel,
+def serialize_unit(
+    unit: Unit,
     *,
+    unit_progress: UserUnitProgress | None = None,
     lesson_progress: dict[int, UserLessonProgress] | None = None,
-    exercise_progress: dict[int, UserExerciseProgress] | None = None,
-    unlocked_lesson_ids: set[int] | None = None,
-    include_exercises: bool = False,
-) -> LearningLevelRead:
-    unlocked_lesson_ids = unlocked_lesson_ids or set()
-    lessons = level.__dict__.get("lessons", [])
-    return LearningLevelRead.model_validate(
+    is_locked: bool = False,
+    include_lessons: bool = True,
+    include_inactive: bool = False,
+    include_lesson_content: bool = True,
+) -> UnitRead:
+    lessons = unit.__dict__.get("lessons", [])
+    return UnitRead.model_validate(
         {
-            "id": level.id,
-            "code": level.code,
-            "title": level.title,
-            "description": level.description,
-            "order_index": level.order_index,
-            "is_active": level.is_active,
+            "id": unit.id,
+            "section_id": unit.section_id,
+            "title": unit.title,
+            "description": unit.description,
+            "order_index": unit.order_index,
+            "estimated_minutes": unit.estimated_minutes,
+            "xp_reward": unit.xp_reward,
+            "coin_reward": unit.coin_reward,
+            "is_active": unit.is_active,
+            "is_locked": is_locked,
+            "progress_status": unit_progress.status if unit_progress else "not_started",
+            "best_score": unit_progress.best_score if unit_progress else None,
             "lessons": [
                 serialize_lesson(
-                    lesson,
-                    lesson_progress=(lesson_progress or {}).get(lesson.id),
-                    exercise_progress=exercise_progress or {},
-                    is_locked=lesson.id not in unlocked_lesson_ids,
-                    include_exercises=include_exercises,
+                    item,
+                    progress=(lesson_progress or {}).get(item.id),
+                    include_content=include_lesson_content,
                 )
-                for lesson in sorted(lessons, key=lambda item: (item.order_index, item.id))
-                if lesson.is_active
+                for item in sorted(lessons, key=lambda lesson: (lesson.order_index, lesson.id))
+                if include_lessons and (include_inactive or item.is_active)
             ],
-            "created_at": level.created_at,
-            "updated_at": level.updated_at,
+            "created_at": unit.created_at,
+            "updated_at": unit.updated_at,
+        }
+    )
+
+
+def serialize_section(
+    section: LearningSection,
+    *,
+    unit_progress: dict[int, UserUnitProgress] | None = None,
+    lesson_progress: dict[int, UserLessonProgress] | None = None,
+    unlocked_unit_ids: set[int] | None = None,
+    include_lessons: bool = False,
+    include_inactive: bool = False,
+    include_lesson_content: bool = True,
+) -> LearningSectionRead:
+    unlocked_unit_ids = unlocked_unit_ids or set()
+    units = section.__dict__.get("units", [])
+    return LearningSectionRead.model_validate(
+        {
+            "id": section.id,
+            "code": section.code,
+            "title": section.title,
+            "cefr_level": section.cefr_level,
+            "description": section.description,
+            "order_index": section.order_index,
+            "is_active": section.is_active,
+            "units": [
+                serialize_unit(
+                    unit,
+                    unit_progress=(unit_progress or {}).get(unit.id),
+                    lesson_progress=lesson_progress or {},
+                    is_locked=unit.id not in unlocked_unit_ids,
+                    include_lessons=include_lessons,
+                    include_inactive=include_inactive,
+                    include_lesson_content=include_lesson_content,
+                )
+                for unit in sorted(units, key=lambda item: (item.order_index, item.id))
+                if include_inactive or unit.is_active
+            ],
+            "created_at": section.created_at,
+            "updated_at": section.updated_at,
         }
     )

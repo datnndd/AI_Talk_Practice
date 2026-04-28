@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sparkle, X } from "@phosphor-icons/react";
 
 import ListEditorField from "./ListEditorField";
+import { getApiErrorMessage } from "@/shared/api/httpClient";
 
 const prettyList = (value) => (Array.isArray(value) ? value.join("\n") : "");
 const parseListInput = (value = "") =>
@@ -65,7 +66,7 @@ const ScenarioEditorModal = ({
       setFormError("");
       await onSubmit(payload);
     } catch (error) {
-      setFormError(error.message || "Please check the form before saving.");
+      setFormError(getApiErrorMessage(error, "Please check the form before saving."));
     }
   };
 
@@ -82,7 +83,7 @@ const ScenarioEditorModal = ({
       updateField("ai_system_prompt", generated.prompt || "");
       setFormError("");
     } catch (error) {
-      setFormError(error?.response?.data?.detail || error.message || "Failed to generate default prompt.");
+      setFormError(getApiErrorMessage(error, "Failed to generate default prompt."));
     } finally {
       setIsGeneratingPrompt(false);
     }

@@ -5,51 +5,81 @@ export const curriculumApi = {
     const { data } = await httpClient.get("/curriculum");
     return data;
   },
-  getLesson: async (lessonId) => {
-    const { data } = await httpClient.get(`/lessons/${lessonId}`);
+  getUnit: async (unitId) => {
+    const { data } = await httpClient.get(`/units/${unitId}`);
     return data;
   },
-  attemptExercise: async (exerciseId, payload) => {
-    const { data } = await httpClient.post(`/exercises/${exerciseId}/attempt`, payload);
+  attemptLesson: async (lessonId, payload) => {
+    const { data } = await httpClient.post(`/lessons/${lessonId}/attempt`, payload);
     return data;
   },
-  startConversationExercise: async (exerciseId, payload = {}) => {
-    const { data } = await httpClient.post(`/exercises/${exerciseId}/start-conversation`, payload);
+  startConversationLesson: async (lessonId, payload = {}) => {
+    const { data } = await httpClient.post(`/lessons/${lessonId}/start-conversation`, payload);
     return data;
   },
 };
 
 export const adminCurriculumApi = {
-  listLevels: async () => {
-    const { data } = await httpClient.get("/admin/curriculum/levels");
+  listSections: async () => {
+    const { data } = await httpClient.get("/admin/curriculum/sections");
     return data;
   },
-  createLevel: async (payload) => {
-    const { data } = await httpClient.post("/admin/curriculum/levels", payload);
+  createSection: async (payload) => {
+    const { data } = await httpClient.post("/admin/curriculum/sections", payload);
     return data;
   },
-  updateLevel: async (levelId, payload) => {
-    const { data } = await httpClient.put(`/admin/curriculum/levels/${levelId}`, payload);
+  updateSection: async (sectionId, payload) => {
+    const { data } = await httpClient.put(`/admin/curriculum/sections/${sectionId}`, payload);
+    return data;
+  },
+  deleteSection: async (sectionId) => {
+    const { data } = await httpClient.delete(`/admin/curriculum/sections/${sectionId}`);
+    return data;
+  },
+  reorderSections: async (items) => {
+    const { data } = await httpClient.post("/admin/curriculum/sections/reorder", { items });
+    return data;
+  },
+  createUnit: async (payload) => {
+    const { data } = await httpClient.post("/admin/curriculum/units", payload);
+    return data;
+  },
+  updateUnit: async (unitId, payload) => {
+    const { data } = await httpClient.put(`/admin/curriculum/units/${unitId}`, payload);
+    return data;
+  },
+  deleteUnit: async (unitId) => {
+    const { data } = await httpClient.delete(`/admin/curriculum/units/${unitId}`);
+    return data;
+  },
+  reorderUnits: async (items) => {
+    const { data } = await httpClient.post("/admin/curriculum/units/reorder", { items });
     return data;
   },
   createLesson: async (payload) => {
     const { data } = await httpClient.post("/admin/curriculum/lessons", payload);
     return data;
   },
+  getLesson: async (lessonId) => {
+    const { data } = await httpClient.get(`/admin/curriculum/lessons/${lessonId}`);
+    return data;
+  },
   updateLesson: async (lessonId, payload) => {
     const { data } = await httpClient.put(`/admin/curriculum/lessons/${lessonId}`, payload);
     return data;
   },
-  createExercise: async (payload) => {
-    const { data } = await httpClient.post("/admin/curriculum/exercises", payload);
+  deleteLesson: async (lessonId) => {
+    const { data } = await httpClient.delete(`/admin/curriculum/lessons/${lessonId}`);
     return data;
   },
-  updateExercise: async (exerciseId, payload) => {
-    const { data } = await httpClient.put(`/admin/curriculum/exercises/${exerciseId}`, payload);
+  reorderLessons: async (items) => {
+    const { data } = await httpClient.post("/admin/curriculum/lessons/reorder", { items });
     return data;
   },
-  previewDictionary: async (words) => {
-    const { data } = await httpClient.post("/admin/curriculum/dictionary/preview", { words });
+  lookupDictionary: async ({ word, lang = "en", defLang = "vi" }) => {
+    const { data } = await httpClient.get("/admin/curriculum/dictionary/lookup", {
+      params: { word, lang, def_lang: defLang },
+    });
     return data;
   },
 };

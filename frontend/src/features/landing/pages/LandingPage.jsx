@@ -1,6 +1,6 @@
 import LandingNavbar from "@/features/landing/components/LandingNavbar";
 import LandingHero from "@/features/landing/components/LandingHero";
-import FutureVoicePreview from "@/features/landing/components/FutureVoicePreview";
+import PronunciationAssessmentPreview from "@/features/landing/components/PronunciationAssessmentPreview";
 import LandingLanguageFooter from "@/features/landing/components/LandingLanguageFooter";
 
 const LandingPage = () => {
@@ -10,7 +10,7 @@ const LandingPage = () => {
       <div className="flex-grow flex flex-col justify-center">
         <LandingHero />
       </div>
-      <FutureVoicePreview />
+      <PronunciationAssessmentPreview />
       <LandingLanguageFooter />
     </div>
   );

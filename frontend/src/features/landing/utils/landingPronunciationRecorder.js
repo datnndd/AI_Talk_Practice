@@ -50,7 +50,7 @@ const blobToDataUrl = (blob) =>
     reader.readAsDataURL(blob);
   });
 
-export const startFutureVoiceRecorder = async ({ maxSeconds = 20, minSampleRate = 24000, onStop, onTick }) => {
+export const startLandingPronunciationRecorder = async ({ maxSeconds = 20, minSampleRate = 16000, onStop, onTick }) => {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {
       channelCount: 1,
@@ -136,4 +136,3 @@ export const startFutureVoiceRecorder = async ({ maxSeconds = 20, minSampleRate 
     },
   };
 };
-

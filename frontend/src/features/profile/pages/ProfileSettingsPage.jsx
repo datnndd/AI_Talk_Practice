@@ -6,6 +6,30 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import { gamificationApi } from "@/features/gamification/api/gamificationApi";
 import ProfileStats from "../components/ProfileStats";
 
+const formatDate = (value) => {
+  if (!value) return "Chưa rõ";
+  try {
+    return new Intl.DateTimeFormat("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(value));
+  } catch {
+    return "Chưa rõ";
+  }
+};
+
+const asList = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+};
+
+const emptyText = "Chưa cập nhật";
+
 const ProfileSettingsPage = () => {
   const { user } = useAuth();
   const [gamification, setGamification] = useState(null);
@@ -16,7 +40,7 @@ const ProfileSettingsPage = () => {
 
   const displayName = user?.display_name || user?.email?.split("@")[0] || "Learner";
   const username = user?.preferences?.handle || user?.email?.split("@")[0]?.toLowerCase() || "learner";
-  const joinedDate = "May 2024";
+  const topics = asList(user?.favorite_topics);
 
   const stats = {
     level: gamification?.xp?.level || 1,
@@ -49,17 +73,13 @@ const ProfileSettingsPage = () => {
               </Link>
             </div>
 
-            {/* Name/Username */}
+          {/* Name/Username */}
             <div className="text-center md:text-left">
               <h1 className="text-3xl font-black text-[#4b4b4b]">{displayName}</h1>
-              <p className="text-lg font-bold text-[#afafaf]">{username}</p>
+              <p className="text-lg font-bold text-[#afafaf]">@{username}</p>
               <div className="mt-2 flex flex-wrap justify-center gap-4 text-sm font-bold text-[#afafaf] md:justify-start">
                 <div className="flex items-center gap-1">
-                  <span>Joined {joinedDate}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="hover:text-[#4b4b4b]">16 Following</button>
-                  <button className="hover:text-[#4b4b4b]">6 Followers</button>
+                  <span>Tham gia {formatDate(user?.created_at)}</span>
                 </div>
               </div>
             </div>
@@ -80,6 +100,55 @@ const ProfileSettingsPage = () => {
         <section>
           <h2 className="mb-4 text-2xl font-black text-[#4b4b4b]">Statistics</h2>
           <ProfileStats stats={stats} />
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-2xl font-black text-[#4b4b4b]">Thông tin học viên</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Email</p>
+              <p className="mt-1 font-bold text-[#4b4b4b]">{user?.email || emptyText}</p>
+            </div>
+            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Trình độ</p>
+              <p className="mt-1 font-bold text-[#4b4b4b]">{user?.level || emptyText}</p>
+            </div>
+            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Ngôn ngữ</p>
+              <p className="mt-1 font-bold text-[#4b4b4b]">
+                {user?.native_language || "vi"} → {user?.target_language || "en"}
+              </p>
+            </div>
+            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Mục tiêu mỗi ngày</p>
+              <p className="mt-1 font-bold text-[#4b4b4b]">
+                {user?.daily_goal ? `${user.daily_goal} phút` : emptyText}
+              </p>
+            </div>
+            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Mục tiêu học</p>
+              <p className="mt-1 font-bold text-[#4b4b4b]">{user?.learning_purpose || emptyText}</p>
+            </div>
+            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Thử thách chính</p>
+              <p className="mt-1 font-bold text-[#4b4b4b]">{user?.main_challenge || emptyText}</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Chủ đề yêu thích</p>
+            {topics.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {topics.map((topic) => (
+                  <span key={topic} className="rounded-full bg-[#ddf4ff] px-3 py-1 text-sm font-black text-[#1cb0f6]">
+                    {topic}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 font-bold text-[#4b4b4b]">{emptyText}</p>
+            )}
+          </div>
         </section>
       </div>
 

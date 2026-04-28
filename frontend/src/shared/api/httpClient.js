@@ -27,8 +27,48 @@ const parseResponse = async (response) => {
   return text ? { detail: text } : null;
 };
 
+export const formatApiErrorDetail = (detail) => {
+  if (!detail) {
+    return "";
+  }
+
+  if (typeof detail === "string") {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === "string") {
+          return item;
+        }
+
+        if (!item || typeof item !== "object") {
+          return String(item);
+        }
+
+        const field = Array.isArray(item.loc)
+          ? item.loc.filter((part) => part !== "body" && part !== "query" && part !== "path").join(".")
+          : "";
+        const message = item.msg || item.message || item.detail || JSON.stringify(item);
+
+        return field ? `${field}: ${message}` : message;
+      })
+      .join(" ");
+  }
+
+  if (typeof detail === "object") {
+    return detail.message || detail.msg || detail.detail || JSON.stringify(detail);
+  }
+
+  return String(detail);
+};
+
+export const getApiErrorMessage = (error, fallback = "Request failed.") =>
+  formatApiErrorDetail(error?.response?.data?.detail) || error?.message || fallback;
+
 const createHttpError = (status, data) => {
-  const message = data?.detail || `Request failed with status ${status}`;
+  const message = formatApiErrorDetail(data?.detail) || `Request failed with status ${status}`;
   const error = new Error(message);
 
   error.response = {

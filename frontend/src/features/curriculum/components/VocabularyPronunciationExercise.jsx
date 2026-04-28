@@ -18,14 +18,18 @@ const VocabularyPronunciationExercise = ({ exercise, onAttempt }) => {
   const currentWord = activeWord || wordLabel(words.find((item) => !passedWords.has(wordLabel(item))) || words[0] || "");
 
   const submitAudio = async (audioBase64) => {
-    const result = await curriculumApi.attemptExercise(exercise.id, {
-      audio_base64: audioBase64,
-      answer: { word: currentWord, transcript: currentWord },
-    });
-    onAttempt(result);
-    const next = words.map(wordLabel).find((word) => !(result.progress?.state?.passed_words || []).includes(word));
-    if (next) {
-      setActiveWord(next);
+    try {
+      const result = await curriculumApi.attemptLesson(exercise.id, {
+        audio_base64: audioBase64,
+        answer: { word: currentWord },
+      });
+      onAttempt(result);
+      const next = words.map(wordLabel).find((word) => !(result.progress?.state?.passed_words || []).includes(word));
+      if (next) {
+        setActiveWord(next);
+      }
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Không thể chấm phát âm. Vui lòng thử lại.");
     }
   };
 
@@ -82,7 +86,7 @@ const VocabularyPronunciationExercise = ({ exercise, onAttempt }) => {
         {currentWord && (
           <audio
             controls
-            src={`${getApiBaseUrl()}/curriculum/dictionary/audio/${encodeURIComponent(currentWord)}`}
+            src={`${getApiBaseUrl()}/curriculum/dictionary/audio?word=${encodeURIComponent(currentWord)}&lang=en`}
             className="h-10"
           />
         )}

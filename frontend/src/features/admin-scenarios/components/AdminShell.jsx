@@ -1,4 +1,4 @@
-import { CreditCard, Moon, Sun, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
+import { CreditCard, GraduationCap, Moon, Sun, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -8,6 +8,7 @@ import { BrandMark } from "@/shared/components/navigation";
 const defaultNavItems = [
   { label: "Users", icon: UserList, to: "/admin/users" },
   { label: "Scenario Library", icon: SquaresFour, to: "/admin/scenarios" },
+  { label: "Curriculum", icon: GraduationCap, to: "/admin/curriculum" },
   { label: "Payments", icon: CreditCard, to: "/admin/payments" },
 ];
 
