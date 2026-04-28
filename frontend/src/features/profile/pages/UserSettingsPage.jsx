@@ -23,8 +23,6 @@ const UserSettingsPage = () => {
     avatar: user?.avatar || "",
     handle: user?.preferences?.handle || "",
     age: user?.age || "",
-    native_language: user?.native_language || "vi",
-    target_language: user?.target_language || "en",
     level: user?.level || "beginner",
     daily_goal: user?.daily_goal || 15,
     learning_purpose: toCommaText(user?.learning_purpose),
@@ -48,8 +46,6 @@ const UserSettingsPage = () => {
         avatar: user.avatar || "",
         handle: user.preferences?.handle || "",
         age: user.age || "",
-        native_language: user.native_language || "vi",
-        target_language: user.target_language || "en",
         level: user.level || "beginner",
         daily_goal: user.daily_goal || 15,
         learning_purpose: toCommaText(user.learning_purpose),
@@ -68,8 +64,6 @@ const UserSettingsPage = () => {
         display_name: toNullableString(formData.display_name),
         avatar: toNullableString(formData.avatar),
         age: formData.age === "" ? null : Number(formData.age),
-        native_language: toNullableString(formData.native_language),
-        target_language: toNullableString(formData.target_language),
         level: toNullableString(formData.level),
         daily_goal: formData.daily_goal === "" ? null : Number(formData.daily_goal),
         learning_purpose: toNullableString(formData.learning_purpose),
@@ -221,45 +215,23 @@ const UserSettingsPage = () => {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <label className="app-label">Ngôn ngữ gốc</label>
-                  <input
-                    type="text"
-                    className="app-input"
-                    value={formData.native_language}
-                    onChange={(e) => setFormData({ ...formData, native_language: e.target.value })}
-                    placeholder="vi"
-                  />
-                </div>
-                <div>
-                  <label className="app-label">Ngôn ngữ học</label>
-                  <input
-                    type="text"
-                    className="app-input"
-                    value={formData.target_language}
-                    onChange={(e) => setFormData({ ...formData, target_language: e.target.value })}
-                    placeholder="en"
-                  />
-                </div>
-                <div>
-                  <label className="app-label">Trình độ</label>
-                  <select
-                    className="app-input"
-                    value={formData.level}
-                    onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                  >
-                    <option value="beginner">beginner</option>
-                    <option value="intermediate">intermediate</option>
-                    <option value="advanced">advanced</option>
-                    <option value="A1">A1</option>
-                    <option value="A2">A2</option>
-                    <option value="B1">B1</option>
-                    <option value="B2">B2</option>
-                    <option value="C1">C1</option>
-                    <option value="C2">C2</option>
-                  </select>
-                </div>
+              <div>
+                <label className="app-label">Trình độ</label>
+                <select
+                  className="app-input"
+                  value={formData.level}
+                  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                >
+                  <option value="beginner">beginner</option>
+                  <option value="intermediate">intermediate</option>
+                  <option value="advanced">advanced</option>
+                  <option value="A1">A1</option>
+                  <option value="A2">A2</option>
+                  <option value="B1">B1</option>
+                  <option value="B2">B2</option>
+                  <option value="C1">C1</option>
+                  <option value="C2">C2</option>
+                </select>
               </div>
 
               <div>

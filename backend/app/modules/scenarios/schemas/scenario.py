@@ -47,6 +47,7 @@ class ScenarioRead(ORMModel):
     ai_system_prompt: str
     ai_role: str = ""
     user_role: str = ""
+    image_url: str | None = None
     tasks: Any | None = None
     category: str
     difficulty: str

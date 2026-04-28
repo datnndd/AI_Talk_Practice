@@ -154,3 +154,25 @@ async def toggle_admin_scenario(
         scenario,
         usage_count=usage_count,
     )
+
+import os
+import uuid
+from fastapi import UploadFile, File
+
+@router.post("/scenarios/upload-image")
+async def upload_scenario_image(
+    file: UploadFile = File(...),
+    _: User = Depends(require_admin_user),
+):
+    upload_dir = "static/uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(upload_dir, filename)
+    
+    with open(filepath, "wb") as f:
+        content = await file.read()
+        f.write(content)
+        
+    return {"url": f"/static/uploads/{filename}"}

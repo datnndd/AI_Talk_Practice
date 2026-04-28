@@ -41,7 +41,7 @@ const Hero = () => {
             </p>
 
             <div className="flex flex-col sm:row gap-5">
-              <Link to="/topics">
+              <Link to="/dashboard">
                 <motion.button
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}

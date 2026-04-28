@@ -1,15 +1,5 @@
 import { httpClient } from "@/shared/api/httpClient";
 
-const COUNTRY_BY_LANGUAGE = {
-  en: "🇺🇸",
-  de: "🇩🇪",
-  es: "🇪🇸",
-  fr: "🇫🇷",
-  vi: "🇻🇳",
-  zh: "🇨🇳",
-  ja: "🇯🇵",
-};
-
 const getDisplayName = (entry) => entry.display_name || entry.email?.split("@")[0] || "Learner";
 
 const normalizeEntry = (entry, currentUserId, topScore) => ({
@@ -18,7 +8,7 @@ const normalizeEntry = (entry, currentUserId, topScore) => ({
   rank: entry.rank,
   name: getDisplayName(entry),
   xp: entry.score,
-  country: COUNTRY_BY_LANGUAGE[entry.target_language] ?? "🌍",
+  country: "🌍",
   avatar: entry.avatar ?? "",
   progress: topScore > 0 ? Math.max(12, Math.round((entry.score / topScore) * 100)) : 0,
   encouragement: entry.user_id === currentUserId ? "Keep going!" : "",

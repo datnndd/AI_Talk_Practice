@@ -11,7 +11,7 @@ const resolvePostLoginPath = (user) => {
     return "/admin/scenarios";
   }
 
-  return user?.is_onboarding_completed ? "/topics" : "/onboarding";
+  return user?.is_onboarding_completed ? "/dashboard" : "/onboarding";
 };
 
 const AuthForm = () => {

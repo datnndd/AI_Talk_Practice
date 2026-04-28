@@ -84,7 +84,6 @@ class LeaderboardEntryRead(BaseModel):
     display_name: str | None = None
     email: str
     avatar: str | None = None
-    target_language: str | None = None
 
 
 class LeaderboardRead(BaseModel):

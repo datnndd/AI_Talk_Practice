@@ -101,6 +101,12 @@ app.add_middleware(
 )
 
 
+from fastapi.staticfiles import StaticFiles
+import os
+
+os.makedirs("static/uploads", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # Register routers
 app.include_router(api_router, prefix="/api")
 # WebSocket router is mounted at root level (no /api prefix)

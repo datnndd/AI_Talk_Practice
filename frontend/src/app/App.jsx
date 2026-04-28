@@ -9,7 +9,7 @@ const LandingPage = lazy(() => import("@/features/landing/pages/LandingPage"));
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const OnboardingPage = lazy(() => import("@/features/onboarding/pages/OnboardingPage"));
-const PracticeTopicPage = lazy(() => import("@/features/practice/pages/PracticeTopicPage"));
+
 const PracticeSessionPage = lazy(() => import("@/features/practice/pages/PracticeSessionPage"));
 const SessionResultPage = lazy(() => import("@/features/practice/pages/SessionResultPage"));
 const ProfileSettingsPage = lazy(() => import("@/features/profile/pages/ProfileSettingsPage"));
@@ -49,7 +49,7 @@ function App() {
         
         {/* Protected Routes */}
         <Route path="/onboarding" element={<PrivateRoute>{withSuspense(<OnboardingPage />)}</PrivateRoute>} />
-        <Route path="/topics" element={<PrivateRoute>{withAppLayout(<PracticeTopicPage />)}</PrivateRoute>} />
+
         <Route path="/practice/:id" element={<PrivateRoute>{withSuspense(<PracticeSessionPage />)}</PrivateRoute>} />
         <Route path="/sessions/:id/result" element={<PrivateRoute>{withAppLayout(<SessionResultPage />)}</PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute>{withAppLayout(<ProfileSettingsPage />)}</PrivateRoute>} />

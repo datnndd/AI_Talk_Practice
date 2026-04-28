@@ -37,8 +37,6 @@ def _normalize_optional_string(value: Any) -> Any:
 
 class OnboardingRequest(BaseModel):
     display_name: str = Field(min_length=1, max_length=100)
-    native_language: str = Field(default="vi", max_length=10)
-    target_language: str | None = Field(default=None, max_length=10)
     avatar: str | None = Field(default=None, max_length=500)
     age: int | None = Field(default=None, ge=1, le=120)
     level: str = Field(
@@ -58,8 +56,6 @@ class OnboardingRequest(BaseModel):
 
     @field_validator(
         "display_name",
-        "native_language",
-        "target_language",
         "avatar",
         "main_challenge",
         mode="before",
@@ -71,8 +67,6 @@ class OnboardingRequest(BaseModel):
 
 class ProfileUpdateRequest(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=100)
-    native_language: str | None = Field(default=None, max_length=10)
-    target_language: str | None = Field(default=None, max_length=10)
     avatar: str | None = Field(default=None, max_length=500)
     age: int | None = Field(default=None, ge=1, le=120)
     level: str | None = Field(
@@ -92,8 +86,6 @@ class ProfileUpdateRequest(BaseModel):
 
     @field_validator(
         "display_name",
-        "native_language",
-        "target_language",
         "avatar",
         "main_challenge",
         mode="before",
@@ -129,8 +121,6 @@ class UserRead(ORMModel):
     display_name: str | None = None
     avatar: str | None = None
     age: int | None = None
-    native_language: str | None = None
-    target_language: str | None = None
     level: str | None = None
     favorite_topics: Any | None = None
     learning_purpose: Any | None = None

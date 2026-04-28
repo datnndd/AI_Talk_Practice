@@ -22,6 +22,7 @@ def serialize_admin_scenario(
             "ai_system_prompt": scenario.ai_system_prompt,
             "ai_role": scenario.ai_role or "",
             "user_role": scenario.user_role or "",
+            "image_url": scenario.image_url,
             "tasks": scenario.tasks or [],
             "tags": scenario.tags or [],
             "estimated_duration_minutes": int(scenario.estimated_duration / 60)
@@ -48,6 +49,7 @@ def serialize_scenario(
             "ai_system_prompt": scenario.ai_system_prompt,
             "ai_role": scenario.ai_role or "",
             "user_role": scenario.user_role or "",
+            "image_url": scenario.image_url,
             "tasks": scenario.tasks,
             "category": scenario.category,
             "difficulty": scenario.difficulty,

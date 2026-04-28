@@ -17,8 +17,6 @@ async def test_admin_can_list_and_filter_users(admin_client, db_session, test_us
     archived_user = User(
         email="archived@example.com",
         display_name="Archived Learner",
-        native_language="vi",
-        target_language="en",
         level="A2",
         preferences={"is_admin": False},
     )

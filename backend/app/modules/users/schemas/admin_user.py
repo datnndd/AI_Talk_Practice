@@ -38,8 +38,6 @@ class AdminUserListResponse(BaseModel):
 
 class AdminUserUpdateRequest(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=100)
-    native_language: str | None = Field(default=None, max_length=10)
-    target_language: str | None = Field(default=None, max_length=10)
     avatar: str | None = Field(default=None, max_length=500)
     age: int | None = Field(default=None, ge=1, le=120)
     level: str | None = Field(
@@ -59,8 +57,6 @@ class AdminUserUpdateRequest(BaseModel):
 
     @field_validator(
         "display_name",
-        "native_language",
-        "target_language",
         "avatar",
         "main_challenge",
         mode="before",

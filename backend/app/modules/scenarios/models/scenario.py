@@ -44,6 +44,7 @@ class Scenario(Base, TimestampMixin):
     # ── Content ───────────────────────────────────────────────────────────────
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
     ai_system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     ai_role: Mapped[str] = mapped_column(String(500), nullable=False, server_default="")

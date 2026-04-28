@@ -9,8 +9,6 @@ async def _create_admin_user(db_session):
         email="admin@example.com",
         password_hash=hash_password("password123"),
         display_name="Admin",
-        native_language="en",
-        target_language="en",
         level="advanced",
         preferences={"is_admin": True},
     )

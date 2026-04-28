@@ -167,7 +167,7 @@ const SessionResultPage = () => {
         </div>
         <button
           type="button"
-          onClick={() => navigate("/topics")}
+          onClick={() => navigate("/dashboard")}
           className="mt-6 inline-flex items-center gap-2 rounded-lg bg-zinc-950 px-5 py-3 text-sm font-bold text-white"
         >
           <ArrowLeft size={18} weight="bold" />
@@ -200,7 +200,7 @@ const SessionResultPage = () => {
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
       <button
         type="button"
-        onClick={() => navigate("/topics")}
+        onClick={() => navigate("/dashboard")}
         className="inline-flex w-fit items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-700 shadow-sm transition hover:bg-zinc-50"
       >
         <ArrowLeft size={18} weight="bold" />

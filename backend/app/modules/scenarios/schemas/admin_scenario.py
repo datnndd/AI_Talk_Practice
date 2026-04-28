@@ -53,6 +53,7 @@ class ScenarioAdminBase(BaseModel):
     estimated_duration_minutes: int | None = Field(default=10, ge=1, le=180)
     is_active: bool = True
     is_pro: bool = False
+    image_url: str | None = None
 
     @field_validator("tasks", "tags", mode="before")
     @classmethod
@@ -77,6 +78,7 @@ class ScenarioAdminUpdate(BaseModel):
     estimated_duration_minutes: int | None = Field(default=None, ge=1, le=180)
     is_active: bool | None = None
     is_pro: bool | None = None
+    image_url: str | None = None
 
     @field_validator("tasks", "tags", mode="before")
     @classmethod
@@ -100,6 +102,7 @@ class ScenarioAdminRead(ORMModel):
     estimated_duration_minutes: int | None = None
     is_active: bool
     is_pro: bool
+    image_url: str | None = None
     deleted_at: datetime | None = None
     usage_count: int = 0
     created_at: datetime

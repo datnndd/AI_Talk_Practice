@@ -23,7 +23,7 @@ const RegisterForm = () => {
     try {
       const userData = await googleLogin(tokenResponse.access_token);
       if (userData.is_onboarding_completed) {
-        navigate("/topics");
+        navigate("/dashboard");
       } else {
         navigate("/onboarding");
       }
@@ -51,7 +51,7 @@ const RegisterForm = () => {
     try {
       const userData = await register(formData);
       if (userData.is_onboarding_completed) {
-        navigate("/topics");
+        navigate("/dashboard");
       } else {
         navigate("/onboarding");
       }

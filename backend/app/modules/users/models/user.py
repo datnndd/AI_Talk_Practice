@@ -36,10 +36,7 @@ class User(Base, TimestampMixin):
     avatar: Mapped[Optional[str]] = mapped_column(String(500))
     age: Mapped[Optional[int]] = mapped_column(SmallInteger)
 
-    # Language & Level
-    native_language: Mapped[Optional[str]] = mapped_column(String(10))
-    target_language: Mapped[Optional[str]] = mapped_column(String(10))
-    target_accent: Mapped[Optional[str]] = mapped_column(String(20))
+    # Level
     level: Mapped[Optional[str]] = mapped_column(String(20))
     current_cefr: Mapped[Optional[str]] = mapped_column(String(10))
 

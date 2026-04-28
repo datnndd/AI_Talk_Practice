@@ -109,8 +109,6 @@ async def test_user(db_session):
         email="test@example.com",
         password_hash=hash_password("password123"),
         display_name="Test User",
-        native_language="vi",
-        target_language="en",
         level="beginner",
         preferences={"is_admin": False}
     )
@@ -133,8 +131,6 @@ async def test_admin_user(db_session):
         email="admin@example.com",
         password_hash=hash_password("admin123"),
         display_name="Admin User",
-        native_language="en",
-        target_language="vi",
         level="advanced",
         preferences={"is_admin": True}
     )
@@ -158,8 +154,6 @@ async def test_google_user(db_session):
         password_hash=None,
         auth_provider="google",
         display_name="Google User",
-        native_language="vi",
-        target_language="en",
         level="intermediate",
         preferences={"is_admin": False},
     )

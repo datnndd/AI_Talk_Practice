@@ -795,7 +795,7 @@ const PracticeSession = () => {
   const handleEndSession = async () => {
     closeSocket(true);
     await teardownAudioPipeline();
-    navigate("/topics");
+    navigate("/dashboard");
   };
 
   const handleRequestHint = async () => {
@@ -842,7 +842,7 @@ const PracticeSession = () => {
             </div>
           </div>
           <button
-            onClick={() => navigate("/topics")}
+            onClick={() => navigate("/dashboard")}
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-zinc-950 px-5 py-3 text-sm font-bold text-white"
           >
             <ArrowLeft size={18} weight="bold" />
@@ -889,7 +889,7 @@ const PracticeSession = () => {
               messages={messages}
               assistantDraft={assistantDraft}
               isListening={recordingState === "recording"}
-              userNativeLanguage={user?.native_language || "vi"}
+              userNativeLanguage="vi"
             />
             <TypewriterInput
               partialTranscript={partialTranscript}
@@ -903,7 +903,7 @@ const PracticeSession = () => {
               hint={lessonHint}
               isHintLoading={isHintLoading}
               onRequestHint={handleRequestHint}
-              userNativeLanguage={user?.native_language || "vi"}
+              userNativeLanguage="vi"
               analysisResultUrl={analysisResultUrl}
               onViewAnalysis={() => navigate(analysisResultUrl)}
             />

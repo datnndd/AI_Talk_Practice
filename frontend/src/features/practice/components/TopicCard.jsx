@@ -1,6 +1,14 @@
 import { motion } from "framer-motion";
 import { Clock, ChatCircle, ArrowRight, LockSimple, Crown } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
+import { getApiBaseUrl } from "@/shared/api/httpClient";
+
+const getFullImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  const host = getApiBaseUrl().replace("/api", "");
+  return `${host}${url}`;
+};
 
 const TopicCard = ({ card }) => {
   const Icon = card.icon;
@@ -16,8 +24,12 @@ const TopicCard = ({ card }) => {
       >
         <div className="relative z-10 flex flex-col h-full">
           <div className="flex justify-between items-start mb-6">
-            <div className={`p-4 ${card.iconBg || 'bg-zinc-100'} rounded-2xl transition-transform group-hover:scale-110 group-hover:rotate-3`}>
-              <Icon weight="bold" size={32} className={card.iconColor || 'text-zinc-900'} />
+            <div className={`p-4 ${card.iconBg || 'bg-zinc-100'} rounded-2xl transition-transform group-hover:scale-110 group-hover:rotate-3 overflow-hidden flex items-center justify-center min-w-[64px] min-h-[64px]`}>
+              {card.image_url ? (
+                <img src={getFullImageUrl(card.image_url)} alt={card.title} className="w-16 h-16 object-cover rounded-xl" />
+              ) : (
+                <Icon weight="bold" size={32} className={card.iconColor || 'text-zinc-900'} />
+              )}
             </div>
             <div className="flex items-center gap-2">
               {card.isLocked && (

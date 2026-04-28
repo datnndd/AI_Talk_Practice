@@ -31,14 +31,6 @@ const adminNavItems = [
   { label: "Payments", icon: CrownSimple, to: "/admin/payments" },
 ];
 
-const LANGUAGE_OPTIONS = [
-  { value: "vi", label: "Vietnamese" },
-  { value: "en", label: "English" },
-  { value: "es", label: "Spanish" },
-  { value: "zh", label: "Chinese" },
-  { value: "fr", label: "French" },
-];
-
 const LEVEL_OPTIONS = [
   { value: "beginner", label: "Beginner" },
   { value: "intermediate", label: "Intermediate" },
@@ -92,8 +84,6 @@ const formatDateTime = (value) => {
 const buildUpdatePayload = (formData) => ({
   display_name: formData.display_name.trim() || null,
   age: formData.age === "" ? null : Number(formData.age),
-  native_language: formData.native_language || null,
-  target_language: formData.target_language || null,
   level: formData.level || null,
   daily_goal: formData.daily_goal === "" ? null : Number(formData.daily_goal),
   learning_purpose: parseCommaSeparated(formData.learning_purpose),
@@ -104,8 +94,6 @@ const buildUpdatePayload = (formData) => ({
 const toFormState = (user) => ({
   display_name: user?.display_name ?? "",
   age: user?.age ?? "",
-  native_language: user?.native_language ?? "vi",
-  target_language: user?.target_language ?? "en",
   level: user?.level ?? "intermediate",
   daily_goal: user?.daily_goal ?? "",
   learning_purpose: toCommaSeparated(user?.learning_purpose),
@@ -448,11 +436,11 @@ const AdminUsersPage = () => {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Languages</p>
-                      <p className="mt-2 text-sm font-semibold">
-                        {selectedUser.native_language || "N/A"} → {selectedUser.target_language || "N/A"}
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Learning</p>
+                      <p className="mt-2 text-sm font-semibold">Level: {selectedUser.level || "Not set"}</p>
+                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        Daily goal: {selectedUser.daily_goal ? `${selectedUser.daily_goal} minutes` : "Not set"}
                       </p>
-                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Level: {selectedUser.level || "Not set"}</p>
                     </div>
                     <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Timeline</p>
@@ -488,33 +476,6 @@ const AdminUsersPage = () => {
                       onChange={(event) => setFormData((current) => ({ ...current, age: event.target.value }))}
                       className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
                     />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <FieldLabel>Native Language</FieldLabel>
-                    <select
-                      value={formData.native_language}
-                      onChange={(event) => setFormData((current) => ({ ...current, native_language: event.target.value }))}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-                    >
-                      {LANGUAGE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <FieldLabel>Target Language</FieldLabel>
-                    <select
-                      value={formData.target_language}
-                      onChange={(event) => setFormData((current) => ({ ...current, target_language: event.target.value }))}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-                    >
-                      {LANGUAGE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
                   </div>
                 </div>
 

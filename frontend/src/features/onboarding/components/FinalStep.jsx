@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { User, Globe, CalendarBlank, Target, Warning, Lightning } from "@phosphor-icons/react";
+import { User, CalendarBlank, Target, Lightning } from "@phosphor-icons/react";
 
 const FinalStep = ({ formData, updateData }) => {
   const itemVariants = {
@@ -51,42 +51,20 @@ const FinalStep = ({ formData, updateData }) => {
           />
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Age */}
-          <motion.div variants={itemVariants} className="flex flex-col gap-2">
-            <label className="text-sm font-bold text-zinc-700 flex items-center gap-2">
-              <CalendarBlank size={18} /> Age
-            </label>
-            <input 
-              type="number" 
-              name="age"
-              value={formData.age}
-              onChange={handleInputChange}
-              placeholder="Your age"
-              min="5" max="100"
-              className="w-full bg-surface-container-lowest border-2 border-outline-variant/30 focus:border-primary/50 rounded-xl px-4 py-3 outline-none transition-all font-medium text-zinc-900"
-            />
-          </motion.div>
-
-          {/* Native Language */}
-          <motion.div variants={itemVariants} className="flex flex-col gap-2">
-            <label className="text-sm font-bold text-zinc-700 flex items-center gap-2">
-              <Globe size={18} /> Native Language
-            </label>
-            <select 
-              name="native_language"
-              value={formData.native_language}
-              onChange={handleInputChange}
-              className="w-full bg-surface-container-lowest border-2 border-outline-variant/30 focus:border-primary/50 rounded-xl px-4 py-3 outline-none transition-all font-medium text-zinc-900"
-            >
-              <option value="vi">Vietnamese</option>
-              <option value="en">English</option>
-              <option value="es">Spanish</option>
-              <option value="zh">Chinese</option>
-              <option value="fr">French</option>
-            </select>
-          </motion.div>
-        </div>
+        <motion.div variants={itemVariants} className="flex flex-col gap-2">
+          <label className="text-sm font-bold text-zinc-700 flex items-center gap-2">
+            <CalendarBlank size={18} /> Age
+          </label>
+          <input
+            type="number"
+            name="age"
+            value={formData.age}
+            onChange={handleInputChange}
+            placeholder="Your age"
+            min="5" max="100"
+            className="w-full bg-surface-container-lowest border-2 border-outline-variant/30 focus:border-primary/50 rounded-xl px-4 py-3 outline-none transition-all font-medium text-zinc-900"
+          />
+        </motion.div>
 
         {/* Daily Goal */}
         <motion.div variants={itemVariants} className="flex flex-col gap-2">

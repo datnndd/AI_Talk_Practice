@@ -203,8 +203,6 @@ async def test_leaderboard_returns_real_weekly_and_all_time_data(test_client, db
         email="leader@example.com",
         password_hash=hash_password("leader123"),
         display_name="Leaderboard Pro",
-        native_language="en",
-        target_language="de",
         level="advanced",
         total_xp=2000,
         preferences={"is_admin": False},

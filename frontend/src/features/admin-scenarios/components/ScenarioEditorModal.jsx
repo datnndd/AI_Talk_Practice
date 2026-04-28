@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Sparkle, X } from "@phosphor-icons/react";
+import { Sparkle, X, Image as ImageIcon, UploadSimple } from "@phosphor-icons/react";
+import { adminApi } from "../api/adminScenariosApi";
 
 import ListEditorField from "./ListEditorField";
 import { getApiErrorMessage } from "@/shared/api/httpClient";
@@ -24,6 +25,7 @@ const createInitialState = (scenario) => ({
   estimated_duration_minutes: scenario?.estimated_duration_minutes || 10,
   is_active: scenario?.is_active ?? true,
   is_pro: scenario?.is_pro ?? false,
+  image_url: scenario?.image_url || "",
 });
 
 const ScenarioEditorModal = ({
@@ -36,8 +38,26 @@ const ScenarioEditorModal = ({
   const [form, setForm] = useState(() => createInitialState(scenario));
   const [formError, setFormError] = useState("");
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const data = await adminApi.uploadImage(file);
+      if (data.url) {
+        updateField("image_url", data.url);
+      }
+    } catch (error) {
+      setFormError(getApiErrorMessage(error, "Failed to upload image."));
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -61,6 +81,7 @@ const ScenarioEditorModal = ({
         estimated_duration_minutes: Number(form.estimated_duration_minutes),
         is_active: form.is_active,
         is_pro: form.is_pro,
+        image_url: form.image_url || null,
       };
 
       setFormError("");
@@ -142,6 +163,32 @@ const ScenarioEditorModal = ({
                       className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
                       placeholder="Describe the situation the learner will face."
                     />
+                  </label>
+
+                  <label className="block space-y-2 md:col-span-2">
+                    <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
+                      <ImageIcon size={16} /> Cover Image
+                    </span>
+                    <div className="flex items-center gap-4">
+                      {form.image_url && (
+                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-200">
+                          <img src={form.image_url.startsWith('http') ? form.image_url : `http://localhost:8000${form.image_url}`} alt="Scenario Cover" className="h-full w-full object-cover" />
+                        </div>
+                      )}
+                      <div className="relative flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          disabled={isUploading}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                        />
+                        <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-400">
+                          <UploadSimple size={18} />
+                          {isUploading ? "Uploading..." : "Click to upload an image"}
+                        </div>
+                      </div>
+                    </div>
                   </label>
 
                   <label className="block space-y-2">

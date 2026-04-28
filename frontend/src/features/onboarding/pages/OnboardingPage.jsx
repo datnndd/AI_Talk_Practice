@@ -20,7 +20,6 @@ const OnboardingPage = () => {
   
   const [formData, setFormData] = useState({
     display_name: "",
-    native_language: "vi",
     avatar: "user1",
     age: "",
     level: "intermediate", // Default to recommended
@@ -50,7 +49,7 @@ const OnboardingPage = () => {
     setIsSubmitting(true);
     try {
       await onboard(formData);
-      navigate("/topics");
+      navigate("/dashboard");
     } catch (err) {
       console.error(err);
       setIsSubmitting(false);

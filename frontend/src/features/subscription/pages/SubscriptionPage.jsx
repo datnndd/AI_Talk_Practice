@@ -245,7 +245,7 @@ const SubscriptionPage = () => {
 
           <div className="mt-10">
             <Link
-              to={isSubscribed ? "/topics" : "/profile"}
+              to={isSubscribed ? "/dashboard" : "/profile"}
               className="inline-flex items-center justify-center rounded-2xl bg-amber-400 px-6 py-3 text-xs font-black uppercase tracking-[0.2em] text-zinc-950 shadow-xl shadow-amber-900/20 transition-transform hover:-translate-y-0.5"
             >
               {isSubscribed ? "Go to practice topics" : "Review your profile"}
@@ -305,7 +305,7 @@ const SubscriptionPage = () => {
           </p>
           <div className="mt-6">
             <Link
-              to="/topics"
+              to="/dashboard"
               className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 px-6 py-3 text-xs font-black uppercase tracking-[0.2em] text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
             >
               Continue practicing

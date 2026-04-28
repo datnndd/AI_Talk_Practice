@@ -81,7 +81,7 @@ const Dashboard = () => {
 
           <div className="flex flex-col gap-4 md:col-span-1">
             <Link
-              to={surpriseScenario ? `/practice/${surpriseScenario.id}` : "/topics"}
+              to={surpriseScenario ? `/practice/${surpriseScenario.id}` : "#playlists"}
               className="group flex flex-1 items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition hover:border-brand-purple/40 hover:shadow-md active:scale-98"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-purple-soft text-2xl">🎁</div>
@@ -90,8 +90,8 @@ const Dashboard = () => {
                 <p className="text-xs font-semibold text-muted-foreground">Kịch bản ngẫu nhiên</p>
               </div>
             </Link>
-            <Link
-              to="/topics"
+            <a
+              href="#playlists"
               className="group flex flex-1 items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition hover:border-brand-purple/40 hover:shadow-md active:scale-98"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-orange-soft text-2xl">✨</div>
@@ -99,12 +99,14 @@ const Dashboard = () => {
                 <p className="text-sm font-extrabold text-foreground">Browse scenarios</p>
                 <p className="text-xs font-semibold text-muted-foreground">Xem toàn bộ thư viện</p>
               </div>
-            </Link>
+            </a>
           </div>
         </div>
       </section>
 
-      <PlaylistSection scenarios={scenarios} isLoading={isLoadingScenarios} error={scenarioError} />
+      <div id="playlists">
+        <PlaylistSection scenarios={scenarios} isLoading={isLoadingScenarios} error={scenarioError} />
+      </div>
     </div>
   );
 };

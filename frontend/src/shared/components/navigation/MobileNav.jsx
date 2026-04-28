@@ -12,7 +12,7 @@ const MOBILE_NAV_ITEMS = [
   },
   {
     label: "Luyện",
-    path: "/topics",
+    path: "/dashboard",
     Icon: Notebook,
   },
   {

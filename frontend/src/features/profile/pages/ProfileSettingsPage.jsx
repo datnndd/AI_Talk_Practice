@@ -114,12 +114,6 @@ const ProfileSettingsPage = () => {
               <p className="mt-1 font-bold text-[#4b4b4b]">{user?.level || emptyText}</p>
             </div>
             <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Ngôn ngữ</p>
-              <p className="mt-1 font-bold text-[#4b4b4b]">
-                {user?.native_language || "vi"} → {user?.target_language || "en"}
-              </p>
-            </div>
-            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
               <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Mục tiêu mỗi ngày</p>
               <p className="mt-1 font-bold text-[#4b4b4b]">
                 {user?.daily_goal ? `${user.daily_goal} phút` : emptyText}

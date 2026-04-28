@@ -76,7 +76,7 @@ async def test_update_profile_success(client, test_user):
     token = create_access_token(user_id=test_user.id)
     update_data = {
         "display_name": "New Name",
-        "native_language": "en"
+        "level": "A1",
     }
     response = await client.patch(
         "/api/users/me",
@@ -86,7 +86,7 @@ async def test_update_profile_success(client, test_user):
     assert response.status_code == 200
     data = response.json()
     assert data["display_name"] == "New Name"
-    assert data["native_language"] == "en"
+    assert data["level"] == "A1"
 
 @pytest.mark.asyncio
 async def test_google_login_simulation(client):

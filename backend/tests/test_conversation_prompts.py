@@ -27,7 +27,7 @@ def test_dialogue_prompt_includes_roles_summary_and_recent_turns():
         scenario=_scenario(),
         rolling_summary="Learner already greeted the barista.",
         recent_turns="Learner: Hi, my drink is late.\nAssistant: Let me check your order.",
-        user_preferences={"native_language": "vi"},
+        user_preferences={"favorite_topics": ["coffee"]},
         extra_instruction="Trả lời lịch sự, khép lại cuộc trò chuyện một cách tự nhiên",
     )
 

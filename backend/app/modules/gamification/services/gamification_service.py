@@ -81,7 +81,6 @@ class GamificationService:
                     User.display_name.label("display_name"),
                     User.email.label("email"),
                     User.avatar.label("avatar"),
-                    User.target_language.label("target_language"),
                     score_expr.label("score"),
                     func.row_number().over(order_by=(score_expr.desc(), User.id.asc())).label("rank"),
                 )
@@ -97,7 +96,6 @@ class GamificationService:
                     User.display_name.label("display_name"),
                     User.email.label("email"),
                     User.avatar.label("avatar"),
-                    User.target_language.label("target_language"),
                     score_expr.label("score"),
                     func.row_number().over(order_by=(score_expr.desc(), User.id.asc())).label("rank"),
                 )
@@ -385,5 +383,4 @@ class GamificationService:
             display_name=row["display_name"],
             email=row["email"],
             avatar=row["avatar"],
-            target_language=row["target_language"],
         )

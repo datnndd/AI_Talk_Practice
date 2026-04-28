@@ -41,10 +41,19 @@ const formatDuration = (seconds) => {
   return `${minutes} phút`;
 };
 
+import { getApiBaseUrl } from "@/shared/api/httpClient";
+
+const getFullImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  const host = getApiBaseUrl().replace("/api", "");
+  return `${host}${url}`;
+};
+
 const getScenarioImage = (scenario) =>
-  scenario?.image_url
-    || scenario?.thumbnail_url
-    || scenario?.cover_url
+  getFullImageUrl(scenario?.image_url)
+    || getFullImageUrl(scenario?.thumbnail_url)
+    || getFullImageUrl(scenario?.cover_url)
     || fallbackScenarioImage;
 
 const groupScenariosByDifficulty = (scenarios) =>

@@ -21,7 +21,7 @@ const AuthCard = ({ mode = "register" }) => {
 
   const resolvePostLoginPath = (user) => {
     if (user?.is_admin) return "/admin/scenarios";
-    return user?.is_onboarding_completed ? "/topics" : "/onboarding";
+    return user?.is_onboarding_completed ? "/dashboard" : "/onboarding";
   };
 
   const handleGoogleSuccess = async (tokenResponse) => {
