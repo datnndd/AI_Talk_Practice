@@ -9,6 +9,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
+    ForeignKey,
     Index,
     Integer,
     SmallInteger,
@@ -21,6 +22,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from app.modules.characters.models.character import Character
     from app.modules.sessions.models.session import Session
 
 
@@ -61,6 +63,11 @@ class Scenario(Base, TimestampMixin):
     # ── Session parameters ────────────────────────────────────────────────────
     estimated_duration: Mapped[Optional[int]] = mapped_column(SmallInteger)  # seconds
     time_limit_minutes: Mapped[Optional[int]] = mapped_column(Integer)  # New: session time limit in minutes
+    character_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("characters.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     # ── Admin ─────────────────────────────────────────────────────────────────
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
@@ -73,6 +80,11 @@ class Scenario(Base, TimestampMixin):
         back_populates="scenario",
         lazy="select",
         passive_deletes=True,
+    )
+    character: Mapped[Optional["Character"]] = relationship(
+        "Character",
+        back_populates="scenarios",
+        lazy="select",
     )
 
     # ── Indexes ───────────────────────────────────────────────────────────────

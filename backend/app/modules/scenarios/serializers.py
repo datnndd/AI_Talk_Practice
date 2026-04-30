@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.modules.characters.serializers import serialize_character
 from app.modules.scenarios.models import Scenario
 from app.modules.scenarios.schemas import (
     ScenarioAdminRead,
@@ -15,6 +16,7 @@ def serialize_admin_scenario(
     return ScenarioAdminRead.model_validate(
         {
             "id": scenario.id,
+            "character_id": scenario.character_id,
             "title": scenario.title,
             "description": scenario.description,
             "category": scenario.category,
@@ -23,6 +25,7 @@ def serialize_admin_scenario(
             "ai_role": scenario.ai_role or "",
             "user_role": scenario.user_role or "",
             "image_url": scenario.image_url,
+            "character": serialize_character(scenario.character) if scenario.character else None,
             "tasks": scenario.tasks or [],
             "tags": scenario.tags or [],
             "estimated_duration_minutes": int(scenario.estimated_duration / 60)
@@ -44,6 +47,7 @@ def serialize_scenario(
     return ScenarioRead.model_validate(
         {
             "id": scenario.id,
+            "character_id": scenario.character_id,
             "title": scenario.title,
             "description": scenario.description,
             "ai_system_prompt": scenario.ai_system_prompt,
@@ -57,6 +61,7 @@ def serialize_scenario(
             "estimated_duration": scenario.estimated_duration,
             "is_active": scenario.is_active,
             "is_pro": scenario.is_pro,
+            "character": serialize_character(scenario.character) if scenario.character else None,
             "created_at": scenario.created_at,
             "updated_at": scenario.updated_at,
         }

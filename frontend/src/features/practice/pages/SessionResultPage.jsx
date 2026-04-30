@@ -36,6 +36,10 @@ const SKILL_META = {
 };
 
 const VISIBLE_SKILL_KEYS = new Set(Object.keys(SKILL_META));
+const ANALYSIS_POLL_INTERVAL_MS = 3000;
+const ANALYSIS_MAX_POLLS = 20;
+
+const isTerminalAnalysisStatus = (status) => ["completed", "failed", "skipped"].includes(status);
 
 const ScoreRing = ({ score, size = 80 }) => {
   const pct = Math.min(100, Math.max(0, (score / 10) * 100));
@@ -117,13 +121,32 @@ const SessionResultPage = () => {
     }
 
     let isMounted = true;
-    const loadSession = async () => {
-      setIsLoading(true);
+    let pollTimer = null;
+
+    const loadSession = async (pollCount = 0) => {
+      if (pollCount === 0) {
+        setIsLoading(true);
+      }
       setError("");
       try {
         const response = await practiceApi.getSession(sessionId);
-        if (isMounted) {
-          setSession(response);
+        if (!isMounted) {
+          return;
+        }
+        setSession(response);
+
+        const finalEvaluation = response?.metadata?.final_evaluation || {};
+        const analysisStatus = finalEvaluation.evaluation_status || "";
+        const shouldPollAnalysis =
+          response?.status !== "active" &&
+          !response?.score &&
+          !isTerminalAnalysisStatus(analysisStatus) &&
+          pollCount < ANALYSIS_MAX_POLLS;
+
+        if (shouldPollAnalysis) {
+          pollTimer = window.setTimeout(() => {
+            void loadSession(pollCount + 1);
+          }, ANALYSIS_POLL_INTERVAL_MS);
         }
       } catch (loadError) {
         if (isMounted) {
@@ -139,6 +162,9 @@ const SessionResultPage = () => {
     void loadSession();
     return () => {
       isMounted = false;
+      if (pollTimer) {
+        window.clearTimeout(pollTimer);
+      }
     };
   }, [sessionId]);
 
@@ -181,6 +207,10 @@ const SessionResultPage = () => {
   const userMessages = messages.filter((m) => m.role === "user");
   const score = session.score;
   const scoreMeta = score?.metadata || {};
+  const finalEvaluation = session.metadata?.final_evaluation || {};
+  const analysisStatus = finalEvaluation.evaluation_status || (score ? "completed" : "pending");
+  const profileExtractionStatus = finalEvaluation.profile_extraction_status;
+  const isAnalysisPending = !score && !isTerminalAnalysisStatus(analysisStatus);
   const skillBreakdown = Object.fromEntries(
     Object.entries(score?.skill_breakdown || {}).filter(([key]) => VISIBLE_SKILL_KEYS.has(key))
   );
@@ -237,6 +267,31 @@ const SessionResultPage = () => {
       </section>
 
       {/* Overall Score + Objective */}
+      {isAnalysisPending && (
+        <section className="rounded-xl border border-sky-200 bg-sky-50 p-6 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="mt-1 h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-sky-200 border-t-sky-600" />
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-sky-700">AI Analysis</p>
+              <h2 className="mt-1 font-display text-xl font-black text-sky-950">Generating detailed feedback</h2>
+              <p className="mt-2 text-sm leading-relaxed text-sky-800">
+                Your conversation has been saved. The analysis LLM is scoring your speaking, writing feedback, and extracting durable learning signals.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!score && isTerminalAnalysisStatus(analysisStatus) && analysisStatus !== "completed" && (
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-700">AI Analysis</p>
+          <h2 className="mt-1 font-display text-xl font-black text-amber-950">Analysis unavailable</h2>
+          <p className="mt-2 text-sm leading-relaxed text-amber-900">
+            The conversation was saved, but the analysis LLM did not finish. Reason: {finalEvaluation.reason || analysisStatus}.
+          </p>
+        </section>
+      )}
+
       {score && (
         <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Score</p>
@@ -263,6 +318,11 @@ const SessionResultPage = () => {
               {score.feedback_summary && (
                 <p className="text-sm leading-relaxed text-zinc-700 italic">{score.feedback_summary}</p>
               )}
+              {profileExtractionStatus ? (
+                <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
+                  Learner signals: {profileExtractionStatus}
+                </p>
+              ) : null}
               {Object.keys(skillBreakdown).length > 0 && (
                 <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {Object.entries(skillBreakdown).map(([key, val]) => (

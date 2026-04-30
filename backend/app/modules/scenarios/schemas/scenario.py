@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.modules.characters.schemas import CharacterRead
+
 
 class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -21,6 +23,7 @@ class ScenarioCreate(BaseModel):
     difficulty: str = Field(default="medium", pattern=r"^(easy|medium|hard)$")
     tags: list[str] = Field(default_factory=list)
     estimated_duration: int | None = Field(default=None, ge=1, le=32767)
+    character_id: int | None = None
     is_active: bool = True
     is_pro: bool = False
 
@@ -36,12 +39,14 @@ class ScenarioUpdate(BaseModel):
     difficulty: str | None = Field(default=None, pattern=r"^(easy|medium|hard)$")
     tags: list[str] | None = None
     estimated_duration: int | None = Field(default=None, ge=1, le=32767)
+    character_id: int | None = None
     is_active: bool | None = None
     is_pro: bool | None = None
 
 
 class ScenarioRead(ORMModel):
     id: int
+    character_id: int | None = None
     title: str
     description: str
     ai_system_prompt: str
@@ -55,5 +60,6 @@ class ScenarioRead(ORMModel):
     estimated_duration: int | None = None
     is_active: bool
     is_pro: bool
+    character: CharacterRead | None = None
     created_at: datetime
     updated_at: datetime

@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError, NotFoundError
+from app.modules.characters.services import CharacterService
 from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.models.session import Session
 from app.modules.scenarios.repository import ScenarioRepository
@@ -213,6 +214,7 @@ class AdminScenarioService:
                 "Prompt quality is below the admin threshold",
                 extra=quality.model_dump(),
             )
+        await CharacterService.ensure_active_character(db, body.character_id)
 
         scenario = await ScenarioRepository.create(
             db,
@@ -226,6 +228,7 @@ class AdminScenarioService:
             difficulty=body.difficulty,
             tags=body.tags,
             estimated_duration=(body.estimated_duration_minutes or 10) * 60,
+            character_id=body.character_id,
             is_active=body.is_active,
             is_pro=body.is_pro,
         )
@@ -251,6 +254,8 @@ class AdminScenarioService:
         if "estimated_duration_minutes" in update_data:
             minutes = update_data.pop("estimated_duration_minutes")
             update_data["estimated_duration"] = minutes * 60 if minutes is not None else None
+        if "character_id" in update_data:
+            await CharacterService.ensure_active_character(db, update_data["character_id"])
 
         prompt_quality: PromptQualityAssessment | None = None
         if "ai_system_prompt" in update_data:

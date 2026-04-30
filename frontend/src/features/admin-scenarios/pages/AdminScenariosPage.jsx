@@ -10,6 +10,7 @@ import {
 
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
 import ScenarioEditorModal from "@/features/admin-scenarios/components/ScenarioEditorModal";
+import { adminCharactersApi } from "@/features/admin-characters/api/adminCharactersApi";
 import { adminApi } from "@/features/admin-scenarios/api/adminScenariosApi";
 import { getApiErrorMessage } from "@/shared/api/httpClient";
 
@@ -46,6 +47,7 @@ const StatusBadge = ({ children, tone = "zinc" }) => {
 const AdminScenarios = () => {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [scenarios, setScenarios] = useState([]);
+  const [characters, setCharacters] = useState([]);
   const [total, setTotal] = useState(0);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedScenarioId, setSelectedScenarioId] = useState(null);
@@ -89,9 +91,22 @@ const AdminScenarios = () => {
     }
   }, [filters]);
 
+  const loadCharacters = useCallback(async () => {
+    try {
+      const data = await adminCharactersApi.listCharacters({ active_only: true, page_size: 100 });
+      setCharacters(data.items || []);
+    } catch (loadError) {
+      setError(getApiErrorMessage(loadError, "Failed to load characters."));
+    }
+  }, []);
+
   useEffect(() => {
     void loadScenarios();
   }, [loadScenarios]);
+
+  useEffect(() => {
+    void loadCharacters();
+  }, [loadCharacters]);
 
   const openCreateScenario = () => {
     setEditingScenario(null);
@@ -405,6 +420,7 @@ const AdminScenarios = () => {
                   {[
                     ["Category", selectedScenario.category],
                     ["Difficulty", selectedScenario.difficulty],
+                    ["Character", selectedScenario.character?.name || "Not set"],
                     ["Usage", selectedScenario.usage_count],
                     ["Duration", formatMinutes(selectedScenario.estimated_duration_minutes)],
                   ].map(([label, value]) => (
@@ -507,6 +523,7 @@ const AdminScenarios = () => {
           onClose={() => setIsScenarioModalOpen(false)}
           onSubmit={handleSaveScenario}
           onGeneratePrompt={handleGenerateDefaultPrompt}
+          characters={characters}
           isSaving={isSavingScenario}
         />
       )}

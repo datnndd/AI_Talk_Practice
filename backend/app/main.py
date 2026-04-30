@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 from contextlib import asynccontextmanager
@@ -46,12 +47,31 @@ class SuppressDashScopeWebSocketNoise(logging.Filter):
         return True
 
 
+os.makedirs("logs", exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("logs/server.log", encoding="utf-8"),
+    ],
 )
 logging.getLogger("websocket").addFilter(SuppressDashScopeWebSocketNoise())
+conversation_trace_logger = logging.getLogger("conversation_trace")
+conversation_trace_logger.setLevel(logging.INFO)
+conversation_log_path = os.path.abspath("logs/conversations.log")
+if not any(
+    isinstance(handler, logging.FileHandler)
+    and os.path.abspath(getattr(handler, "baseFilename", "")) == conversation_log_path
+    for handler in conversation_trace_logger.handlers
+):
+    conversation_trace_handler = logging.FileHandler(conversation_log_path, encoding="utf-8")
+    conversation_trace_handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)-7s | %(message)s")
+    )
+    conversation_trace_logger.addHandler(conversation_trace_handler)
+conversation_trace_logger.propagate = False
 logger = logging.getLogger(__name__)
 
 # ─── Lifespan ──────────────────────────────────────────────────────────────
@@ -102,7 +122,6 @@ app.add_middleware(
 
 
 from fastapi.staticfiles import StaticFiles
-import os
 
 os.makedirs("static/uploads", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")

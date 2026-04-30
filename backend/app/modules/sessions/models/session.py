@@ -20,6 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base_class import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from app.modules.characters.models.character import Character
     from app.modules.sessions.models.message import Message
     from app.modules.scenarios.models.scenario import Scenario
     from app.modules.sessions.models.session_score import SessionScore
@@ -50,6 +51,9 @@ class Session(Base, TimestampMixin):
     scenario_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("scenarios.id", ondelete="RESTRICT"), nullable=False
     )
+    character_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True
+    )
     # ── Status ────────────────────────────────────────────────────────────────
     # "active" | "completed" | "abandoned" | "error"
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="active")
@@ -71,6 +75,7 @@ class Session(Base, TimestampMixin):
     # ── Relationships ─────────────────────────────────────────────────────────
     user: Mapped["User"] = relationship("User", back_populates="sessions", lazy="select")
     scenario: Mapped["Scenario"] = relationship("Scenario", back_populates="sessions", lazy="select")
+    character: Mapped[Optional["Character"]] = relationship("Character", back_populates="sessions", lazy="select")
     # lazy="select" — load explicitly with selectinload() to avoid N+1
     messages: Mapped[list["Message"]] = relationship(
         "Message",
@@ -95,6 +100,7 @@ class Session(Base, TimestampMixin):
         Index("ix_sessions_user_status_started", "user_id", "status", "started_at"),
         # Dashboard: sessions per scenario
         Index("ix_sessions_scenario_status", "scenario_id", "status"),
+        Index("ix_sessions_character_id", "character_id"),
         Index("ix_sessions_started_at", "started_at"),
         # Partial: live sessions (dashboard monitoring)
         Index(

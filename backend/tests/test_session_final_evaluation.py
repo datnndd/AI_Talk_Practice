@@ -120,6 +120,49 @@ async def test_final_evaluation_does_not_depend_on_message_scores(db_session, te
 
 
 @pytest.mark.asyncio
+async def test_final_evaluation_keeps_score_when_profile_extraction_fails(db_session, test_user, test_session):
+    await SessionService.add_message(
+        db_session,
+        session_id=test_session.id,
+        user_id=test_user.id,
+        payload=MessageCreate(role="user", content="My goal is to check in at a hotel."),
+    )
+
+    llm = EvaluationLLM(
+        [
+            json.dumps(
+                {
+                    "pronunciation_score": 7.0,
+                    "fluency_score": 7.0,
+                    "grammar_score": 7.0,
+                    "vocabulary_score": 7.0,
+                    "intonation_score": 7.0,
+                    "relevance_score": 8.0,
+                    "overall_score": 7.2,
+                    "objective_completion": "partial",
+                    "strengths": ["Relevant answer"],
+                    "improvements": ["Ask one follow-up question"],
+                    "corrections": [],
+                    "next_steps": ["Practice confirming reservation details"],
+                    "feedback_summary": "Bạn trả lời đúng bối cảnh và nên hỏi thêm về đặt phòng.",
+                }
+            ),
+            "not json",
+            "still not json",
+        ]
+    )
+    service = SessionFinalEvaluationService(llm=llm, max_tokens=900)
+
+    score = await service.evaluate_and_store(db_session, session_id=test_session.id)
+
+    assert isinstance(score, SessionScore)
+    assert score.overall_score == 7.2
+    assert score.feedback_summary == "Bạn trả lời đúng bối cảnh và nên hỏi thêm về đặt phòng."
+    assert test_session.session_metadata["final_evaluation"]["evaluation_status"] == "completed"
+    assert test_session.session_metadata["final_evaluation"]["profile_extraction_status"] == "failed"
+
+
+@pytest.mark.asyncio
 async def test_final_evaluation_failure_does_not_raise(db_session, test_user, test_session):
     await SessionService.add_message(
         db_session,

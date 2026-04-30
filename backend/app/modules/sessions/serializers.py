@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.modules.characters.serializers import serialize_character
 from app.modules.scenarios.serializers import serialize_scenario
 from app.modules.sessions.models.correction import Correction
 from app.modules.sessions.models.message import Message
@@ -72,17 +73,29 @@ def serialize_session_list_item(session: Session) -> SessionListItem:
     )
 
 
+def get_session_character_payload(session: Session) -> dict | None:
+    metadata = dict(session.session_metadata or {})
+    snapshot = metadata.get("character_snapshot")
+    if isinstance(snapshot, dict):
+        return snapshot
+    if session.character is None:
+        return None
+    return serialize_character(session.character).model_dump(mode="json")
+
+
 def serialize_session(session: Session) -> SessionRead:
     return SessionRead.model_validate(
         {
             "id": session.id,
             "user_id": session.user_id,
             "scenario_id": session.scenario_id,
+            "character_id": session.character_id,
             "status": session.status,
             "started_at": session.started_at,
             "ended_at": session.ended_at,
             "duration_seconds": session.duration_seconds,
             "metadata": session.session_metadata or {},
+            "character": get_session_character_payload(session),
             "scenario": serialize_scenario(session.scenario),
             "messages": [serialize_message(item) for item in session.messages],
             "score": serialize_session_score(session.score) if session.score else None,

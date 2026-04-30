@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
+from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.models.correction import Correction
 from app.modules.sessions.models.message import Message
 from app.modules.sessions.models.session import Session
@@ -11,7 +12,8 @@ from app.modules.sessions.models.session_score import SessionScore
 
 
 FULL_SESSION_LOAD = (
-    joinedload(Session.scenario),
+    joinedload(Session.scenario).joinedload(Scenario.character),
+    joinedload(Session.character),
     joinedload(Session.score),
     selectinload(Session.messages).selectinload(Message.corrections),
 )
@@ -35,7 +37,7 @@ class SessionRepository:
     ) -> list[Session]:
         stmt = (
             select(Session)
-            .options(joinedload(Session.scenario), joinedload(Session.score))
+            .options(joinedload(Session.scenario).joinedload(Scenario.character), joinedload(Session.character), joinedload(Session.score))
             .where(Session.user_id == user_id, Session.deleted_at.is_(None))
             .order_by(Session.started_at.desc(), Session.id.desc())
             .limit(limit)
@@ -60,7 +62,7 @@ class SessionRepository:
         if full:
             stmt = stmt.options(*FULL_SESSION_LOAD)
         else:
-            stmt = stmt.options(joinedload(Session.scenario), joinedload(Session.score))
+            stmt = stmt.options(joinedload(Session.scenario).joinedload(Scenario.character), joinedload(Session.character), joinedload(Session.score))
         result = await db.execute(stmt)
         return result.unique().scalar_one_or_none()
 

@@ -5,6 +5,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ForbiddenError, NotFoundError
+from app.modules.characters.services import CharacterService
 from app.modules.scenarios.models.scenario import Scenario
 from app.modules.scenarios.repository import ScenarioRepository
 from app.modules.scenarios.schemas.scenario import (
@@ -72,6 +73,7 @@ class ScenarioService:
 
     @staticmethod
     async def create(db: AsyncSession, user_id: int, body: ScenarioCreate) -> Scenario:
+        await CharacterService.ensure_active_character(db, body.character_id)
         scenario = await ScenarioRepository.create(
             db,
             title=body.title,
@@ -84,6 +86,7 @@ class ScenarioService:
             difficulty=body.difficulty,
             tags=body.tags,
             estimated_duration=body.estimated_duration,
+            character_id=body.character_id,
             is_active=body.is_active,
             is_pro=body.is_pro,
         )
@@ -96,6 +99,8 @@ class ScenarioService:
     async def update(db: AsyncSession, scenario_id: int, body: ScenarioUpdate) -> Scenario:
         scenario = await ScenarioService.get_by_id(db, scenario_id)
         update_data = body.model_dump(exclude_unset=True)
+        if "character_id" in update_data:
+            await CharacterService.ensure_active_character(db, update_data["character_id"])
         if "ai_role" in update_data and update_data["ai_role"] is not None:
             update_data["ai_role"] = update_data["ai_role"].strip()
         if "user_role" in update_data and update_data["user_role"] is not None:

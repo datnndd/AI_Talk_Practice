@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy import Select, String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.models.session import Session
@@ -24,7 +25,7 @@ class ScenarioRepository:
 
     @staticmethod
     def _scenario_query(*, include_deleted: bool = False) -> Select[tuple[Scenario]]:
-        stmt = select(Scenario)
+        stmt = select(Scenario).options(joinedload(Scenario.character))
         if not include_deleted:
             stmt = stmt.where(Scenario.deleted_at.is_(None))
         return stmt

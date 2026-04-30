@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.modules.characters.schemas import CharacterRead
+
 
 class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -51,6 +53,7 @@ class ScenarioAdminBase(BaseModel):
     tasks: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     estimated_duration_minutes: int | None = Field(default=10, ge=1, le=180)
+    character_id: int | None = None
     is_active: bool = True
     is_pro: bool = False
     image_url: str | None = None
@@ -76,6 +79,7 @@ class ScenarioAdminUpdate(BaseModel):
     tasks: list[str] | None = None
     tags: list[str] | None = None
     estimated_duration_minutes: int | None = Field(default=None, ge=1, le=180)
+    character_id: int | None = None
     is_active: bool | None = None
     is_pro: bool | None = None
     image_url: str | None = None
@@ -90,6 +94,7 @@ class ScenarioAdminUpdate(BaseModel):
 
 class ScenarioAdminRead(ORMModel):
     id: int
+    character_id: int | None = None
     title: str
     description: str
     category: str
@@ -103,6 +108,7 @@ class ScenarioAdminRead(ORMModel):
     is_active: bool
     is_pro: bool
     image_url: str | None = None
+    character: CharacterRead | None = None
     deleted_at: datetime | None = None
     usage_count: int = 0
     created_at: datetime

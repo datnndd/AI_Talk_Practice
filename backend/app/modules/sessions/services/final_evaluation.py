@@ -16,6 +16,7 @@ from app.modules.sessions.services.conversation_support import (
 from app.modules.users.models.user import User
 
 logger = logging.getLogger(__name__)
+conversation_logger = logging.getLogger("conversation_trace")
 
 
 def _utcnow() -> str:
@@ -45,23 +46,6 @@ class SessionFinalEvaluationService:
                 max_tokens=self.max_tokens,
             )
             payload = await evaluation_builder.evaluate(session=session)
-
-            user = await db.scalar(select(User).where(User.id == session.user_id))
-            if user is not None:
-                personal_info_service = ConversationPersonalInfoService(
-                    llm=self.llm,
-                    max_tokens=min(self.max_tokens, 700),
-                )
-                profile_payload = await personal_info_service.extract(
-                    session=session,
-                    existing_preferences=dict(user.preferences or {}),
-                )
-                user.preferences = _merge_conversation_profile(
-                    existing_preferences=dict(user.preferences or {}),
-                    personal_info=profile_payload.personal_info,
-                    preferences=profile_payload.preferences,
-                    notes=profile_payload.notes,
-                )
         except Exception:
             logger.exception("Final session evaluation failed for session_id=%s", session.id)
             await self._mark_status(db, session, status="failed", reason="llm_or_parse_error")
@@ -103,7 +87,15 @@ class SessionFinalEvaluationService:
             },
         )
         await self._mark_status(db, session, status="completed", reason=None)
+        await self._extract_profile_best_effort(db, session=session)
         await db.flush()
+        conversation_logger.info(
+            "event=final_evaluation_completed session_id=%s user_id=%s overall_score=%s scored_message_count=%s",
+            session.id,
+            session.user_id,
+            score.overall_score,
+            score.scored_message_count,
+        )
         return score
 
     async def _mark_status(self, db: AsyncSession, session, *, status: str, reason: str | None) -> None:
@@ -115,6 +107,49 @@ class SessionFinalEvaluationService:
         metadata["final_evaluation"] = final_evaluation
         session.session_metadata = metadata
         await db.flush()
+
+    async def _mark_profile_status(self, db: AsyncSession, session, *, status: str, reason: str | None = None) -> None:
+        metadata = dict(session.session_metadata or {})
+        final_evaluation = dict(metadata.get("final_evaluation") or {})
+        final_evaluation.update({"profile_extraction_status": status, "profile_updated_at": _utcnow()})
+        if reason:
+            final_evaluation["profile_extraction_reason"] = reason
+        metadata["final_evaluation"] = final_evaluation
+        session.session_metadata = metadata
+        await db.flush()
+
+    async def _extract_profile_best_effort(self, db: AsyncSession, *, session) -> None:
+        user = await db.scalar(select(User).where(User.id == session.user_id))
+        if user is None:
+            await self._mark_profile_status(db, session, status="skipped", reason="user_not_found")
+            return
+
+        try:
+            personal_info_service = ConversationPersonalInfoService(
+                llm=self.llm,
+                max_tokens=min(self.max_tokens, 700),
+            )
+            profile_payload = await personal_info_service.extract(
+                session=session,
+                existing_preferences=dict(user.preferences or {}),
+            )
+            user.preferences = _merge_conversation_profile(
+                existing_preferences=dict(user.preferences or {}),
+                personal_info=profile_payload.personal_info,
+                preferences=profile_payload.preferences,
+                notes=profile_payload.notes,
+            )
+        except Exception:
+            logger.exception("Conversation profile extraction failed for session_id=%s", session.id)
+            await self._mark_profile_status(db, session, status="failed", reason="llm_or_parse_error")
+            return
+
+        await self._mark_profile_status(db, session, status="completed")
+        conversation_logger.info(
+            "event=conversation_profile_extracted session_id=%s user_id=%s",
+            session.id,
+            session.user_id,
+        )
 
 
 def _merge_conversation_profile(

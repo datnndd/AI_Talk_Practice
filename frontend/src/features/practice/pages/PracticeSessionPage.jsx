@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, WarningCircle } from "@phosphor-icons/react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useAuth } from "@/features/auth/context/AuthContext";
 import ChatWindow from "@/features/practice/components/ChatWindow";
+import Live2DAvatarPanel from "@/features/practice/components/Live2DAvatarPanel";
 import ScenarioSidebar from "@/features/practice/components/ScenarioSidebar";
 import TypewriterInput from "@/features/practice/components/TypewriterInput";
 import { SessionHeader } from "@/shared/components/navigation";
@@ -17,10 +17,59 @@ import { buildConversationGuidance } from "@/features/practice/utils/conversatio
 import { appendUniqueMessage } from "@/features/practice/utils/lessonState";
 
 const DEFAULT_LANGUAGE = "en";
-const DEFAULT_VOICE = "Cherry";
 const STOP_CAPTURE_FLUSH_MS = 250;
+const LIP_SYNC_FRAME_MS = 48;
+const LIP_SYNC_RESET_DELAY_MS = 80;
+const PLAYBACK_JITTER_BUFFER_SECONDS = 0.18;
 const RECONNECT_DELAYS_MS = [500, 1000, 2000];
 const NO_INPUT_NOTICE = "Mải mê nghe giọng bạn làm mình đãng trí. Bạn có thể nói lại một lần nữa được không?";
+
+const buildLipSyncFrames = (samples, sampleRate) => {
+  const frameSize = Math.max(1, Math.floor(sampleRate * LIP_SYNC_FRAME_MS / 1000));
+  const frames = [];
+
+  for (let offset = 0; offset < samples.length; offset += frameSize) {
+    const end = Math.min(offset + frameSize, samples.length);
+    let sumSquares = 0;
+
+    for (let index = offset; index < end; index += 1) {
+      sumSquares += samples[index] * samples[index];
+    }
+
+    const rms = Math.sqrt(sumSquares / Math.max(1, end - offset));
+    frames.push(Math.min(1, Math.max(0, rms * 5.6)));
+  }
+
+  return frames;
+};
+
+const getLive2DStatus = ({ connectionState, recordingState, sessionEnded, sessionError }) => {
+  if (sessionEnded) {
+    return "ended";
+  }
+
+  if (connectionState === "connecting" || connectionState === "reconnecting") {
+    return connectionState;
+  }
+
+  if (connectionState === "error" || sessionError) {
+    return "error";
+  }
+
+  if (recordingState === "recording") {
+    return "listening";
+  }
+
+  if (recordingState === "processing") {
+    return "thinking";
+  }
+
+  if (recordingState === "assistant") {
+    return "speaking";
+  }
+
+  return "idle";
+};
 
 const wait = (milliseconds) => new Promise((resolve) => {
   window.setTimeout(resolve, milliseconds);
@@ -42,7 +91,6 @@ const PracticeSession = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
   const scenarioId = Number(id);
   const initialSessionId = Number(searchParams.get("sessionId"));
 
@@ -63,6 +111,8 @@ const PracticeSession = () => {
   const [isHintLoading, setIsHintLoading] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [analysisResultUrl, setAnalysisResultUrl] = useState("");
+  const [live2DLipSyncLevel, setLive2DLipSyncLevel] = useState(0);
+  const [activeCharacter, setActiveCharacter] = useState(null);
 
   const socketRef = useRef(null);
   const intentionalCloseSocketRef = useRef(null);
@@ -75,6 +125,7 @@ const PracticeSession = () => {
   const captureActiveRef = useRef(false);
   const playbackCursorRef = useRef(0);
   const playbackSourcesRef = useRef(new Set());
+  const lipSyncTimersRef = useRef(new Set());
   const sessionStartAtRef = useRef(null);
   const messageIdRef = useRef(0);
   const isCleaningUpRef = useRef(false);
@@ -131,7 +182,35 @@ const PracticeSession = () => {
     return audioContextRef.current;
   }, []);
 
-  const teardownAudioPipeline = async () => {
+  const clearLipSyncTimers = useCallback(() => {
+    lipSyncTimersRef.current.forEach((timerId) => {
+      window.clearTimeout(timerId);
+    });
+    lipSyncTimersRef.current.clear();
+    setLive2DLipSyncLevel(0);
+  }, []);
+
+  const scheduleLipSyncFrames = useCallback((frames, startAt, audioContext) => {
+    const now = audioContext.currentTime;
+
+    frames.forEach((level, index) => {
+      const delay = Math.max(0, (startAt - now) * 1000 + index * LIP_SYNC_FRAME_MS);
+      const timerId = window.setTimeout(() => {
+        lipSyncTimersRef.current.delete(timerId);
+        setLive2DLipSyncLevel(level);
+      }, delay);
+      lipSyncTimersRef.current.add(timerId);
+    });
+
+    const resetDelay = Math.max(0, (startAt - now) * 1000 + frames.length * LIP_SYNC_FRAME_MS + LIP_SYNC_RESET_DELAY_MS);
+    const resetTimerId = window.setTimeout(() => {
+      lipSyncTimersRef.current.delete(resetTimerId);
+      setLive2DLipSyncLevel(0);
+    }, resetDelay);
+    lipSyncTimersRef.current.add(resetTimerId);
+  }, []);
+
+  const teardownAudioPipeline = useCallback(async () => {
     captureActiveRef.current = false;
     suppressAssistantStreamRef.current = false;
 
@@ -156,13 +235,14 @@ const PracticeSession = () => {
       source.disconnect();
     });
     playbackSourcesRef.current.clear();
+    clearLipSyncTimers();
 
     if (audioContextRef.current && audioContextRef.current.state !== "closed") {
       await audioContextRef.current.close();
     }
     audioContextRef.current = null;
     playbackCursorRef.current = 0;
-  };
+  }, [clearLipSyncTimers]);
 
   const closeSocket = useCallback((intentional = false) => {
     captureActiveRef.current = false;
@@ -266,15 +346,19 @@ const PracticeSession = () => {
     source.buffer = buffer;
     source.connect(audioContext.destination);
 
-    const startAt = Math.max(audioContext.currentTime, playbackCursorRef.current);
+    const currentTime = audioContext.currentTime;
+    const startAt = playbackCursorRef.current > currentTime
+      ? playbackCursorRef.current
+      : currentTime + PLAYBACK_JITTER_BUFFER_SECONDS;
     source.start(startAt);
     playbackCursorRef.current = startAt + buffer.duration;
+    scheduleLipSyncFrames(buildLipSyncFrames(float32, buffer.sampleRate), startAt, audioContext);
     playbackSourcesRef.current.add(source);
     source.onended = () => {
       playbackSourcesRef.current.delete(source);
       source.disconnect();
     };
-  }, [ensureAudioContext]);
+  }, [ensureAudioContext, scheduleLipSyncFrames]);
 
   const stopAssistantPlayback = useCallback(() => {
     playbackSourcesRef.current.forEach((source) => {
@@ -287,6 +371,7 @@ const PracticeSession = () => {
       source.disconnect();
     });
     playbackSourcesRef.current.clear();
+    clearLipSyncTimers();
 
     if (audioContextRef.current && audioContextRef.current.state !== "closed") {
       playbackCursorRef.current = audioContextRef.current.currentTime;
@@ -294,7 +379,7 @@ const PracticeSession = () => {
     }
 
     playbackCursorRef.current = 0;
-  }, []);
+  }, [clearLipSyncTimers]);
 
   const scheduleAutoReconnect = useCallback(() => {
     if (!sessionIdRef.current || reconnectAttemptsRef.current >= RECONNECT_DELAYS_MS.length) {
@@ -338,7 +423,6 @@ const PracticeSession = () => {
       socketRef.current?.send(JSON.stringify({
         type: "start_recording",
         language: DEFAULT_LANGUAGE,
-        voice: DEFAULT_VOICE,
       }));
       recordingStateRef.current = "recording";
       setRecordingState("recording");
@@ -390,6 +474,7 @@ const PracticeSession = () => {
         assistantDraftRef.current = "";
         sessionIdRef.current = payload.session_id;
         setSessionId(payload.session_id);
+        setActiveCharacter(payload.character || scenario?.character || null);
         setSessionEnded(false);
         setAnalysisResultUrl("");
         if (payload.max_duration_seconds) {
@@ -537,7 +622,7 @@ const PracticeSession = () => {
       default:
         break;
     }
-  }, [closeSocket, queuePlaybackChunk, startRecordingTurn, stopAssistantPlayback]);
+  }, [closeSocket, queuePlaybackChunk, scenario, startRecordingTurn, stopAssistantPlayback]);
 
   const connectSocket = useCallback((options = true) => {
     const resetConversation = typeof options === "boolean" ? options : options.resetConversation !== false;
@@ -589,7 +674,6 @@ const PracticeSession = () => {
         token,
         scenario_id: scenarioId,
         language: DEFAULT_LANGUAGE,
-        voice: DEFAULT_VOICE,
         metadata: {
           resume_enabled: true,
         },
@@ -643,7 +727,7 @@ const PracticeSession = () => {
       recordingStateRef.current = "idle";
       setRecordingState("idle");
     };
-  }, [closeSocket, handleSocketMessage, scenarioId, scheduleAutoReconnect, stopAssistantPlayback]);
+  }, [closeSocket, handleSocketMessage, scenarioId, scheduleAutoReconnect, stopAssistantPlayback, teardownAudioPipeline]);
 
   useEffect(() => {
     connectSocketRef.current = connectSocket;
@@ -668,6 +752,7 @@ const PracticeSession = () => {
           return;
         }
         setScenario(response);
+        setActiveCharacter(response?.character || null);
       } catch (error) {
         if (!isMounted) {
           return;
@@ -690,7 +775,7 @@ const PracticeSession = () => {
   useEffect(() => () => {
     closeSocket(true);
     void teardownAudioPipeline();
-  }, [closeSocket]);
+  }, [closeSocket, teardownAudioPipeline]);
 
   useEffect(() => {
     connectionStateRef.current = connectionState;
@@ -866,6 +951,12 @@ const PracticeSession = () => {
     durationSeconds,
     turnCount: userTurnCount,
   });
+  const live2DStatus = getLive2DStatus({
+    connectionState,
+    recordingState,
+    sessionEnded,
+    sessionError,
+  });
 
   return (
     <div className="min-h-[100dvh] bg-[linear-gradient(135deg,_#f8fafc_0%,_#ffffff_46%,_#f0fdf4_100%)] p-4 font-sans antialiased md:p-6">
@@ -878,11 +969,20 @@ const PracticeSession = () => {
           timeLimitSeconds={timeLimitSeconds}
         />
 
-        <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)] w-full">
+        <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[300px_minmax(0,1fr)_260px] xl:grid-cols-[340px_minmax(0,1fr)_300px] 2xl:grid-cols-[360px_minmax(0,1fr)_320px] w-full">
           <div className="hidden min-h-0 lg:flex">
             <ScenarioSidebar scenario={scenario} guidance={conversationGuidance} />
           </div>
           <div className="relative flex min-h-0 flex-1 flex-col gap-3">
+            <div className="lg:hidden">
+              <Live2DAvatarPanel
+                status={live2DStatus}
+                scenarioTitle={scenario?.ai_role || scenario?.title}
+                lipSyncLevel={live2DLipSyncLevel}
+                modelUrl={activeCharacter?.model_url}
+                coreUrl={activeCharacter?.core_url}
+              />
+            </div>
             <ChatWindow
               scenario={scenario}
               guidance={conversationGuidance}
@@ -906,6 +1006,15 @@ const PracticeSession = () => {
               userNativeLanguage="vi"
               analysisResultUrl={analysisResultUrl}
               onViewAnalysis={() => navigate(analysisResultUrl)}
+            />
+          </div>
+          <div className="hidden min-h-0 lg:flex">
+            <Live2DAvatarPanel
+              status={live2DStatus}
+              scenarioTitle={scenario?.ai_role || scenario?.title}
+              lipSyncLevel={live2DLipSyncLevel}
+              modelUrl={activeCharacter?.model_url}
+              coreUrl={activeCharacter?.core_url}
             />
           </div>
         </main>

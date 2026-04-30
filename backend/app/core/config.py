@@ -76,7 +76,7 @@ class Settings(BaseSettings):
         description="System prompt for the LLM",
     )
     llm_temperature: float = Field(default=0.3, description="Sampling temperature for LLM generation")
-    llm_max_tokens: int = Field(default=160, description="Maximum tokens generated per assistant turn")
+    llm_max_tokens: int = Field(default=800, description="Maximum tokens generated per assistant turn")
     lesson_plan_llm_max_tokens: int = Field(
         default=2400,
         description="Maximum tokens generated when creating structured lesson plans",
@@ -150,7 +150,7 @@ class Settings(BaseSettings):
         description="Maximum repeated repair attempts before narrowing the prompt more aggressively",
     )
     conversation_final_evaluation_timeout_seconds: float = Field(
-        default=15.0,
+        default=60.0,
         description="Best-effort timeout for final session evaluation LLM calls",
     )
 

@@ -4,6 +4,7 @@ import {
   CreditCard,
   HouseLine,
   Sparkle,
+  Robot,
   Trophy,
   SquaresFour,
   UserList,
@@ -44,6 +45,7 @@ export const adminNavItems = [
 export const adminWorkspaceNavItems = [
   { label: "Users", path: "/admin/users", icon: UserList },
   { label: "Scenarios", path: "/admin/scenarios", icon: SquaresFour },
+  { label: "Characters", path: "/admin/characters", icon: Robot },
   { label: "Curriculum", path: "/admin/curriculum", icon: GraduationCap },
   { label: "Payments", path: "/admin/payments", icon: CreditCard },
 ];

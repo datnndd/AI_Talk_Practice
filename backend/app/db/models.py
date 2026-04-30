@@ -13,7 +13,8 @@ from app.modules.users.models.user import User
 from app.modules.payments.models.payment_transaction import PaymentTransaction
 from app.modules.payments.models.payment_webhook_event import PaymentWebhookEvent
 
-# Scenarios
+# Characters and scenarios
+from app.modules.characters.models.character import Character
 from app.modules.scenarios.models.scenario import Scenario
 
 # Sessions
@@ -43,6 +44,7 @@ from app.modules.gamification.models.gamification_setting import GamificationSet
 from app.modules.notifications.models.notification import Notification, NotificationReadState
 
 __all__ = [
+    "Character",
     "CoinTransaction",
     "Correction",
     "DailyCheckin",

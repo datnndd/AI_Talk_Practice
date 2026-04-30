@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.modules.characters.schemas import CharacterRead
 from app.modules.scenarios.schemas import ScenarioRead
 
 
@@ -132,11 +133,13 @@ class SessionRead(ORMModel):
     id: int
     user_id: int
     scenario_id: int
+    character_id: int | None = None
     status: str
     started_at: datetime
     ended_at: datetime | None = None
     duration_seconds: int | None = None
     metadata: dict[str, Any] | None = None
+    character: CharacterRead | None = None
     scenario: ScenarioRead
     messages: list[MessageRead] = Field(default_factory=list)
     score: SessionScoreRead | None = None

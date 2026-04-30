@@ -23,6 +23,7 @@ const createInitialState = (scenario) => ({
   ai_system_prompt: scenario?.ai_system_prompt || "",
   tags: prettyList(scenario?.tags),
   estimated_duration_minutes: scenario?.estimated_duration_minutes || 10,
+  character_id: scenario?.character_id || scenario?.character?.id || "",
   is_active: scenario?.is_active ?? true,
   is_pro: scenario?.is_pro ?? false,
   image_url: scenario?.image_url || "",
@@ -33,6 +34,7 @@ const ScenarioEditorModal = ({
   onClose,
   onSubmit,
   onGeneratePrompt,
+  characters = [],
   isSaving,
 }) => {
   const [form, setForm] = useState(() => createInitialState(scenario));
@@ -67,6 +69,10 @@ const ScenarioEditorModal = ({
         setFormError("Generate or enter a system prompt before saving.");
         return;
       }
+      if (form.is_active && !form.character_id) {
+        setFormError("Select a character before activating this scenario.");
+        return;
+      }
 
       const payload = {
         title: form.title.trim(),
@@ -79,6 +85,7 @@ const ScenarioEditorModal = ({
         ai_system_prompt: form.ai_system_prompt.trim(),
         tags: parseListInput(form.tags),
         estimated_duration_minutes: Number(form.estimated_duration_minutes),
+        character_id: form.character_id ? Number(form.character_id) : null,
         is_active: form.is_active,
         is_pro: form.is_pro,
         image_url: form.image_url || null,
@@ -211,6 +218,22 @@ const ScenarioEditorModal = ({
                       <option value="easy">Easy</option>
                       <option value="medium">Medium</option>
                       <option value="hard">Hard</option>
+                    </select>
+                  </label>
+
+                  <label className="block space-y-2 md:col-span-2">
+                    <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Character</span>
+                    <select
+                      value={form.character_id}
+                      onChange={(event) => updateField("character_id", event.target.value)}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                    >
+                      <option value="">No character selected</option>
+                      {characters.map((character) => (
+                        <option key={character.id} value={character.id}>
+                          {character.name} · {character.tts_voice}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>

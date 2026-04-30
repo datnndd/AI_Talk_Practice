@@ -1,3 +1,6 @@
 .env
 venv/
 ai_talk_practice.db
+__pycache__/
+*.pyc
+logs/*.log

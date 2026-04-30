@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError
 from app.infra.factory import LLMRole, create_llm_for_role
+from app.modules.characters.models import Character
+from app.modules.characters.repository import CharacterRepository
 from app.modules.sessions.models.message import Message
 from app.modules.sessions.models.session import Session
 from app.modules.scenarios.repository import ScenarioRepository
@@ -41,6 +43,24 @@ def _duration_seconds(started_at: datetime, ended_at: datetime) -> int:
     if ended_at.tzinfo is None:
         ended_at = ended_at.replace(tzinfo=timezone.utc)
     return max(0, int((ended_at - started_at).total_seconds()))
+
+
+def build_character_snapshot(character: Character | None) -> dict[str, Any] | None:
+    if character is None:
+        return None
+    return {
+        "id": character.id,
+        "name": character.name,
+        "description": character.description,
+        "model_url": character.model_url,
+        "core_url": character.core_url,
+        "thumbnail_url": character.thumbnail_url,
+        "tts_voice": character.tts_voice,
+        "tts_language": character.tts_language,
+        "is_active": character.is_active,
+        "sort_order": character.sort_order,
+        "metadata": character.character_metadata or {},
+    }
 
 
 class SessionService:
@@ -78,12 +98,17 @@ class SessionService:
         if scenario.is_pro and not user_is_vip(user):
             raise ForbiddenError("This scenario requires VIP access")
 
+        character = await SessionService._resolve_character_for_scenario(db, scenario)
+        character_snapshot = build_character_snapshot(character)
         session_metadata: dict[str, Any] = dict(payload.metadata or {})
+        if character_snapshot:
+            session_metadata["character_snapshot"] = character_snapshot
 
         session = await SessionRepository.create_session(
             db,
             user_id=user_id,
             scenario_id=scenario.id,
+            character_id=character.id if character else None,
             status="active",
             session_metadata=session_metadata,
         )
@@ -95,6 +120,23 @@ class SessionService:
             scenario.id,
         )
         return await SessionService.get_by_id(db, session.id, user_id)
+
+    @staticmethod
+    async def _resolve_character_for_scenario(db: AsyncSession, scenario) -> Character:
+        character = getattr(scenario, "character", None)
+        if character is not None and character.deleted_at is None and character.is_active:
+            return character
+
+        characters, _ = await CharacterRepository.list_characters(
+            db,
+            active_only=True,
+            include_deleted=False,
+            page=1,
+            page_size=1,
+        )
+        if not characters:
+            raise BadRequestError("No active character is configured for practice sessions")
+        return characters[0]
 
     @staticmethod
     async def add_message(
@@ -309,6 +351,18 @@ class SessionService:
     async def _run_final_evaluation_if_needed(db: AsyncSession, *, session: Session) -> None:
         llm = None
         try:
+            metadata = dict(session.session_metadata or {})
+            final_evaluation = dict(metadata.get("final_evaluation") or {})
+            final_evaluation.update(
+                {
+                    "evaluation_status": "running",
+                    "updated_at": _utcnow().isoformat(),
+                }
+            )
+            metadata["final_evaluation"] = final_evaluation
+            session.session_metadata = metadata
+            await db.flush()
+
             llm = create_llm_for_role(settings, LLMRole.EVALUATION)
             service = SessionFinalEvaluationService(
                 llm=llm,
