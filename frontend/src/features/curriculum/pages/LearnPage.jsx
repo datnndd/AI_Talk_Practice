@@ -11,17 +11,32 @@ const LearnPage = () => {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      setIsLoading(true);
+      const cachedCurriculum = curriculumApi.getCachedCurriculum();
+      if (cachedCurriculum) {
+        setData(cachedCurriculum);
+      }
+      setIsLoading(!cachedCurriculum);
       setError("");
       try {
         const response = await curriculumApi.getCurriculum();
-        if (mounted) setData(response);
+        if (mounted) {
+          setData(response);
+          void curriculumApi.prefetchUnit(response?.current_unit_id);
+        }
       } catch (err) {
         if (mounted) setError(err?.response?.data?.detail || "Không thể tải lộ trình học.");
       } finally {
         if (mounted) setIsLoading(false);
       }
     };
+    if (curriculumApi.getCachedCurriculum()) {
+      void curriculumApi.getCurriculum({ force: true }).then((response) => {
+        if (mounted) {
+          setData(response);
+          void curriculumApi.prefetchUnit(response?.current_unit_id);
+        }
+      }).catch(() => null);
+    }
     void load();
     return () => {
       mounted = false;

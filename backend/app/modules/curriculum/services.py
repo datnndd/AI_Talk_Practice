@@ -494,7 +494,7 @@ class CurriculumService:
         lesson_id: int,
         payload: LessonAttemptRequest,
     ) -> LessonAttemptRead:
-        lesson = await cls._get_active_lesson(db, lesson_id)
+        lesson = await cls._get_active_lesson(db, lesson_id, include_unit_lessons=False)
         await cls.get_user_unit(db, user_id=user.id, unit_id=lesson.unit_id)
 
         score, feedback, answer_payload = await cls._score_lesson(db, user=user, lesson=lesson, payload=payload)
@@ -766,14 +766,11 @@ class CurriculumService:
         )
 
     @staticmethod
-    async def _get_active_lesson(db: AsyncSession, lesson_id: int) -> Lesson:
-        lesson = (
-            await db.execute(
-                select(Lesson)
-                .options(selectinload(Lesson.unit).selectinload(Unit.lessons))
-                .where(Lesson.id == lesson_id, _truthy(Lesson.is_active))
-            )
-        ).scalar_one_or_none()
+    async def _get_active_lesson(db: AsyncSession, lesson_id: int, *, include_unit_lessons: bool = True) -> Lesson:
+        stmt = select(Lesson).where(Lesson.id == lesson_id, _truthy(Lesson.is_active))
+        if include_unit_lessons:
+            stmt = stmt.options(selectinload(Lesson.unit).selectinload(Unit.lessons))
+        lesson = (await db.execute(stmt)).scalar_one_or_none()
         if lesson is None:
             raise NotFoundError("Lesson not found")
         return lesson

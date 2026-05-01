@@ -9,23 +9,24 @@ from app.api.dependencies import get_current_user, get_db
 from app.modules.users.models.user import User
 from app.modules.scenarios.schemas import (
     ScenarioCreate,
+    ScenarioListRead,
     ScenarioRead,
     ScenarioUpdate,
 )
-from app.modules.scenarios.serializers import serialize_scenario
+from app.modules.scenarios.serializers import serialize_scenario, serialize_scenario_list_item
 from app.modules.scenarios.services.scenario_service import ScenarioService
 
 router = APIRouter(prefix="/scenarios", tags=["scenarios"])
 
 
-@router.get("", response_model=list[ScenarioRead])
+@router.get("", response_model=list[ScenarioListRead])
 async def list_scenarios(
     category: str | None = Query(default=None),
     difficulty: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ):
     scenarios = await ScenarioService.list_active(db, category, difficulty)
-    return [serialize_scenario(item) for item in scenarios]
+    return [serialize_scenario_list_item(item) for item in scenarios]
 
 
 @router.get("/{scenario_id}", response_model=ScenarioRead)

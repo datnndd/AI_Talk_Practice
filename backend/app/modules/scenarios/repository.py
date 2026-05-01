@@ -24,8 +24,10 @@ class ScenarioRepository:
         )
 
     @staticmethod
-    def _scenario_query(*, include_deleted: bool = False) -> Select[tuple[Scenario]]:
-        stmt = select(Scenario).options(joinedload(Scenario.character))
+    def _scenario_query(*, include_deleted: bool = False, include_character: bool = True) -> Select[tuple[Scenario]]:
+        stmt = select(Scenario)
+        if include_character:
+            stmt = stmt.options(joinedload(Scenario.character))
         if not include_deleted:
             stmt = stmt.where(Scenario.deleted_at.is_(None))
         return stmt
@@ -39,7 +41,7 @@ class ScenarioRepository:
         difficulty: str | None = None,
         is_active: bool | None = True,
     ) -> list[Scenario]:
-        stmt = cls._scenario_query()
+        stmt = cls._scenario_query(include_character=False)
         if is_active is not None:
             stmt = stmt.where(cls._truthy(Scenario.is_active) if is_active else cls._falsy(Scenario.is_active))
         if category:

@@ -63,3 +63,22 @@ class ScenarioRead(ORMModel):
     character: CharacterRead | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class ScenarioListRead(ORMModel):
+    id: int
+    character_id: int | None = None
+    title: str
+    description: str
+    ai_role: str = ""
+    user_role: str = ""
+    image_url: str | None = None
+    tasks: Any | None = None
+    category: str
+    difficulty: str
+    tags: Any | None = None
+    estimated_duration: int | None = None
+    is_active: bool
+    is_pro: bool
+    created_at: datetime
+    updated_at: datetime

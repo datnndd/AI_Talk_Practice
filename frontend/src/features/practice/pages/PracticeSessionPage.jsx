@@ -743,7 +743,12 @@ const PracticeSession = () => {
     let isMounted = true;
 
     const fetchScenario = async () => {
-      setIsLoading(true);
+      const cachedScenario = practiceApi.getCachedScenario(scenarioId);
+      if (cachedScenario?.ai_system_prompt) {
+        setScenario(cachedScenario);
+        setActiveCharacter(cachedScenario?.character || null);
+      }
+      setIsLoading(!cachedScenario?.ai_system_prompt);
       setScenarioError("");
 
       try {

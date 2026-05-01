@@ -37,7 +37,13 @@ const LessonPlayerPage = () => {
   const [rewardNotice, setRewardNotice] = useState("");
 
   const loadUnit = useCallback(async () => {
-    setIsLoading(true);
+    const cachedUnit = curriculumApi.getCachedUnit(unitId);
+    if (cachedUnit) {
+      setUnit(cachedUnit);
+      const firstOpen = cachedUnit.lessons.findIndex((item) => item.progress?.status !== "completed");
+      setActiveIndex(firstOpen >= 0 ? firstOpen : 0);
+    }
+    setIsLoading(!cachedUnit);
     setError("");
     try {
       const data = await curriculumApi.getUnit(unitId);
@@ -53,6 +59,13 @@ const LessonPlayerPage = () => {
 
   useEffect(() => {
     void loadUnit();
+    if (curriculumApi.getCachedUnit(unitId)) {
+      void curriculumApi.getUnit(unitId, { force: true }).then((data) => {
+        setUnit(data);
+        const firstOpen = data.lessons.findIndex((item) => item.progress?.status !== "completed");
+        setActiveIndex(firstOpen >= 0 ? firstOpen : 0);
+      }).catch(() => null);
+    }
   }, [loadUnit]);
 
   const activeExercise = useMemo(() => unit?.lessons?.[activeIndex], [unit, activeIndex]);

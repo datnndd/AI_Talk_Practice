@@ -1,13 +1,62 @@
 import { httpClient } from "@/shared/api/httpClient";
 
+const curriculumCache = {
+  data: null,
+  promise: null,
+};
+
+const unitCache = new Map();
+
+const getUnitCacheKey = (unitId) => String(unitId);
+
 export const curriculumApi = {
-  getCurriculum: async () => {
-    const { data } = await httpClient.get("/curriculum");
-    return data;
+  getCurriculum: async ({ force = false } = {}) => {
+    if (!force && curriculumCache.data) {
+      return curriculumCache.data;
+    }
+    if (!force && curriculumCache.promise) {
+      return curriculumCache.promise;
+    }
+
+    curriculumCache.promise = httpClient.get("/curriculum").then(({ data }) => {
+      curriculumCache.data = data;
+      curriculumCache.promise = null;
+      return data;
+    }).catch((error) => {
+      curriculumCache.promise = null;
+      throw error;
+    });
+
+    return curriculumCache.promise;
   },
-  getUnit: async (unitId) => {
-    const { data } = await httpClient.get(`/units/${unitId}`);
-    return data;
+  getCachedCurriculum: () => curriculumCache.data,
+  getUnit: async (unitId, { force = false } = {}) => {
+    const key = getUnitCacheKey(unitId);
+    const cached = unitCache.get(key);
+    if (!force && cached?.data) {
+      return cached.data;
+    }
+    if (!force && cached?.promise) {
+      return cached.promise;
+    }
+
+    const promise = httpClient.get(`/units/${unitId}`).then(({ data }) => {
+      unitCache.set(key, { data });
+      return data;
+    }).catch((error) => {
+      unitCache.delete(key);
+      throw error;
+    });
+
+    unitCache.set(key, { promise });
+    return promise;
+  },
+  getCachedUnit: (unitId) => unitCache.get(getUnitCacheKey(unitId))?.data || null,
+  prefetchUnit: (unitId) => {
+    if (!unitId) {
+      return Promise.resolve(null);
+    }
+    return curriculumApi.getUnit(unitId).catch(() => null);
   },
   attemptLesson: async (lessonId, payload) => {
     const { data } = await httpClient.post(`/lessons/${lessonId}/attempt`, payload);

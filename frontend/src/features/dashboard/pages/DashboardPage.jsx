@@ -20,7 +20,11 @@ const Dashboard = () => {
     let isMounted = true;
 
     const loadScenarios = async () => {
-      setIsLoadingScenarios(true);
+      const cachedScenarios = practiceApi.getCachedScenarios?.();
+      if (cachedScenarios) {
+        setScenarios(Array.isArray(cachedScenarios) ? cachedScenarios : []);
+      }
+      setIsLoadingScenarios(!cachedScenarios);
       setScenarioError("");
 
       try {
@@ -39,7 +43,15 @@ const Dashboard = () => {
       }
     };
 
+    const hadCachedScenarios = Boolean(practiceApi.getCachedScenarios?.());
     void loadScenarios();
+    if (hadCachedScenarios) {
+      void practiceApi.listScenarios({ force: true }).then((data) => {
+        if (isMounted) {
+          setScenarios(Array.isArray(data) ? data : []);
+        }
+      }).catch(() => null);
+    }
 
     return () => {
       isMounted = false;

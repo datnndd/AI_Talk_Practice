@@ -1,5 +1,6 @@
 from .scenario import (
     ScenarioCreate,
+    ScenarioListRead,
     ScenarioRead,
     ScenarioUpdate,
 )
@@ -17,6 +18,7 @@ from .admin_scenario import (
 
 __all__ = [
     "ScenarioCreate",
+    "ScenarioListRead",
     "ScenarioRead",
     "ScenarioUpdate",
     "ScenarioAdminCreate",

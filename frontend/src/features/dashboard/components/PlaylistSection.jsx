@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Headphones } from "@phosphor-icons/react";
 
 import fallbackScenarioImage from "@/assets/buddy_talk_logo.jpg";
+import { practiceApi } from "@/features/practice/api/practiceApi";
 
 const DIFFICULTY_GROUPS = [
   {
@@ -72,6 +73,8 @@ const groupScenariosByDifficulty = (scenarios) =>
 const ScenarioCard = ({ scenario, group }) => (
   <Link
     to={`/practice/${scenario.id}`}
+    onMouseEnter={() => practiceApi.prefetchScenario(scenario.id)}
+    onFocus={() => practiceApi.prefetchScenario(scenario.id)}
     className="group relative col-span-12 block cursor-pointer overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-800 sm:col-span-6 md:col-span-3 2xl:col-span-2"
   >
     <div className="relative aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-700">

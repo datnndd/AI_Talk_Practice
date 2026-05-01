@@ -49,11 +49,18 @@ async def test_curriculum_locks_next_unit_until_previous_completed(client, db_se
     units = data["sections"][0]["units"]
     assert units[0]["id"] == unit_1.id
     assert units[0]["is_locked"] is False
+    assert units[0]["lessons"] == []
     assert units[1]["id"] == unit_2.id
     assert units[1]["is_locked"] is True
 
     locked_response = await client.get(f"/api/units/{unit_2.id}", headers=headers)
     assert locked_response.status_code == 403
+
+    unit_response = await client.get(f"/api/units/{unit_1.id}", headers=headers)
+    assert unit_response.status_code == 200, unit_response.text
+    unit_data = unit_response.json()
+    assert unit_data["lessons"][0]["id"] == lesson_1.id
+    assert unit_data["lessons"][0]["content"]["passage"] == "I want a ___."
 
     attempt = await client.post(
         f"/api/lessons/{lesson_1.id}/attempt",

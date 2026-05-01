@@ -4,6 +4,7 @@ from app.modules.characters.serializers import serialize_character
 from app.modules.scenarios.models import Scenario
 from app.modules.scenarios.schemas import (
     ScenarioAdminRead,
+    ScenarioListRead,
     ScenarioRead,
 )
 
@@ -62,6 +63,31 @@ def serialize_scenario(
             "is_active": scenario.is_active,
             "is_pro": scenario.is_pro,
             "character": serialize_character(scenario.character) if scenario.character else None,
+            "created_at": scenario.created_at,
+            "updated_at": scenario.updated_at,
+        }
+    )
+
+
+def serialize_scenario_list_item(
+    scenario: Scenario,
+) -> ScenarioListRead:
+    return ScenarioListRead.model_validate(
+        {
+            "id": scenario.id,
+            "character_id": scenario.character_id,
+            "title": scenario.title,
+            "description": scenario.description,
+            "ai_role": scenario.ai_role or "",
+            "user_role": scenario.user_role or "",
+            "image_url": scenario.image_url,
+            "tasks": scenario.tasks,
+            "category": scenario.category,
+            "difficulty": scenario.difficulty,
+            "tags": scenario.tags,
+            "estimated_duration": scenario.estimated_duration,
+            "is_active": scenario.is_active,
+            "is_pro": scenario.is_pro,
             "created_at": scenario.created_at,
             "updated_at": scenario.updated_at,
         }
