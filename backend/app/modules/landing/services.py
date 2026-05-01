@@ -14,8 +14,8 @@ from app.core.config import Settings, settings
 from app.core.exceptions import BadRequestError, UpstreamServiceError
 
 LANDING_PRONUNCIATION_TEXT = (
-    "Every day I practice speaking with confidence. I listen carefully, pronounce clearly, "
-    "and keep going even when a sentence feels difficult."
+    "All men have a sweetness in their life. That is what helps them go on. "
+    "It is towards that they turn when they feel too worn out."
 )
 
 LANDING_PRONUNCIATION_MAX_RECORDING_SECONDS = 20

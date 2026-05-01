@@ -46,7 +46,14 @@ const SiteFooter = ({ className = "" }) => {
             <a href="/" className="flex items-center gap-3" aria-label="Buddy Talk home">
               <img src={settings.logoUrl} alt={settings.brandName} className="h-[54px] w-[54px] rounded-2xl object-cover shadow-sm" />
               <div>
-                <p className="text-xl font-black text-[#121212]">{settings.brandName}</p>
+                {settings.brandName.toLowerCase().replace(/\s+/g, "") === "buddytalk" ? (
+                  <p className="flex items-center text-2xl font-black leading-none tracking-tighter">
+                    <span className="text-foreground">Buddy</span>
+                    <span className="ml-1 text-brand-green">Talk</span>
+                  </p>
+                ) : (
+                  <p className="text-xl font-black text-foreground">{settings.brandName}</p>
+                )}
                 <p className="text-sm font-semibold text-[#667394]">{settings.tagline}</p>
               </div>
             </a>

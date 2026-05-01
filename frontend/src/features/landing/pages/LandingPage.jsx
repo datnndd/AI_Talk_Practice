@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -18,8 +18,10 @@ import {
 } from "@phosphor-icons/react";
 
 import AuthCard from "@/features/auth/components/AuthCard";
+import PronunciationAssessmentWidget from "@/features/landing/components/PronunciationAssessmentWidget";
 import SiteFooter from "@/shared/components/SiteFooter";
 import { useSiteSettings } from "@/shared/hooks/useSiteSettings";
+import landingCosmicBg from "@/assets/landing-cosmic-bg.png";
 
 const navItems = [
   { label: "Tính năng", href: "#features" },
@@ -92,12 +94,6 @@ const pronunciationScores = [
   { label: "Trôi chảy", score: 76, color: "bg-brand-orange" },
 ];
 
-const problemWords = [
-  { word: "confidence", status: "Tốt", tone: "text-brand-green bg-brand-green/10" },
-  { word: "carefully", status: "Cần luyện", tone: "text-brand-orange bg-brand-orange/10" },
-  { word: "difficult", status: "Sai âm cuối", tone: "text-brand-red bg-brand-red/10" },
-];
-
 const fadeIn = {
   hidden: { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0 },
@@ -113,38 +109,79 @@ const SectionHeading = ({ eyebrow, title, description }) => (
 
 const LandingPage = () => {
   const [authMode, setAuthMode] = useState(null);
+  const [activeSection, setActiveSection] = useState("features");
   const siteSettings = useSiteSettings();
 
   const openAuth = (mode) => setAuthMode(mode);
   const closeAuth = () => setAuthMode(null);
 
-  return (
-    <main className="min-h-screen overflow-x-hidden bg-[#f8fbff] text-zinc-950">
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_10%,rgba(88,204,2,0.16),transparent_32%),radial-gradient(circle_at_90%_20%,rgba(28,176,246,0.18),transparent_28%),linear-gradient(180deg,#f8fbff_0%,#ffffff_52%,#f3fbff_100%)]" />
+  useEffect(() => {
+    const observedSections = navItems
+      .map((item) => document.getElementById(item.href.replace("#", "")))
+      .filter(Boolean);
 
-      <header className="sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-xl">
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntry = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visibleEntry?.target?.id) {
+          setActiveSection(visibleEntry.target.id);
+        }
+      },
+      { rootMargin: "-30% 0px -55% 0px", threshold: [0.1, 0.25, 0.5] },
+    );
+
+    observedSections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <main className="relative min-h-screen overflow-x-hidden bg-[#f8fbff] text-[#24324a]">
+      <div
+        className="fixed inset-0 -z-20 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${landingCosmicBg})` }}
+      />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[linear-gradient(180deg,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0.50)_34%,rgba(244,253,255,0.64)_68%,rgba(255,253,244,0.80)_100%),radial-gradient(circle_at_18%_18%,rgba(255,253,244,0.78),transparent_34%),radial-gradient(circle_at_88%_18%,rgba(210,228,248,0.70),transparent_34%),radial-gradient(circle_at_12%_88%,rgba(136,223,70,0.16),transparent_36%)]" />
+
+      <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/70 bg-white/55 backdrop-blur-[24px]">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8">
           <a href="/" className="flex items-center gap-3" aria-label="Buddy Talk home">
             <img src={siteSettings.logoUrl} alt={siteSettings.brandName} className="h-11 w-11 rounded-2xl object-cover shadow-sm" />
-            <span className="font-display text-xl font-black tracking-tight">{siteSettings.brandName}</span>
+            {siteSettings.brandName.toLowerCase().replace(/\s+/g, "") === "buddytalk" ? (
+              <span className="flex items-center font-display text-2xl font-black leading-none tracking-tighter">
+                <span className="text-foreground">Buddy</span>
+                <span className="ml-1 text-brand-green">Talk</span>
+              </span>
+            ) : (
+              <span className="font-display text-xl font-black tracking-tight text-foreground">{siteSettings.brandName}</span>
+            )}
           </a>
 
-          <div className="hidden items-center gap-8 rounded-full border border-zinc-200 bg-white/70 px-6 py-3 text-sm font-bold text-zinc-600 shadow-sm lg:flex">
+          <div className="hidden items-center gap-8 rounded-full border border-white/80 bg-white/45 px-6 py-3 text-sm font-bold text-[#667394] shadow-sm shadow-sky-100/60 lg:flex">
             {navItems.map((item) => (
-              <a key={item.href} href={item.href} className="hover:text-brand-blue">
+              <a
+                key={item.href}
+                href={item.href}
+                className={`rounded-full px-3 py-1.5 transition ${
+                  activeSection === item.href.replace("#", "")
+                    ? "bg-gradient-to-r from-[#88DF46]/20 to-[#34DBC5]/20 text-[#1f8f83] shadow-sm"
+                    : "hover:bg-white/60 hover:text-[#34DBC5]"
+                }`}
+              >
                 {item.label}
               </a>
             ))}
           </div>
 
           <div className="flex items-center gap-3">
-            <button type="button" onClick={() => openAuth("login")} className="hidden rounded-full px-5 py-3 text-sm font-black text-zinc-700 hover:bg-zinc-100 sm:inline-flex">
+            <button type="button" onClick={() => openAuth("login")} className="hidden rounded-full px-5 py-3 text-sm font-black text-[#667394] hover:bg-white/70 hover:text-[#34DBC5] sm:inline-flex">
               Đăng nhập
             </button>
             <button
               type="button"
               onClick={() => openAuth("register")}
-              className="inline-flex items-center gap-2 rounded-full bg-brand-green px-5 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(88,204,2,0.28)] hover:bg-brand-green-dark"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-5 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(52,219,197,0.24)] hover:shadow-[0_14px_30px_rgba(52,219,197,0.32)]"
             >
               Bắt đầu <ArrowRight weight="bold" />
             </button>
@@ -152,15 +189,15 @@ const LandingPage = () => {
         </nav>
       </header>
 
-      <section className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-16 lg:grid-cols-[1.02fr_0.98fr] lg:px-8 lg:pb-28 lg:pt-24">
+      <section className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-32 lg:grid-cols-[1.02fr_0.98fr] lg:px-8 lg:pb-28 lg:pt-40">
         <motion.div initial="hidden" animate="visible" variants={fadeIn} transition={{ duration: 0.65 }} className="max-w-3xl">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-green/20 bg-brand-green/10 px-4 py-2 text-sm font-black text-brand-green-dark">
             <Sparkle weight="fill" /> AI tutor luyện nói 24/7
           </div>
-          <h1 className="text-5xl font-black leading-[1.02] tracking-[-0.055em] text-zinc-950 md:text-7xl">
+          <h1 className="text-5xl font-black leading-[1.02] tracking-[-0.055em] text-[#20314a] md:text-7xl">
             Luyện nói tiếng Anh mỗi ngày với AI tutor.
           </h1>
-          <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-zinc-600 md:text-xl">
+          <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-[#667394] md:text-xl">
             Buddy Talk giúp bạn nói nhiều hơn, sửa phát âm rõ hơn và giữ động lực bằng lộ trình học, điểm thưởng, leaderboard và phản hồi sau mỗi buổi luyện.
           </p>
 
@@ -168,13 +205,13 @@ const LandingPage = () => {
             <button
               type="button"
               onClick={() => openAuth("register")}
-              className="inline-flex items-center justify-center gap-3 rounded-2xl bg-zinc-950 px-7 py-4 text-base font-black text-white shadow-2xl shadow-zinc-950/15 hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-7 py-4 text-base font-black text-white shadow-2xl shadow-cyan-200/50 hover:-translate-y-0.5"
             >
               Tạo tài khoản miễn phí <ArrowRight weight="bold" />
             </button>
             <a
               href="#pronunciation"
-              className="inline-flex items-center justify-center gap-3 rounded-2xl border border-zinc-200 bg-white px-7 py-4 text-base font-black text-zinc-800 shadow-sm hover:-translate-y-0.5 hover:border-brand-blue/40"
+              className="inline-flex items-center justify-center gap-3 rounded-2xl border border-white/80 bg-white/60 px-7 py-4 text-base font-black text-[#2f496b] shadow-sm backdrop-blur hover:-translate-y-0.5 hover:border-[#34DBC5]/50"
             >
               Xem chấm phát âm <MicrophoneStage weight="bold" />
             </a>
@@ -182,8 +219,8 @@ const LandingPage = () => {
 
           <div className="mt-10 grid max-w-2xl grid-cols-3 gap-3">
             {stats.map((stat) => (
-              <div key={stat.label} className="rounded-3xl border border-white bg-white/75 p-4 shadow-sm">
-                <p className="text-2xl font-black text-zinc-950">{stat.value}</p>
+              <div key={stat.label} className="rounded-3xl border border-white/80 bg-white/58 p-4 shadow-sm shadow-sky-100/50 backdrop-blur">
+                <p className="text-2xl font-black text-[#20314a]">{stat.value}</p>
                 <p className="mt-1 text-xs font-bold uppercase tracking-wide text-zinc-500">{stat.label}</p>
               </div>
             ))}
@@ -198,39 +235,39 @@ const LandingPage = () => {
         >
           <div className="absolute -left-8 top-10 h-32 w-32 rounded-full bg-brand-green/25 blur-3xl" />
           <div className="absolute -right-10 bottom-12 h-40 w-40 rounded-full bg-brand-blue/25 blur-3xl" />
-          <div className="relative rounded-[2.5rem] border border-white bg-white/85 p-4 shadow-[0_30px_80px_rgba(15,23,42,0.14)] backdrop-blur">
-            <div className="rounded-[2rem] bg-zinc-950 p-5 text-white">
+          <div className="relative rounded-[2.5rem] border border-white/85 bg-white/62 p-4 shadow-[0_30px_80px_rgba(52,219,197,0.16)] backdrop-blur-[18px]">
+            <div className="rounded-[2rem] border border-white/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(210,228,248,0.58))] p-5 text-[#20314a]">
               <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-green text-xl font-black">AI</div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] text-xl font-black text-white">AI</div>
                   <div>
                     <p className="font-black">Speaking Session</p>
-                    <p className="text-sm font-semibold text-zinc-400">Travel roleplay · A2-B1</p>
+                    <p className="text-sm font-semibold text-[#667394]">Travel roleplay · A2-B1</p>
                   </div>
                 </div>
-                <div className="rounded-full bg-brand-green/20 px-3 py-1 text-sm font-black text-brand-green">Live</div>
+                <div className="rounded-full bg-[#88DF46]/20 px-3 py-1 text-sm font-black text-[#46a302]">Live</div>
               </div>
 
               <div className="space-y-3">
-                <div className="max-w-[86%] rounded-3xl rounded-tl-md bg-white/10 p-4">
-                  <p className="text-sm font-semibold text-zinc-300">AI Tutor</p>
+                <div className="max-w-[86%] rounded-3xl rounded-tl-md border border-white/70 bg-white/70 p-4 shadow-sm">
+                  <p className="text-sm font-semibold text-[#667394]">AI Tutor</p>
                   <p className="mt-1 font-medium">Tell me about your last weekend trip. Try using past tense.</p>
                 </div>
-                <div className="ml-auto max-w-[86%] rounded-3xl rounded-tr-md bg-brand-blue p-4">
-                  <p className="text-sm font-semibold text-sky-100">Bạn</p>
+                <div className="ml-auto max-w-[86%] rounded-3xl rounded-tr-md bg-gradient-to-r from-[#34DBC5] to-[#8bdcff] p-4 text-white shadow-lg shadow-cyan-100">
+                  <p className="text-sm font-semibold text-white/80">Bạn</p>
                   <p className="mt-1 font-medium">I went to Da Lat and tried new coffee with my friends.</p>
                 </div>
-                <div className="rounded-3xl border border-brand-green/25 bg-brand-green/10 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-brand-green">
+                <div className="rounded-3xl border border-[#88DF46]/25 bg-[#88DF46]/12 p-4">
+                  <div className="mb-2 flex items-center gap-2 text-[#46a302]">
                     <CheckCircle weight="fill" />
                     <span className="text-sm font-black uppercase tracking-wider">Feedback</span>
                   </div>
-                  <p className="text-sm font-medium text-zinc-200">Great sentence. Practice ending sound in “friends” and add one detail about the place.</p>
+                  <p className="text-sm font-medium text-[#4f6280]">Great sentence. Practice ending sound in “friends” and add one detail about the place.</p>
                 </div>
               </div>
             </div>
 
-            <div className="-mt-6 ml-auto mr-4 max-w-sm rounded-[1.75rem] border border-zinc-100 bg-white p-5 shadow-xl">
+            <div className="-mt-6 ml-auto mr-4 max-w-sm rounded-[1.75rem] border border-white/80 bg-white/82 p-5 shadow-xl shadow-sky-100/60 backdrop-blur">
               <div className="mb-4 flex items-center justify-between">
                 <p className="font-black">Session result</p>
                 <div className="flex items-center gap-1 rounded-full bg-brand-gold/20 px-3 py-1 text-sm font-black text-amber-600">
@@ -255,7 +292,7 @@ const LandingPage = () => {
         </motion.div>
       </section>
 
-      <section id="features" className="bg-white py-24">
+      <section id="features" className="py-24">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
           <SectionHeading
             eyebrow="Tính năng"
@@ -274,7 +311,7 @@ const LandingPage = () => {
                   viewport={{ once: true, margin: "-80px" }}
                   variants={fadeIn}
                   transition={{ duration: 0.45, delay: index * 0.04 }}
-                  className="group rounded-[2rem] border border-zinc-100 bg-[#fbfdff] p-7 shadow-sm hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-100"
+                  className="group rounded-[2rem] border border-white/80 bg-white/62 p-7 shadow-sm shadow-sky-100/40 backdrop-blur hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-100"
                 >
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-blue/10 text-brand-blue group-hover:bg-brand-green/15 group-hover:text-brand-green-dark">
                     <Icon size={28} weight="duotone" />
@@ -298,8 +335,8 @@ const LandingPage = () => {
 
           <div className="grid gap-5 lg:grid-cols-4">
             {steps.map((step, index) => (
-              <div key={step.title} className="relative rounded-[2rem] border border-white bg-white/80 p-7 shadow-sm">
-                <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-950 text-lg font-black text-white">
+              <div key={step.title} className="relative rounded-[2rem] border border-white/80 bg-white/58 p-7 shadow-sm shadow-sky-100/40 backdrop-blur">
+                <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] text-lg font-black text-white">
                   {index + 1}
                 </div>
                 <h3 className="text-xl font-black">{step.title}</h3>
@@ -310,76 +347,29 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section id="pronunciation" className="bg-white py-24">
-        <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 lg:grid-cols-2 lg:px-8">
-          <div>
+      <section id="pronunciation" className="py-24">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <div id="pronunciation-demo" className="mx-auto mb-10 max-w-3xl scroll-mt-28 text-center">
             <p className="mb-3 text-sm font-black uppercase tracking-[0.28em] text-brand-blue">Phát âm</p>
-            <h2 className="text-3xl font-black tracking-tight text-zinc-950 md:text-5xl">Biết mình sai ở đâu, sửa đúng chỗ đó.</h2>
-            <p className="mt-5 text-lg font-medium leading-8 text-zinc-600">
-              Khu chấm phát âm mô phỏng cách app phân tích câu nói: điểm tổng, điểm từng kỹ năng và trạng thái từng từ. Không cần gọi API ở landing.
+            <h2 className="text-3xl font-black tracking-tight text-[#20314a] md:text-5xl">Thử chấm phát âm ngay trên landing page.</h2>
+            <p className="mt-5 text-lg font-medium leading-8 text-[#667394]">
+              Đọc câu mẫu, gửi bản ghi âm để hệ thống chấm và xem lỗi được highlight trực tiếp trên câu gốc.
             </p>
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              {[
-                "Sai phát âm",
-                "Thiếu từ",
-                "Thừa từ",
-              ].map((item) => (
-                <div key={item} className="rounded-2xl border border-zinc-100 bg-[#f8fbff] p-4 text-sm font-black text-zinc-700">
-                  <CheckCircle className="mb-2 text-brand-green" weight="fill" size={22} />
-                  {item}
-                </div>
-              ))}
-            </div>
           </div>
-
-          <div className="rounded-[2.5rem] border border-zinc-100 bg-[#f8fbff] p-5 shadow-2xl shadow-sky-100/80">
-            <div className="rounded-[2rem] bg-white p-6">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-wider text-zinc-400">Reference sentence</p>
-                  <p className="mt-2 text-lg font-black">I practice speaking with confidence.</p>
-                </div>
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-green text-white">
-                  <MicrophoneStage size={28} weight="bold" />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {pronunciationScores.map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-zinc-100 p-4">
-                    <div className="mb-2 flex items-center justify-between text-sm font-black">
-                      <span>{item.label}</span>
-                      <span>{item.score}/100</span>
-                    </div>
-                    <div className="h-3 rounded-full bg-zinc-100">
-                      <div className={`h-3 rounded-full ${item.color}`} style={{ width: `${item.score}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-2">
-                {problemWords.map((item) => (
-                  <span key={item.word} className={`rounded-full px-4 py-2 text-sm font-black ${item.tone}`}>
-                    {item.word} · {item.status}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
+          <PronunciationAssessmentWidget />
         </div>
       </section>
 
       <section id="gamification" className="py-24">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <div className="grid items-center gap-10 rounded-[2.5rem] bg-zinc-950 p-8 text-white shadow-2xl shadow-zinc-950/20 lg:grid-cols-[0.9fr_1.1fr] lg:p-12">
+          <div className="grid items-center gap-10 rounded-[2.5rem] border border-white/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.76),rgba(210,228,248,0.56),rgba(255,253,244,0.72))] p-8 text-[#20314a] shadow-2xl shadow-sky-100/80 backdrop-blur-[18px] lg:grid-cols-[0.9fr_1.1fr] lg:p-12">
             <div>
               <p className="mb-3 text-sm font-black uppercase tracking-[0.28em] text-brand-green">Gamification</p>
               <h2 className="text-3xl font-black tracking-tight md:text-5xl">Học đều hơn bằng điểm, hạng và phần thưởng.</h2>
-              <p className="mt-5 text-lg font-medium leading-8 text-zinc-300">
+              <p className="mt-5 text-lg font-medium leading-8 text-[#667394]">
                 Leaderboard và shop tạo động lực nhẹ nhàng để bạn quay lại luyện mỗi ngày, không biến học nói thành áp lực.
               </p>
-              <button type="button" onClick={() => openAuth("register")} className="mt-8 inline-flex items-center gap-3 rounded-2xl bg-brand-green px-7 py-4 font-black text-white hover:bg-brand-green-dark">
+              <button type="button" onClick={() => openAuth("register")} className="mt-8 inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-7 py-4 font-black text-white shadow-lg shadow-cyan-100 hover:shadow-xl hover:shadow-cyan-100">
                 Bắt đầu tích XP <ArrowRight weight="bold" />
               </button>
             </div>
@@ -393,11 +383,11 @@ const LandingPage = () => {
               ].map((card) => {
                 const Icon = card.icon;
                 return (
-                  <div key={card.title} className="rounded-[1.75rem] border border-white/10 bg-white/10 p-6">
+                  <div key={card.title} className="rounded-[1.75rem] border border-white/80 bg-white/62 p-6 shadow-sm shadow-sky-100/50 backdrop-blur">
                     <Icon className="text-brand-green" size={30} weight="duotone" />
-                    <p className="mt-5 text-sm font-black uppercase tracking-wider text-zinc-400">{card.title}</p>
+                    <p className="mt-5 text-sm font-black uppercase tracking-wider text-[#667394]">{card.title}</p>
                     <p className="mt-1 text-3xl font-black">{card.value}</p>
-                    <p className="mt-2 text-sm font-semibold leading-6 text-zinc-300">{card.text}</p>
+                    <p className="mt-2 text-sm font-semibold leading-6 text-[#667394]">{card.text}</p>
                   </div>
                 );
               })}
@@ -406,24 +396,24 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section className="bg-white py-24">
+      <section className="py-24">
         <div className="mx-auto max-w-5xl px-5 text-center lg:px-8">
-          <h2 className="text-4xl font-black tracking-tight text-zinc-950 md:text-6xl">Sẵn sàng nói tiếng Anh nhiều hơn hôm nay?</h2>
+          <h2 className="text-4xl font-black tracking-tight text-[#20314a] md:text-6xl">Sẵn sàng nói tiếng Anh nhiều hơn hôm nay?</h2>
           <p className="mx-auto mt-5 max-w-2xl text-lg font-medium leading-8 text-zinc-600">
             Tạo tài khoản, chọn mục tiêu và bắt đầu phiên luyện nói đầu tiên với Buddy Talk.
           </p>
           <div className="mt-9 flex flex-col justify-center gap-4 sm:flex-row">
-            <button type="button" onClick={() => openAuth("register")} className="inline-flex items-center justify-center gap-3 rounded-2xl bg-brand-green px-8 py-4 font-black text-white shadow-xl shadow-lime-200 hover:bg-brand-green-dark">
+            <button type="button" onClick={() => openAuth("register")} className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-8 py-4 font-black text-white shadow-xl shadow-cyan-100 hover:shadow-2xl hover:shadow-cyan-100">
               Đăng ký ngay <ArrowRight weight="bold" />
             </button>
-            <button type="button" onClick={() => openAuth("login")} className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 px-8 py-4 font-black text-zinc-800 hover:border-brand-blue/40">
+            <button type="button" onClick={() => openAuth("login")} className="inline-flex items-center justify-center rounded-2xl border border-white/80 bg-white/58 px-8 py-4 font-black text-[#2f496b] shadow-sm backdrop-blur hover:border-[#34DBC5]/50">
               Tôi đã có tài khoản
             </button>
           </div>
         </div>
       </section>
 
-      <SiteFooter className="bg-white" />
+      <SiteFooter className="bg-transparent" />
 
       {authMode ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/55 px-4 py-6 backdrop-blur-md" role="dialog" aria-modal="true">
