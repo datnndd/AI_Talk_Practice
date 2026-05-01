@@ -9,6 +9,9 @@ registered on Base.metadata before the ORM is used.
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 
+# Auth
+from app.modules.auth.models.email_otp import EmailOTP
+
 # Payments
 from app.modules.payments.models.payment_transaction import PaymentTransaction
 from app.modules.payments.models.payment_webhook_event import PaymentWebhookEvent
@@ -50,6 +53,7 @@ __all__ = [
     "DailyCheckin",
     "DailyStat",
     "DictionaryAudioCache",
+    "EmailOTP",
     "GamificationSetting",
     "Message",
     "LearningSection",

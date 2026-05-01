@@ -8,6 +8,9 @@ import PublicRoute from "@/features/auth/components/PublicRoute";
 const LandingPage = lazy(() => import("@/features/landing/pages/LandingPage"));
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
+const ForgotPasswordPage = lazy(() => import("@/features/auth/pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("@/features/auth/pages/ResetPasswordPage"));
+const LegalPage = lazy(() => import("@/features/legal/pages/LegalPage"));
 const OnboardingPage = lazy(() => import("@/features/onboarding/pages/OnboardingPage"));
 
 const PracticeSessionPage = lazy(() => import("@/features/practice/pages/PracticeSessionPage"));
@@ -48,6 +51,10 @@ function App() {
         <Route path="/" element={withSuspense(<LandingPage />)} />
         <Route path="/login" element={<PublicRoute>{withSuspense(<LoginPage />)}</PublicRoute>} />
         <Route path="/register" element={<PublicRoute>{withSuspense(<RegisterPage />)}</PublicRoute>} />
+        <Route path="/forgot-password" element={<PublicRoute>{withSuspense(<ForgotPasswordPage />)}</PublicRoute>} />
+        <Route path="/reset-password" element={<PublicRoute>{withSuspense(<ResetPasswordPage />)}</PublicRoute>} />
+        <Route path="/terms" element={withSuspense(<LegalPage type="terms" />)} />
+        <Route path="/privacy" element={withSuspense(<LegalPage type="privacy" />)} />
         
         {/* Protected Routes */}
         <Route path="/onboarding" element={<PrivateRoute>{withSuspense(<OnboardingPage />)}</PrivateRoute>} />

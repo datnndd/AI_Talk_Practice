@@ -46,7 +46,7 @@ async def test_change_password_updates_password_hash(client, db_session, test_us
         "/api/users/me/change-password",
         json={
             "current_password": "password123",
-            "new_password": "new-password-456",
+            "new_password": "Newpass456",
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -55,7 +55,7 @@ async def test_change_password_updates_password_hash(client, db_session, test_us
 
     assert response.status_code == 200
     assert response.json()["detail"] == "Password updated successfully."
-    assert verify_password("new-password-456", test_user.password_hash)
+    assert verify_password("Newpass456", test_user.password_hash)
 
 
 @pytest.mark.asyncio
@@ -66,7 +66,7 @@ async def test_change_password_rejects_invalid_current_password(client, test_use
         "/api/users/me/change-password",
         json={
             "current_password": "wrong-password",
-            "new_password": "new-password-456",
+            "new_password": "Newpass456",
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -76,7 +76,7 @@ async def test_change_password_rejects_invalid_current_password(client, test_use
 
 
 @pytest.mark.asyncio
-async def test_change_password_allows_google_user_to_set_password_without_current_password(
+async def test_change_password_rejects_google_user_without_password(
     client, db_session, test_google_user
 ):
     token = create_access_token(user_id=test_google_user.id)
@@ -85,23 +85,23 @@ async def test_change_password_allows_google_user_to_set_password_without_curren
         "/api/users/me/change-password",
         json={
             "current_password": "",
-            "new_password": "new-password-456",
+            "new_password": "Newpass456",
         },
         headers={"Authorization": f"Bearer {token}"},
     )
 
     await db_session.refresh(test_google_user)
 
-    assert response.status_code == 200
-    assert response.json()["detail"] == "Password updated successfully."
-    assert verify_password("new-password-456", test_google_user.password_hash)
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Please use forgot password OTP flow to set a password."
+    assert test_google_user.password_hash is None
 
 
 @pytest.mark.asyncio
 async def test_change_password_requires_current_password_when_password_already_exists(
     client, test_google_user, db_session
 ):
-    test_google_user.password_hash = hash_password("existing-password-123")
+    test_google_user.password_hash = hash_password("Existing123")
     await db_session.commit()
     await db_session.refresh(test_google_user)
     token = create_access_token(user_id=test_google_user.id)
@@ -109,7 +109,7 @@ async def test_change_password_requires_current_password_when_password_already_e
     response = await client.post(
         "/api/users/me/change-password",
         json={
-            "new_password": "new-password-456",
+            "new_password": "Newpass456",
         },
         headers={"Authorization": f"Bearer {token}"},
     )

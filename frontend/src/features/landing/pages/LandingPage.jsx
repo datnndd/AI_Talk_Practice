@@ -108,12 +108,12 @@ const SectionHeading = ({ eyebrow, title, description }) => (
 );
 
 const LandingPage = () => {
-  const [authMode, setAuthMode] = useState(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("features");
   const siteSettings = useSiteSettings();
 
-  const openAuth = (mode) => setAuthMode(mode);
-  const closeAuth = () => setAuthMode(null);
+  const openAuth = () => setIsAuthOpen(true);
+  const closeAuth = () => setIsAuthOpen(false);
 
   useEffect(() => {
     const observedSections = navItems
@@ -415,7 +415,7 @@ const LandingPage = () => {
 
       <SiteFooter className="bg-transparent" />
 
-      {authMode ? (
+      {isAuthOpen ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/55 px-4 py-6 backdrop-blur-md" role="dialog" aria-modal="true">
           <button type="button" aria-label="Đóng form đăng nhập" className="absolute inset-0 cursor-default" onClick={closeAuth} />
           <motion.div
@@ -433,7 +433,7 @@ const LandingPage = () => {
             >
               <X size={20} weight="bold" />
             </button>
-            <AuthCard mode={authMode} embedded onModeChange={setAuthMode} />
+            <AuthCard embedded />
           </motion.div>
         </div>
       ) : null}

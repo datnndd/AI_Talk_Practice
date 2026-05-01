@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FloppyDisk, GlobeHemisphereWest, ImageSquare, LinkSimple, RotateCounterClockwise } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, FloppyDisk, GlobeHemisphereWest, ImageSquare, LinkSimple } from "@phosphor-icons/react";
 
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
 import SiteFooter from "@/shared/components/SiteFooter";
@@ -87,10 +87,6 @@ const AdminSiteSettingsPage = () => {
                 <span className="mb-2 block text-sm font-bold text-zinc-600 dark:text-zinc-300">Logo URL</span>
                 <input className={fieldClass} value={settings.logoUrl} onChange={(event) => updateField("logoUrl", event.target.value)} placeholder="https://... hoặc /assets/..." />
               </label>
-              <label className="block">
-                <span className="mb-2 block text-sm font-bold text-zinc-600 dark:text-zinc-300">Ghi chú mobile</span>
-                <input className={fieldClass} value={settings.mobileNote} onChange={(event) => updateField("mobileNote", event.target.value)} />
-              </label>
             </div>
           </div>
 
@@ -132,7 +128,7 @@ const AdminSiteSettingsPage = () => {
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <button type="button" onClick={resetDefaults} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-5 py-3 text-sm font-black text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
-              <RotateCounterClockwise size={18} weight="bold" />
+              <ArrowCounterClockwise size={18} weight="bold" />
               Mặc định
             </button>
             <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-green px-5 py-3 text-sm font-black text-white shadow-[0_4px_0_0_#46a302] active:translate-y-[3px] active:shadow-none">

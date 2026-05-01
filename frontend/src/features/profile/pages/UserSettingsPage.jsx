@@ -84,6 +84,10 @@ const UserSettingsPage = () => {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
+    if (!user?.has_password) {
+      navigate(`/reset-password?email=${encodeURIComponent(user?.email || "")}`);
+      return;
+    }
     if (passwordData.new_password !== passwordData.confirm_password) {
       setMessage({ type: "error", text: "New passwords do not match." });
       return;
@@ -295,6 +299,18 @@ const UserSettingsPage = () => {
           <section className="space-y-6 pt-12 border-t-2 border-[#e5e5e5]">
             <h2 className="text-xl font-black text-[#4b4b4b]">Bảo mật</h2>
             
+            {!user?.has_password ? (
+              <div className="rounded-2xl border-2 border-[#84d8ff] bg-[#ddf4ff] p-5 text-sm font-bold text-[#1cb0f6]">
+                Tài khoản này chưa có mật khẩu. Vui lòng dùng OTP qua email để đặt mật khẩu an toàn.
+                <button
+                  type="button"
+                  onClick={() => navigate(`/reset-password?email=${encodeURIComponent(user?.email || "")}`)}
+                  className="mt-4 block rounded-xl bg-[#1cb0f6] px-5 py-3 font-black text-white"
+                >
+                  Đặt mật khẩu bằng OTP
+                </button>
+              </div>
+            ) : (
             <form onSubmit={handlePasswordChange} className="space-y-6">
               <div>
                 <label className="app-label">Mật khẩu hiện tại</label>
@@ -334,6 +350,7 @@ const UserSettingsPage = () => {
                 </button>
               </div>
             </form>
+            )}
           </section>
 
           {/* Danger Zone */}

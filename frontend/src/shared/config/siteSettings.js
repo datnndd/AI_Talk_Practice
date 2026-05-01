@@ -6,7 +6,6 @@ export const defaultSiteSettings = {
   brandName: "Buddy Talk",
   tagline: "AI Speaking Tutor",
   logoUrl: defaultLogo,
-  mobileNote: "App mobile đang phát triển",
   contactNote: "Kênh social đang chờ cấu hình. Footer giữ sẵn vị trí để thêm link thật sau.",
   socialLinks: {
     facebook: "#",

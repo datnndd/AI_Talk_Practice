@@ -47,6 +47,11 @@ async def send_verification_email(to_email: str, token: str) -> None:
 
 async def send_password_reset_email(to_email: str, token: str) -> None:
     subject = "Reset your AI Talk Practice Password"
-    link = f"{settings.frontend_url.rstrip('/')}/auth/reset-password?token={token}"
-    body = f"You requested a password reset. Click here to reset it: {link}\nIf you did not request this, ignore this email."
+    body = f"Your password reset code is: {token}\nThis code expires in 10 minutes. If you did not request this, ignore this email."
+    await send_email(to_email, subject, body)
+
+
+async def send_register_otp_email(to_email: str, otp: str) -> None:
+    subject = "Verify your AI Talk Practice email"
+    body = f"Your registration code is: {otp}\nThis code expires in 10 minutes."
     await send_email(to_email, subject, body)

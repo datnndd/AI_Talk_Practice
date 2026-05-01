@@ -1,7 +1,6 @@
 import {
   ChartLineUp,
   CheckCircle,
-  DeviceMobile,
   EnvelopeSimple,
   FacebookLogo,
   GraduationCap,
@@ -35,13 +34,18 @@ const appLinks = [
   { label: "Subscription", href: "/subscription", icon: ShieldCheck },
 ];
 
+const legalLinks = [
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+];
+
 const SiteFooter = ({ className = "" }) => {
   const settings = useSiteSettings();
 
   return (
     <div className={`p-4 md:p-8 ${className}`}>
       <footer className="mx-auto max-w-7xl rounded-xl border border-solid border-gray-200 bg-[linear-gradient(126deg,rgba(242,245,247,0.78)_20%,rgba(255,254,247,0.78)_97%)] px-6 pb-5 pt-10 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-[30px] md:px-10 lg:rounded-3xl">
-        <div className="grid grid-cols-1 gap-8 pb-[30px] md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-8 pb-[30px] md:grid-cols-2 lg:grid-cols-5">
           <div>
             <a href="/" className="flex items-center gap-3" aria-label="Buddy Talk home">
               <img src={settings.logoUrl} alt={settings.brandName} className="h-[54px] w-[54px] rounded-2xl object-cover shadow-sm" />
@@ -57,18 +61,6 @@ const SiteFooter = ({ className = "" }) => {
                 <p className="text-sm font-semibold text-[#667394]">{settings.tagline}</p>
               </div>
             </a>
-
-            <div className="relative mt-8 before:absolute before:-inset-px before:-z-10 before:rounded-xl before:bg-gradient-to-r before:from-[#88DF46] before:to-[#34DBC5] before:content-[''] md:w-[190px]">
-              <div className="relative z-10 rounded-xl bg-[#d2e4f8e7] p-3">
-                <div className="flex flex-col items-center gap-3 text-center">
-                  <DeviceMobile size={28} weight="duotone" className="text-brand-blue" />
-                  <span className="text-sm font-semibold text-[#667394]">{settings.mobileNote}</span>
-                  <a href="/register" className="w-full rounded-xl bg-white px-3 py-2 text-sm font-black text-brand-green-dark shadow-sm hover:text-brand-blue">
-                    Nhận trải nghiệm web
-                  </a>
-                </div>
-              </div>
-            </div>
           </div>
 
           <div>
@@ -118,6 +110,19 @@ const SiteFooter = ({ className = "" }) => {
                   </li>
                 );
               })}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="mb-6 text-lg font-semibold text-[#121212]">Pháp lý</h3>
+            <ul className="flex flex-col gap-3">
+              {legalLinks.map((link) => (
+                <li key={link.href}>
+                  <a href={link.href} className="text-sm font-medium text-[#667394] hover:text-brand-blue">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
         </div>

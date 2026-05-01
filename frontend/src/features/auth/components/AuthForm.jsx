@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -185,8 +185,8 @@ const AuthForm = () => {
           </p>
           
           <div className="flex justify-center gap-8 border-t border-zinc-100 pt-10">
-            <a className="text-[9px] font-black text-zinc-400 uppercase tracking-widest hover:text-indigo-600 transition-colors" href="#">Privacy Policy</a>
-            <a className="text-[9px] font-black text-zinc-400 uppercase tracking-widest hover:text-indigo-600 transition-colors" href="#">Terms of Service</a>
+            <a className="text-[9px] font-black text-zinc-400 uppercase tracking-widest hover:text-indigo-600 transition-colors" href="/privacy">Privacy Policy</a>
+            <a className="text-[9px] font-black text-zinc-400 uppercase tracking-widest hover:text-indigo-600 transition-colors" href="/terms">Terms of Service</a>
           </div>
         </footer>
       </motion.div>

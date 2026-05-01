@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, get_current_user
 from app.modules.auth.schemas.auth import (
+    AuthIdentityRequest, AuthIdentityResponse,
+    OTPRequest, RegisterVerifyRequest,
     RegisterRequest, LoginRequest, TokenResponse, TokenRefreshResponse,
     RefreshRequest, GoogleLoginRequest, ForgotPasswordRequest,
     ResetPasswordRequest, VerifyEmailRequest
@@ -42,6 +44,24 @@ async def onboard_me(
 async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     return await AuthService.register(db, body)
 
+
+@router.post("/otp/request", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("5/minute")
+async def request_otp(request: Request, body: OTPRequest, db: AsyncSession = Depends(get_db)):
+    await AuthService.request_otp(db, body.email, body.purpose)
+    return {"message": "If eligible, an OTP has been sent"}
+
+
+@router.post("/register/verify", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+async def register_verify(request: Request, body: RegisterVerifyRequest, db: AsyncSession = Depends(get_db)):
+    return await AuthService.register_with_otp(db, body)
+
+@router.post("/identity", response_model=AuthIdentityResponse)
+@limiter.limit("10/minute")
+async def identify_email(request: Request, body: AuthIdentityRequest, db: AsyncSession = Depends(get_db)):
+    return await AuthService.identify_email(db, body.email)
+
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
 async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)):
@@ -63,7 +83,7 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest, db: Asy
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
 async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
-    await AuthService.reset_password(db, body.token, body.new_password)
+    await AuthService.reset_password(db, body.email, body.otp, body.new_password)
     return {"message": "Password updated successfully"}
 
 @router.post("/verify-email", status_code=status.HTTP_200_OK)

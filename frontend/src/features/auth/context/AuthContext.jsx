@@ -49,6 +49,16 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const checkIdentity = async (email) => {
+    const response = await httpClient.post("/auth/identity", { email });
+    return response.data;
+  };
+
+  const requestOtp = async ({ email, purpose }) => {
+    const response = await httpClient.post("/auth/otp/request", { email, purpose });
+    return response.data;
+  };
+
   const googleLogin = async (idToken) => {
     const response = await httpClient.post("/auth/google", { id_token: idToken });
     const { access_token, refresh_token } = response.data;
@@ -59,7 +69,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
-    const response = await httpClient.post("/auth/register", userData);
+    const response = await httpClient.post("/auth/register/verify", userData);
     const { access_token, refresh_token } = response.data;
     localStorage.setItem("access_token", access_token);
     localStorage.setItem("refresh_token", refresh_token);
@@ -84,6 +94,16 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const forgotPassword = async (email) => {
+    const response = await httpClient.post("/auth/forgot-password", { email });
+    return response.data;
+  };
+
+  const resetPassword = async (data) => {
+    const response = await httpClient.post("/auth/reset-password", data);
+    return response.data;
+  };
+
   const subscription = normalizeSubscription(user?.subscription);
   const isSubscribed = canAccessSubscriptionFeatures(user);
   const accessLevel = getUserAccessLevel(user);
@@ -95,8 +115,12 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         login,
+        checkIdentity,
+        requestOtp,
         googleLogin,
         register,
+        forgotPassword,
+        resetPassword,
         onboard,
         updateProfile,
         changePassword,

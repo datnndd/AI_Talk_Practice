@@ -3,39 +3,18 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useGoogleLogin } from "@react-oauth/google";
 import {
+  ArrowLeft,
   ArrowRight,
   EnvelopeSimple,
   Eye,
   EyeSlash,
   GoogleLogo,
   LockSimple,
-  MicrophoneStage,
   Sparkle,
-  UserCircle,
 } from "@phosphor-icons/react";
 
 import { useAuth } from "@/features/auth/context/AuthContext";
-
-const copy = {
-  login: {
-    eyebrow: "Chào mừng trở lại",
-    title: "Tiếp tục luyện nói cùng Buddy Talk",
-    description: "Đăng nhập để quay lại dashboard, lịch sử luyện tập và mục tiêu hôm nay.",
-    submit: "Đăng nhập",
-    loading: "Đang đăng nhập...",
-    switchPrompt: "Chưa có tài khoản?",
-    switchAction: "Tạo tài khoản",
-  },
-  register: {
-    eyebrow: "Bắt đầu miễn phí",
-    title: "Tạo hồ sơ luyện nói của bạn",
-    description: "Tạo tài khoản để nhận lộ trình, feedback phát âm và theo dõi tiến bộ mỗi ngày.",
-    submit: "Tạo tài khoản",
-    loading: "Đang tạo...",
-    switchPrompt: "Đã có tài khoản?",
-    switchAction: "Đăng nhập",
-  },
-};
+import loginRightSide from "@/assets/login_right_side.png";
 
 const resolvePostLoginPath = (user) => {
   if (user?.is_admin) {
@@ -45,26 +24,33 @@ const resolvePostLoginPath = (user) => {
   return user?.is_onboarding_completed ? "/dashboard" : "/onboarding";
 };
 
-const AuthCard = ({ mode = "register", embedded = false, onModeChange }) => {
-  const isLogin = mode === "login";
-  const content = copy[mode] || copy.register;
-  const [formData, setFormData] = useState({ email: "", password: "", name: "" });
+const normalizeEmail = (value) => value.trim().toLowerCase();
+
+const AuthCard = ({ embedded = false }) => {
+  const [step, setStep] = useState("start");
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login, register, googleLogin, refreshUser } = useAuth();
+  const { checkIdentity, login, register, requestOtp, googleLogin, refreshUser } = useAuth();
   const navigate = useNavigate();
+
+  const completeAuth = async () => {
+    const user = await refreshUser();
+    navigate(resolvePostLoginPath(user), { replace: true });
+  };
 
   const handleGoogleSuccess = async (tokenResponse) => {
     setIsLoading(true);
     setError("");
     try {
       await googleLogin(tokenResponse.access_token);
-      const user = await refreshUser();
-      navigate(resolvePostLoginPath(user), { replace: true });
+      await completeAuth();
     } catch (err) {
-      setError(err.response?.data?.detail || "Đăng nhập Google thất bại");
+      setError(err.response?.data?.detail || "Không thể tiếp tục với Google.");
     } finally {
       setIsLoading(false);
     }
@@ -72,197 +58,256 @@ const AuthCard = ({ mode = "register", embedded = false, onModeChange }) => {
 
   const signInWithGoogle = useGoogleLogin({
     onSuccess: handleGoogleSuccess,
-    onError: () => setError("Đăng nhập Google thất bại"),
+    onError: () => setError("Không thể tiếp tục với Google."),
   });
 
-  const handleChange = (event) => {
-    setFormData((current) => ({ ...current, [event.target.name]: event.target.value }));
+  const startEmailFlow = () => {
+    setError("");
+    setStep("email");
   };
 
-  const handleSubmit = async (event) => {
+  const handleEmailSubmit = async (event) => {
     event.preventDefault();
+    const nextEmail = normalizeEmail(email);
+    if (!nextEmail) {
+      setError("Vui lòng nhập email.");
+      return;
+    }
+
+    setEmail(nextEmail);
     setError("");
     setIsLoading(true);
-
     try {
-      if (isLogin) {
-        await login(formData.email, formData.password);
+      const identity = await checkIdentity(nextEmail);
+      setPassword("");
+      setOtp("");
+      if (identity.status === "existing") {
+        setStep("password-login");
       } else {
-        await register(formData);
+        await requestOtp({ email: nextEmail, purpose: "register" });
+        setStep("otp-register");
       }
-      const user = await refreshUser();
-      navigate(resolvePostLoginPath(user), { replace: true });
     } catch (err) {
-      setError(err.response?.data?.detail || (isLogin ? "Email hoặc mật khẩu chưa đúng" : "Tạo tài khoản thất bại"));
+      setError(err.response?.data?.detail || "Không thể kiểm tra email. Vui lòng thử lại.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const switchMode = isLogin ? "register" : "login";
-  const switchPath = isLogin ? "/register" : "/login";
+  const handlePasswordSubmit = async (event) => {
+    event.preventDefault();
+    const normalizedEmail = normalizeEmail(email);
+    if (!password) {
+      setError("Vui lòng nhập mật khẩu.");
+      return;
+    }
+    if (step === "otp-register" && !otp) {
+      setError("Vui lòng nhập mã OTP.");
+      return;
+    }
+
+    setError("");
+    setIsLoading(true);
+    try {
+      if (step === "password-login") {
+        await login(normalizedEmail, password);
+      } else {
+        await register({ email: normalizedEmail, otp, password });
+      }
+      await completeAuth();
+    } catch (err) {
+      setError(err.response?.data?.detail || (step === "password-login" ? "Email hoặc mật khẩu chưa đúng." : "Không thể tạo tài khoản."));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetToStart = () => {
+    setStep("start");
+    setError("");
+    setPassword("");
+    setOtp("");
+  };
+
+  const useAnotherEmail = () => {
+    setStep("email");
+    setError("");
+    setPassword("");
+    setOtp("");
+  };
+
+  const isPasswordStep = step === "password-login" || step === "otp-register";
+  const passwordTitle = step === "password-login" ? "Nhập mật khẩu để đăng nhập" : "Xác thực email và tạo mật khẩu";
+  const passwordButton = step === "password-login" ? "Log in" : "Create account";
 
   const card = (
     <motion.div
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28 }}
-      className="relative w-full max-w-[860px] overflow-hidden rounded-[30px] border border-white/70 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.16)]"
+      className="relative grid w-full max-w-[900px] overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.12)] lg:grid-cols-[420px_minmax(360px,1fr)]"
     >
-      <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-brand-green/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-56 w-56 rounded-full bg-brand-blue/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-[#88DF46]/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -left-16 h-48 w-48 rounded-full bg-[#34DBC5]/20 blur-3xl" />
 
-      <div className="relative grid lg:grid-cols-[0.92fr_1.08fr]">
-        <aside className="hidden min-h-[560px] flex-col justify-between bg-zinc-950 p-8 text-white lg:flex">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-brand-green">
-              <Sparkle weight="fill" /> Buddy Talk
-            </div>
-            <h2 className="mt-8 font-display text-4xl font-black leading-tight tracking-[-0.04em]">
-              Nói nhiều hơn, sửa nhanh hơn, tiến bộ rõ hơn.
-            </h2>
-            <p className="mt-4 text-sm font-semibold leading-7 text-zinc-300">
-              Một tài khoản để vào dashboard, bài học, luyện hội thoại AI, chấm phát âm và theo dõi streak mỗi ngày.
-            </p>
+      <div className="relative px-6 py-8 sm:px-9 lg:px-10 lg:py-10">
+        {step !== "start" ? (
+          <button
+            type="button"
+            onClick={step === "email" ? resetToStart : useAnotherEmail}
+            className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-4 py-2 text-sm font-black text-[#667394] shadow-sm hover:text-[#1f8f83]"
+          >
+            <ArrowLeft size={17} weight="bold" />
+            {step === "email" ? "Quay lại" : "Dùng email khác"}
+          </button>
+        ) : null}
+
+        <div className="mb-6 flex justify-start">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#88DF46]/20 bg-[#88DF46]/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#1f8f83]">
+            <Sparkle weight="fill" /> Buddy Talk
           </div>
+        </div>
 
-          <div className="space-y-3">
-            {[
-              "AI tutor phản hồi tức thì",
-              "Chấm phát âm theo từng từ",
-              "XP, streak và leaderboard",
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 text-sm font-bold text-zinc-100">
-                <span className="flex size-8 items-center justify-center rounded-xl bg-brand-green text-white">
-                  <ArrowRight size={16} weight="bold" />
-                </span>
-                {item}
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        <div className="p-6 sm:p-8 lg:p-10">
-          <div className="mb-7 flex items-center justify-between gap-4 lg:hidden">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-green/20 bg-brand-green/10 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-brand-green-dark">
-              <Sparkle weight="fill" /> Buddy Talk
-            </div>
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-zinc-950 text-white shadow-lg shadow-zinc-950/15">
-              <MicrophoneStage size={25} weight="duotone" />
-            </div>
-          </div>
-
-        <header className="mb-6">
-          <p className="mb-2 text-sm font-black uppercase tracking-[0.22em] text-brand-blue">{content.eyebrow}</p>
-          <h1 className="font-display text-[30px] font-black leading-[1.05] tracking-[-0.05em] text-zinc-950 sm:text-[36px]">
-            {content.title}
+        <header className="mb-6 text-left">
+          <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.025em] text-[#20314a] sm:text-[32px]">
+            {step === "start" ? "Log in or sign up in seconds" : step === "email" ? "Continue with email" : passwordTitle}
           </h1>
-          <p className="mt-4 text-sm font-semibold leading-6 text-zinc-500">{content.description}</p>
+          <p className="mt-3 max-w-sm text-[14px] font-medium leading-6 text-[#667394]">
+            {step === "start"
+              ? "Use your email or another service to continue with Buddy Talk. It’s free!"
+              : step === "email"
+                ? "Enter your email. If you already have an account, we’ll ask for your password."
+                : email}
+          </p>
         </header>
 
-        <button
-          type="button"
-          onClick={() => signInWithGoogle()}
-          disabled={isLoading}
-          className="mb-5 flex w-full items-center justify-center gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-sm font-black text-zinc-800 shadow-sm hover:-translate-y-0.5 hover:border-brand-blue/40 disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          <GoogleLogo size={22} weight="bold" className="text-red-500" />
-          Tiếp tục với Google
-        </button>
+        {error ? (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-center text-xs font-bold text-rose-600"
+          >
+            {error}
+          </motion.div>
+        ) : null}
 
-        <div className="mb-5 flex items-center gap-4">
-          <div className="h-px flex-1 bg-zinc-200" />
-          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">hoặc email</span>
-          <div className="h-px flex-1 bg-zinc-200" />
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {error ? (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-center text-xs font-bold text-rose-600"
-            >
-              {error}
-            </motion.div>
-          ) : null}
-
-          {!isLogin ? (
-            <label className="group relative block">
-              <UserCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-brand-blue" size={22} weight="duotone" />
-              <input
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full rounded-2xl border-2 border-zinc-100 bg-zinc-50 py-4 pl-12 pr-4 font-bold text-zinc-800 placeholder:text-zinc-400 focus:border-brand-blue focus:bg-white focus:outline-none"
-                placeholder="Tên của bạn (tuỳ chọn)"
-                type="text"
-              />
-            </label>
-          ) : null}
-
-          <label className="group relative block">
-            <EnvelopeSimple className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-brand-blue" size={22} weight="duotone" />
-            <input
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full rounded-2xl border-2 border-zinc-100 bg-zinc-50 py-4 pl-12 pr-4 font-bold text-zinc-800 placeholder:text-zinc-400 focus:border-brand-blue focus:bg-white focus:outline-none"
-              placeholder="Email"
-              type="email"
-            />
-          </label>
-
-          <label className="group relative block">
-            <LockSimple className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-brand-blue" size={22} weight="duotone" />
-            <input
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="w-full rounded-2xl border-2 border-zinc-100 bg-zinc-50 py-4 pl-12 pr-12 font-bold text-zinc-800 placeholder:text-zinc-400 focus:border-brand-blue focus:bg-white focus:outline-none"
-              placeholder="Mật khẩu"
-              type={showPassword ? "text" : "password"}
-            />
+        {step === "start" ? (
+          <div className="space-y-3">
             <button
               type="button"
-              onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-brand-blue"
-              aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              onClick={() => signInWithGoogle()}
+              disabled={isLoading}
+              className="relative flex h-12 w-full items-center justify-center rounded-xl border border-[#d9dde8] bg-white px-4 text-sm font-semibold text-[#24324a] shadow-sm transition hover:border-[#34DBC5] hover:bg-[#f8fbff] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {showPassword ? <EyeSlash size={22} weight="bold" /> : <Eye size={22} weight="bold" />}
+              <GoogleLogo size={22} weight="bold" className="absolute left-4 text-red-500" />
+              Continue with Google
             </button>
-          </label>
+            <button
+              type="button"
+              onClick={startEmailFlow}
+              className="relative flex h-12 w-full items-center justify-center rounded-xl border border-[#d9dde8] bg-white px-4 text-sm font-semibold text-[#24324a] shadow-sm transition hover:border-[#34DBC5] hover:bg-[#f8fbff]"
+            >
+              <EnvelopeSimple size={22} weight="bold" className="absolute left-4 text-[#24324a]" />
+              Continue with email
+            </button>
+          </div>
+        ) : null}
 
-          <button
-            disabled={isLoading}
-            className="flex w-full items-center justify-center gap-3 rounded-2xl bg-brand-green px-5 py-4 font-display text-sm font-black uppercase tracking-[0.16em] text-white shadow-[0_5px_0_0_#46a302] transition-all hover:bg-brand-green-dark active:translate-y-[4px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-70"
-            type="submit"
-          >
-            {isLoading ? content.loading : content.submit}
-            <ArrowRight size={18} weight="bold" />
-          </button>
-        </form>
+        {step === "email" ? (
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <label className="group relative block">
+              <EnvelopeSimple className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a8c4] group-focus-within:text-[#34DBC5]" size={22} weight="duotone" />
+              <input
+                autoFocus
+                name="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                className="h-12 w-full rounded-xl border border-[#d9dde8] bg-white py-3 pl-12 pr-4 font-semibold text-[#20314a] placeholder:text-[#94a8c4] shadow-sm focus:border-[#34DBC5] focus:outline-none focus:ring-4 focus:ring-[#34DBC5]/10"
+                placeholder="Email"
+                type="email"
+              />
+            </label>
+            <button
+              disabled={isLoading}
+              className="flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-5 text-sm font-bold text-white shadow-lg shadow-cyan-100 disabled:cursor-not-allowed disabled:opacity-70"
+              type="submit"
+            >
+              {isLoading ? "Checking..." : "Continue"}
+              <ArrowRight size={18} weight="bold" />
+            </button>
+          </form>
+        ) : null}
 
-        <footer className="mt-7 text-center text-[12px] font-bold leading-relaxed text-zinc-500">
-          <p className="mb-4">
-            Bằng việc {isLogin ? "đăng nhập" : "đăng ký"}, bạn đồng ý với điều khoản sử dụng Buddy Talk.
-          </p>
-          <p>
-            {content.switchPrompt}
-            {onModeChange ? (
-              <button type="button" className="ml-2 font-black uppercase tracking-wider text-brand-blue hover:underline" onClick={() => onModeChange(switchMode)}>
-                {content.switchAction}
+        {isPasswordStep ? (
+          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <label className="group relative block">
+              {step === "otp-register" ? (
+                <input
+                  autoFocus
+                  name="otp"
+                  value={otp}
+                  onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                  required
+                  minLength={6}
+                  maxLength={6}
+                  className="mb-4 h-12 w-full rounded-xl border border-[#d9dde8] bg-white px-4 py-3 text-center font-semibold tracking-[0.35em] text-[#20314a] placeholder:text-[#94a8c4] shadow-sm focus:border-[#34DBC5] focus:outline-none focus:ring-4 focus:ring-[#34DBC5]/10"
+                  placeholder="OTP"
+                  inputMode="numeric"
+                />
+              ) : null}
+              <LockSimple className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a8c4] group-focus-within:text-[#34DBC5]" size={22} weight="duotone" />
+              <input
+                autoFocus
+                name="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                minLength={step === "otp-register" ? 6 : undefined}
+                className="h-12 w-full rounded-xl border border-[#d9dde8] bg-white py-3 pl-12 pr-12 font-semibold text-[#20314a] placeholder:text-[#94a8c4] shadow-sm focus:border-[#34DBC5] focus:outline-none focus:ring-4 focus:ring-[#34DBC5]/10"
+                placeholder={step === "password-login" ? "Password" : "Create password"}
+                type={showPassword ? "text" : "password"}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a8c4] hover:text-[#34DBC5]"
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              >
+                {showPassword ? <EyeSlash size={22} weight="bold" /> : <Eye size={22} weight="bold" />}
               </button>
-            ) : (
-              <Link className="ml-2 font-black uppercase tracking-wider text-brand-blue hover:underline" to={switchPath}>
-                {content.switchAction}
+            </label>
+            <button
+              disabled={isLoading}
+              className="flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-5 text-sm font-bold text-white shadow-lg shadow-cyan-100 disabled:cursor-not-allowed disabled:opacity-70"
+              type="submit"
+            >
+              {isLoading ? "Please wait..." : passwordButton}
+              <ArrowRight size={18} weight="bold" />
+            </button>
+            {step === "password-login" ? (
+              <Link className="block text-center text-xs font-black text-indigo-600 hover:underline" to="/forgot-password">
+                Quên mật khẩu?
               </Link>
-            )}
-          </p>
+            ) : null}
+          </form>
+        ) : null}
+
+        <footer className="mt-7 text-left text-[12px] font-medium leading-relaxed text-[#667394]">
+          By continuing, you agree to Buddy Talk’s{" "}
+          <Link className="font-semibold text-[#20314a] underline underline-offset-2 hover:text-[#34DBC5]" to="/terms">Terms</Link>
+          {" "}and{" "}
+          <Link className="font-semibold text-[#20314a] underline underline-offset-2 hover:text-[#34DBC5]" to="/privacy">Privacy Policy</Link>.
         </footer>
-        </div>
+      </div>
+
+      <div className="relative hidden min-h-[620px] overflow-hidden bg-zinc-50 lg:block">
+        <img
+          src={loginRightSide}
+          alt="Buddy Talk learning preview"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(52,219,197,0.10))]" />
       </div>
     </motion.div>
   );
@@ -272,7 +317,7 @@ const AuthCard = ({ mode = "register", embedded = false, onModeChange }) => {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[radial-gradient(circle_at_15%_20%,rgba(88,204,2,0.16),transparent_32%),radial-gradient(circle_at_85%_18%,rgba(28,176,246,0.18),transparent_28%),#f8fbff] px-4 py-16 selection:bg-brand-blue/10 selection:text-brand-blue">
+    <div className="flex min-h-screen w-full items-center justify-center bg-white px-4 py-16 selection:bg-brand-blue/10 selection:text-brand-blue">
       {card}
     </div>
   );

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password, verify_password
 from app.core.exceptions import BadRequestError
+from app.core.password_policy import validate_password_policy
 from app.modules.users.models.user import User
 from app.modules.users.schemas.user import ChangePasswordRequest, OnboardingRequest, ProfileUpdateRequest
 
@@ -44,6 +45,9 @@ class UserService:
 
     @staticmethod
     async def change_password(db: AsyncSession, user: User, body: ChangePasswordRequest) -> None:
+        if not user.password_hash:
+            raise BadRequestError("Please use forgot password OTP flow to set a password.")
+
         if user.password_hash:
             if not body.current_password:
                 raise BadRequestError("Current password is required.")
@@ -54,6 +58,7 @@ class UserService:
         if body.current_password and body.current_password == body.new_password:
             raise BadRequestError("New password must be different from the current password.")
 
+        validate_password_policy(body.new_password)
         user.password_hash = hash_password(body.new_password)
         await db.commit()
         logger.info("Changed password for user id=%s", user.id)
