@@ -1,12 +1,12 @@
 from .auth import (
-    OTPRequest, RegisterVerifyRequest,
+    OTPRequest, OTPVerifyRequest, RegisterVerifyRequest,
     RegisterRequest, LoginRequest, TokenResponse, TokenRefreshResponse,
     RefreshRequest, GoogleLoginRequest, ForgotPasswordRequest,
     ResetPasswordRequest, VerifyEmailRequest
 )
 
 __all__ = [
-    "OTPRequest", "RegisterVerifyRequest",
+    "OTPRequest", "OTPVerifyRequest", "RegisterVerifyRequest",
     "RegisterRequest", "LoginRequest", "TokenResponse", "TokenRefreshResponse",
     "RefreshRequest", "GoogleLoginRequest", "ForgotPasswordRequest",
     "ResetPasswordRequest", "VerifyEmailRequest"

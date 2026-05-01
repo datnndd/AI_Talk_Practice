@@ -5,6 +5,8 @@ import pytest
 from app.modules.curriculum.models import LearningSection, Lesson, Unit
 from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
+from app.modules.gamification.models.shop_product import ShopProduct
+from app.modules.gamification.models.shop_redemption import ShopRedemption
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 from app.core.security import hash_password
@@ -146,6 +148,20 @@ async def test_daily_checkin_default_duplicate_and_admin_tier_rewards(
 
 
 @pytest.mark.asyncio
+async def test_auto_checkin_is_idempotent_and_reports_existing(test_client):
+    first = await test_client.post("/api/gamification/check-in/auto")
+    assert first.status_code == 200
+    assert first.json()["coin_earned"] == 1
+    assert first.json()["already_checked_in"] is False
+
+    second = await test_client.post("/api/gamification/check-in/auto")
+    assert second.status_code == 200
+    assert second.json()["coin_earned"] == 0
+    assert second.json()["already_checked_in"] is True
+    assert second.json()["dashboard"]["check_in"]["checked_in_today"] is True
+
+
+@pytest.mark.asyncio
 async def test_missed_checkin_day_resets_streak(test_client, db_session, test_user):
     db_session.add(
         DailyCheckin(
@@ -165,24 +181,65 @@ async def test_missed_checkin_day_resets_streak(test_client, db_session, test_us
 
 
 @pytest.mark.asyncio
-async def test_shop_pro_ticket_purchase_requires_and_spends_coin(test_client, db_session, test_user):
-    poor = await test_client.post("/api/gamification/shop/purchase", json={"item_code": "pro_1_day_ticket"})
+async def test_shop_redeem_physical_product_requires_and_spends_coin(test_client, db_session, test_user):
+    product = ShopProduct(
+        code="cap",
+        name="Mũ AI Talk",
+        description="Mũ lưu niệm",
+        price_coin=500,
+        stock_quantity=2,
+        is_active=True,
+        sort_order=1,
+    )
+    db_session.add(product)
+    await db_session.commit()
+
+    shop = await test_client.get("/api/gamification/shop")
+    assert shop.status_code == 200
+    assert [item["code"] for item in shop.json()["items"]] == ["cap"]
+
+    payload = {
+        "product_code": "cap",
+        "recipient_name": "Nguyen Van A",
+        "phone": "0900000000",
+        "address": "1 Nguyen Trai, Ha Noi",
+        "note": "Call before delivery",
+    }
+    poor = await test_client.post("/api/gamification/shop/redeem", json=payload)
     assert poor.status_code == 400
 
     user = await db_session.get(User, test_user.id)
     user.coin_balance = 500
     await db_session.commit()
 
-    purchase = await test_client.post("/api/gamification/shop/purchase", json={"item_code": "pro_1_day_ticket"})
+    purchase = await test_client.post("/api/gamification/shop/redeem", json=payload)
 
     assert purchase.status_code == 200
     body = purchase.json()
     assert body["coin_spent"] == 500
     assert body["dashboard"]["coin"]["balance"] == 0
-    assert body["subscription_expires_at"] is not None
+    assert body["redemption"]["status"] == "pending"
     refreshed = await db_session.get(User, test_user.id)
-    assert refreshed.subscription.tier == "PRO"
-    assert refreshed.subscription.status == "active"
+    assert refreshed.subscription.tier != "PRO"
+    refreshed_product = await db_session.get(ShopProduct, product.id)
+    assert refreshed_product.stock_quantity == 1
+    redemptions = (await db_session.execute(ShopRedemption.__table__.select())).all()
+    assert len(redemptions) == 1
+
+
+@pytest.mark.asyncio
+async def test_shop_hides_inactive_and_out_of_stock_products(test_client, db_session):
+    db_session.add_all([
+        ShopProduct(code="active", name="Active", description="Shown", price_coin=1, stock_quantity=1, is_active=True),
+        ShopProduct(code="hidden", name="Hidden", description="Hidden", price_coin=1, stock_quantity=1, is_active=False),
+        ShopProduct(code="sold", name="Sold", description="Sold", price_coin=1, stock_quantity=0, is_active=True),
+    ])
+    await db_session.commit()
+
+    response = await test_client.get("/api/gamification/shop")
+
+    assert response.status_code == 200
+    assert [item["code"] for item in response.json()["items"]] == ["active"]
 
 
 @pytest.mark.asyncio

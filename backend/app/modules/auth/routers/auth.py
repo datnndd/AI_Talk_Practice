@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import get_db, get_current_user
 from app.modules.auth.schemas.auth import (
     AuthIdentityRequest, AuthIdentityResponse,
-    OTPRequest, RegisterVerifyRequest,
+    OTPRequest, OTPVerifyRequest, RegisterVerifyRequest,
     RegisterRequest, LoginRequest, TokenResponse, TokenRefreshResponse,
     RefreshRequest, GoogleLoginRequest, ForgotPasswordRequest,
     ResetPasswordRequest, VerifyEmailRequest
@@ -50,6 +50,13 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
 async def request_otp(request: Request, body: OTPRequest, db: AsyncSession = Depends(get_db)):
     await AuthService.request_otp(db, body.email, body.purpose)
     return {"message": "If eligible, an OTP has been sent"}
+
+
+@router.post("/otp/verify", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+async def verify_otp(request: Request, body: OTPVerifyRequest, db: AsyncSession = Depends(get_db)):
+    await AuthService.verify_otp(db, body.email, body.purpose, body.otp)
+    return {"message": "OTP verified successfully"}
 
 
 @router.post("/register/verify", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)

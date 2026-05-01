@@ -24,9 +24,15 @@ async def test_register_verify_success_with_subscription(client, db_session):
     db_session.add(EmailOTP(email=email, purpose="register", code_hash=hash_password("123456"), expires_at=datetime.now(timezone.utc) + timedelta(minutes=10)))
     await db_session.commit()
 
+    verify_response = await client.post(
+        "/api/auth/otp/verify",
+        json={"email": email, "purpose": "register", "otp": "123456"},
+    )
+    assert verify_response.status_code == 200
+
     response = await client.post(
         "/api/auth/register/verify",
-        json={"email": email, "otp": "123456", "password": "Password123"}
+        json={"email": email, "otp": "123456", "password": "Password123", "name": "New User"}
     )
     assert response.status_code == 201
     data = response.json()

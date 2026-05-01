@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+SHOP_REDEMPTION_STATUSES = {"pending", "processing", "shipped", "completed", "cancelled"}
 
 
 def _validate_non_negative_int_map(value: dict[str, int] | None) -> dict[str, int] | None:
@@ -48,3 +50,57 @@ class AdminGamificationOverviewRead(BaseModel):
     checkins_today: int
     coins_in_circulation: int
     pro_upgrade_rate: float
+
+
+class AdminShopProductRead(BaseModel):
+    id: int
+    code: str
+    name: str
+    description: str
+    price_coin: int
+    image_url: str | None = None
+    stock_quantity: int
+    is_active: bool
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminShopProductWrite(BaseModel):
+    code: str = Field(min_length=1, max_length=80)
+    name: str = Field(min_length=1, max_length=160)
+    description: str = Field(default="", max_length=2000)
+    price_coin: int = Field(ge=0)
+    image_url: str | None = Field(default=None, max_length=500)
+    stock_quantity: int = Field(ge=0)
+    is_active: bool = True
+    sort_order: int = 0
+
+
+class AdminShopRedemptionRead(BaseModel):
+    id: int
+    user_id: int
+    user_email: str
+    user_display_name: str | None = None
+    product_id: int
+    product_name: str
+    price_coin: int
+    recipient_name: str
+    phone: str
+    address: str
+    note: str | None = None
+    status: str
+    refunded: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminShopRedemptionStatusUpdate(BaseModel):
+    status: str
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str) -> str:
+        if value not in SHOP_REDEMPTION_STATUSES:
+            raise ValueError("Unsupported redemption status")
+        return value

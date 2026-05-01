@@ -9,16 +9,6 @@ from app.modules.gamification.models.gamification_setting import GamificationSet
 
 DEFAULT_DAILY_CHECKIN_COIN_REWARDS = {"1": 1}
 DEFAULT_LEVEL_COIN_REWARDS: dict[str, int] = {}
-SHOP_ITEMS = {
-    "pro_1_day_ticket": {
-        "code": "pro_1_day_ticket",
-        "name": "Pro 1 day ticket",
-        "description": "Unlocks Pro access for 1 day.",
-        "price_coin": 500,
-        "type": "subscription_ticket",
-        "duration_days": 1,
-    }
-}
 
 
 @dataclass(frozen=True)

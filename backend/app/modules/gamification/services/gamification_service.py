@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import BadRequestError
 from app.modules.curriculum.models import Unit
 from app.modules.gamification.models.coin_transaction import CoinTransaction
+from app.modules.gamification.models.shop_product import ShopProduct
+from app.modules.gamification.models.shop_redemption import ShopRedemption
 from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.gamification.schemas import (
@@ -21,19 +23,18 @@ from app.modules.gamification.schemas import (
     LessonCompleteResponse,
     RewardRead,
     ShopItemRead,
-    ShopPurchaseResponse,
+    ShopRedeemResponse,
+    ShopRedemptionRead,
     ShopRead,
     XPRead,
 )
 from app.modules.gamification.settings import (
-    SHOP_ITEMS,
     GamificationRules,
     get_effective_rules,
     level_from_total_xp,
     level_progress_from_total_xp,
     tiered_coin_reward,
 )
-from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 
 
@@ -163,7 +164,7 @@ class GamificationService:
         )
 
     @classmethod
-    async def check_in(cls, db: AsyncSession, user: User) -> CheckInResponse:
+    async def check_in(cls, db: AsyncSession, user: User, *, allow_existing: bool = False) -> CheckInResponse:
         await cls._ensure_user_state(user)
         rules = await get_effective_rules(db)
         today = _today()
@@ -171,6 +172,16 @@ class GamificationService:
             await db.execute(select(DailyCheckin).where(DailyCheckin.user_id == user.id, DailyCheckin.date == today))
         ).scalar_one_or_none()
         if existing is not None:
+            if allow_existing:
+                dashboard = await cls._build_dashboard(db, user, rules)
+                await db.commit()
+                return CheckInResponse(
+                    date=today,
+                    streak_day=existing.streak_day,
+                    coin_earned=0,
+                    dashboard=dashboard,
+                    already_checked_in=True,
+                )
             raise BadRequestError("You have already checked in today.")
 
         latest = await cls._latest_checkin(db, user.id)
@@ -190,40 +201,72 @@ class GamificationService:
         )
         dashboard = await cls._build_dashboard(db, user, rules)
         await db.commit()
-        return CheckInResponse(date=today, streak_day=streak_day, coin_earned=coin_earned, dashboard=dashboard)
+        return CheckInResponse(
+            date=today,
+            streak_day=streak_day,
+            coin_earned=coin_earned,
+            dashboard=dashboard,
+            already_checked_in=False,
+        )
 
     @staticmethod
-    def get_shop() -> ShopRead:
-        return ShopRead(items=[ShopItemRead(**item) for item in SHOP_ITEMS.values()])
+    async def get_shop(db: AsyncSession) -> ShopRead:
+        rows = (
+            await db.execute(
+                select(ShopProduct)
+                .where(ShopProduct.is_active.is_(True), ShopProduct.stock_quantity > 0)
+                .order_by(ShopProduct.sort_order.asc(), ShopProduct.id.asc())
+            )
+        ).scalars().all()
+        return ShopRead(items=[ShopItemRead.model_validate(item, from_attributes=True) for item in rows])
 
     @classmethod
-    async def purchase_shop_item(cls, db: AsyncSession, user: User, item_code: str) -> ShopPurchaseResponse:
+    async def redeem_shop_product(cls, db: AsyncSession, user: User, body) -> ShopRedeemResponse:
         await cls._ensure_user_state(user)
-        item_payload = SHOP_ITEMS.get(item_code)
-        if item_payload is None:
+        product = (
+            await db.execute(select(ShopProduct).where(ShopProduct.code == body.product_code))
+        ).scalar_one_or_none()
+        if product is None or not product.is_active:
             raise BadRequestError("Shop item not found.")
-        item = ShopItemRead(**item_payload)
-        if user.coin_balance < item.price_coin:
+        if product.stock_quantity <= 0:
+            raise BadRequestError("Shop item is out of stock.")
+        if user.coin_balance < product.price_coin:
             raise BadRequestError("Not enough Coin.")
 
-        user.coin_balance -= item.price_coin
-        expires_at = await cls._activate_subscription_ticket(db, user, duration_days=item.duration_days or 1)
+        user.coin_balance -= product.price_coin
+        product.stock_quantity -= 1
+        redemption = ShopRedemption(
+            user_id=user.id,
+            product_id=product.id,
+            product_name=product.name,
+            price_coin=product.price_coin,
+            recipient_name=body.recipient_name.strip(),
+            phone=body.phone.strip(),
+            address=body.address.strip(),
+            note=body.note.strip() if body.note else None,
+            status="pending",
+        )
+        db.add(redemption)
+        await db.flush()
         await cls._record_coin_transaction(
             db,
             user,
-            amount=-item.price_coin,
-            transaction_type="spend_shop_purchase",
-            reference_type="shop_item",
-            reference_id=item.code,
-            metadata={"item_type": item.type, "duration_days": item.duration_days},
+            amount=-product.price_coin,
+            transaction_type="spend_shop_redeem",
+            reference_type="shop_redemption",
+            reference_id=str(redemption.id),
+            metadata={"product_id": product.id, "product_code": product.code},
         )
         rules = await get_effective_rules(db)
         dashboard = await cls._build_dashboard(db, user, rules)
         await db.commit()
-        return ShopPurchaseResponse(
+        await db.refresh(redemption)
+        await db.refresh(product)
+        item = ShopItemRead.model_validate(product, from_attributes=True)
+        return ShopRedeemResponse(
             item=item,
-            coin_spent=item.price_coin,
-            subscription_expires_at=expires_at,
+            redemption=ShopRedemptionRead.model_validate(redemption, from_attributes=True),
+            coin_spent=product.price_coin,
             dashboard=dashboard,
         )
 
@@ -337,27 +380,6 @@ class GamificationService:
             )
         )
 
-    @staticmethod
-    async def _activate_subscription_ticket(db: AsyncSession, user: User, *, duration_days: int) -> datetime:
-        subscription = user.subscription
-        if subscription is None:
-            subscription = Subscription(user_id=user.id)
-            db.add(subscription)
-            user.subscription = subscription
-
-        now = _utcnow()
-        current_expiry = subscription.expires_at
-        if current_expiry is not None:
-            current_expiry = _as_aware(current_expiry)
-        base = current_expiry if current_expiry and current_expiry > now else now
-        expires_at = base + timedelta(days=duration_days)
-        subscription.tier = "PRO"
-        subscription.status = "active"
-        subscription.expires_at = expires_at
-        features = dict(subscription.features or {})
-        features.update({"live_ai_practice": True, "advanced_scenarios": True, "premium_tutor": True})
-        subscription.features = features
-        return expires_at
 
     @staticmethod
     def _serialize_leaderboard_row(row: dict) -> LeaderboardEntryRead:
@@ -369,3 +391,5 @@ class GamificationService:
             email=row["email"],
             avatar=row["avatar"],
         )
+
+

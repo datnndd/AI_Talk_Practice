@@ -5,15 +5,24 @@ from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.core.exceptions import BadRequestError, NotFoundError
+from app.modules.gamification.models.coin_transaction import CoinTransaction
 from app.modules.gamification.schemas.admin_gamification import (
     AdminGamificationOverviewRead,
+    AdminShopProductRead,
+    AdminShopProductWrite,
+    AdminShopRedemptionRead,
+    AdminShopRedemptionStatusUpdate,
     GamificationSettingsRead,
     GamificationSettingsUpdateRequest,
 )
 from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.gamification.models.gamification_setting import GamificationSetting
+from app.modules.gamification.models.shop_product import ShopProduct
+from app.modules.gamification.models.shop_redemption import ShopRedemption
 from app.modules.gamification.settings import get_effective_rules
 from app.modules.sessions.models.session import Session
 from app.modules.users.models.subscription import Subscription
@@ -25,6 +34,113 @@ def _settings_payload(settings: GamificationSettingsRead) -> dict[str, Any]:
 
 
 class AdminGamificationService:
+    @staticmethod
+    async def list_shop_products(db: AsyncSession) -> list[AdminShopProductRead]:
+        rows = (await db.execute(select(ShopProduct).order_by(ShopProduct.sort_order.asc(), ShopProduct.id.asc()))).scalars().all()
+        return [AdminShopProductRead.model_validate(row, from_attributes=True) for row in rows]
+
+    @staticmethod
+    async def create_shop_product(db: AsyncSession, body: AdminShopProductWrite) -> AdminShopProductRead:
+        existing = (await db.execute(select(ShopProduct).where(ShopProduct.code == body.code))).scalar_one_or_none()
+        if existing is not None:
+            raise BadRequestError("Shop product code already exists.")
+        product = ShopProduct(**body.model_dump())
+        db.add(product)
+        await db.commit()
+        await db.refresh(product)
+        return AdminShopProductRead.model_validate(product, from_attributes=True)
+
+    @staticmethod
+    async def update_shop_product(db: AsyncSession, product_id: int, body: AdminShopProductWrite) -> AdminShopProductRead:
+        product = await db.get(ShopProduct, product_id)
+        if product is None:
+            raise NotFoundError("Shop product not found.")
+        existing = (await db.execute(select(ShopProduct).where(ShopProduct.code == body.code, ShopProduct.id != product_id))).scalar_one_or_none()
+        if existing is not None:
+            raise BadRequestError("Shop product code already exists.")
+        for key, value in body.model_dump().items():
+            setattr(product, key, value)
+        await db.commit()
+        await db.refresh(product)
+        return AdminShopProductRead.model_validate(product, from_attributes=True)
+
+    @staticmethod
+    async def hide_shop_product(db: AsyncSession, product_id: int) -> AdminShopProductRead:
+        product = await db.get(ShopProduct, product_id)
+        if product is None:
+            raise NotFoundError("Shop product not found.")
+        product.is_active = False
+        await db.commit()
+        await db.refresh(product)
+        return AdminShopProductRead.model_validate(product, from_attributes=True)
+
+    @staticmethod
+    def _serialize_redemption(redemption: ShopRedemption) -> AdminShopRedemptionRead:
+        return AdminShopRedemptionRead(
+            id=redemption.id,
+            user_id=redemption.user_id,
+            user_email=redemption.user.email,
+            user_display_name=redemption.user.display_name,
+            product_id=redemption.product_id,
+            product_name=redemption.product_name,
+            price_coin=redemption.price_coin,
+            recipient_name=redemption.recipient_name,
+            phone=redemption.phone,
+            address=redemption.address,
+            note=redemption.note,
+            status=redemption.status,
+            refunded=redemption.refunded,
+            created_at=redemption.created_at,
+            updated_at=redemption.updated_at,
+        )
+
+    @classmethod
+    async def list_shop_redemptions(cls, db: AsyncSession) -> list[AdminShopRedemptionRead]:
+        rows = (
+            await db.execute(
+                select(ShopRedemption)
+                .options(selectinload(ShopRedemption.user))
+                .order_by(ShopRedemption.created_at.desc(), ShopRedemption.id.desc())
+            )
+        ).scalars().all()
+        return [cls._serialize_redemption(row) for row in rows]
+
+    @classmethod
+    async def update_shop_redemption_status(
+        cls,
+        db: AsyncSession,
+        redemption_id: int,
+        body: AdminShopRedemptionStatusUpdate,
+    ) -> AdminShopRedemptionRead:
+        redemption = await db.get(ShopRedemption, redemption_id)
+        if redemption is None:
+            raise NotFoundError("Shop redemption not found.")
+        redemption.status = body.status
+        if body.status == "cancelled" and not redemption.refunded:
+            user = await db.get(User, redemption.user_id)
+            user.coin_balance = (user.coin_balance or 0) + redemption.price_coin
+            redemption.refunded = True
+            db.add(
+                CoinTransaction(
+                    user_id=user.id,
+                    type="refund_shop_redemption",
+                    amount=redemption.price_coin,
+                    balance_after=user.coin_balance,
+                    reference_type="shop_redemption",
+                    reference_id=str(redemption.id),
+                    transaction_metadata={"status": "cancelled"},
+                )
+            )
+        await db.commit()
+        redemption = (
+            await db.execute(
+                select(ShopRedemption)
+                .options(selectinload(ShopRedemption.user))
+                .where(ShopRedemption.id == redemption_id)
+            )
+        ).scalar_one()
+        return cls._serialize_redemption(redemption)
+
     @staticmethod
     async def get_settings(db: AsyncSession) -> GamificationSettingsRead:
         rules = await get_effective_rules(db)

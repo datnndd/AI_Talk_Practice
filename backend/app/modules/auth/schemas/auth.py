@@ -24,6 +24,13 @@ class RegisterVerifyRequest(BaseModel):
     email: EmailStr
     otp: str = Field(min_length=6, max_length=6)
     password: str = Field(min_length=6, max_length=128)
+    name: str | None = Field(default=None, max_length=100)
+
+
+class OTPVerifyRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6)
+    purpose: Literal["register", "reset_password"]
 
 class LoginRequest(BaseModel):
     email: EmailStr

@@ -3,6 +3,7 @@ import {
   ArrowClockwise,
   CrownSimple,
   FloppyDiskBack,
+  Gift,
   GraduationCap,
   MagnifyingGlass,
   ProhibitInset,
@@ -28,6 +29,7 @@ const adminNavItems = [
   { label: "User Directory", icon: UserList, to: "/admin/users" },
   { label: "Scenarios", icon: SquaresFour, to: "/admin/scenarios" },
   { label: "Curriculum", icon: GraduationCap, to: "/admin/curriculum" },
+  { label: "Shop", icon: Gift, to: "/admin/shop" },
   { label: "Payments", icon: CrownSimple, to: "/admin/payments" },
 ];
 

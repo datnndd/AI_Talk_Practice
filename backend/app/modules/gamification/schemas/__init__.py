@@ -1,5 +1,9 @@
 from .admin_gamification import (
     AdminGamificationOverviewRead,
+    AdminShopProductRead,
+    AdminShopProductWrite,
+    AdminShopRedemptionRead,
+    AdminShopRedemptionStatusUpdate,
     GamificationSettingsRead,
     GamificationSettingsUpdateRequest,
 )
@@ -14,14 +18,19 @@ from .gamification import (
     LessonCompleteResponse,
     RewardRead,
     ShopItemRead,
-    ShopPurchaseRequest,
-    ShopPurchaseResponse,
+    ShopRedeemRequest,
+    ShopRedeemResponse,
+    ShopRedemptionRead,
     ShopRead,
     XPRead,
 )
 
 __all__ = [
     "AdminGamificationOverviewRead",
+    "AdminShopProductRead",
+    "AdminShopProductWrite",
+    "AdminShopRedemptionRead",
+    "AdminShopRedemptionStatusUpdate",
     "CheckInRead",
     "CheckInResponse",
     "CoinRead",
@@ -34,8 +43,9 @@ __all__ = [
     "LessonCompleteResponse",
     "RewardRead",
     "ShopItemRead",
-    "ShopPurchaseRequest",
-    "ShopPurchaseResponse",
+    "ShopRedeemRequest",
+    "ShopRedeemResponse",
+    "ShopRedemptionRead",
     "ShopRead",
     "XPRead",
 ]

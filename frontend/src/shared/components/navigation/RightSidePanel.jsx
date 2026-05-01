@@ -1,18 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, CheckCircle, Fire, Hexagon, Star } from '@phosphor-icons/react';
+﻿import { useMemo } from 'react';
+import { BookOpen, Fire, Hexagon, Star } from '@phosphor-icons/react';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { gamificationApi } from '@/features/gamification/api/gamificationApi';
 import './RightSidePanel.css';
 
 const RightSidePanel = () => {
-  const { user } = useAuth();
-  const [gamification, setGamification] = useState(null);
-  const [isCheckingIn, setIsCheckingIn] = useState(false);
-  const [checkInMessage, setCheckInMessage] = useState("");
-
-  useEffect(() => {
-    gamificationApi.getDashboard().then(setGamification).catch(() => {});
-  }, []);
+  const { user, gamification } = useAuth();
 
   const checkIn = gamification?.check_in;
   const streakLabel = useMemo(() => {
@@ -20,25 +12,6 @@ const RightSidePanel = () => {
     return `${streak} day${streak === 1 ? "" : "s"}`;
   }, [checkIn?.current_streak]);
 
-  const handleCheckIn = async () => {
-    if (checkIn?.checked_in_today || isCheckingIn) {
-      return;
-    }
-
-    setIsCheckingIn(true);
-    setCheckInMessage("");
-
-    try {
-      const response = await gamificationApi.checkIn();
-      setGamification(response.dashboard);
-      setCheckInMessage(`+${response.coin_earned} Coin`);
-    } catch (error) {
-      setCheckInMessage(error?.response?.data?.detail || "Check-in failed");
-    } finally {
-      setIsCheckingIn(false);
-    }
-  };
-  
   const stats = {
     courses: user?.preferences?.courses_count || 51,
     level: gamification?.xp?.level || 1,
@@ -49,7 +22,6 @@ const RightSidePanel = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Top Stats Menu */}
       <div className="flex items-center justify-between px-2">
         <div className="stat-item">
           <BookOpen size={24} weight="fill" className="text-[#afafaf]" />
@@ -75,25 +47,15 @@ const RightSidePanel = () => {
               <div className="mt-4 rounded-lg bg-[#f7f7f7] p-3">
                 <div className="flex items-center justify-between text-sm font-extrabold">
                   <span className="text-[#777777]">
-                    {checkIn?.checked_in_today ? "Checked in today" : "Today reward"}
+                    {checkIn?.checked_in_today ? "Auto checked in today" : "Next login reward"}
                   </span>
                   <span className="text-[#1cb0f6]">+{checkIn?.today_coin_reward || 0} Coin</span>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleCheckIn}
-                disabled={checkIn?.checked_in_today || isCheckingIn}
-                className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#ff9600] px-3 text-sm font-black text-white transition hover:bg-[#f28b00] disabled:cursor-default disabled:bg-[#e5e5e5] disabled:text-[#777777]"
-              >
-                {checkIn?.checked_in_today ? <CheckCircle size={18} weight="fill" /> : null}
-                {checkIn?.checked_in_today ? "Done for today" : isCheckingIn ? "Checking in..." : "Check in"}
-              </button>
-
-              {checkInMessage ? (
-                <p className="mt-2 text-center text-xs font-extrabold text-[#58cc02]">{checkInMessage}</p>
-              ) : null}
+              <p className="mt-4 rounded-lg bg-[#fff3df] px-3 py-2 text-center text-xs font-extrabold text-[#ff9600]">
+                Coin tự nhận khi bạn đăng nhập mỗi ngày.
+              </p>
             </div>
           </div>
         </div>

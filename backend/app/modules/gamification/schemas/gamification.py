@@ -51,29 +51,51 @@ class CheckInResponse(BaseModel):
     streak_day: int
     coin_earned: int
     dashboard: GamificationDashboard
+    already_checked_in: bool = False
 
 
 class ShopItemRead(BaseModel):
+    id: int
     code: str
     name: str
     description: str
     price_coin: int
-    type: str
-    duration_days: int | None = None
+    image_url: str | None = None
+    stock_quantity: int
+    is_active: bool = True
+    sort_order: int = 0
 
 
 class ShopRead(BaseModel):
     items: list[ShopItemRead]
 
 
-class ShopPurchaseRequest(BaseModel):
-    item_code: str = Field(min_length=1, max_length=80)
+class ShopRedeemRequest(BaseModel):
+    product_code: str = Field(min_length=1, max_length=80)
+    recipient_name: str = Field(min_length=1, max_length=160)
+    phone: str = Field(min_length=1, max_length=40)
+    address: str = Field(min_length=1, max_length=1000)
+    note: str | None = Field(default=None, max_length=1000)
 
 
-class ShopPurchaseResponse(BaseModel):
+class ShopRedemptionRead(BaseModel):
+    id: int
+    product_id: int
+    product_name: str
+    price_coin: int
+    recipient_name: str
+    phone: str
+    address: str
+    note: str | None = None
+    status: str
+    refunded: bool = False
+    created_at: datetime
+
+
+class ShopRedeemResponse(BaseModel):
     item: ShopItemRead
+    redemption: ShopRedemptionRead
     coin_spent: int
-    subscription_expires_at: datetime | None = None
     dashboard: GamificationDashboard
 
 

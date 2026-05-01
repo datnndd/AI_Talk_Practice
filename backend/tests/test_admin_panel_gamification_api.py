@@ -5,6 +5,8 @@ import pytest
 from app.modules.gamification.models.coin_transaction import CoinTransaction
 from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
+from app.modules.gamification.models.shop_product import ShopProduct
+from app.modules.gamification.models.shop_redemption import ShopRedemption
 from app.modules.sessions.models.session import Session
 from app.modules.users.models.user import User
 
@@ -98,6 +100,82 @@ async def test_admin_gamification_overview_counts_daily_metrics(
     assert body["checkins_today"] == 1
     assert body["coins_in_circulation"] == 100
     assert body["pro_upgrade_rate"] == 0.5
+
+
+@pytest.mark.asyncio
+async def test_admin_shop_products_and_redemption_status_refund(admin_client, db_session, test_user):
+    created = await admin_client.post(
+        "/api/admin/gamification/shop/products",
+        json={
+            "code": "shirt",
+            "name": "Áo AI Talk",
+            "description": "Áo thun",
+            "price_coin": 100,
+            "image_url": None,
+            "stock_quantity": 5,
+            "is_active": True,
+            "sort_order": 2,
+        },
+    )
+    assert created.status_code == 201
+    product_id = created.json()["id"]
+
+    updated = await admin_client.put(
+        f"/api/admin/gamification/shop/products/{product_id}",
+        json={
+            "code": "shirt",
+            "name": "Áo AI Talk Pro",
+            "description": "Áo thun",
+            "price_coin": 120,
+            "image_url": None,
+            "stock_quantity": 4,
+            "is_active": True,
+            "sort_order": 1,
+        },
+    )
+    assert updated.status_code == 200
+    assert updated.json()["price_coin"] == 120
+
+    product = await db_session.get(ShopProduct, product_id)
+    user = await db_session.get(User, test_user.id)
+    user.coin_balance = 500
+    redemption = ShopRedemption(
+        user_id=user.id,
+        product_id=product.id,
+        product_name=product.name,
+        price_coin=product.price_coin,
+        recipient_name="Nguyen Van A",
+        phone="0900000000",
+        address="Ha Noi",
+        status="pending",
+    )
+    db_session.add(redemption)
+    await db_session.commit()
+
+    redemptions = await admin_client.get("/api/admin/gamification/shop/redemptions")
+    assert redemptions.status_code == 200
+    assert redemptions.json()[0]["user_email"] == test_user.email
+
+    cancelled = await admin_client.put(
+        f"/api/admin/gamification/shop/redemptions/{redemption.id}/status",
+        json={"status": "cancelled"},
+    )
+    assert cancelled.status_code == 200
+    assert cancelled.json()["refunded"] is True
+    refreshed_user = await db_session.get(User, test_user.id)
+    assert refreshed_user.coin_balance == 620
+
+    duplicate_cancel = await admin_client.put(
+        f"/api/admin/gamification/shop/redemptions/{redemption.id}/status",
+        json={"status": "cancelled"},
+    )
+    assert duplicate_cancel.status_code == 200
+    refreshed_user = await db_session.get(User, test_user.id)
+    assert refreshed_user.coin_balance == 620
+
+    hidden = await admin_client.delete(f"/api/admin/gamification/shop/products/{product_id}")
+    assert hidden.status_code == 200
+    assert hidden.json()["is_active"] is False
 
 
 @pytest.mark.asyncio

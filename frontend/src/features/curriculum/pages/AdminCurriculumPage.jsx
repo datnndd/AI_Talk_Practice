@@ -6,6 +6,7 @@ import {
   CheckCircle,
   Code,
   FloppyDiskBack,
+  Gift,
   GraduationCap,
   MagicWand,
   PencilSimple,
@@ -66,6 +67,7 @@ const adminNavItems = [
   { label: "Users", icon: UserList, to: "/admin/users" },
   { label: "Scenario Library", icon: SquaresFour, to: "/admin/scenarios" },
   { label: "Curriculum", icon: GraduationCap, to: "/admin/curriculum" },
+  { label: "Shop", icon: Gift, to: "/admin/shop" },
 ];
 
 const pretty = (value) => JSON.stringify(value || {}, null, 2);

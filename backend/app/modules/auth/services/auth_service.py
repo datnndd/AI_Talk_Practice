@@ -85,10 +85,11 @@ class AuthService:
         if await UserRepository.get_active_by_email(db, normalized_email):
             raise BadRequestError("Email already registered")
         validate_password_policy(body.password)
-        await AuthService._consume_otp(db, normalized_email, "register", body.otp)
+        await AuthService._assert_consumed_otp(db, normalized_email, "register", body.otp)
         user = await AuthService._create_user_with_free_tier(
             db,
             email=normalized_email,
+            display_name=(body.name or "").strip(),
             password_hash=hash_password(body.password),
             auth_provider="local",
             is_email_verified=True,
@@ -224,6 +225,27 @@ class AuthService:
         otp.consumed_at = now
         await db.commit()
         return otp
+
+    @staticmethod
+    async def verify_otp(db: AsyncSession, email: str, purpose: str, code: str) -> None:
+        await AuthService._consume_otp(db, email.strip().lower(), purpose, code)
+
+    @staticmethod
+    async def _assert_consumed_otp(db: AsyncSession, email: str, purpose: str, code: str) -> None:
+        result = await db.execute(
+            select(EmailOTP)
+            .where(EmailOTP.email == email)
+            .where(EmailOTP.purpose == purpose)
+            .where(EmailOTP.consumed_at.is_not(None))
+            .order_by(EmailOTP.consumed_at.desc())
+        )
+        otp = result.scalars().first()
+        now = datetime.now(timezone.utc)
+        if not otp:
+            raise BadRequestError("Invalid or expired OTP")
+        expires_at = otp.expires_at.replace(tzinfo=timezone.utc) if otp.expires_at.tzinfo is None else otp.expires_at.astimezone(timezone.utc)
+        if expires_at < now or not verify_password(code, otp.code_hash):
+            raise BadRequestError("Invalid or expired OTP")
 
     @staticmethod
     async def verify_email(db: AsyncSession, token: str) -> None:

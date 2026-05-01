@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowClockwise, CheckCircle, CreditCard, GraduationCap, MagnifyingGlass, ProhibitInset, SquaresFour, UserList } from "@phosphor-icons/react";
+import { ArrowClockwise, CheckCircle, CreditCard, Gift, GraduationCap, MagnifyingGlass, ProhibitInset, SquaresFour, UserList } from "@phosphor-icons/react";
 
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
 import { adminPaymentsApi } from "@/features/admin-payments/api/adminPaymentsApi";
@@ -15,6 +15,7 @@ const adminNavItems = [
   { label: "Users", icon: UserList, to: "/admin/users" },
   { label: "Scenario Library", icon: SquaresFour, to: "/admin/scenarios" },
   { label: "Curriculum", icon: GraduationCap, to: "/admin/curriculum" },
+  { label: "Shop", icon: Gift, to: "/admin/shop" },
   { label: "Transactions", icon: CreditCard, to: "/admin/payments" },
 ];
 
