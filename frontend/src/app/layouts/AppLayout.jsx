@@ -1,4 +1,5 @@
 import { MobileNav, AppSidebar, TopBar } from "@/shared/components/navigation";
+import SiteFooter from "@/shared/components/SiteFooter";
 
 const AppLayout = ({ children, showMobileNav = true }) => {
   return (
@@ -15,6 +16,7 @@ const AppLayout = ({ children, showMobileNav = true }) => {
           <main className="min-w-0 flex-1 pb-28 md:pb-14">
             {children}
           </main>
+          <SiteFooter />
         </div>
       </div>
       

@@ -78,7 +78,7 @@
   --color-difficulty-easy: #58cc02;
   --color-primary-soft: #e5f5ff;
 
-  --color-primary: #005ab6;
+  --color-primary: #88DF46;
   --color-primary-container: #1672df;
   --color-on-primary-container: #fefcff;
   --color-primary-fixed: #d7e3ff;
@@ -86,9 +86,10 @@
   --color-on-primary-fixed-variant: #00458e;
   --color-primary-fixed-dim: #abc7ff;
   
-  --color-secondary: #006d37;
+  --color-secondary: #34DBC5;
   --color-secondary-container: #7bf8a1;
   --color-on-secondary-container: #007239;
+  --color-dark-bg: #121212;
   
   --color-tertiary: #805200;
   --color-tertiary-fixed: #ffddb4;

@@ -1,4 +1,4 @@
-import { CreditCard, GraduationCap, Moon, Robot, Sun, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
+import { CreditCard, GlobeHemisphereWest, GraduationCap, Moon, Robot, Sun, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -11,6 +11,7 @@ const defaultNavItems = [
   { label: "Characters", icon: Robot, to: "/admin/characters" },
   { label: "Curriculum", icon: GraduationCap, to: "/admin/curriculum" },
   { label: "Payments", icon: CreditCard, to: "/admin/payments" },
+  { label: "Site Settings", icon: GlobeHemisphereWest, to: "/admin/site" },
 ];
 
 const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) => {
