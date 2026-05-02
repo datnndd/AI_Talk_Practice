@@ -15,6 +15,7 @@ from app.modules.auth.models.email_otp import EmailOTP
 # Payments
 from app.modules.payments.models.payment_transaction import PaymentTransaction
 from app.modules.payments.models.payment_webhook_event import PaymentWebhookEvent
+from app.modules.payments.models.subscription_billing import PromotionCode, SubscriptionPlan
 
 # Characters and scenarios
 from app.modules.characters.models.character import Character

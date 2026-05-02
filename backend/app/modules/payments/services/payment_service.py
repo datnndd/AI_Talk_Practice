@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.modules.payments.models import PaymentTransaction, PaymentWebhookEvent
+from app.modules.payments.models import PaymentTransaction, PaymentWebhookEvent, PromotionCode, SubscriptionPlan
 from app.modules.payments.schemas.payment import PaymentCheckoutRequest
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
@@ -28,8 +28,91 @@ PLAN_CONFIG = {
     }
 }
 
+DEFAULT_SUBSCRIPTION_PLANS = [
+    {"code": "PRO_30D", "name": "Pro 30 ngày", "duration_days": 30, "price_amount": 99000, "sort_order": 1},
+    {"code": "PRO_6M", "name": "Pro 6 tháng", "duration_days": 180, "price_amount": 499000, "sort_order": 2},
+    {"code": "PRO_1Y", "name": "Pro 1 năm", "duration_days": 365, "price_amount": 899000, "sort_order": 3},
+]
+
 
 class PaymentService:
+    @staticmethod
+    def _normalize_promo_code(code: str | None) -> str | None:
+        normalized = (code or "").strip().upper()
+        return normalized or None
+
+    @staticmethod
+    async def ensure_default_subscription_plans(db: AsyncSession) -> None:
+        for item in DEFAULT_SUBSCRIPTION_PLANS:
+            existing = (
+                await db.execute(select(SubscriptionPlan).where(SubscriptionPlan.code == item["code"]))
+            ).scalar_one_or_none()
+            if existing is None:
+                db.add(SubscriptionPlan(currency="VND", is_active=True, **item))
+        await db.flush()
+
+    @classmethod
+    async def list_active_subscription_plans(cls, db: AsyncSession) -> list[SubscriptionPlan]:
+        await cls.ensure_default_subscription_plans(db)
+        result = await db.execute(
+            select(SubscriptionPlan)
+            .where(SubscriptionPlan.is_active.is_(True))
+            .order_by(SubscriptionPlan.sort_order, SubscriptionPlan.duration_days)
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    async def _get_subscription_plan(cls, db: AsyncSession, plan_code: str, *, require_active: bool = True) -> SubscriptionPlan:
+        await cls.ensure_default_subscription_plans(db)
+        stmt = select(SubscriptionPlan).where(SubscriptionPlan.code == plan_code)
+        if require_active:
+            stmt = stmt.where(SubscriptionPlan.is_active.is_(True))
+        plan = (await db.execute(stmt)).scalar_one_or_none()
+        if plan is None:
+            raise BadRequestError(f"Unsupported subscription plan: {plan_code}")
+        if plan.currency.upper() != "VND":
+            raise BadRequestError("Only VND subscription plans are supported.")
+        return plan
+
+    @classmethod
+    async def _get_valid_promotion_code(cls, db: AsyncSession, promo_code: str | None) -> PromotionCode | None:
+        normalized = cls._normalize_promo_code(promo_code)
+        if not normalized:
+            return None
+        promo = (
+            await db.execute(select(PromotionCode).where(PromotionCode.code == normalized))
+        ).scalar_one_or_none()
+        if promo is None or not promo.is_active:
+            raise BadRequestError("Promotion code is invalid.")
+        now = datetime.now(timezone.utc)
+        starts_at = promo.starts_at.replace(tzinfo=timezone.utc) if promo.starts_at and promo.starts_at.tzinfo is None else promo.starts_at
+        ends_at = promo.ends_at.replace(tzinfo=timezone.utc) if promo.ends_at and promo.ends_at.tzinfo is None else promo.ends_at
+        if starts_at and starts_at > now:
+            raise BadRequestError("Promotion code is not active yet.")
+        if ends_at and ends_at < now:
+            raise BadRequestError("Promotion code has expired.")
+        if promo.max_redemptions is not None and promo.redeemed_count >= promo.max_redemptions:
+            raise BadRequestError("Promotion code redemption limit reached.")
+        return promo
+
+    @classmethod
+    async def quote_checkout(cls, db: AsyncSession, *, plan_code: str, promo_code: str | None = None) -> dict[str, Any]:
+        plan = await cls._get_subscription_plan(db, plan_code)
+        promo = await cls._get_valid_promotion_code(db, promo_code)
+        original_amount = plan.price_amount
+        discount_amount = (original_amount * promo.discount_percent // 100) if promo else 0
+        amount = max(original_amount - discount_amount, 0)
+        if amount <= 0:
+            raise BadRequestError("Promotion discount cannot reduce checkout amount to zero.")
+        return {
+            "plan": plan,
+            "promo": promo,
+            "original_amount": original_amount,
+            "discount_amount": discount_amount,
+            "amount": amount,
+            "currency": plan.currency.upper(),
+        }
+
     @staticmethod
     def _payment_amount_for(provider: str, plan: str) -> tuple[int, str]:
         if plan not in PLAN_CONFIG:
@@ -108,6 +191,7 @@ class PaymentService:
         *,
         user_id: int,
         plan: str,
+        duration_days: int,
         activated_at: datetime,
     ) -> Subscription:
         subscription = await cls._get_subscription_for_user(db, user_id)
@@ -115,7 +199,7 @@ class PaymentService:
         if subscription and subscription.expires_at and subscription.expires_at > activated_at:
             base_start = subscription.expires_at
 
-        expires_at = base_start + timedelta(days=cls._subscription_duration_days())
+        expires_at = base_start + timedelta(days=max(duration_days, 1))
         features = PLAN_CONFIG[plan]["features"]
 
         if subscription is None:
@@ -153,8 +237,16 @@ class PaymentService:
             db,
             user_id=payment.user_id,
             plan=payment.plan,
+            duration_days=payment.duration_days or cls._subscription_duration_days(),
             activated_at=paid_at,
         )
+
+        if payment.promo_code:
+            promo = (
+                await db.execute(select(PromotionCode).where(PromotionCode.code == payment.promo_code))
+            ).scalar_one_or_none()
+            if promo:
+                promo.redeemed_count += 1
 
         payment.status = "paid"
         payment.paid_at = paid_at
@@ -212,8 +304,8 @@ class PaymentService:
                         "currency": payment.currency.lower(),
                         "unit_amount": payment.amount,
                         "product_data": {
-                            "name": "AI Talk Practice Pro",
-                            "description": "30-day Pro subscription upgrade",
+                            "name": f"AI Talk Practice {payment.plan_code or payment.plan}",
+                            "description": f"{payment.duration_days or cls._subscription_duration_days()}-day Pro subscription upgrade",
                         },
                     },
                     "quantity": 1,
@@ -226,6 +318,9 @@ class PaymentService:
                 "payment_id": str(payment.id),
                 "user_id": str(user.id),
                 "plan": payment.plan,
+                "plan_code": payment.plan_code or "",
+                "duration_days": str(payment.duration_days or ""),
+                "promo_code": payment.promo_code or "",
             },
         )
         return {
@@ -252,14 +347,24 @@ class PaymentService:
         del client_ip
         provider = body.provider.lower()
         plan = body.plan.upper()
-        amount, currency = cls._payment_amount_for(provider, plan)
+        if provider != "stripe":
+            raise BadRequestError(f"Unsupported payment provider: {provider}")
+        plan_code = (body.plan_code or "PRO_30D").strip().upper()
+        quote = await cls.quote_checkout(db, plan_code=plan_code, promo_code=body.promo_code)
+        subscription_plan: SubscriptionPlan = quote["plan"]
+        promo: PromotionCode | None = quote["promo"]
 
         payment = PaymentTransaction(
             user_id=user.id,
             provider=provider,
             plan=plan,
-            amount=amount,
-            currency=currency,
+            plan_code=subscription_plan.code,
+            duration_days=subscription_plan.duration_days,
+            original_amount=quote["original_amount"],
+            discount_amount=quote["discount_amount"],
+            promo_code=promo.code if promo else None,
+            amount=quote["amount"],
+            currency=quote["currency"],
             status="pending",
             order_code=uuid4().hex[:24].upper(),
             provider_payload={},

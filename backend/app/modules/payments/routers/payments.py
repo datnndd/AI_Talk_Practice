@@ -7,12 +7,42 @@ from app.api.dependencies import get_current_user, get_db
 from app.modules.payments.schemas.payment import (
     PaymentCheckoutRequest,
     PaymentCheckoutResponse,
+    PromoQuoteRequest,
+    PromoQuoteResponse,
     PaymentStatusResponse,
+    SubscriptionPlanRead,
 )
 from app.modules.payments.services.payment_service import PaymentService
 from app.modules.users.models.user import User
 
 router = APIRouter(prefix="/payments", tags=["payments"])
+
+
+@router.get("/plans", response_model=list[SubscriptionPlanRead])
+async def list_subscription_plans(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    return await PaymentService.list_active_subscription_plans(db)
+
+
+@router.post("/promo/quote", response_model=PromoQuoteResponse)
+async def quote_promo_code(
+    body: PromoQuoteRequest,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    quote = await PaymentService.quote_checkout(db, plan_code=body.plan_code.strip().upper(), promo_code=body.promo_code)
+    promo = quote["promo"]
+    return PromoQuoteResponse(
+        plan_code=quote["plan"].code,
+        promo_code=promo.code,
+        original_amount=quote["original_amount"],
+        discount_amount=quote["discount_amount"],
+        amount=quote["amount"],
+        currency=quote["currency"],
+        discount_percent=promo.discount_percent,
+    )
 
 
 @router.post("/checkout", response_model=PaymentCheckoutResponse)
@@ -33,6 +63,11 @@ async def create_checkout(
         order_code=payment.order_code,
         provider=payment.provider,
         plan=payment.plan,
+        plan_code=payment.plan_code,
+        duration_days=payment.duration_days,
+        original_amount=payment.original_amount,
+        discount_amount=payment.discount_amount,
+        promo_code=payment.promo_code,
         amount=payment.amount,
         currency=payment.currency,
         status=payment.status,
@@ -57,6 +92,11 @@ async def get_payment_status(
         order_code=payment.order_code,
         provider=payment.provider,
         plan=payment.plan,
+        plan_code=payment.plan_code,
+        duration_days=payment.duration_days,
+        original_amount=payment.original_amount,
+        discount_amount=payment.discount_amount,
+        promo_code=payment.promo_code,
         amount=payment.amount,
         currency=payment.currency,
         status=payment.status,

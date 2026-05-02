@@ -1,4 +1,4 @@
-const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "trial"]);
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active"]);
 const PAID_SUBSCRIPTION_TIERS = new Set(["PRO", "PREMIUM", "SUBSCRIPTION", "ENTERPRISE"]);
 
 export const normalizeSubscription = (subscription) => {

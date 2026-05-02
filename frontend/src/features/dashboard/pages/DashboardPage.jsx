@@ -2,9 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import PlaylistSection from "@/features/dashboard/components/PlaylistSection";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { canAccessSubscriptionFeatures } from "@/features/auth/utils/subscription";
 import { practiceApi } from "@/features/practice/api/practiceApi";
 
 const Dashboard = () => {
+  const { user, gamification } = useAuth();
   const [scenarios, setScenarios] = useState([]);
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(true);
   const [scenarioError, setScenarioError] = useState("");
@@ -15,6 +18,9 @@ const Dashboard = () => {
 
     return scenarios[Math.floor(Math.random() * scenarios.length)];
   }, [scenarios]);
+  const hasProAccess = canAccessSubscriptionFeatures(user);
+  const streak = gamification?.check_in?.current_streak || 0;
+  const level = gamification?.xp?.level || 1;
 
   useEffect(() => {
     let isMounted = true;
@@ -65,7 +71,9 @@ const Dashboard = () => {
           Role-Play Labs <span className="ml-1">🎭</span>
         </h2>
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          <div className="group relative col-span-1 overflow-hidden rounded-2xl bg-[#1a1f4d] p-7 text-white shadow-md transition hover:shadow-lg md:col-span-2">
+          <div className={`group relative col-span-1 overflow-hidden rounded-2xl p-7 text-white shadow-md transition hover:shadow-lg md:col-span-2 ${
+            hasProAccess ? "bg-gradient-to-br from-purple-700 via-[#1a1f4d] to-amber-500" : "bg-[#1a1f4d]"
+          }`}>
             <div
               className="pointer-events-none absolute inset-0 opacity-20"
               style={{
@@ -76,13 +84,20 @@ const Dashboard = () => {
             <div className="pointer-events-none absolute inset-y-0 right-0 w-2/3 bg-gradient-to-l from-[#2a3175]/60 to-transparent" />
             <div className="relative z-10 flex h-full items-center justify-between gap-4">
               <div className="space-y-4">
-                <h3 className="text-3xl font-extrabold leading-tight">Talk to AI Tutor</h3>
-                <p className="text-sm font-semibold text-white/70">Practice anytime, anywhere</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-200">
+                  {hasProAccess ? "Pro Practice Hub" : "Free practice mode"}
+                </p>
+                <h3 className="text-3xl font-extrabold leading-tight">
+                  {hasProAccess ? "AI Tutor unlocked" : "Mở khóa luyện nói AI không giới hạn"}
+                </h3>
+                <p className="text-sm font-semibold text-white/70">
+                  {hasProAccess ? `Level ${level} • Streak ${streak} ngày • Premium scenarios ready` : "Nâng cấp Pro để mở kịch bản VIP, luyện nói live và phản hồi nâng cao."}
+                </p>
                 <Link
-                  to="/learn"
+                  to={hasProAccess ? (surpriseScenario ? `/practice/${surpriseScenario.id}` : "/learn") : "/subscription"}
                   className="inline-flex rounded-full bg-brand-purple px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-brand-purple/90 active:scale-95"
                 >
-                  Start Learning
+                  {hasProAccess ? "Quick start" : "Nâng cấp Pro"}
                 </Link>
               </div>
               <div className="flex h-28 w-28 shrink-0 items-center justify-center text-7xl transition-transform select-none group-hover:scale-110">
@@ -117,7 +132,7 @@ const Dashboard = () => {
       </section>
 
       <div id="playlists">
-        <PlaylistSection scenarios={scenarios} isLoading={isLoadingScenarios} error={scenarioError} />
+        <PlaylistSection scenarios={scenarios} isLoading={isLoadingScenarios} error={scenarioError} hasProAccess={hasProAccess} />
       </div>
     </div>
   );

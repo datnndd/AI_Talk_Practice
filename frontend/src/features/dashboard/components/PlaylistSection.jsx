@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Headphones } from "@phosphor-icons/react";
+import { Crown, Headphones, LockSimple } from "@phosphor-icons/react";
 
 import fallbackScenarioImage from "@/assets/buddy_talk_logo.jpg";
 import { practiceApi } from "@/features/practice/api/practiceApi";
@@ -70,11 +70,15 @@ const groupScenariosByDifficulty = (scenarios) =>
     { easy: [], medium: [], hard: [] },
   );
 
-const ScenarioCard = ({ scenario, group }) => (
+const ScenarioCard = ({ scenario, group, hasProAccess }) => {
+  const isProScenario = Boolean(scenario.is_pro);
+  const isLocked = isProScenario && !hasProAccess;
+
+  return (
   <Link
-    to={`/practice/${scenario.id}`}
-    onMouseEnter={() => practiceApi.prefetchScenario(scenario.id)}
-    onFocus={() => practiceApi.prefetchScenario(scenario.id)}
+    to={isLocked ? "/subscription" : `/practice/${scenario.id}`}
+    onMouseEnter={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
+    onFocus={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
     className="group relative col-span-12 block cursor-pointer overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-800 sm:col-span-6 md:col-span-3 2xl:col-span-2"
   >
     <div className="relative aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-700">
@@ -85,7 +89,7 @@ const ScenarioCard = ({ scenario, group }) => (
         onError={(event) => {
           event.currentTarget.src = fallbackScenarioImage;
         }}
-        className="size-full object-cover transition-transform group-hover:scale-105"
+        className={`size-full object-cover transition-transform group-hover:scale-105 ${isLocked ? "blur-[1px] saturate-75" : ""}`}
       />
       <span className={`absolute left-2 top-2 rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white ${group.badgeClass}`}>
         {group.badge}
@@ -94,6 +98,20 @@ const ScenarioCard = ({ scenario, group }) => (
         <Headphones size={16} weight="fill" />
         {formatDuration(scenario.estimated_duration)}
       </div>
+      {isProScenario ? (
+        <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-amber-800 ring-1 ring-amber-200">
+          <Crown size={11} weight="fill" />
+          {isLocked ? "Pro" : "Unlocked"}
+        </span>
+      ) : null}
+      {isLocked ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/35 text-white">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700 shadow-lg">
+            <LockSimple size={13} weight="fill" />
+            Mở khóa Pro
+          </div>
+        </div>
+      ) : null}
     </div>
     <div className="p-3">
       <h3 className="line-clamp-2 min-h-[2.5rem] font-semibold text-gray-900 transition-colors group-hover:text-brand-purple dark:text-white">
@@ -112,9 +130,10 @@ const ScenarioCard = ({ scenario, group }) => (
       </div>
     </div>
   </Link>
-);
+  );
+};
 
-const ScenarioGroup = ({ group, scenarios }) => {
+const ScenarioGroup = ({ group, scenarios, hasProAccess }) => {
   if (scenarios.length === 0) {
     return null;
   }
@@ -129,14 +148,14 @@ const ScenarioGroup = ({ group, scenarios }) => {
       </div>
       <div className="grid min-h-[245px] grid-cols-12 gap-4">
         {scenarios.map((scenario) => (
-          <ScenarioCard key={scenario.id} scenario={scenario} group={group} />
+          <ScenarioCard key={scenario.id} scenario={scenario} group={group} hasProAccess={hasProAccess} />
         ))}
       </div>
     </section>
   );
 };
 
-const PlaylistSection = ({ scenarios = [], isLoading = false, error = "" }) => {
+const PlaylistSection = ({ scenarios = [], isLoading = false, error = "", hasProAccess = false }) => {
   const groupedScenarios = groupScenariosByDifficulty(scenarios);
 
   return (
@@ -171,7 +190,7 @@ const PlaylistSection = ({ scenarios = [], isLoading = false, error = "" }) => {
       {!isLoading && !error ? (
         <div className="space-y-8">
           {DIFFICULTY_GROUPS.map((group) => (
-            <ScenarioGroup key={group.key} group={group} scenarios={groupedScenarios[group.key]} />
+            <ScenarioGroup key={group.key} group={group} scenarios={groupedScenarios[group.key]} hasProAccess={hasProAccess} />
           ))}
         </div>
       ) : null}

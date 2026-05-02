@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Gear, PencilSimple } from "@phosphor-icons/react";
+import { Crown, Gear, PencilSimple } from "@phosphor-icons/react";
 
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { canAccessSubscriptionFeatures, getSubscriptionLabel } from "@/features/auth/utils/subscription";
 import { gamificationApi } from "@/features/gamification/api/gamificationApi";
 import ProfileStats from "../components/ProfileStats";
 
@@ -41,6 +42,9 @@ const ProfileSettingsPage = () => {
   const displayName = user?.display_name || user?.email?.split("@")[0] || "Learner";
   const username = user?.preferences?.handle || user?.email?.split("@")[0]?.toLowerCase() || "learner";
   const topics = asList(user?.favorite_topics);
+  const hasProAccess = canAccessSubscriptionFeatures(user);
+  const planLabel = user?.is_admin ? "Admin" : getSubscriptionLabel(user?.subscription);
+  const subscriptionExpiry = user?.subscription?.expires_at ? formatDate(user.subscription.expires_at) : null;
 
   const stats = {
     level: gamification?.xp?.level || 1,
@@ -58,13 +62,26 @@ const ProfileSettingsPage = () => {
           <div className="flex flex-col items-center gap-6 md:flex-row md:items-center">
             {/* Avatar */}
             <div className="relative group">
-              <div className="h-40 w-40 overflow-hidden rounded-full border-4 border-[#e5e5e5] bg-[#4B4B4B] flex items-center justify-center">
-                {user?.avatar ? (
-                  <img src={user.avatar} alt={displayName} className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-4xl font-black text-white">{displayName.slice(0, 1).toUpperCase()}</span>
-                )}
+              <div className={`h-40 w-40 rounded-full p-1 ${
+                hasProAccess
+                  ? "bg-gradient-to-br from-amber-200 via-yellow-400 to-amber-600 shadow-[0_0_34px_rgba(251,191,36,0.75)]"
+                  : "bg-gradient-to-br from-zinc-200 via-zinc-300 to-zinc-500 shadow-[0_0_14px_rgba(113,113,122,0.22)]"
+              }`}>
+                <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#4B4B4B]">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-4xl font-black text-white">{displayName.slice(0, 1).toUpperCase()}</span>
+                  )}
+                </div>
               </div>
+              <span className={`absolute -right-1 top-3 flex h-12 w-12 rotate-12 items-center justify-center rounded-full border-2 ${
+                hasProAccess
+                  ? "border-amber-200 bg-amber-300 text-amber-900 shadow-[0_0_18px_rgba(251,191,36,0.9)]"
+                  : "border-zinc-300 bg-zinc-200 text-zinc-500"
+              }`}>
+                <Crown size={28} weight="fill" />
+              </span>
               <Link 
                 to="/settings"
                 className="absolute bottom-1 right-1 h-10 w-10 rounded-full border-2 border-[#e5e5e5] bg-white flex items-center justify-center text-[#1cb0f6] shadow-sm transition-transform hover:scale-110 active:translate-y-[2px]"
@@ -82,6 +99,15 @@ const ProfileSettingsPage = () => {
                   <span>Tham gia {formatDate(user?.created_at)}</span>
                 </div>
               </div>
+              <Link
+                to="/subscription"
+                className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] ${
+                  hasProAccess ? "bg-gradient-to-r from-amber-300 to-purple-500 text-white" : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                }`}
+              >
+                <Crown size={14} weight="fill" />
+                {hasProAccess ? `${planLabel} unlocked${subscriptionExpiry ? ` • ${subscriptionExpiry}` : ""}` : "Free • Nâng cấp Pro"}
+              </Link>
             </div>
           </div>
 

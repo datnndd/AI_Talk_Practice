@@ -6,6 +6,7 @@ import {
   ChatCenteredText,
   CheckCircle,
   Clock,
+  Crown,
   Lightning,
   Textbox,
   Trophy,
@@ -13,6 +14,8 @@ import {
   XCircle,
 } from "@phosphor-icons/react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { canAccessSubscriptionFeatures } from "@/features/auth/utils/subscription";
 import { practiceApi } from "@/features/practice/api/practiceApi";
 import { formatLessonEndReason } from "@/features/practice/utils/lessonState";
 
@@ -108,7 +111,9 @@ const CorrectionCard = ({ correction, index }) => (
 const SessionResultPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth();
   const sessionId = Number(id);
+  const hasProAccess = canAccessSubscriptionFeatures(user);
   const [session, setSession] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -219,6 +224,11 @@ const SessionResultPage = () => {
   const corrections = scoreMeta.corrections || [];
   const nextSteps = scoreMeta.next_steps || [];
   const objectiveCompletion = scoreMeta.objective_completion;
+  const advancedMetrics = [
+    { label: "Pronunciation", value: scoreMeta.pronunciation_score || score?.pronunciation_score || "Preview" },
+    { label: "Vocabulary", value: skillBreakdown.vocabulary ?? "Preview" },
+    { label: "Fluency", value: skillBreakdown.fluency ?? "Preview" },
+  ];
 
   const completionBadge = {
     completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle },
@@ -400,6 +410,50 @@ const SessionResultPage = () => {
           </ul>
         </section>
       )}
+
+      <section className={`rounded-xl border p-6 shadow-sm ${
+        hasProAccess
+          ? "border-amber-200 bg-gradient-to-br from-amber-50 to-purple-50"
+          : "border-zinc-200 bg-white"
+      }`}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-700">Advanced Feedback</p>
+            <h2 className="mt-1 font-display text-xl font-black text-zinc-950">
+              {hasProAccess ? "Pro insights unlocked" : "Pro insights preview"}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+              {hasProAccess
+                ? "Theo dõi phát âm, vốn từ, độ trôi chảy và gợi ý câu trả lời tốt hơn."
+                : "Nâng cấp Pro để mở khóa phân tích sâu sau mỗi buổi luyện nói."}
+            </p>
+          </div>
+          <div className="inline-flex w-fit items-center gap-2 rounded-full bg-amber-100 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">
+            <Crown size={14} weight="fill" />
+            {hasProAccess ? "Unlocked" : "Locked"}
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {advancedMetrics.map((metric) => (
+            <div key={metric.label} className={`rounded-lg border p-4 ${hasProAccess ? "border-white/80 bg-white/80" : "border-zinc-200 bg-zinc-50"}`}>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">{metric.label}</p>
+              <p className="mt-2 text-lg font-black text-zinc-950">
+                {typeof metric.value === "number" ? Number(metric.value).toFixed(1) : metric.value}
+              </p>
+            </div>
+          ))}
+        </div>
+        {!hasProAccess ? (
+          <button
+            type="button"
+            onClick={() => navigate("/subscription")}
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-zinc-950 px-5 py-3 text-sm font-black text-white"
+          >
+            <Crown size={16} weight="fill" />
+            Nâng cấp Pro
+          </button>
+        ) : null}
+      </section>
 
       {/* Conversation transcript */}
       <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">

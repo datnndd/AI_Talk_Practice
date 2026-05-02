@@ -1,4 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
+import { Crown } from "@phosphor-icons/react";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { canAccessSubscriptionFeatures } from "@/features/auth/utils/subscription";
 import { isRouteActive } from "./navigationData";
 import BrandMark from "./BrandMark";
 
@@ -84,6 +87,8 @@ const NAV_ITEMS = [
 
 const AppSidebar = () => {
   const location = useLocation();
+  const { user } = useAuth();
+  const hasProAccess = canAccessSubscriptionFeatures(user);
 
   return (
     <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-border bg-card px-4 py-6 lg:flex">
@@ -117,14 +122,13 @@ const AppSidebar = () => {
       </nav>
 
       <div className="mt-auto pt-6">
-        <Link to="/shop" className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-promo-from to-promo-to px-4 py-3 text-sm font-extrabold text-white shadow-md transition hover:opacity-90 active:scale-95">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles h-4 w-4" aria-hidden="true">
-            <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
-            <path d="M20 2v4"></path>
-            <path d="M22 4h-4"></path>
-            <circle cx="4" cy="20" r="2"></circle>
-          </svg>
-          Upgrade Pro
+        <Link to="/subscription" className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-extrabold shadow-lg transition hover:-translate-y-0.5 hover:opacity-95 active:scale-95 ${
+          hasProAccess
+            ? "bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 text-amber-950 shadow-amber-300/40"
+            : "bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 text-amber-950 shadow-amber-300/45 ring-1 ring-yellow-200"
+        }`}>
+          <Crown size={18} weight="fill" />
+          {hasProAccess ? "Pro Unlocked" : "Nâng cấp Pro"}
         </Link>
       </div>
     </aside>

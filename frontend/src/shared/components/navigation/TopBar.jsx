@@ -1,6 +1,7 @@
 ﻿import { Link } from "react-router-dom";
-import { Fire, Moon, Sun, X } from "@phosphor-icons/react";
+import { Crown, Fire, Moon, Sun, X } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { canAccessSubscriptionFeatures } from "@/features/auth/utils/subscription";
 import { useTheme } from "@/shared/context/ThemeContext";
 
 const TopBar = () => {
@@ -12,6 +13,7 @@ const TopBar = () => {
   const coins = gamification?.coin?.balance || 0;
   const streak = gamification?.check_in?.current_streak || dailyCheckinReward?.streak_day || 0;
   const initials = user?.display_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "D";
+  const hasProAccess = canAccessSubscriptionFeatures(user);
 
   return (
     <>
@@ -64,9 +66,22 @@ const TopBar = () => {
           
           <Link 
             to="/profile" 
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-sm font-bold text-background hover:opacity-90 transition-opacity"
+            className={`relative flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold transition-opacity hover:opacity-90 ${
+              hasProAccess
+                ? "bg-gradient-to-br from-amber-200 to-yellow-500 p-[3px] shadow-[0_0_18px_rgba(251,191,36,0.75)]"
+                : "bg-gradient-to-br from-zinc-200 to-zinc-500 p-[2px] shadow-[0_0_8px_rgba(113,113,122,0.25)]"
+            }`}
           >
-            {initials}
+            <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-foreground text-background">
+              {user?.avatar ? <img src={user.avatar} alt="Profile" className="h-full w-full object-cover" /> : initials}
+            </span>
+            <span className={`absolute -right-1 -top-1 flex h-5 w-5 rotate-12 items-center justify-center rounded-full border ${
+              hasProAccess
+                ? "border-amber-200 bg-amber-300 text-amber-900 shadow-[0_0_10px_rgba(251,191,36,0.9)]"
+                : "border-zinc-300 bg-zinc-200 text-zinc-500"
+            }`}>
+              <Crown size={12} weight="fill" />
+            </span>
           </Link>
         </div>
       </div>
