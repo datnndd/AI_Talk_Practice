@@ -12,7 +12,8 @@ class PaymentOverviewRead(BaseModel):
     paid_transactions: int
     failed_transactions: int
     cancelled_transactions: int
-    paid_revenue_usd_cents: int
+    paid_revenue_amount: int
+    paid_revenue_currency: str = "VND"
 
 
 class AdminPaymentTransactionRead(BaseModel):

@@ -57,8 +57,6 @@ class Settings(BaseSettings):
 
     # --- Payment / Billing ---
     frontend_url: str = Field(description="Public frontend base URL")
-    payment_pro_duration_days: int = Field(default=30, description="Subscription duration in days after a successful payment")
-    payment_pro_amount_usd_cents: int = Field(default=9900, description="Stripe price for PRO plan in cents")
 
     # --- LLM Configuration ---
     llm_model: str = Field(default="ai-talk", description="LLM model name")

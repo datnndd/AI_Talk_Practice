@@ -114,18 +114,6 @@ class PaymentService:
         }
 
     @staticmethod
-    def _payment_amount_for(provider: str, plan: str) -> tuple[int, str]:
-        if plan not in PLAN_CONFIG:
-            raise BadRequestError(f"Unsupported subscription plan: {plan}")
-        if provider != "stripe":
-            raise BadRequestError(f"Unsupported payment provider: {provider}")
-        return settings.payment_pro_amount_usd_cents, "USD"
-
-    @staticmethod
-    def _subscription_duration_days() -> int:
-        return max(settings.payment_pro_duration_days, 1)
-
-    @staticmethod
     def _build_frontend_subscription_url(status: str, provider: str, order_code: str | None = None, code: str | None = None) -> str:
         query: dict[str, str] = {
             "payment": status,
@@ -237,7 +225,7 @@ class PaymentService:
             db,
             user_id=payment.user_id,
             plan=payment.plan,
-            duration_days=payment.duration_days or cls._subscription_duration_days(),
+            duration_days=payment.duration_days or 30,
             activated_at=paid_at,
         )
 
@@ -305,7 +293,7 @@ class PaymentService:
                         "unit_amount": payment.amount,
                         "product_data": {
                             "name": f"AI Talk Practice {payment.plan_code or payment.plan}",
-                            "description": f"{payment.duration_days or cls._subscription_duration_days()}-day Pro subscription upgrade",
+                            "description": f"{payment.duration_days or 30}-day Pro subscription upgrade",
                         },
                     },
                     "quantity": 1,

@@ -23,13 +23,6 @@ const formatCurrency = (amount, currency) => {
   if (currency === "VND") {
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(amount || 0);
   }
-  if (currency === "USD") {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount / 100);
-  }
-
   return `${amount} ${currency}`;
 };
 
@@ -133,7 +126,7 @@ const AdminPaymentsPage = () => {
     { label: "Total", value: overview?.total_transactions || 0 },
     { label: "Pending", value: overview?.pending_transactions || 0 },
     { label: "Paid", value: overview?.paid_transactions || 0 },
-    { label: "Revenue", value: formatCurrency(overview?.paid_revenue_usd_cents || 0, "USD") },
+    { label: "Revenue", value: formatCurrency(overview?.paid_revenue_amount || 0, overview?.paid_revenue_currency || "VND") },
   ], [overview]);
 
   const handleApprove = async () => {

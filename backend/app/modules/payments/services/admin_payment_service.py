@@ -130,7 +130,8 @@ class AdminPaymentService:
             paid_transactions=int(totals[2] or 0),
             failed_transactions=int(totals[3] or 0),
             cancelled_transactions=int(totals[4] or 0),
-            paid_revenue_usd_cents=int(totals[5] or 0),
+            paid_revenue_amount=int(totals[5] or 0),
+            paid_revenue_currency="VND",
         )
 
     @staticmethod

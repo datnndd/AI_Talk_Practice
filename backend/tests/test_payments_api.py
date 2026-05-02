@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 import pytest
 from sqlalchemy import select
 
-from app.core.config import settings
 from app.core.security import create_access_token
 from app.modules.payments.models import PaymentTransaction
 from app.modules.payments.services.payment_service import PaymentService
@@ -32,7 +31,7 @@ async def test_create_stripe_checkout_returns_checkout_url(client, db_session, t
 
     response = await client.post(
         "/api/payments/checkout",
-        json={"provider": "stripe", "plan": "PRO"},
+        json={"provider": "stripe", "plan": "PRO", "plan_code": "PRO_30D"},
         headers={"Authorization": f"Bearer {token}"},
     )
 
@@ -48,19 +47,26 @@ async def test_create_stripe_checkout_returns_checkout_url(client, db_session, t
         )
     ).scalar_one()
     assert payment.external_checkout_id == "cs_test_123"
-    assert payment.amount == settings.payment_pro_amount_usd_cents
-    assert payment.currency == "USD"
+    assert payment.plan_code == "PRO_30D"
+    assert payment.duration_days == 30
+    assert payment.amount == 99000
+    assert payment.currency == "VND"
 
 @pytest.mark.asyncio
 async def test_stripe_webhook_marks_payment_paid_and_upgrades_subscription(client, db_session, test_user, monkeypatch):
+    from app.core.config import settings
     monkeypatch.setattr(settings, "stripe_webhook_secret", "whsec_test")
 
     payment = PaymentTransaction(
         user_id=test_user.id,
         provider="stripe",
         plan="PRO",
-        amount=settings.payment_pro_amount_usd_cents,
-        currency="USD",
+        plan_code="PRO_30D",
+        duration_days=30,
+        original_amount=99000,
+        discount_amount=0,
+        amount=99000,
+        currency="VND",
         status="pending",
         order_code="ORDERSTRIPE001",
         external_checkout_id="cs_test_123",
@@ -83,8 +89,8 @@ async def test_stripe_webhook_marks_payment_paid_and_upgrades_subscription(clien
         return {
             "id": "cs_test_123",
             "metadata": {"payment_order_code": payment.order_code},
-            "amount_total": settings.payment_pro_amount_usd_cents,
-            "currency": "usd",
+            "amount_total": 99000,
+            "currency": "vnd",
             "payment_status": "paid",
             "payment_intent": "pi_test_123",
         }
@@ -120,8 +126,12 @@ async def test_get_payment_status_returns_only_current_user_payment(client, db_s
         user_id=test_user.id,
         provider="stripe",
         plan="PRO",
-        amount=settings.payment_pro_amount_usd_cents,
-        currency="USD",
+        plan_code="PRO_30D",
+        duration_days=30,
+        original_amount=99000,
+        discount_amount=0,
+        amount=99000,
+        currency="VND",
         status="paid",
         order_code="ORDERSTATUS001",
         external_checkout_id="cs_status_123",
