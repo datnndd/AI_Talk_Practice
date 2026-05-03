@@ -110,7 +110,7 @@ class _SafeQwenTtsRealtime(QwenTtsRealtime):
 
 
 class DashScopeTTS(TTSBase):
-    """DashScope Realtime TTS using qwen3-tts-flash-realtime."""
+    """DashScope Qwen CustomVoice realtime TTS."""
 
     def __init__(self, config: Settings):
         self._config = config
@@ -154,19 +154,26 @@ class DashScopeTTS(TTSBase):
         )
 
         await self._run_blocking(tts_client.connect)
+
+        session_payload = {
+            "voice": cfg.voice,
+            "response_format": AudioFormat.PCM_24000HZ_MONO_16BIT,
+            "mode": "commit",
+            "language_type": cfg.language,
+        }
+        if "instruct" in self._config.tts_model.lower() and self._config.tts_instructions:
+            session_payload["instructions"] = self._config.tts_instructions
+            session_payload["enable_instructions_optimization"] = self._config.tts_optimize_instructions
+
         await self._run_blocking(
-            lambda: tts_client.update_session(
-                voice=cfg.voice,
-                response_format=AudioFormat.PCM_24000HZ_MONO_16BIT,
-                mode="commit",
-                language_type=cfg.language,
-            ),
+            lambda: tts_client.update_session(**session_payload),
         )
         logger.info(
-            "DashScope TTS: session configured (model=%s, mode=commit, voice=%s, language=%s, text_len=%s)",
+            "DashScope Qwen instruct TTS: session configured (model=%s, mode=commit, voice=%s, language=%s, instructions=%s, text_len=%s)",
             self._config.tts_model,
             cfg.voice,
             cfg.language,
+            bool(session_payload.get("instructions")),
             len(full_text),
         )
 

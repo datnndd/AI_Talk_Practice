@@ -81,12 +81,23 @@ async def test_dashscope_tts_commits_and_yields_audio(monkeypatch):
         yield "Hello there."
 
     chunks = []
-    async for chunk in tts.synthesize_stream(text_stream(), config=TTSConfig(voice="Cherry", language="en")):
+    async for chunk in tts.synthesize_stream(text_stream(), config=TTSConfig(voice="myvoice", language="en")):
         chunks.append(chunk)
 
     assert chunks == [b"pcm-bytes"]
     client = FakeRealtimeClient.instances[0]
-    assert client.model == "qwen3-tts-flash-realtime-2025-09-18"
+    assert client.model == "qwen3-tts-instruct-flash-realtime-2026-01-22"
+    assert (
+        "update_session",
+        {
+            "voice": "myvoice",
+            "response_format": dashscope_tts_module.AudioFormat.PCM_24000HZ_MONO_16BIT,
+            "mode": "commit",
+            "language_type": "en",
+            "instructions": "Speak in a natural, friendly English tutor voice with clear pronunciation.",
+            "enable_instructions_optimization": True,
+        },
+    ) in client.calls
     assert ("connect",) in client.calls
     assert ("commit",) in client.calls
     assert ("finish",) not in client.calls
@@ -104,18 +115,18 @@ async def test_dashscope_tts_uses_configured_model(monkeypatch):
     monkeypatch.setattr(dashscope_tts_module.DashScopeTTS, "_run_blocking", run_inline)
 
     tts = dashscope_tts_module.DashScopeTTS(
-        Settings(tts_model="qwen3-tts-flash-realtime-2025-11-27")
+        Settings(tts_model="qwen3-tts-vc-realtime-2025-12-01")
     )
 
     async def text_stream():
         yield "Hello there."
 
     chunks = []
-    async for chunk in tts.synthesize_stream(text_stream(), config=TTSConfig(voice="Cherry", language="en")):
+    async for chunk in tts.synthesize_stream(text_stream(), config=TTSConfig(voice="myvoice", language="en")):
         chunks.append(chunk)
 
     assert chunks == [b"pcm-bytes"]
-    assert FakeRealtimeClient.instances[0].model == "qwen3-tts-flash-realtime-2025-11-27"
+    assert FakeRealtimeClient.instances[0].model == "qwen3-tts-vc-realtime-2025-12-01"
 
 
 def test_dashscope_tts_invalid_close_frame_is_treated_as_close():

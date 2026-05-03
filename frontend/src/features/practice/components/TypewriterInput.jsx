@@ -70,7 +70,7 @@ const TypewriterInput = ({
       : <Microphone weight="fill" size={22} />;
 
   const buttonClassName = disabled
-    ? "cursor-not-allowed bg-zinc-300 shadow-none"
+    ? "cursor-not-allowed bg-[var(--page-subtle)] shadow-none"
     : isRecording
       ? "bg-rose-500 shadow-rose-500/25"
       : isAssistantSpeaking
@@ -116,7 +116,7 @@ const TypewriterInput = ({
   };
 
   return (
-    <footer className="rounded-lg border border-zinc-200 bg-white shadow-[0_20px_54px_-42px_rgba(15,23,42,0.55)]">
+    <footer className="rounded-lg border border-border bg-card shadow-[0_20px_54px_-42px_rgba(15,23,42,0.55)]">
       {hint ? (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -197,9 +197,9 @@ const TypewriterInput = ({
       ) : null}
 
       <div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center">
-        <div className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">Speech-to-Text</p>
-          <p className={`mt-1 min-h-6 text-sm leading-relaxed ${partialTranscript ? "font-semibold text-zinc-950" : "text-zinc-500"}`}>
+        <div className="min-w-0 flex-1 rounded-lg border border-border bg-muted px-3 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--page-subtle)]">Speech-to-Text</p>
+          <p className={`mt-1 min-h-6 text-sm leading-relaxed ${partialTranscript ? "font-semibold text-[var(--page-fg)]" : "text-[var(--page-muted)]"}`}>
             {transcript}
           </p>
           {error ? (
@@ -226,7 +226,7 @@ const TypewriterInput = ({
             <button
               onClick={onRequestHint}
               disabled={isHintLoading}
-              className="flex min-w-32 items-center justify-center gap-2 rounded-lg border border-primary/20 bg-white px-4 py-3 text-sm font-bold text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex min-w-32 items-center justify-center gap-2 rounded-lg border border-primary/20 bg-card px-4 py-3 text-sm font-bold text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Sparkle weight="fill" size={18} />
               <span>{isHintLoading ? "Loading..." : "Get Hint"}</span>
@@ -247,7 +247,7 @@ const TypewriterInput = ({
           <button
             onClick={onReconnect}
             disabled={sessionEnded || connectionState === "connecting" || connectionState === "reconnecting"}
-            className="flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-card text-[var(--page-muted)] transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             title="Reconnect session"
           >
             <ArrowsClockwise size={20} />

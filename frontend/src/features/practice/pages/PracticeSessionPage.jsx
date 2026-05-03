@@ -2,10 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, WarningCircle } from "@phosphor-icons/react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ChatWindow from "@/features/practice/components/ChatWindow";
-import Live2DAvatarPanel from "@/features/practice/components/Live2DAvatarPanel";
 import ScenarioSidebar from "@/features/practice/components/ScenarioSidebar";
 import TypewriterInput from "@/features/practice/components/TypewriterInput";
-import { SessionHeader } from "@/shared/components/navigation";
 import {
   arrayBufferToBase64,
   base64ToArrayBuffer,
@@ -44,30 +42,12 @@ const buildLipSyncFrames = (samples, sampleRate) => {
 };
 
 const getLive2DStatus = ({ connectionState, recordingState, sessionEnded, sessionError }) => {
-  if (sessionEnded) {
-    return "ended";
-  }
-
-  if (connectionState === "connecting" || connectionState === "reconnecting") {
-    return connectionState;
-  }
-
-  if (connectionState === "error" || sessionError) {
-    return "error";
-  }
-
-  if (recordingState === "recording") {
-    return "listening";
-  }
-
-  if (recordingState === "processing") {
-    return "thinking";
-  }
-
-  if (recordingState === "assistant") {
-    return "speaking";
-  }
-
+  if (sessionEnded) return "ended";
+  if (connectionState === "connecting" || connectionState === "reconnecting") return connectionState;
+  if (connectionState === "error" || sessionError) return "error";
+  if (recordingState === "recording") return "listening";
+  if (recordingState === "processing") return "thinking";
+  if (recordingState === "assistant") return "speaking";
   return "idle";
 };
 
@@ -132,7 +112,6 @@ const PracticeSession = () => {
   const autoStartRecordingRef = useRef(false);
   const suppressAssistantStreamRef = useRef(false);
   const assistantDraftRef = useRef("");
-  const hasAutoConnectedRef = useRef(false);
   const isStoppingRecordingRef = useRef(false);
   const connectionStateRef = useRef(connectionState);
   const recordingStateRef = useRef(recordingState);
@@ -236,7 +215,6 @@ const PracticeSession = () => {
     });
     playbackSourcesRef.current.clear();
     clearLipSyncTimers();
-
     if (audioContextRef.current && audioContextRef.current.state !== "closed") {
       await audioContextRef.current.close();
     }
@@ -372,7 +350,6 @@ const PracticeSession = () => {
     });
     playbackSourcesRef.current.clear();
     clearLipSyncTimers();
-
     if (audioContextRef.current && audioContextRef.current.state !== "closed") {
       playbackCursorRef.current = audioContextRef.current.currentTime;
       return;
@@ -477,9 +454,7 @@ const PracticeSession = () => {
         setActiveCharacter(payload.character || scenario?.character || null);
         setSessionEnded(false);
         setAnalysisResultUrl("");
-        if (payload.max_duration_seconds) {
-          setTimeLimitSeconds(payload.max_duration_seconds);
-        }
+        setTimeLimitSeconds(payload.max_duration_seconds || null);
         connectionStateRef.current = "ready";
         recordingStateRef.current = "idle";
         setConnectionState("ready");
@@ -651,6 +626,7 @@ const PracticeSession = () => {
       setAnalysisResultUrl("");
       sessionIdRef.current = resumeSessionId || null;
       setDurationSeconds(0);
+      setTimeLimitSeconds(null);
       setLessonHint(null);
       sessionStartAtRef.current = null;
       assistantDraftRef.current = "";
@@ -746,7 +722,6 @@ const PracticeSession = () => {
       const cachedScenario = practiceApi.getCachedScenario(scenarioId);
       if (cachedScenario?.ai_system_prompt) {
         setScenario(cachedScenario);
-        setActiveCharacter(cachedScenario?.character || null);
       }
       setIsLoading(!cachedScenario?.ai_system_prompt);
       setScenarioError("");
@@ -795,13 +770,12 @@ const PracticeSession = () => {
   }, [sessionId]);
 
   useEffect(() => {
-    if (!scenario || scenarioError || hasAutoConnectedRef.current || connectionState !== "closed") {
+    if (!scenario || scenarioError || sessionEnded || connectionState !== "closed") {
       return;
     }
 
-    hasAutoConnectedRef.current = true;
     connectSocket(true);
-  }, [connectSocket, connectionState, scenario, scenarioError]);
+  }, [connectSocket, connectionState, scenario, scenarioError, sessionEnded]);
 
   useEffect(() => {
     if (connectionState !== "ready" || !autoStartRecordingRef.current) {
@@ -862,6 +836,7 @@ const PracticeSession = () => {
       isStoppingRecordingRef.current = true;
       recordingStateRef.current = "processing";
       setRecordingState("processing");
+      processorRef.current?.port?.postMessage({ type: "flush" });
       await wait(STOP_CAPTURE_FLUSH_MS);
       captureActiveRef.current = false;
       if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -882,7 +857,7 @@ const PracticeSession = () => {
     setReconnectRequest((current) => current + 1);
   };
 
-  const handleEndSession = async () => {
+  const handleBackToConversationMenu = async () => {
     closeSocket(true);
     await teardownAudioPipeline();
     navigate("/dashboard");
@@ -909,10 +884,10 @@ const PracticeSession = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50">
-        <div className="flex flex-col items-center gap-4 rounded-4xl border border-white/40 bg-white/70 px-8 py-10 shadow-xl backdrop-blur-xl">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[var(--page-bg)] text-[var(--page-fg)]">
+        <div className="flex flex-col items-center gap-4 rounded-4xl border border-border bg-card/70 px-8 py-10 shadow-xl backdrop-blur-xl">
           <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
-          <p className="text-sm font-semibold text-zinc-500">Loading practice session...</p>
+          <p className="text-sm font-semibold text-[var(--page-muted)]">Loading practice session...</p>
         </div>
       </div>
     );
@@ -920,13 +895,13 @@ const PracticeSession = () => {
 
   if (scenarioError || !scenario) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-6">
-        <div className="max-w-lg rounded-4xl border border-rose-100 bg-white p-8 shadow-xl">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[var(--page-bg)] p-6 text-[var(--page-fg)]">
+        <div className="max-w-lg rounded-4xl border border-border bg-card p-8 shadow-xl">
           <div className="flex items-start gap-3 text-rose-600">
             <WarningCircle size={24} weight="fill" className="mt-0.5 shrink-0" />
             <div>
-              <h1 className="text-xl font-black text-zinc-950 font-display">Session unavailable</h1>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+              <h1 className="font-display text-xl font-black text-[var(--page-fg)]">Session unavailable</h1>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--page-muted)]">
                 {scenarioError || "This scenario could not be loaded."}
               </p>
             </div>
@@ -956,6 +931,8 @@ const PracticeSession = () => {
     durationSeconds,
     turnCount: userTurnCount,
   });
+  const taskItems = Array.isArray(scenario?.tasks) ? scenario.tasks.filter(Boolean) : conversationGuidance.evaluationFocus;
+  const completedTaskCount = Math.min(taskItems.length, userTurnCount);
   const live2DStatus = getLive2DStatus({
     connectionState,
     recordingState,
@@ -964,36 +941,36 @@ const PracticeSession = () => {
   });
 
   return (
-    <div className="min-h-[100dvh] bg-[linear-gradient(135deg,_#f8fafc_0%,_#ffffff_46%,_#f0fdf4_100%)] p-4 font-sans antialiased md:p-6">
-      <div className="mx-auto flex h-[calc(100dvh-2rem)] max-w-[1440px] flex-col gap-4 md:h-[calc(100dvh-3rem)] md:gap-6">
-        <SessionHeader
-          onBack={handleEndSession}
-          onReconnect={handleReconnect}
-          connectionState={connectionState}
-          durationSeconds={durationSeconds}
-          timeLimitSeconds={timeLimitSeconds}
-        />
+    <div className="min-h-[100dvh] bg-[var(--page-bg)] font-sans text-[var(--page-fg)] antialiased">
+      <main className="mx-auto grid h-screen w-full max-w-[1400px] grid-cols-1 gap-4 p-4 lg:grid-cols-[340px_1fr] lg:gap-6 lg:p-6">
+        <div className="flex min-h-0 w-full flex-col gap-4">
+          <button
+            type="button"
+            onClick={handleBackToConversationMenu}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-bold text-[var(--page-fg)] transition hover:bg-muted lg:justify-start"
+          >
+            <ArrowLeft size={18} weight="bold" />
+            Quay lại menu hội thoại
+          </button>
+          <ScenarioSidebar
+            scenario={scenario}
+            guidance={conversationGuidance}
+            completedCount={completedTaskCount}
+            character={activeCharacter}
+            live2DStatus={live2DStatus}
+            lipSyncLevel={live2DLipSyncLevel}
+          />
+        </div>
 
-        <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[300px_minmax(0,1fr)_260px] xl:grid-cols-[340px_minmax(0,1fr)_300px] 2xl:grid-cols-[360px_minmax(0,1fr)_320px] w-full">
-          <div className="hidden min-h-0 lg:flex">
-            <ScenarioSidebar scenario={scenario} guidance={conversationGuidance} />
-          </div>
-          <div className="relative flex min-h-0 flex-1 flex-col gap-3">
-            <div className="lg:hidden">
-              <Live2DAvatarPanel
-                status={live2DStatus}
-                scenarioTitle={scenario?.ai_role || scenario?.title}
-                lipSyncLevel={live2DLipSyncLevel}
-                modelUrl={activeCharacter?.model_url}
-                coreUrl={activeCharacter?.core_url}
-              />
-            </div>
+        <section className="relative flex min-h-0 flex-col">
             <ChatWindow
               scenario={scenario}
               guidance={conversationGuidance}
               messages={messages}
               assistantDraft={assistantDraft}
               isListening={recordingState === "recording"}
+              durationSeconds={durationSeconds}
+              timeLimitSeconds={timeLimitSeconds}
               userNativeLanguage="vi"
             />
             <TypewriterInput
@@ -1012,20 +989,13 @@ const PracticeSession = () => {
               analysisResultUrl={analysisResultUrl}
               onViewAnalysis={() => navigate(analysisResultUrl)}
             />
-          </div>
-          <div className="hidden min-h-0 lg:flex">
-            <Live2DAvatarPanel
-              status={live2DStatus}
-              scenarioTitle={scenario?.ai_role || scenario?.title}
-              lipSyncLevel={live2DLipSyncLevel}
-              modelUrl={activeCharacter?.model_url}
-              coreUrl={activeCharacter?.core_url}
-            />
-          </div>
-        </main>
-      </div>
+        </section>
+
+      </main>
     </div>
   );
 };
 
 export default PracticeSession;
+
+

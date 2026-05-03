@@ -96,8 +96,8 @@ def upgrade() -> None:
         bind.execute(
             sa.text(
                 "INSERT INTO subscription_plans (code, name, duration_days, price_amount, currency, is_active, sort_order) "
-                "SELECT :code, :name, :duration_days, :price_amount, 'VND', 1, :sort_order "
-                "WHERE NOT EXISTS (SELECT 1 FROM subscription_plans WHERE code = :code)"
+                "SELECT CAST(:code AS VARCHAR), CAST(:name AS VARCHAR), :duration_days, :price_amount, 'VND', TRUE, :sort_order "
+                "WHERE NOT EXISTS (SELECT 1 FROM subscription_plans WHERE code = CAST(:code AS VARCHAR))"
             ),
             plan,
         )

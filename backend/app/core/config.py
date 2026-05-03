@@ -154,13 +154,25 @@ class Settings(BaseSettings):
 
     # --- ASR Configuration ---
     asr_language: str = Field(default="en", description="ASR language code")
-    deepgram_asr_model: str = Field(default="nova-3", description="Deepgram ASR model")
+    deepgram_asr_model: str = Field(default="flux-general-en", description="Deepgram Flux ASR model")
+    deepgram_ws_url: str = Field(
+        default="wss://api.deepgram.com/v2/listen",
+        description="Deepgram Flux realtime speech-to-text WebSocket URL",
+    )
+    deepgram_eot_threshold: float = Field(
+        default=0.7,
+        description="Deepgram Flux end-of-turn confidence threshold",
+    )
+    deepgram_eot_timeout_ms: int = Field(
+        default=1200,
+        description="Deepgram Flux silence timeout before end-of-turn",
+    )
     deepgram_endpointing_ms: int = Field(
-        default=300,
+        default=700,
         description="Deepgram endpointing pause threshold in milliseconds",
     )
     deepgram_utterance_end_ms: int = Field(
-        default=1000,
+        default=1600,
         description="Deepgram utterance end threshold in milliseconds",
     )
     deepgram_keepalive_seconds: float = Field(
@@ -168,7 +180,7 @@ class Settings(BaseSettings):
         description="Deepgram websocket keepalive interval while streaming",
     )
     asr_finalization_grace_ms: int = Field(
-        default=700,
+        default=1200,
         description="Delay after ASR speech-end/final events before closing the turn, so trailing audio can arrive",
     )
     asr_emit_partial_transcripts: bool = Field(
@@ -190,11 +202,19 @@ class Settings(BaseSettings):
 
     # --- TTS Configuration ---
     tts_model: str = Field(
-        default="qwen3-tts-flash-realtime-2025-09-18",
-        description="DashScope TTS model",
+        default="qwen3-tts-instruct-flash-realtime-2026-01-22",
+        description="DashScope Qwen instruct TTS model",
     )
-    tts_voice: str = Field(default="Cherry", description="DashScope TTS voice name")
+    tts_voice: str = Field(default="myvoice", description="DashScope Qwen TTS voice ID")
     tts_language: str = Field(default="en", description="TTS language")
+    tts_instructions: str | None = Field(
+        default="Speak in a natural, friendly English tutor voice with clear pronunciation.",
+        description="Qwen instruct TTS speaking style instructions",
+    )
+    tts_optimize_instructions: bool = Field(
+        default=True,
+        description="Let Qwen instruct TTS optimize speaking style instructions",
+    )
     # --- DashScope Region ---
     dashscope_region: str = Field(default="intl", description="intl | cn")
 
@@ -210,11 +230,6 @@ class Settings(BaseSettings):
         if self.dashscope_region == "cn":
             return "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
         return "wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime"
-
-    @property
-    def deepgram_ws_url(self) -> str:
-        """WebSocket URL for Deepgram realtime speech-to-text."""
-        return "wss://api.deepgram.com/v1/listen"
 
     @property
     def llm_api_key(self) -> str | None:

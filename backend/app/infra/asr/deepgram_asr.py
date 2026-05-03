@@ -1,7 +1,7 @@
 """
 Deepgram realtime ASR provider.
 
-Streams PCM audio to Deepgram's Nova-3 WebSocket API and converts websocket
+Streams PCM audio to Deepgram's Flux WebSocket API and converts websocket
 messages into the app's TranscriptEvent contract.
 """
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class DeepgramASR(ASRBase):
-    """Deepgram realtime ASR using the Nova-3 streaming model."""
+    """Deepgram realtime ASR using the Flux streaming model."""
 
     def __init__(self, config: Settings):
         self._config = config
@@ -53,12 +53,8 @@ class DeepgramASR(ASRBase):
                 "language": language,
                 "encoding": "linear16",
                 "sample_rate": sample_rate,
-                "interim_results": "true",
-                "vad_events": "true",
-                "endpointing": str(self._config.deepgram_endpointing_ms),
-                "utterance_end_ms": str(self._config.deepgram_utterance_end_ms),
-                "smart_format": "true",
-                "punctuate": "true",
+                "eot_threshold": self._config.deepgram_eot_threshold,
+                "eot_timeout_ms": self._config.deepgram_eot_timeout_ms,
             }
         )
         url = f"{self._config.deepgram_ws_url}?{query}"
@@ -77,7 +73,7 @@ class DeepgramASR(ASRBase):
         self._receiver_task = asyncio.create_task(self._receive_messages())
         self._keepalive_task = asyncio.create_task(self._send_keepalive())
         logger.info(
-            "Deepgram ASR session started (model=%s, language=%s, rate=%s)",
+            "Deepgram Flux ASR session started (model=%s, language=%s, rate=%s)",
             self._config.deepgram_asr_model,
             language,
             sample_rate,
@@ -177,16 +173,24 @@ class DeepgramASR(ASRBase):
     def _handle_payload(self, payload: Mapping[str, Any]) -> None:
         message_type = str(payload.get("type") or "")
 
-        if message_type == "Results":
+        if message_type in {"Results", "Transcript"}:
             channel = payload.get("channel") or {}
             alternatives = channel.get("alternatives") or []
             transcript = ""
             if alternatives and isinstance(alternatives[0], Mapping):
                 transcript = str(alternatives[0].get("transcript") or "").strip()
+            if not transcript:
+                transcript = str(payload.get("transcript") or payload.get("text") or "").strip()
             language = self._extract_language(channel)
 
             if transcript:
-                event_type = TranscriptType.FINAL if bool(payload.get("is_final")) else TranscriptType.PARTIAL
+                is_final = bool(
+                    payload.get("is_final")
+                    or payload.get("speech_final")
+                    or payload.get("final")
+                    or payload.get("end_of_turn")
+                )
+                event_type = TranscriptType.FINAL if is_final else TranscriptType.PARTIAL
                 self._transcript_queue.put_nowait(
                     TranscriptEvent(
                         text=transcript,
@@ -195,7 +199,7 @@ class DeepgramASR(ASRBase):
                     )
                 )
 
-            if bool(payload.get("speech_final")):
+            if bool(payload.get("speech_final") or payload.get("end_of_turn")):
                 self._transcript_queue.put_nowait(
                     TranscriptEvent(
                         text="",
@@ -205,7 +209,29 @@ class DeepgramASR(ASRBase):
                 )
             return
 
-        if message_type == "UtteranceEnd":
+        if message_type == "TurnInfo":
+            event = str(payload.get("event") or "")
+            transcript = str(payload.get("transcript") or payload.get("text") or "").strip()
+            is_final = event.lower() in {"endofturn", "end_of_turn", "end-of-turn"}
+            if transcript:
+                self._transcript_queue.put_nowait(
+                    TranscriptEvent(
+                        text=transcript,
+                        type=TranscriptType.FINAL if is_final else TranscriptType.PARTIAL,
+                        language=self._language,
+                    )
+                )
+            if is_final:
+                self._transcript_queue.put_nowait(
+                    TranscriptEvent(
+                        text="",
+                        type=TranscriptType.SPEECH_END,
+                        language=self._language,
+                    )
+                )
+            return
+
+        if message_type in {"UtteranceEnd", "EndOfTurn", "TurnEnd"}:
             self._transcript_queue.put_nowait(
                 TranscriptEvent(
                     text="",
