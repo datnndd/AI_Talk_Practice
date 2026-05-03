@@ -10,6 +10,7 @@ import {
   Sparkle,
   SquaresFour,
   UserList,
+  X,
 } from "@phosphor-icons/react";
 
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -106,6 +107,7 @@ const toFormState = (user) => ({
 const getRoleBadge = (user) => (user?.is_admin ? "Admin" : "Learner");
 const getPlanBadge = (user) => String(user?.subscription?.tier || "FREE").toUpperCase();
 const getStatusBadge = (user) => (user?.deleted_at ? "Inactive" : "Active");
+const getCoinBalance = (user) => Number(user?.gamification?.coin?.balance ?? user?.coin_balance ?? 0);
 
 const FieldLabel = ({ children }) => (
   <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
@@ -121,6 +123,9 @@ const AdminUsersPage = () => {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState("FREE");
+  const [activeUserTab, setActiveUserTab] = useState("overview");
+  const [coinDelta, setCoinDelta] = useState("");
+  const [coinReason, setCoinReason] = useState("");
   const [formData, setFormData] = useState(() => toFormState(null));
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
@@ -194,6 +199,8 @@ const AdminUsersPage = () => {
   const baselinePayload = useMemo(() => buildUpdatePayload(toFormState(selectedUser)), [selectedUser]);
   const hasFormChanges = JSON.stringify(currentPayload) !== JSON.stringify(baselinePayload);
   const hasPlanChange = selectedPlan !== getPlanBadge(selectedUser);
+  const parsedCoinDelta = Number(coinDelta);
+  const hasCoinAdjustment = coinDelta !== "" && Number.isInteger(parsedCoinDelta) && parsedCoinDelta !== 0;
   const isSelfSelected = selectedUser?.id === currentUser?.id;
   const totalPages = Math.max(1, Math.ceil(total / filters.page_size));
 
@@ -220,6 +227,21 @@ const AdminUsersPage = () => {
     if (selectedUserId) {
       await loadUserDetail(selectedUserId);
     }
+  };
+
+  const handleAdjustCoins = async () => {
+    if (!hasCoinAdjustment) return;
+
+    await runAction(
+      (userId) =>
+        adminUsersApi.adjustBalance(userId, {
+          coin_delta: parsedCoinDelta,
+          reason: coinReason.trim() || null,
+        }),
+      `Coin balance adjusted by ${parsedCoinDelta}.`,
+    );
+    setCoinDelta("");
+    setCoinReason("");
   };
 
   const runAction = async (request, successMessage) => {
@@ -259,7 +281,7 @@ const AdminUsersPage = () => {
           </div>
         )}
 
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]" id="user-directory">
+        <section id="user-directory">
           <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
@@ -343,7 +365,10 @@ const AdminUsersPage = () => {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setSelectedUserId(item.id)}
+                    onClick={() => {
+                      setSelectedUserId(item.id);
+                      setActiveUserTab("overview");
+                    }}
                     className={`grid w-full grid-cols-[minmax(0,1.6fr)_120px_120px_120px_160px] gap-3 px-4 py-4 text-left text-sm transition ${
                       selectedUserId === item.id ? "bg-primary/5 dark:bg-primary/10" : ""
                     }`}
@@ -406,7 +431,42 @@ const AdminUsersPage = () => {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-2xl overflow-y-auto border-l border-zinc-200 bg-zinc-50 p-4 shadow-2xl transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950 ${selectedUserId ? "translate-x-0" : "translate-x-full"}`}>
+            <div className="mb-4 rounded-[30px] border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Selected User</p>
+                  <h2 className="mt-1 text-xl font-black">{selectedUser?.display_name || selectedUser?.email || "Loading..."}</h2>
+                  <p className="mt-1 truncate text-xs text-zinc-500 dark:text-zinc-400">{selectedUser?.email || "Select a user to inspect"}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserId(null)}
+                  className="rounded-2xl border border-zinc-200 p-3 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  aria-label="Close user detail"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 rounded-2xl bg-zinc-100 p-1 text-xs font-black dark:bg-zinc-950">
+                {[
+                  ["overview", "Overview"],
+                  ["profile", "Profile"],
+                  ["actions", "Actions"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setActiveUserTab(value)}
+                    className={`rounded-xl px-3 py-2 transition ${activeUserTab === value ? "bg-white text-primary shadow-sm dark:bg-zinc-900 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {activeUserTab === "overview" && (
             <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">User Detail</p>
               {isLoadingDetail && <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">Loading detail...</p>}
@@ -444,6 +504,14 @@ const AdminUsersPage = () => {
                         Daily goal: {selectedUser.daily_goal ? `${selectedUser.daily_goal} minutes` : "Not set"}
                       </p>
                     </div>
+                    <div className="rounded-[24px] bg-amber-50 p-4 text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-200">Coin Balance</p>
+                      <p className="mt-2 text-2xl font-black">{getCoinBalance(selectedUser).toLocaleString()}</p>
+                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-200/80">Available learner coins</p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Timeline</p>
                       <p className="mt-2 text-sm font-semibold">{formatDateTime(selectedUser.created_at)}</p>
@@ -455,7 +523,9 @@ const AdminUsersPage = () => {
                 </div>
               )}
             </section>
+            )}
 
+            {activeUserTab === "profile" && (
             <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Edit Profile</p>
               <form className="mt-4 space-y-4" onSubmit={handleSave}>
@@ -560,7 +630,9 @@ const AdminUsersPage = () => {
                 </div>
               </form>
             </section>
+            )}
 
+            {activeUserTab === "actions" && (
             <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Admin Actions</p>
               <div className="mt-4 grid gap-3">
@@ -611,6 +683,54 @@ const AdminUsersPage = () => {
                   </div>
                 </div>
 
+                <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                        Coin Balance
+                      </p>
+                      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        Add or subtract coins for the selected learner.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)]">
+                      <input
+                        type="number"
+                        step="1"
+                        value={coinDelta}
+                        onChange={(event) => setCoinDelta(event.target.value)}
+                        disabled={!selectedUserId || isRunningAction}
+                        placeholder="+100 / -50"
+                        className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
+                      />
+                      <input
+                        value={coinReason}
+                        onChange={(event) => setCoinReason(event.target.value)}
+                        disabled={!selectedUserId || isRunningAction}
+                        placeholder="Reason shown in transaction metadata"
+                        className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={!selectedUserId || isRunningAction || !hasCoinAdjustment}
+                      onClick={() => {
+                        void handleAdjustCoins();
+                      }}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-700 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200"
+                    >
+                      <Gift size={16} weight="fill" />
+                      Apply Coin Change
+                    </button>
+
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Current coins: <span className="font-semibold">{getCoinBalance(selectedUser).toLocaleString()}</span>
+                    </p>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   disabled={!selectedUserId || isRunningAction || isSelfSelected}
@@ -651,6 +771,7 @@ const AdminUsersPage = () => {
                 ) : null}
               </div>
             </section>
+            )}
           </div>
         </section>
       </div>
@@ -659,3 +780,4 @@ const AdminUsersPage = () => {
 };
 
 export default AdminUsersPage;
+

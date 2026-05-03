@@ -17,6 +17,10 @@ export const adminUsersApi = {
     const { data } = await httpClient.put(`/admin/users/${userId}/subscription`, payload);
     return data;
   },
+  adjustBalance: async (userId, payload) => {
+    const { data } = await httpClient.post(`/admin/users/${userId}/gamification/adjust-balance`, payload);
+    return data;
+  },
   toggleAdmin: async (userId) => {
     const { data } = await httpClient.post(`/admin/users/${userId}/toggle-admin`);
     return data;
