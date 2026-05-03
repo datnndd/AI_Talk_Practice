@@ -6,6 +6,7 @@ import io
 import os
 import re
 import tempfile
+import uuid
 import wave
 from datetime import date, datetime, timezone
 from typing import Any
@@ -19,10 +20,13 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError, UpstreamServiceError
+from app.infra.contracts import TTSConfig
+from app.infra.factory import create_tts
 from app.modules.curriculum.models import (
     DictionaryAudioCache,
     LearningSection,
     Lesson,
+    LessonAudioAsset,
     LessonAttempt,
     Unit,
     UserLessonProgress,
@@ -33,6 +37,7 @@ from app.modules.curriculum.schemas import (
     LearningSectionUpdate,
     LessonAttemptRead,
     LessonAttemptRequest,
+    LessonAudioTTSRequest,
     LessonCreate,
     LessonUpdate,
     ProgressSummary,
@@ -50,6 +55,8 @@ from app.modules.users.models.user import User
 
 WORD_RE = re.compile(r"[a-z0-9']+")
 MAX_PRONUNCIATION_AUDIO_BYTES = 10 * 1024 * 1024
+LESSON_AUDIO_UPLOAD_DIR = os.path.join("static", "uploads", "lesson-audio")
+LESSON_AUDIO_URL_PREFIX = "/static/uploads/lesson-audio"
 MIN_PRONUNCIATION_SAMPLE_RATE = 16000
 
 
@@ -869,6 +876,106 @@ class CurriculumService:
 
 
 class AdminCurriculumService:
+    @staticmethod
+    def _lesson_audio_path(filename: str) -> tuple[str, str]:
+        os.makedirs(LESSON_AUDIO_UPLOAD_DIR, exist_ok=True)
+        return os.path.join(LESSON_AUDIO_UPLOAD_DIR, filename), f"{LESSON_AUDIO_URL_PREFIX}/{filename}"
+
+    @staticmethod
+    async def _create_audio_asset(
+        db: AsyncSession,
+        *,
+        source: str,
+        audio_bytes: bytes,
+        content_type: str,
+        lesson_id: int | None = None,
+        text: str | None = None,
+        voice: str | None = None,
+        language: str | None = None,
+        extension: str = "wav",
+    ) -> LessonAudioAsset:
+        if lesson_id is not None:
+            await AdminCurriculumService.get_lesson(db, lesson_id)
+        if not audio_bytes:
+            raise BadRequestError("Lesson audio was empty")
+        if len(audio_bytes) > settings.lesson_audio_upload_max_bytes:
+            raise BadRequestError("Lesson audio exceeds maximum size")
+
+        safe_extension = re.sub(r"[^a-zA-Z0-9]", "", extension or "wav")[:12] or "wav"
+        filename = f"{uuid.uuid4().hex}.{safe_extension}"
+        filepath, url = AdminCurriculumService._lesson_audio_path(filename)
+        with open(filepath, "wb") as audio_file:
+            audio_file.write(audio_bytes)
+
+        asset = LessonAudioAsset(
+            lesson_id=lesson_id,
+            source=source,
+            text=(text or None),
+            voice=(voice or None),
+            language=(language or None),
+            filename=filename,
+            url=url,
+            content_type=content_type,
+            size_bytes=len(audio_bytes),
+        )
+        db.add(asset)
+        await db.commit()
+        await db.refresh(asset)
+        return asset
+
+    @staticmethod
+    async def create_tts_audio(db: AsyncSession, body: LessonAudioTTSRequest) -> LessonAudioAsset:
+        text = body.text.strip()
+        if not text:
+            raise BadRequestError("TTS text is required")
+        voice = (body.voice or settings.tts_voice or "Cherry").strip()
+        language = (body.language or "en").strip()
+        tts = create_tts(settings)
+        chunks: list[bytes] = []
+        try:
+            async for chunk in tts.synthesize(text, TTSConfig(voice=voice, language=language)):
+                if chunk:
+                    chunks.append(chunk)
+        finally:
+            await tts.close()
+        return await AdminCurriculumService._create_audio_asset(
+            db,
+            source="tts",
+            audio_bytes=b"".join(chunks),
+            content_type="audio/wav",
+            lesson_id=body.lesson_id,
+            text=text,
+            voice=voice,
+            language=language,
+            extension="wav",
+        )
+
+    @staticmethod
+    async def upload_audio(
+        db: AsyncSession,
+        *,
+        audio_bytes: bytes,
+        filename: str | None,
+        content_type: str | None,
+        lesson_id: int | None = None,
+        text: str | None = None,
+        language: str | None = None,
+    ) -> LessonAudioAsset:
+        normalized_content_type = (content_type or "").split(";", 1)[0].strip().lower()
+        if not normalized_content_type.startswith("audio/"):
+            raise BadRequestError("Uploaded lesson audio must be an audio file")
+        extension = os.path.splitext(filename or "")[1].lstrip(".") or normalized_content_type.split("/", 1)[1]
+        return await AdminCurriculumService._create_audio_asset(
+            db,
+            source="upload",
+            audio_bytes=audio_bytes,
+            content_type=normalized_content_type,
+            lesson_id=lesson_id,
+            text=(text or "").strip() or None,
+            language=(language or "").strip() or None,
+            extension=extension,
+        )
+
     @staticmethod
     async def list_sections(db: AsyncSession, include_inactive: bool = True) -> list[LearningSection]:
         stmt = select(LearningSection).options(selectinload(LearningSection.units).selectinload(Unit.lessons))

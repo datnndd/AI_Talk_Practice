@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+﻿import { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import { AppLayout } from "@/app/layouts";
@@ -14,6 +14,7 @@ const LegalPage = lazy(() => import("@/features/legal/pages/LegalPage"));
 const OnboardingPage = lazy(() => import("@/features/onboarding/pages/OnboardingPage"));
 
 const PracticeSessionPage = lazy(() => import("@/features/practice/pages/PracticeSessionPage"));
+const ScenarioPreviewPage = lazy(() => import("@/features/practice/pages/ScenarioPreviewPage"));
 const SessionResultPage = lazy(() => import("@/features/practice/pages/SessionResultPage"));
 const ProfileSettingsPage = lazy(() => import("@/features/profile/pages/ProfileSettingsPage"));
 const UserSettingsPage = lazy(() => import("@/features/profile/pages/UserSettingsPage"));
@@ -60,6 +61,7 @@ function App() {
         {/* Protected Routes */}
         <Route path="/onboarding" element={<PrivateRoute>{withSuspense(<OnboardingPage />)}</PrivateRoute>} />
 
+        <Route path="/practice/:id/preview" element={<PrivateRoute>{withAppLayout(<ScenarioPreviewPage />)}</PrivateRoute>} />
         <Route path="/practice/:id" element={<PrivateRoute>{withSuspense(<PracticeSessionPage />)}</PrivateRoute>} />
         <Route path="/sessions/:id/result" element={<PrivateRoute>{withAppLayout(<SessionResultPage />)}</PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute>{withAppLayout(<ProfileSettingsPage />)}</PrivateRoute>} />
@@ -85,3 +87,5 @@ function App() {
 }
 
 export default App;
+
+

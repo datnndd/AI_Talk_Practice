@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -188,7 +188,7 @@ const SessionResultPage = () => {
 
   if (error || !session) {
     return (
-      <div className="mx-auto max-w-2xl rounded-lg border border-rose-100 bg-white p-6 shadow-sm">
+      <div className="app-page-narrow rounded-lg border border-rose-100 bg-white p-6 shadow-sm">
         <div className="flex items-start gap-3 text-rose-600">
           <WarningCircle size={24} weight="fill" className="mt-0.5 shrink-0" />
           <div>
@@ -237,7 +237,7 @@ const SessionResultPage = () => {
   }[objectiveCompletion] || null;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-5">
+    <div className="flex w-full flex-col gap-5">
       <button
         type="button"
         onClick={() => navigate("/dashboard")}
@@ -492,3 +492,4 @@ const SessionResultPage = () => {
 };
 
 export default SessionResultPage;
+

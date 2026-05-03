@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+﻿import { motion } from "framer-motion";
 import { Clock, ChatCircle, ArrowRight, LockSimple, Crown } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 import { getApiBaseUrl } from "@/shared/api/httpClient";
@@ -12,7 +12,7 @@ const getFullImageUrl = (url) => {
 
 const TopicCard = ({ card }) => {
   const Icon = card.icon;
-  const destination = card.isLocked ? "/subscription" : `/practice/${card.id}`;
+  const destination = card.isLocked ? "/subscription" : `/practice/${card.id}/preview`;
   
   return (
     <Link to={destination} className={card.size}>
@@ -86,3 +86,4 @@ const TopicCard = ({ card }) => {
 };
 
 export default TopicCard;
+

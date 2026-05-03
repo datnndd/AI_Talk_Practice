@@ -43,8 +43,8 @@ const SiteFooter = ({ className = "" }) => {
   const settings = useSiteSettings();
 
   return (
-    <div className={`p-4 md:p-8 ${className}`}>
-      <footer className="mx-auto max-w-7xl rounded-xl border border-solid border-gray-200 bg-[linear-gradient(126deg,rgba(242,245,247,0.78)_20%,rgba(255,254,247,0.78)_97%)] px-6 pb-5 pt-10 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-[30px] md:px-10 lg:rounded-3xl">
+    <div className={`w-full ${className}`}>
+      <footer className="w-full rounded-xl border border-solid border-gray-200 bg-[linear-gradient(126deg,rgba(242,245,247,0.78)_20%,rgba(255,254,247,0.78)_97%)] px-6 pb-5 pt-10 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-[30px] md:px-10 lg:rounded-3xl">
         <div className="grid grid-cols-1 gap-8 pb-[30px] md:grid-cols-2 lg:grid-cols-5">
           <div>
             <a href="/" className="flex items-center gap-3" aria-label="Buddy Talk home">

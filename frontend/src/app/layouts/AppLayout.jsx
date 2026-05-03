@@ -8,15 +8,15 @@ const AppLayout = ({ children, showMobileNav = true }) => {
       <AppSidebar />
       
       {/* Content Area */}
-      <div className="flex flex-col lg:pl-[256px]">
+      <div className="flex min-h-[100dvh] flex-col lg:pl-[256px]">
         <TopBar />
         
-        <div className="flex-1">
+        <div className="app-layout-container flex flex-1 flex-col">
           {/* Main Content */}
-          <main className="min-w-0 flex-1 pb-28 md:pb-14">
+          <main className="app-page-content min-w-0 flex-1">
             {children}
           </main>
-          <SiteFooter />
+          <SiteFooter className="mt-8" />
         </div>
       </div>
       

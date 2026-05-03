@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle, Crown, Lightning } from "@phosphor-icons/react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -161,7 +161,7 @@ const SubscriptionPage = () => {
     : 0;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 pb-12">
+    <div className="app-page-wide space-y-8">
       {paymentMessage ? (
         <div className={`rounded-[1.5rem] border px-5 py-4 text-sm font-semibold shadow-sm ${
           paymentMessage.tone === "success"
@@ -261,3 +261,4 @@ const SubscriptionPage = () => {
 };
 
 export default SubscriptionPage;
+

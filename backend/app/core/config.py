@@ -54,6 +54,10 @@ class Settings(BaseSettings):
         default="https://dict.minhqnd.com",
         description="Public dictionary API base URL used for pronunciation audio",
     )
+    lesson_audio_upload_max_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        description="Maximum uploaded lesson audio size in bytes",
+    )
 
     # --- Payment / Billing ---
     frontend_url: str = Field(description="Public frontend base URL")

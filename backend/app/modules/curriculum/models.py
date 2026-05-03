@@ -118,6 +118,13 @@ class Lesson(Base, TimestampMixin):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    audio_assets: Mapped[list["LessonAudioAsset"]] = relationship(
+        "LessonAudioAsset",
+        back_populates="lesson",
+        lazy="select",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     __table_args__ = (
         UniqueConstraint("unit_id", "order_index", name="uq_lessons_unit_order"),
@@ -128,6 +135,29 @@ class Lesson(Base, TimestampMixin):
         ),
         CheckConstraint("order_index >= 0", name="ck_lessons_order_nonnegative"),
         CheckConstraint("pass_score >= 0 AND pass_score <= 100", name="ck_lessons_pass_score"),
+    )
+
+
+class LessonAudioAsset(Base, TimestampMixin):
+    __tablename__ = "lesson_audio_assets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    lesson_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("lessons.id", ondelete="SET NULL"))
+    source: Mapped[str] = mapped_column(String(20), nullable=False)
+    text: Mapped[Optional[str]] = mapped_column(Text)
+    voice: Mapped[Optional[str]] = mapped_column(String(100))
+    language: Mapped[Optional[str]] = mapped_column(String(20))
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    lesson: Mapped[Optional["Lesson"]] = relationship("Lesson", back_populates="audio_assets", lazy="select")
+
+    __table_args__ = (
+        Index("ix_lesson_audio_assets_lesson_created", "lesson_id", "created_at"),
+        CheckConstraint("source IN ('tts','upload')", name="ck_lesson_audio_assets_source"),
+        CheckConstraint("size_bytes > 0", name="ck_lesson_audio_assets_size_positive"),
     )
 
 

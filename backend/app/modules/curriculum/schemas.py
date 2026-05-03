@@ -162,6 +162,28 @@ class LessonRead(ORMModel):
     updated_at: datetime
 
 
+class LessonAudioTTSRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=5000)
+    lesson_id: int | None = None
+    voice: str | None = Field(default=None, max_length=100)
+    language: str | None = Field(default="en", max_length=20)
+
+
+class LessonAudioAssetRead(ORMModel):
+    id: int
+    lesson_id: int | None = None
+    source: Literal["tts", "upload"]
+    text: str | None = None
+    voice: str | None = None
+    language: str | None = None
+    filename: str
+    url: str
+    content_type: str
+    size_bytes: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class UnitRead(ORMModel):
     id: int
     section_id: int

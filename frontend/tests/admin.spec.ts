@@ -275,6 +275,29 @@ test.describe('Admin Curriculum Management', () => {
         return;
       }
 
+      if (path === '/api/admin/curriculum/audio/tts' && request.method() === 'POST') {
+        const payload = request.postDataJSON();
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 900,
+            lesson_id: payload.lesson_id || null,
+            source: 'tts',
+            text: payload.text,
+            voice: payload.voice || 'Cherry',
+            language: payload.language || 'en',
+            filename: 'coffee.wav',
+            url: '/static/uploads/lesson-audio/coffee.wav',
+            content_type: 'audio/wav',
+            size_bytes: 4,
+            created_at: now,
+            updated_at: now,
+          }),
+        });
+        return;
+      }
+
       if (path === '/api/admin/curriculum/sections' && request.method() === 'POST') {
         const payload = request.postDataJSON();
         const section = { id: 3, units: [], created_at: now, updated_at: now, ...payload };
@@ -369,8 +392,12 @@ test.describe('Admin Curriculum Management', () => {
     await page.getByTestId('vocab-word-input-0').fill('coffee');
     await page.getByRole('button', { name: /Lấy nghĩa/ }).click();
     await expect(page.getByTestId('vocab-meaning-input-0')).toHaveValue('ca phe');
-    await page.getByRole('button', { name: /Lấy audio/ }).click();
-    await expect(page.locator('audio')).toHaveAttribute('src', /dictionary\/audio/);
+    page.once('dialog', async dialog => {
+      expect(dialog.defaultValue()).toBe('coffee');
+      await dialog.accept('coffee');
+    });
+    await page.getByRole('button', { name: /Generate TTS/ }).click();
+    await expect(page.locator('audio')).toHaveAttribute('src', /lesson-audio\/coffee\.wav/);
     await page.getByTestId('save-curriculum-entity').click();
     await expect(page.getByText('lesson saved.')).toBeVisible();
     await expect(page.getByTestId('curriculum-exercise-row-300')).toContainText('Lesson 1');

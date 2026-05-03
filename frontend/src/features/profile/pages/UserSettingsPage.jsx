@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CaretLeft, Camera, ShieldCheck, User as UserIcon, SignOut, Trash } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -113,7 +113,7 @@ const UserSettingsPage = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="app-page-narrow">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-[#e5e5e5]">
         <div className="flex items-center gap-4">
@@ -369,3 +369,4 @@ const UserSettingsPage = () => {
 };
 
 export default UserSettingsPage;
+

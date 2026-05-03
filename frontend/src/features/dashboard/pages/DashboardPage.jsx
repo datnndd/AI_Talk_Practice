@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import PlaylistSection from "@/features/dashboard/components/PlaylistSection";
@@ -65,7 +65,7 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="space-y-10 px-8 pb-12 pt-4">
+    <div className="app-page-wide space-y-10">
       <section className="space-y-4">
         <h2 className="text-xl font-extrabold uppercase tracking-wide text-foreground/80">
           Role-Play Labs <span className="ml-1">🎭</span>
@@ -94,7 +94,7 @@ const Dashboard = () => {
                   {hasProAccess ? `Level ${level} • Streak ${streak} ngày • Premium scenarios ready` : "Nâng cấp Pro để mở kịch bản VIP, luyện nói live và phản hồi nâng cao."}
                 </p>
                 <Link
-                  to={hasProAccess ? (surpriseScenario ? `/practice/${surpriseScenario.id}` : "/learn") : "/subscription"}
+                  to={hasProAccess ? (surpriseScenario ? `/practice/${surpriseScenario.id}/preview` : "/learn") : "/subscription"}
                   className="inline-flex rounded-full bg-brand-purple px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-brand-purple/90 active:scale-95"
                 >
                   {hasProAccess ? "Quick start" : "Nâng cấp Pro"}
@@ -108,7 +108,7 @@ const Dashboard = () => {
 
           <div className="flex flex-col gap-4 md:col-span-1">
             <Link
-              to={surpriseScenario ? `/practice/${surpriseScenario.id}` : "#playlists"}
+              to={surpriseScenario ? `/practice/${surpriseScenario.id}/preview` : "#playlists"}
               className="group flex flex-1 items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition hover:border-brand-purple/40 hover:shadow-md active:scale-98"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-purple-soft text-2xl">🎁</div>
@@ -139,3 +139,5 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+

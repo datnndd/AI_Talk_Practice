@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+﻿import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle, Circle } from "@phosphor-icons/react";
 import { curriculumApi } from "@/features/curriculum/api/curriculumApi";
@@ -91,12 +91,12 @@ const LessonPlayerPage = () => {
   const canGoNext = activeExercise?.progress?.status === "completed";
 
   if (isLoading) {
-    return <div className="p-8 text-sm font-semibold text-muted-foreground">Đang tải bài học...</div>;
+    return <div className="py-8 text-sm font-semibold text-muted-foreground">Đang tải bài học...</div>;
   }
 
   if (error || !unit) {
     return (
-      <div className="mx-auto max-w-3xl px-6 py-10">
+      <div className="app-page-narrow py-6">
         <Link to="/learn" className="inline-flex items-center gap-2 text-sm font-bold text-primary">
           <ArrowLeft size={16} /> Quay lại lộ trình
         </Link>
@@ -108,7 +108,7 @@ const LessonPlayerPage = () => {
   }
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-6 pb-12 pt-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <div className="app-page-wide grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
       <aside className="space-y-4">
         <Link to="/learn" className="inline-flex items-center gap-2 text-sm font-bold text-primary">
           <ArrowLeft size={16} /> Lộ trình
@@ -177,3 +177,6 @@ const LessonPlayerPage = () => {
 };
 
 export default LessonPlayerPage;
+
+
+

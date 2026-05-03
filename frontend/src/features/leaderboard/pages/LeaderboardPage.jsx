@@ -80,7 +80,7 @@ const LeaderboardPage = () => {
 
   return (
     <div className="leaderboard-container">
-      <main className="w-full">
+      <div className="w-full">
         <motion.section
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -113,7 +113,7 @@ const LeaderboardPage = () => {
             <LeaderboardList entries={data.entries} currentUser={data.currentUser} />
           </motion.div>
         )}
-      </main>
+      </div>
     </div>
   );
 };

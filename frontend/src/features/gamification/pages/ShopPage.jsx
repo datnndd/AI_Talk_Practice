@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import { Gift, X } from "@phosphor-icons/react";
 import { gamificationApi } from "@/features/gamification/api/gamificationApi";
 
@@ -86,11 +86,11 @@ const ShopPage = () => {
   const coinBalance = Number(dashboard?.coin?.balance || 0);
 
   if (isLoading) {
-    return <div className="p-8 text-sm font-semibold text-muted-foreground">Đang tải cửa hàng...</div>;
+    return <div className="py-8 text-sm font-semibold text-muted-foreground">Đang tải cửa hàng...</div>;
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="mx-auto w-full max-w-5xl">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">Shop</p>
@@ -195,3 +195,5 @@ const ShopPage = () => {
 };
 
 export default ShopPage;
+
+

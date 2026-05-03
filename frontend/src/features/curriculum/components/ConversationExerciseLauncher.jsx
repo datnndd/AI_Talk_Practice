@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ChatCircleText } from "@phosphor-icons/react";
 import { curriculumApi } from "@/features/curriculum/api/curriculumApi";
@@ -62,7 +62,7 @@ const ConversationExerciseLauncher = ({ exercise, onAttempt }) => {
         </button>
       ) : (
         <Link
-          to={`/practice/${session.scenario_id}?sessionId=${session.session_id}`}
+          to={`/practice/${session.scenario_id}/preview?sessionId=${session.session_id}`}
           className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white"
         >
           <ChatCircleText size={18} weight="fill" />
@@ -99,3 +99,4 @@ const ConversationExerciseLauncher = ({ exercise, onAttempt }) => {
 };
 
 export default ConversationExerciseLauncher;
+

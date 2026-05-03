@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, require_admin_user
@@ -12,6 +12,8 @@ from app.modules.curriculum.schemas import (
     LearningSectionRead,
     LearningSectionUpdate,
     LessonCreate,
+    LessonAudioAssetRead,
+    LessonAudioTTSRequest,
     LessonRead,
     LessonUpdate,
     ReorderRequest,
@@ -33,6 +35,36 @@ async def dictionary_lookup(
     _: User = Depends(require_admin_user),
 ):
     return await DictionaryApiService.lookup_word(word=word, language=lang, definition_language=def_lang)
+
+
+@router.post("/audio/tts", response_model=LessonAudioAssetRead, status_code=status.HTTP_201_CREATED)
+async def create_lesson_tts_audio(
+    body: LessonAudioTTSRequest,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin_user),
+):
+    return await AdminCurriculumService.create_tts_audio(db, body)
+
+
+@router.post("/audio/upload", response_model=LessonAudioAssetRead, status_code=status.HTTP_201_CREATED)
+async def upload_lesson_audio(
+    file: UploadFile = File(...),
+    lesson_id: int | None = Form(default=None),
+    text: str | None = Form(default=None),
+    language: str | None = Form(default=None),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin_user),
+):
+    audio_bytes = await file.read()
+    return await AdminCurriculumService.upload_audio(
+        db,
+        audio_bytes=audio_bytes,
+        filename=file.filename,
+        content_type=file.content_type,
+        lesson_id=lesson_id,
+        text=text,
+        language=language,
+    )
 
 
 @router.get("/sections", response_model=list[LearningSectionRead])

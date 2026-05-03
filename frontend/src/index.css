@@ -202,6 +202,22 @@
     background-attachment: fixed;
   }
 
+  .app-layout-container {
+    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;
+  }
+
+  .app-page-content {
+    @apply w-full pb-28 pt-4 md:pb-14;
+  }
+
+  .app-page-narrow {
+    @apply mx-auto w-full max-w-4xl;
+  }
+
+  .app-page-wide {
+    @apply w-full;
+  }
+
   /* Background Image Cross-fade Strategy */
   .app-page-shell::before,
   .app-page-shell::after {
@@ -426,6 +442,131 @@
 
   .section-completed .app-section-panel {
     @apply border-brand-border bg-white;
+  }
+
+  .learn-path-page {
+    @apply flex w-full flex-col gap-4;
+  }
+
+  .learn-path-header {
+    @apply sticky top-0 z-20 flex h-[72px] items-center border-b-2 border-[#e5e5e5] bg-white/80 backdrop-blur-md;
+  }
+
+  .learn-back-link {
+    @apply inline-flex items-center gap-2 text-sm font-black uppercase tracking-wide text-[#afafaf] transition-colors hover:text-[#777777];
+  }
+
+  .learn-section-list {
+    @apply flex flex-col gap-0;
+  }
+
+  .learn-section-card {
+    @apply flex flex-col gap-4 px-0 py-4 md:px-4 md:py-6;
+  }
+
+  .learn-section-panel {
+    @apply flex items-center justify-between gap-5 rounded-[20px] border-2 border-b-[4px] border-[#e5e5e5] bg-white p-6 shadow-sm;
+  }
+
+  .learn-section-level {
+    @apply mb-1 inline-flex text-[13px] font-black uppercase tracking-wide text-[#1cb0f6];
+  }
+
+  .learn-section-title {
+    @apply text-[28px] font-black leading-tight text-[#4b4b4b];
+  }
+
+  .learn-section-status {
+    @apply mt-3 flex items-center gap-2 text-sm font-black uppercase tracking-wide text-[#58cc02];
+  }
+
+  .learn-section-button {
+    @apply inline-flex h-[50px] shrink-0 items-center justify-center rounded-[16px] border-2 border-b-[4px] border-[#e5e5e5] bg-white px-8 text-sm font-black uppercase tracking-wide text-[#1cb0f6] transition-all hover:bg-[#f7f7f7] active:translate-y-[2px] active:border-b-2;
+  }
+
+  .learn-section-active .learn-section-panel {
+    @apply border-[#1cb0f6] border-b-[#1899d6] bg-[#1cb0f6];
+  }
+
+  .learn-section-active .learn-section-title,
+  .learn-section-active .learn-section-level {
+    @apply text-white;
+  }
+
+  .learn-section-active .learn-section-button {
+    @apply border-white/30 border-b-white/50 bg-white text-[#1cb0f6];
+  }
+
+  .learn-section-locked .learn-section-panel {
+    @apply border-[#e5e5e5] bg-[#f7f7f7];
+  }
+
+  .learn-section-locked .learn-section-title {
+    @apply text-[#afafaf];
+  }
+
+  .learn-section-locked .learn-section-status {
+    @apply text-[#afafaf];
+  }
+
+  .learn-section-locked .learn-section-button {
+    @apply border-[#e5e5e5] bg-white text-[#afafaf];
+  }
+
+  .learn-progress {
+    @apply relative h-[18px] w-[220px] overflow-hidden rounded-full bg-white/35;
+  }
+
+  .learn-progress-fill {
+    @apply absolute inset-y-0 left-0 rounded-full bg-[#58cc02] transition-all duration-700;
+  }
+
+  .learn-progress-fill::after {
+    content: "";
+    @apply absolute left-3 right-3 top-[3px] h-[3px] rounded-full bg-white/35;
+  }
+
+  .learn-progress span {
+    @apply absolute inset-0 flex items-center justify-center text-[11px] font-black text-white drop-shadow-sm;
+  }
+
+  .learn-section-art {
+    @apply relative ml-auto flex w-full max-w-[560px] items-end justify-end gap-4 pr-0 md:pr-20;
+  }
+
+  .learn-speech-bubble {
+    @apply relative max-w-[320px] rounded-2xl border-2 border-[#e5e5e5] bg-white p-4 text-[15px] font-black leading-snug text-[#4b4b4b] shadow-sm;
+  }
+
+  .learn-speech-bubble::after {
+    content: "";
+    @apply absolute -right-[9px] bottom-5 h-4 w-4 rotate-45 border-r-2 border-t-2 border-[#e5e5e5] bg-white;
+  }
+
+  .learn-mascot {
+    @apply shrink-0 rounded-full bg-white p-3 shadow-sm;
+  }
+
+  .learn-current-unit {
+    @apply absolute -bottom-7 right-0 flex max-w-[360px] items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black text-[#777777] shadow-sm;
+  }
+
+  @media (max-width: 640px) {
+    .learn-section-panel {
+      @apply flex-col items-stretch;
+    }
+
+    .learn-section-button {
+      @apply w-full;
+    }
+
+    .learn-section-art {
+      @apply flex-col items-center pr-0;
+    }
+
+    .learn-speech-bubble::after {
+      @apply hidden;
+    }
   }
 
   /* Glass Overrides for Tailwind classes */

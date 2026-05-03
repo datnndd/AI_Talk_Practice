@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { Crown, Headphones, LockSimple } from "@phosphor-icons/react";
 
 import fallbackScenarioImage from "@/assets/buddy_talk_logo.jpg";
@@ -76,7 +76,7 @@ const ScenarioCard = ({ scenario, group, hasProAccess }) => {
 
   return (
   <Link
-    to={isLocked ? "/subscription" : `/practice/${scenario.id}`}
+    to={isLocked ? "/subscription" : `/practice/${scenario.id}/preview`}
     onMouseEnter={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
     onFocus={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
     className="group relative col-span-12 block cursor-pointer overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-800 sm:col-span-6 md:col-span-3 2xl:col-span-2"
@@ -199,3 +199,4 @@ const PlaylistSection = ({ scenarios = [], isLoading = false, error = "", hasPro
 };
 
 export default PlaylistSection;
+

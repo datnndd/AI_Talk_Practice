@@ -3,7 +3,7 @@ import base64
 import pytest
 
 from app.core.security import create_access_token
-from app.modules.curriculum.models import DictionaryAudioCache, LearningSection, Lesson, Unit
+from app.modules.curriculum.models import DictionaryAudioCache, LearningSection, Lesson, LessonAudioAsset, Unit
 
 
 async def seed_curriculum(db_session):
@@ -238,7 +238,7 @@ async def test_admin_can_create_curriculum_with_word_audio_lesson(admin_client):
     )
     assert lesson_response.status_code == 201
     assert lesson_response.json()["type"] == "word_audio_choice"
-    assert lesson_response.json()["content"]["options"][0]["audio_url"].startswith("/api/curriculum/dictionary/audio")
+    assert "audio_url" not in lesson_response.json()["content"]["options"][0]
 
     list_response = await admin_client.get("/api/admin/curriculum/sections")
     assert list_response.status_code == 200
@@ -456,3 +456,96 @@ async def test_admin_reorder_swaps_without_unique_constraint_error(admin_client,
     assert unit_2.order_index == 0
     assert lesson_1.order_index == 1
     assert lesson_2.order_index == 0
+
+@pytest.mark.asyncio
+async def test_admin_tts_audio_creates_static_asset(admin_client, db_session, monkeypatch, tmp_path):
+    from app.modules.curriculum import services as curriculum_services
+
+    class StubTTS:
+        async def synthesize(self, text, config=None):
+            yield b"RIFF"
+            yield text.encode("utf-8")
+
+        async def close(self):
+            pass
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(curriculum_services, "create_tts", lambda settings: StubTTS())
+
+    response = await admin_client.post(
+        "/api/admin/curriculum/audio/tts",
+        json={"text": "hello", "voice": "Cherry", "language": "en"},
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["source"] == "tts"
+    assert data["url"].startswith("/static/uploads/lesson-audio/")
+    assert (tmp_path / data["url"].lstrip("/")).exists()
+    asset = await db_session.get(LessonAudioAsset, data["id"])
+    assert asset is not None
+    assert asset.text == "hello"
+    assert asset.size_bytes == len(b"RIFFhello")
+
+
+@pytest.mark.asyncio
+async def test_admin_audio_upload_accepts_audio_and_rejects_non_audio(admin_client, db_session, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    rejected = await admin_client.post(
+        "/api/admin/curriculum/audio/upload",
+        files={"file": ("note.txt", b"hello", "text/plain")},
+    )
+    assert rejected.status_code == 400
+
+    accepted = await admin_client.post(
+        "/api/admin/curriculum/audio/upload",
+        files={"file": ("sample.wav", b"WAVE", "audio/wav")},
+        data={"text": "sample", "language": "en"},
+    )
+
+    assert accepted.status_code == 201
+    data = accepted.json()
+    assert data["source"] == "upload"
+    assert data["content_type"] == "audio/wav"
+    assert data["url"].endswith(".wav")
+    assert (tmp_path / data["url"].lstrip("/")).exists()
+    asset = await db_session.get(LessonAudioAsset, data["id"])
+    assert asset is not None
+    assert asset.source == "upload"
+
+
+@pytest.mark.asyncio
+async def test_word_audio_choice_serializer_keeps_saved_audio_only(client, db_session, test_user):
+    section = LearningSection(code="NO_DICT", title="No dict", order_index=0)
+    db_session.add(section)
+    await db_session.flush()
+    unit = Unit(section_id=section.id, title="Audio", order_index=0)
+    db_session.add(unit)
+    await db_session.flush()
+    lesson = Lesson(
+        unit_id=unit.id,
+        type="word_audio_choice",
+        title="Choose audio",
+        order_index=0,
+        content={
+            "prompt_word": "reservation",
+            "language": "en",
+            "options": [
+                {"word": "reservation", "is_correct": True, "audio_url": "/static/uploads/lesson-audio/a.wav"},
+                {"word": "reception", "is_correct": False},
+            ],
+        },
+        pass_score=100,
+    )
+    db_session.add(lesson)
+    await db_session.commit()
+    headers = {"Authorization": f"Bearer {create_access_token(test_user.id)}"}
+
+    response = await client.get(f"/api/units/{unit.id}", headers=headers)
+
+    assert response.status_code == 200
+    options = response.json()["lessons"][0]["content"]["options"]
+    assert options[0]["audio_url"] == "/static/uploads/lesson-audio/a.wav"
+    assert "audio_url" not in options[1]
+    assert "source" not in options[0]

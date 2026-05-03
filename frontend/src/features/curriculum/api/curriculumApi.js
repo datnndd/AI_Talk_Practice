@@ -131,4 +131,17 @@ export const adminCurriculumApi = {
     });
     return data;
   },
+  createLessonAudioTts: async (payload) => {
+    const { data } = await httpClient.post("/admin/curriculum/audio/tts", payload);
+    return data;
+  },
+  uploadLessonAudio: async ({ file, lessonId, text, language }) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (lessonId) formData.append("lesson_id", lessonId);
+    if (text) formData.append("text", text);
+    if (language) formData.append("language", language);
+    const { data } = await httpClient.post("/admin/curriculum/audio/upload", formData);
+    return data;
+  },
 };

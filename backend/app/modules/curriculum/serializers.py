@@ -1,37 +1,11 @@
 from __future__ import annotations
 
-from urllib.parse import urlencode
-
 from app.modules.curriculum.models import LearningSection, Lesson, Unit, UserLessonProgress, UserUnitProgress
 from app.modules.curriculum.schemas import LearningSectionRead, LessonRead, ProgressSummary, UnitRead
 
 
-def dictionary_audio_url(word: str, language: str = "en") -> str:
-    query = urlencode({"word": word, "lang": language or "en"})
-    return f"/api/curriculum/dictionary/audio?{query}"
-
-
 def _enriched_lesson_content(lesson: Lesson) -> dict:
-    content = dict(lesson.content or {})
-    if lesson.type != "word_audio_choice":
-        return content
-
-    language = content.get("language") or "en"
-    enriched_options = []
-    for option in content.get("options") or []:
-        if not isinstance(option, dict):
-            continue
-        word = str(option.get("word") or "").strip()
-        enriched_options.append(
-            {
-                **option,
-                "audio_url": dictionary_audio_url(word, language) if word else None,
-                "source": "dict.minhqnd.com",
-            }
-        )
-    content["language"] = language
-    content["options"] = enriched_options
-    return content
+    return dict(lesson.content or {})
 
 
 def serialize_lesson(

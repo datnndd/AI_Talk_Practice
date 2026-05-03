@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowClockwise,
   ArrowDown,
@@ -193,7 +193,7 @@ const normalizeExercisePayload = (form) => ({
 
 const audioOptionsToText = (content) =>
   (content.options || [])
-    .map((option) => `${option.is_correct ? "*" : ""}${option.word || ""}`)
+    .map((option) => `${option.is_correct ? "*" : ""}${option.word || ""}${option.audio_url ? ` | ${option.audio_url}` : ""}`)
     .join("\n");
 
 const textToAudioChoice = (promptWord, language, value) => ({
@@ -205,7 +205,9 @@ const textToAudioChoice = (promptWord, language, value) => ({
     .filter(Boolean)
     .map((line) => {
       const isCorrect = line.startsWith("*");
-      return { word: isCorrect ? line.slice(1).trim() : line, is_correct: isCorrect };
+      const cleanLine = isCorrect ? line.slice(1).trim() : line;
+      const [word, audioUrl] = cleanLine.split("|").map((item) => item.trim());
+      return { word, is_correct: isCorrect, ...(audioUrl ? { audio_url: audioUrl } : {}) };
     }),
 });
 
@@ -278,9 +280,94 @@ const absoluteApiUrl = (value) => {
   return `${origin}${value.startsWith("/") ? value : `/${value}`}`;
 };
 
+const AudioAssetControl = ({ value, onChange, text = "", language = "en", lessonId = "", compact = false }) => {
+  const [state, setState] = useState({ loading: "", error: "" });
+  const fileInputRef = useRef(null);
+
+  const createTts = async () => {
+    const defaultText = text?.trim() || window.prompt("Text for TTS", "")?.trim();
+    if (!defaultText) {
+      setState({ loading: "", error: "Nhập text để tạo TTS." });
+      return;
+    }
+    const editableText = window.prompt("Text for TTS", defaultText);
+    const finalText = editableText?.trim();
+    if (!finalText) return;
+    setState({ loading: "tts", error: "" });
+    try {
+      const result = await adminCurriculumApi.createLessonAudioTts({
+        text: finalText,
+        language: language || "en",
+        ...(lessonId ? { lesson_id: parseNumber(lessonId) } : {}),
+      });
+      onChange(result.url || "");
+    } catch (error) {
+      setState({ loading: "", error: getErrorMessage(error, "Không thể tạo audio TTS.") });
+      return;
+    }
+    setState({ loading: "", error: "" });
+  };
+
+  const uploadAudio = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setState({ loading: "upload", error: "" });
+    try {
+      const result = await adminCurriculumApi.uploadLessonAudio({
+        file,
+        lessonId: lessonId ? parseNumber(lessonId) : undefined,
+        text,
+        language,
+      });
+      onChange(result.url || "");
+    } catch (error) {
+      setState({ loading: "", error: getErrorMessage(error, "Không thể upload audio.") });
+      return;
+    } finally {
+      event.target.value = "";
+    }
+    setState({ loading: "", error: "" });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className={`grid gap-2 ${compact ? "" : "sm:grid-cols-[minmax(0,1fr)_auto]"}`}>
+        <input
+          value={value || ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="/static/uploads/lesson-audio/..."
+          className="w-full rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+        />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={createTts}
+            disabled={Boolean(state.loading)}
+            className="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-[11px] font-black text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            <SpeakerHigh size={13} />
+            {state.loading === "tts" ? "Generating" : "Generate TTS"}
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={Boolean(state.loading)}
+            className="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-[11px] font-black text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            Upload
+          </button>
+          <input ref={fileInputRef} type="file" accept="audio/*" onChange={uploadAudio} className="hidden" />
+        </div>
+      </div>
+      {value ? <audio controls src={absoluteApiUrl(value)} className="h-9 w-full" /> : null}
+      {state.error ? <p className="text-xs font-semibold text-rose-600 dark:text-rose-300">{state.error}</p> : null}
+    </div>
+  );
+};
+
 const curriculumKindLabel = (kind) => (kind === "level" ? "section" : kind === "lesson" ? "unit" : "lesson");
 
-const VocabWordsEditor = ({ content, onChange }) => {
+const VocabWordsEditor = ({ content, onChange, lessonId = "" }) => {
   const rows = normalizeVocabRows(content);
   const [rowState, setRowState] = useState({});
 
@@ -366,25 +453,15 @@ const VocabWordsEditor = ({ content, onChange }) => {
                 />
               </div>
               <div>
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <FieldLabel>Audio</FieldLabel>
-                  <button
-                    type="button"
-                    onClick={() => lookupWord(index, "audio")}
-                    disabled={state.loading === "audio"}
-                    className="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-[11px] font-black text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                  >
-                    <SpeakerHigh size={13} />
-                    {state.loading === "audio" ? "Đang lấy" : "Lấy audio"}
-                  </button>
-                </div>
-                <input
+                <FieldLabel>Audio</FieldLabel>
+                <AudioAssetControl
+                  compact
                   value={row.audio_url}
-                  onChange={(event) => updateRow(index, { audio_url: event.target.value })}
-                  placeholder="/api/curriculum/dictionary/audio?..."
-                  className="w-full rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                  text={row.word}
+                  language="en"
+                  lessonId={lessonId}
+                  onChange={(audioUrl) => updateRow(index, { audio_url: audioUrl })}
                 />
-                {row.audio_url ? <audio controls src={absoluteApiUrl(row.audio_url)} className="mt-2 h-9 w-full" /> : null}
                 {state.error ? <p className="mt-2 text-xs font-semibold text-rose-600 dark:text-rose-300">{state.error}</p> : null}
               </div>
               <button
@@ -411,7 +488,7 @@ const VocabWordsEditor = ({ content, onChange }) => {
   );
 };
 
-const ClozeDictationEditor = ({ content, onChange }) => {
+const ClozeDictationEditor = ({ content, onChange, lessonId = "" }) => {
   const rows = normalizeClozeRows(content);
   const [rowState, setRowState] = useState({});
 
@@ -476,6 +553,17 @@ const ClozeDictationEditor = ({ content, onChange }) => {
             Dùng <span className="font-mono">___</span> trong passage để đánh dấu chỗ trống.
           </p>
         </div>
+      </div>
+
+      <div>
+        <FieldLabel>Prompt Audio</FieldLabel>
+        <AudioAssetControl
+          value={content.audio_url || ""}
+          text={content.passage || ""}
+          language={content.language || "en"}
+          lessonId={lessonId}
+          onChange={(audioUrl) => updateContent({ audio_url: audioUrl })}
+        />
       </div>
 
       <div>
@@ -710,26 +798,38 @@ const EntityModal = ({
       return (
         <div>
           <FieldLabel>Words</FieldLabel>
-          <VocabWordsEditor content={content} onChange={updateExerciseContent} />
+          <VocabWordsEditor content={content} onChange={updateExerciseContent} lessonId={form.lesson_id} />
         </div>
       );
     }
 
     if (form.type === "cloze_dictation") {
       return (
-        <ClozeDictationEditor content={content} onChange={updateExerciseContent} />
+        <ClozeDictationEditor content={content} onChange={updateExerciseContent} lessonId={form.lesson_id} />
       );
     }
 
     if (form.type === "sentence_pronunciation") {
       return (
-        <div>
-          <FieldLabel>Reference Text</FieldLabel>
-          <textarea
-            value={content.reference_text || ""}
-            onChange={(event) => updateExerciseContent({ reference_text: event.target.value })}
-            className="min-h-[130px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-          />
+        <div className="space-y-4">
+          <div>
+            <FieldLabel>Reference Text</FieldLabel>
+            <textarea
+              value={content.reference_text || ""}
+              onChange={(event) => updateExerciseContent({ ...content, reference_text: event.target.value })}
+              className="min-h-[130px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+            />
+          </div>
+          <div>
+            <FieldLabel>Sample Audio</FieldLabel>
+            <AudioAssetControl
+              value={content.sample_audio_url || ""}
+              text={content.reference_text || ""}
+              language={content.language || "en"}
+              lessonId={form.lesson_id}
+              onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })}
+            />
+          </div>
         </div>
       );
     }
@@ -760,12 +860,31 @@ const EntityModal = ({
             <textarea
               value={audioOptionsToText(content)}
               onChange={(event) => updateExerciseContent(textToAudioChoice(content.prompt_word || "", content.language || "en", event.target.value))}
-              placeholder={"*reservation\nreception\nrecommendation"}
+              placeholder={"*reservation | /static/uploads/lesson-audio/...\nreception\nrecommendation"}
               className="min-h-[150px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-xs outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
             />
             <p className="mt-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-              Prefix exactly one correct option with *. Audio comes from dict.minhqnd.com through the backend cache.
+              Prefix exactly one correct option with *. Add optional audio URL after | or generate/upload below.
             </p>
+            <div className="mt-3 space-y-3">
+              {(content.options || []).map((option, index) => (
+                <div key={`${option.word}-${index}`} className="rounded-[18px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950">
+                  <FieldLabel>{option.is_correct ? "Correct" : "Option"}: {option.word}</FieldLabel>
+                  <AudioAssetControl
+                    value={option.audio_url || ""}
+                    text={option.word || content.prompt_word || ""}
+                    language={content.language || "en"}
+                    lessonId={form.lesson_id}
+                    onChange={(audioUrl) => updateExerciseContent({
+                      ...content,
+                      options: (content.options || []).map((currentOption, optionIndex) => (
+                        optionIndex === index ? { ...currentOption, audio_url: audioUrl } : currentOption
+                      )),
+                    })}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </>
       );
@@ -1407,7 +1526,7 @@ const AdminCurriculumPage = () => {
         </section>
 
         <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-          Dictionary audio is proxied and cached from dict.minhqnd.com for word audio choice lessons.
+          Lesson audio is generated by backend TTS or uploaded directly by admins.
         </p>
       </div>
 
