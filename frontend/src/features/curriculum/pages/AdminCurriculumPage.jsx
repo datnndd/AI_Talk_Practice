@@ -332,12 +332,11 @@ const AudioAssetControl = ({ value, onChange, text = "", language = "en", lesson
   return (
     <div className="space-y-2">
       <div className={`grid gap-2 ${compact ? "" : "sm:grid-cols-[minmax(0,1fr)_auto]"}`}>
-        <input
-          value={value || ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="/static/uploads/lesson-audio/..."
-          className="w-full rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-        />
+        <div className="min-w-0 rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950">
+          <p className="truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+            {value || "Generate TTS hoặc upload file audio để lấy Supabase URL"}
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -860,11 +859,11 @@ const EntityModal = ({
             <textarea
               value={audioOptionsToText(content)}
               onChange={(event) => updateExerciseContent(textToAudioChoice(content.prompt_word || "", content.language || "en", event.target.value))}
-              placeholder={"*reservation | /static/uploads/lesson-audio/...\nreception\nrecommendation"}
+              placeholder={"*reservation\nreception\nrecommendation"}
               className="min-h-[150px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-xs outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
             />
             <p className="mt-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-              Prefix exactly one correct option with *. Add optional audio URL after | or generate/upload below.
+              Prefix exactly one correct option with *. Generate or upload audio below to set Supabase URLs.
             </p>
             <div className="mt-3 space-y-3">
               {(content.options || []).map((option, index) => (

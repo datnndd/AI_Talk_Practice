@@ -2,6 +2,7 @@
 Application configuration loaded from .env file.
 """
 
+from pathlib import Path
 from typing import Optional
 
 from pydantic import Field
@@ -9,6 +10,7 @@ from pydantic_settings import BaseSettings
 
 
 DEFAULT_LLM_BASE_URL = "https://rfij5ml.9router.com/v1"
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
@@ -58,6 +60,10 @@ class Settings(BaseSettings):
         default=10 * 1024 * 1024,
         description="Maximum uploaded lesson audio size in bytes",
     )
+    supabase_url: str | None = Field(default=None, description="Supabase project URL")
+    supabase_service_role_key: str | None = Field(default=None, description="Supabase service role key")
+    supabase_images_bucket: str = Field(default="images", description="Supabase bucket for uploaded images")
+    supabase_audio_bucket: str = Field(default="audio", description="Supabase bucket for uploaded audio")
 
     # --- Payment / Billing ---
     frontend_url: str = Field(description="Public frontend base URL")
@@ -241,7 +247,7 @@ class Settings(BaseSettings):
         return self.openai_api_key
 
     model_config = {
-        "env_file": ".env",
+        "env_file": str(ENV_FILE),
         "env_file_encoding": "utf-8",
         "extra": "ignore",
     }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle, CreditCard, Gift, GraduationCap, PencilSimple, Plus, ProhibitInset, SquaresFour, Trash, UserList } from "@phosphor-icons/react";
 
 import { adminShopApi } from "@/features/admin-shop/api/adminShopApi";
@@ -35,8 +35,11 @@ const AdminShopPage = () => {
   const [form, setForm] = useState(EMPTY_PRODUCT);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const imageInputRef = useRef(null);
 
   const selectedProduct = useMemo(
     () => products.find((product) => product.id === selectedProductId) || null,
@@ -66,6 +69,9 @@ const AdminShopPage = () => {
 
   useEffect(() => {
     if (!selectedProduct) return;
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImageFile(null);
+    setImagePreviewUrl("");
     setForm({
       code: selectedProduct.code || "",
       name: selectedProduct.name || "",
@@ -78,13 +84,20 @@ const AdminShopPage = () => {
     });
   }, [selectedProduct]);
 
+  useEffect(() => () => {
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+  }, [imagePreviewUrl]);
+
   const updateForm = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
   const startCreate = () => {
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
     setSelectedProductId(null);
     setForm(EMPTY_PRODUCT);
+    setImageFile(null);
+    setImagePreviewUrl("");
     setTab("products");
   };
 
@@ -105,10 +118,13 @@ const AdminShopPage = () => {
     };
     try {
       const saved = selectedProductId
-        ? await adminShopApi.updateProduct(selectedProductId, payload)
-        : await adminShopApi.createProduct(payload);
+        ? await adminShopApi.updateProductWithImage(selectedProductId, payload, imageFile)
+        : await adminShopApi.createProductWithImage(payload, imageFile);
       setNotice(selectedProductId ? "Đã cập nhật sản phẩm." : "Đã thêm sản phẩm.");
       setSelectedProductId(saved.id);
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+      setImageFile(null);
+      setImagePreviewUrl("");
       await load();
     } catch (err) {
       setError(err?.response?.data?.detail || "Không thể lưu sản phẩm.");
@@ -139,6 +155,20 @@ const AdminShopPage = () => {
     } catch (err) {
       setError(err?.response?.data?.detail || "Không thể cập nhật trạng thái.");
     }
+  };
+
+  const chooseProductImage = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setError("");
+    setNotice("");
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+    }
+    setImageFile(file);
+    setImagePreviewUrl(URL.createObjectURL(file));
+    setNotice("Đã chọn ảnh. Ảnh sẽ upload khi lưu sản phẩm.");
+    event.target.value = "";
   };
 
   return (
@@ -189,7 +219,19 @@ const AdminShopPage = () => {
               <input required placeholder="Code" value={form.code} onChange={(event) => updateForm("code", event.target.value)} className="w-full rounded-xl border border-border px-4 py-3 text-sm" />
               <input required placeholder="Tên sản phẩm" value={form.name} onChange={(event) => updateForm("name", event.target.value)} className="w-full rounded-xl border border-border px-4 py-3 text-sm" />
               <textarea placeholder="Mô tả" value={form.description} onChange={(event) => updateForm("description", event.target.value)} className="w-full rounded-xl border border-border px-4 py-3 text-sm" />
-              <input placeholder="Ảnh URL" value={form.image_url} onChange={(event) => updateForm("image_url", event.target.value)} className="w-full rounded-xl border border-border px-4 py-3 text-sm" />
+              <div className="rounded-xl border border-border p-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">Ảnh sản phẩm</p>
+                    <p className="mt-1 truncate text-xs font-semibold text-zinc-500">{imageFile?.name || form.image_url || "Chưa có ảnh"}</p>
+                  </div>
+                  <button type="button" onClick={() => imageInputRef.current?.click()} disabled={isSaving} className="rounded-xl border border-border px-4 py-2 text-xs font-black text-zinc-700 disabled:opacity-50">
+                    Chọn ảnh
+                  </button>
+                </div>
+                {imagePreviewUrl || form.image_url ? <img src={imagePreviewUrl || form.image_url} alt="Product" className="mt-3 h-32 w-full rounded-xl object-cover" /> : null}
+                <input ref={imageInputRef} type="file" accept="image/*" onChange={chooseProductImage} className="hidden" />
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <input type="number" min="0" placeholder="Coin" value={form.price_coin} onChange={(event) => updateForm("price_coin", event.target.value)} className="rounded-xl border border-border px-4 py-3 text-sm" />
                 <input type="number" min="0" placeholder="Tồn" value={form.stock_quantity} onChange={(event) => updateForm("stock_quantity", event.target.value)} className="rounded-xl border border-border px-4 py-3 text-sm" />

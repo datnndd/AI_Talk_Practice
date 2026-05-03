@@ -113,11 +113,12 @@ const refreshAccessToken = async () => {
 
 const request = async ({ method = "GET", path, params, data, headers = {}, _retry = false }) => {
   const accessToken = localStorage.getItem("access_token");
+  const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
   const requestHeaders = {
     ...headers,
   };
 
-  if (data !== undefined) {
+  if (data !== undefined && !isFormData) {
     requestHeaders["Content-Type"] = "application/json";
   }
 
@@ -128,7 +129,7 @@ const request = async ({ method = "GET", path, params, data, headers = {}, _retr
   const response = await fetch(buildUrl(path, params), {
     method,
     headers: requestHeaders,
-    body: data !== undefined ? JSON.stringify(data) : undefined,
+    body: data !== undefined ? (isFormData ? data : JSON.stringify(data)) : undefined,
   });
 
   const responseData = await parseResponse(response);

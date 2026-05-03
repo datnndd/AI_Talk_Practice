@@ -20,6 +20,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError, UpstreamServiceError
+from app.infra.supabase_storage import supabase_storage
 from app.infra.contracts import TTSConfig
 from app.infra.factory import create_tts
 from app.modules.curriculum.models import (
@@ -882,6 +883,27 @@ class AdminCurriculumService:
         return os.path.join(LESSON_AUDIO_UPLOAD_DIR, filename), f"{LESSON_AUDIO_URL_PREFIX}/{filename}"
 
     @staticmethod
+    async def _upload_lesson_audio_to_storage(
+        *,
+        filename: str,
+        audio_bytes: bytes,
+        content_type: str,
+    ) -> str:
+        if not supabase_storage.is_configured:
+            filepath, url = AdminCurriculumService._lesson_audio_path(filename)
+            with open(filepath, "wb") as audio_file:
+                audio_file.write(audio_bytes)
+            return url
+
+        result = await supabase_storage.upload_public_object(
+            bucket=settings.supabase_audio_bucket,
+            path=f"lesson-audio/{filename}",
+            content=audio_bytes,
+            content_type=content_type,
+        )
+        return result.public_url
+
+    @staticmethod
     async def _create_audio_asset(
         db: AsyncSession,
         *,
@@ -903,9 +925,11 @@ class AdminCurriculumService:
 
         safe_extension = re.sub(r"[^a-zA-Z0-9]", "", extension or "wav")[:12] or "wav"
         filename = f"{uuid.uuid4().hex}.{safe_extension}"
-        filepath, url = AdminCurriculumService._lesson_audio_path(filename)
-        with open(filepath, "wb") as audio_file:
-            audio_file.write(audio_bytes)
+        url = await AdminCurriculumService._upload_lesson_audio_to_storage(
+            filename=filename,
+            audio_bytes=audio_bytes,
+            content_type=content_type,
+        )
 
         asset = LessonAudioAsset(
             lesson_id=lesson_id,

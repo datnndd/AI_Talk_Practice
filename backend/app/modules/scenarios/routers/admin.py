@@ -156,23 +156,39 @@ async def toggle_admin_scenario(
     )
 
 import os
+import re
 import uuid
 from fastapi import UploadFile, File
+from app.core.config import settings
+from app.core.exceptions import BadRequestError
+from app.infra.supabase_storage import supabase_storage
 
 @router.post("/scenarios/upload-image")
 async def upload_scenario_image(
     file: UploadFile = File(...),
     _: User = Depends(require_admin_user),
 ):
-    upload_dir = "static/uploads"
-    os.makedirs(upload_dir, exist_ok=True)
-    
-    ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    filepath = os.path.join(upload_dir, filename)
-    
-    with open(filepath, "wb") as f:
-        content = await file.read()
-        f.write(content)
-        
-    return {"url": f"/static/uploads/{filename}"}
+    normalized_content_type = (file.content_type or "").split(";", 1)[0].strip().lower()
+    if not normalized_content_type.startswith("image/"):
+        raise BadRequestError("Uploaded scenario image must be an image file")
+
+    content = await file.read()
+    extension = file.filename.rsplit(".", 1)[-1] if file.filename and "." in file.filename else normalized_content_type.split("/", 1)[1]
+    safe_extension = re.sub(r"[^a-zA-Z0-9]", "", extension or "jpg")[:12] or "jpg"
+    path = f"scenario-images/{uuid.uuid4().hex}.{safe_extension}"
+    if not supabase_storage.is_configured:
+        upload_dir = "static/uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        filename = path.rsplit("/", 1)[-1]
+        filepath = os.path.join(upload_dir, filename)
+        with open(filepath, "wb") as local_file:
+            local_file.write(content)
+        return {"url": f"/static/uploads/{filename}", "path": filename}
+
+    result = await supabase_storage.upload_public_object(
+        bucket=settings.supabase_images_bucket,
+        path=path,
+        content=content,
+        content_type=normalized_content_type,
+    )
+    return {"url": result.public_url, "path": result.path}

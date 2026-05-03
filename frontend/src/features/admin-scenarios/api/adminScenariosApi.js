@@ -36,20 +36,7 @@ export const adminApi = {
   uploadImage: async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    const token = localStorage.getItem("access_token");
-    const baseURL = httpClient.defaults.baseURL || "http://localhost:8000/api";
-    
-    const response = await fetch(`${baseURL}/admin/scenarios/upload-image`, {
-      method: "POST",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
-      body: formData,
-    });
-    
-    if (!response.ok) {
-        throw new Error("Failed to upload image");
-    }
-    return response.json();
+    const { data } = await httpClient.post("/admin/scenarios/upload-image", formData);
+    return data;
   },
 };
