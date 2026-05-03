@@ -1,6 +1,7 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Gift, X } from "@phosphor-icons/react";
 import { gamificationApi } from "@/features/gamification/api/gamificationApi";
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 const EMPTY_FORM = {
   recipient_name: "",
@@ -10,6 +11,7 @@ const EMPTY_FORM = {
 };
 
 const ShopPage = () => {
+  const { refreshGamification } = useAuth();
   const [dashboard, setDashboard] = useState(null);
   const [items, setItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -72,6 +74,7 @@ const ShopPage = () => {
         note: form.note.trim() || null,
       });
       setDashboard(response.dashboard);
+      await refreshGamification().catch(() => {});
       setNotice(`Đã gửi yêu cầu đổi quà: ${response.item.name}.`);
       setSelectedItem(null);
       setForm(EMPTY_FORM);
@@ -117,30 +120,31 @@ const ShopPage = () => {
           {items.map((item) => {
             const disabled = isRedeeming || coinBalance < item.price_coin || item.stock_quantity <= 0;
             return (
-              <article key={item.code} className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-                <div className="flex h-44 items-center justify-center bg-zinc-100 text-zinc-400">
+              <article key={item.code} className="overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+                <div className="relative flex aspect-[4/3] items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-50 to-zinc-100 p-4 text-zinc-400">
+                  <span className="absolute right-3 top-3 z-10 rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 shadow-sm ring-1 ring-amber-100">
+                    {item.price_coin} Coin
+                  </span>
                   {item.image_url ? (
-                    <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+                    <img src={item.image_url} alt={item.name} className="relative z-0 max-h-full max-w-full object-contain drop-shadow-sm" />
                   ) : (
-                    <Gift size={48} weight="duotone" />
+                    <Gift size={56} weight="duotone" />
                   )}
                 </div>
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <h2 className="text-xl font-black text-zinc-950">{item.name}</h2>
-                    <span className="shrink-0 rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
-                      {item.price_coin} Coin
+                <div className="pt-4">
+                  <h2 className="text-xl font-black text-zinc-950">{item.name}</h2>
+                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{item.description}</p>
+                  <div className="mt-4 flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.16em] text-zinc-400">
+                    <span>Còn {item.stock_quantity} sản phẩm</span>
+                    <span className={coinBalance >= item.price_coin ? "text-emerald-600" : "text-rose-500"}>
+                      {coinBalance >= item.price_coin ? "Đủ coin" : "Thiếu coin"}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
-                  <p className="mt-3 text-xs font-black uppercase tracking-[0.16em] text-zinc-400">
-                    Còn {item.stock_quantity} sản phẩm
-                  </p>
                   <button
                     type="button"
                     disabled={disabled}
                     onClick={() => openRedeemForm(item)}
-                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Gift size={16} weight="fill" />
                     Đổi ngay
@@ -195,5 +199,7 @@ const ShopPage = () => {
 };
 
 export default ShopPage;
+
+
 
 
