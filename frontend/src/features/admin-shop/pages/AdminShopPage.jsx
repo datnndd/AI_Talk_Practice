@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle, CreditCard, Gift, GraduationCap, PencilSimple, Plus, ProhibitInset, SquaresFour, Trash, UserList } from "@phosphor-icons/react";
+import { CheckCircle, CreditCard, Gift, GraduationCap, PencilSimple, Plus, ProhibitInset, Robot, SquaresFour, Trash, UserList } from "@phosphor-icons/react";
 
 import { adminShopApi } from "@/features/admin-shop/api/adminShopApi";
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
@@ -14,14 +14,6 @@ const EMPTY_PRODUCT = {
   is_active: true,
   sort_order: 0,
 };
-
-const adminNavItems = [
-  { label: "Users", icon: UserList, to: "/admin/users" },
-  { label: "Scenario Library", icon: SquaresFour, to: "/admin/scenarios" },
-  { label: "Curriculum", icon: GraduationCap, to: "/admin/curriculum" },
-  { label: "Shop", icon: Gift, to: "/admin/shop" },
-  { label: "Transactions", icon: CreditCard, to: "/admin/payments" },
-];
 
 const statuses = ["pending", "processing", "shipped", "completed", "cancelled"];
 
@@ -172,7 +164,7 @@ const AdminShopPage = () => {
   };
 
   return (
-    <AdminShell title="Shop" subtitle="Quản lý sản phẩm đổi Coin và đơn nhận hàng." navItems={adminNavItems}>
+    <AdminShell title="Shop" subtitle="Quản lý sản phẩm đổi Coin và đơn nhận hàng.">
       {(notice || error) && (
         <div className={`mb-5 rounded-xl px-4 py-3 text-sm font-semibold ${error ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
           {error || notice}

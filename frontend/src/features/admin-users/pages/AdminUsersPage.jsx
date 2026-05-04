@@ -7,6 +7,7 @@ import {
   GraduationCap,
   MagnifyingGlass,
   ProhibitInset,
+  Robot,
   Sparkle,
   SquaresFour,
   UserList,
@@ -25,14 +26,6 @@ const DEFAULT_FILTERS = {
   page: 1,
   page_size: 12,
 };
-
-const adminNavItems = [
-  { label: "User Directory", icon: UserList, to: "/admin/users" },
-  { label: "Scenarios", icon: SquaresFour, to: "/admin/scenarios" },
-  { label: "Curriculum", icon: GraduationCap, to: "/admin/curriculum" },
-  { label: "Shop", icon: Gift, to: "/admin/shop" },
-  { label: "Payments", icon: CrownSimple, to: "/admin/payments" },
-];
 
 const LEVEL_OPTIONS = [
   { value: "beginner", label: "Beginner" },
@@ -266,7 +259,6 @@ const AdminUsersPage = () => {
     <AdminShell
       title="User Operations"
       subtitle="Search learners, inspect account state, edit profile metadata, and control operational access without leaving the admin workspace."
-      navItems={adminNavItems}
     >
       <div className="space-y-6">
         {(notice || error) && (

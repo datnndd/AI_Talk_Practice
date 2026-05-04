@@ -12,6 +12,7 @@ import {
   PencilSimple,
   Plus,
   ProhibitInset,
+  Robot,
   SpeakerHigh,
   SquaresFour,
   UserList,
@@ -61,13 +62,6 @@ const EXERCISE_TYPES = [
   { value: "sentence_pronunciation", label: "Sentence pronunciation" },
   { value: "interactive_conversation", label: "Interactive conversation" },
   { value: "word_audio_choice", label: "Word audio choice" },
-];
-
-const adminNavItems = [
-  { label: "Users", icon: UserList, to: "/admin/users" },
-  { label: "Scenario Library", icon: SquaresFour, to: "/admin/scenarios" },
-  { label: "Curriculum", icon: GraduationCap, to: "/admin/curriculum" },
-  { label: "Shop", icon: Gift, to: "/admin/shop" },
 ];
 
 const pretty = (value) => JSON.stringify(value || {}, null, 2);
@@ -1106,6 +1100,7 @@ const AdminCurriculumPage = () => {
   const [selectedLevelId, setSelectedLevelId] = useState(null);
   const [selectedLessonId, setSelectedLessonId] = useState(null);
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
+  const [activeNode, setActiveNode] = useState(null);
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1336,6 +1331,40 @@ const AdminCurriculumPage = () => {
     }
   };
 
+  const selectLevelNode = (levelId) => {
+    setSelectedLevelId(levelId);
+    setActiveNode({ kind: "level", id: levelId });
+  };
+
+  const selectLessonNode = (levelId, lessonId) => {
+    setSelectedLevelId(levelId);
+    setSelectedLessonId(lessonId);
+    setActiveNode({ kind: "lesson", id: lessonId });
+  };
+
+  const selectExerciseNode = (levelId, lessonId, exerciseId) => {
+    setSelectedLevelId(levelId);
+    setSelectedLessonId(lessonId);
+    setSelectedExerciseId(exerciseId);
+    setActiveNode({ kind: "exercise", id: exerciseId });
+  };
+
+  const activeItem =
+    activeNode?.kind === "level"
+      ? levels.find((level) => level.id === activeNode.id) || null
+      : activeNode?.kind === "lesson"
+        ? allLessons.find((lesson) => lesson.id === activeNode.id) || null
+        : activeNode?.kind === "exercise"
+          ? allLessons.flatMap((lesson) => lesson.exercises || []).find((exercise) => exercise.id === activeNode.id) || null
+          : null;
+
+  const activeParentLesson =
+    activeNode?.kind === "exercise"
+      ? allLessons.find((lesson) => (lesson.exercises || []).some((exercise) => exercise.id === activeNode.id)) || null
+      : null;
+
+  const activeKindLabel = activeNode ? curriculumKindLabel(activeNode.kind) : "item";
+
   const summaryCards = [
     { label: "Sections", value: levels.length },
     { label: "Units", value: levels.reduce((sum, level) => sum + (level.lessons?.length || 0), 0) },
@@ -1345,7 +1374,6 @@ const AdminCurriculumPage = () => {
 
   return (
     <AdminShell
-      navItems={adminNavItems}
       title="Curriculum Admin"
       subtitle="Manage sections, units, lessons, order, and runtime content."
     >
@@ -1371,154 +1399,217 @@ const AdminCurriculumPage = () => {
           ))}
         </div>
 
-        <section className="grid gap-6 xl:grid-cols-[300px_minmax(0,0.95fr)_minmax(0,1.05fr)]" id="curriculum-library">
+        <section id="curriculum-library">
           <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <PanelHeader
-              eyebrow="Section Tree"
-              title="Sections"
+              eyebrow="Curriculum Tree"
+              title="Sections, units, lessons"
               actionLabel="New Section"
               actionTestId="new-section-button"
               onAction={() => openModal("level")}
               onRefresh={loadLevels}
             />
-            <div className="mt-5 space-y-2">
+
+            <div className="mt-5 space-y-3">
               {isLoading && <EmptyState>Loading curriculum...</EmptyState>}
               {!isLoading && levels.length === 0 && <EmptyState>No sections created yet.</EmptyState>}
-              {!isLoading && levels.map((level, index) => (
-                <button
-                  key={level.id}
-                  type="button"
-                  data-testid={`curriculum-level-row-${level.id}`}
-                  onClick={() => setSelectedLevelId(level.id)}
-                  className={`w-full rounded-[22px] border px-4 py-3 text-left text-sm transition ${
-                    selectedLevelId === level.id
-                      ? "border-primary bg-primary/5 dark:bg-primary/10"
-                      : "border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-950"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
+              {!isLoading && levels.map((level, levelIndex) => (
+                <div key={level.id} className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+                  <button
+                    type="button"
+                    data-testid={`curriculum-level-row-${level.id}`}
+                    onClick={() => selectLevelNode(level.id)}
+                    className={`flex w-full items-start justify-between gap-3 rounded-[18px] px-3 py-3 text-left transition ${
+                      activeNode?.kind === "level" && activeNode.id === level.id
+                        ? "bg-primary/10 text-primary dark:text-white"
+                        : "hover:bg-white dark:hover:bg-zinc-900"
+                    }`}
+                  >
                     <div className="min-w-0">
-                      <p className="truncate font-black">{index + 1}. {level.title}</p>
-                      <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{level.cefr_level || level.code}</p>
+                      <p className="truncate text-sm font-black">{levelIndex + 1}. {level.title}</p>
+                      <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                        {level.cefr_level || level.code} ? {(level.lessons || []).length} units
+                      </p>
                     </div>
                     <StatusBadge isActive={level.is_active}>{level.is_active ? "Active" : "Inactive"}</StatusBadge>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <ItemActions
-              kind="level"
-              item={selectedLevel}
-              items={levels}
-              onEdit={() => openModal("level", selectedLevel)}
-              onToggle={() => toggleActive("level", selectedLevel)}
-              onMove={moveItem}
-              disabled={isReordering}
-            />
-          </div>
+                  </button>
 
-          <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <PanelHeader
-              eyebrow="Unit Sequence"
-              title={selectedLevel ? selectedLevel.title : "Units"}
-              actionLabel="New Unit"
-              actionTestId="new-unit-button"
-              onAction={() => openModal("lesson")}
-              disabled={!selectedLevel}
-            />
-            <div className="mt-5 space-y-2">
-              {!selectedLevel && <EmptyState>Select a section first.</EmptyState>}
-              {selectedLevel && selectedLessons.length === 0 && <EmptyState>No units in this section.</EmptyState>}
-              {selectedLessons.map((lesson, index) => (
-                <button
-                  key={lesson.id}
-                  type="button"
-                  data-testid={`curriculum-lesson-row-${lesson.id}`}
-                  onClick={() => setSelectedLessonId(lesson.id)}
-                  className={`w-full rounded-[22px] border px-4 py-3 text-left text-sm transition ${
-                    selectedLessonId === lesson.id
-                      ? "border-primary bg-primary/5 dark:bg-primary/10"
-                      : "border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-950"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-black">{index + 1}. {lesson.title}</p>
-                      <p className="mt-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                        {lesson.xp_reward || 0} XP - {lesson.coin_reward || 0} coins
-                      </p>
-                    </div>
-                    <StatusBadge isActive={lesson.is_active}>{lesson.is_active ? "Active" : "Inactive"}</StatusBadge>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <ItemActions
-              kind="lesson"
-              item={selectedLesson}
-              items={selectedLessons}
-              onEdit={() => openModal("lesson", selectedLesson)}
-              onToggle={() => toggleActive("lesson", selectedLesson)}
-              onMove={moveItem}
-              disabled={isReordering}
-            />
-          </div>
+                  <div className="mt-2 space-y-2 border-l border-zinc-200 pl-4 dark:border-zinc-800">
+                    {sortedByOrder(level.lessons || []).map((lesson, lessonIndex) => (
+                      <div key={lesson.id}>
+                        <button
+                          type="button"
+                          data-testid={`curriculum-lesson-row-${lesson.id}`}
+                          onClick={() => selectLessonNode(level.id, lesson.id)}
+                          className={`flex w-full items-start justify-between gap-3 rounded-[18px] px-3 py-2 text-left transition ${
+                            activeNode?.kind === "lesson" && activeNode.id === lesson.id
+                              ? "bg-primary/10 text-primary dark:text-white"
+                              : "hover:bg-white dark:hover:bg-zinc-900"
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold">{levelIndex + 1}.{lessonIndex + 1} {lesson.title}</p>
+                            <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                              {lesson.xp_reward || 0} XP ? {lesson.coin_reward || 0} coins ? {(lesson.exercises || []).length} lessons
+                            </p>
+                          </div>
+                          <StatusBadge isActive={lesson.is_active}>{lesson.is_active ? "Active" : "Inactive"}</StatusBadge>
+                        </button>
 
-          <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <PanelHeader
-              eyebrow="Lesson Content"
-              title={selectedLesson ? selectedLesson.title : "Lessons"}
-              actionLabel="New Lesson"
-              actionTestId="new-lesson-button"
-              onAction={() => openModal("exercise")}
-              disabled={!selectedLesson}
-            />
-            <div className="mt-5 space-y-2">
-              {!selectedLesson && <EmptyState>Select a unit first.</EmptyState>}
-              {selectedLesson && selectedExercises.length === 0 && <EmptyState>No lessons in this unit.</EmptyState>}
-              {selectedExercises.map((exercise, index) => (
-                <button
-                  key={exercise.id}
-                  type="button"
-                  data-testid={`curriculum-exercise-row-${exercise.id}`}
-                  onClick={() => setSelectedExerciseId(exercise.id)}
-                  className={`w-full rounded-[22px] border px-4 py-3 text-left text-sm transition ${
-                    selectedExerciseId === exercise.id
-                      ? "border-primary bg-primary/5 dark:bg-primary/10"
-                      : "border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-950"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-black">{index + 1}. {exercise.title}</p>
-                      <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                        {exercise.type} - pass {exercise.pass_score}
-                      </p>
-                    </div>
-                    <StatusBadge isActive={exercise.is_active}>{exercise.is_active ? "Active" : "Inactive"}</StatusBadge>
+                        <div className="mt-1 space-y-1 border-l border-zinc-200 pl-4 dark:border-zinc-800">
+                          {sortedByOrder(lesson.exercises || []).map((exercise, exerciseIndex) => (
+                            <button
+                              key={exercise.id}
+                              type="button"
+                              data-testid={`curriculum-exercise-row-${exercise.id}`}
+                              onClick={() => selectExerciseNode(level.id, lesson.id, exercise.id)}
+                              className={`flex w-full items-start justify-between gap-3 rounded-[16px] px-3 py-2 text-left transition ${
+                                activeNode?.kind === "exercise" && activeNode.id === exercise.id
+                                  ? "bg-primary/10 text-primary dark:text-white"
+                                  : "hover:bg-white dark:hover:bg-zinc-900"
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-black">
+                                  {levelIndex + 1}.{lessonIndex + 1}.{exerciseIndex + 1} {exercise.title}
+                                </p>
+                                <p className="mt-1 truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+                                  {exercise.type} ? pass {exercise.pass_score}
+                                </p>
+                              </div>
+                              <StatusBadge isActive={exercise.is_active}>{exercise.is_active ? "Active" : "Inactive"}</StatusBadge>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </button>
-              ))}
-            </div>
-            <ItemActions
-              kind="exercise"
-              item={selectedExercise}
-              items={selectedExercises}
-              onEdit={() => openModal("exercise", selectedExercise)}
-              onToggle={() => toggleActive("exercise", selectedExercise)}
-              onMove={moveItem}
-              disabled={isReordering}
-            />
-
-            {selectedExercise && (
-              <div className="mt-5 rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-                  <Code size={14} />
-                  Content Preview
                 </div>
-                <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[18px] bg-zinc-950 p-4 font-mono text-xs text-zinc-50">
-                  {loadingExerciseId === selectedExercise.id ? "Loading content..." : pretty(selectedExercise.content)}
-                </pre>
+              ))}
+            </div>
+          </div>
+
+          <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-3xl overflow-y-auto border-l border-zinc-200 bg-zinc-50 p-4 shadow-2xl transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950 ${activeNode ? "translate-x-0" : "translate-x-full"}`}>
+            <div className="mb-4 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">{activeKindLabel} Detail</p>
+                  <h2 className="mt-1 truncate text-2xl font-black">{activeItem?.title || "Select a curriculum item"}</h2>
+                  <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                    Tree stays visible while this drawer handles editing, ordering, and preview.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveNode(null)}
+                  className="rounded-2xl border border-zinc-200 p-3 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  aria-label="Close curriculum detail"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {!activeItem && <EmptyState>Select a section, unit, or lesson from the tree.</EmptyState>}
+
+            {activeItem && (
+              <div className="space-y-4">
+                <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">Overview</p>
+                      <h3 className="mt-2 text-xl font-black">{activeItem.title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                        {activeItem.description || activeItem.type || activeItem.code || "No description."}
+                      </p>
+                    </div>
+                    <StatusBadge isActive={activeItem.is_active}>{activeItem.is_active ? "Active" : "Inactive"}</StatusBadge>
+                  </div>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-[22px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Order</p>
+                      <p className="mt-2 text-2xl font-black">{activeItem.order_index ?? 0}</p>
+                    </div>
+                    <div className="rounded-[22px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Type</p>
+                      <p className="mt-2 text-sm font-black capitalize">{activeKindLabel}</p>
+                    </div>
+                    <div className="rounded-[22px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Children</p>
+                      <p className="mt-2 text-2xl font-black">
+                        {activeNode.kind === "level" ? (activeItem.lessons || []).length : activeNode.kind === "lesson" ? (activeItem.exercises || []).length : 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Quick Actions</p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => openModal(activeNode.kind, activeItem)}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5"
+                    >
+                      <PencilSimple size={16} />
+                      Edit {activeKindLabel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleActive(activeNode.kind, activeItem)}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      <ProhibitInset size={16} />
+                      {activeItem.is_active ? "Deactivate" : "Restore"}
+                    </button>
+                    {activeNode.kind === "level" && (
+                      <button
+                        type="button"
+                        onClick={() => openModal("lesson")}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-black text-primary transition hover:-translate-y-0.5 dark:text-white"
+                      >
+                        <Plus size={16} />
+                        Add Unit
+                      </button>
+                    )}
+                    {activeNode.kind === "lesson" && (
+                      <button
+                        type="button"
+                        onClick={() => openModal("exercise")}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-black text-primary transition hover:-translate-y-0.5 dark:text-white"
+                      >
+                        <Plus size={16} />
+                        Add Lesson
+                      </button>
+                    )}
+                  </div>
+
+                  <ItemActions
+                    kind={activeNode.kind}
+                    item={activeItem}
+                    items={activeNode.kind === "level" ? levels : activeNode.kind === "lesson" ? selectedLessons : selectedExercises}
+                    onEdit={() => openModal(activeNode.kind, activeItem)}
+                    onToggle={() => toggleActive(activeNode.kind, activeItem)}
+                    onMove={moveItem}
+                    disabled={isReordering}
+                  />
+                </div>
+
+                {activeNode.kind === "exercise" && (
+                  <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                        <Code size={14} />
+                        Content Preview
+                      </div>
+                      {activeParentLesson && <span className="text-xs font-semibold text-zinc-500">Unit: {activeParentLesson.title}</span>}
+                    </div>
+                    <pre className="mt-3 max-h-[420px] overflow-auto whitespace-pre-wrap break-words rounded-[18px] bg-zinc-950 p-4 font-mono text-xs text-zinc-50">
+                      {loadingExerciseId === activeItem.id ? "Loading content..." : pretty(activeItem.content)}
+                    </pre>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -20,23 +20,21 @@ export const publicNavItems = [
 ];
 
 export const learnerNavItems = [
-  { label: "Tổng quan", path: "/dashboard", icon: HouseLine },
-  { label: "Học tập", path: "/learn", icon: GraduationCap },
-  { label: "Bảng xếp hạng", path: "/leaderboard", icon: Trophy },
-  { label: "Cửa hàng", path: "/shop", icon: Storefront },
-  { label: "Gói học", path: "/subscription", icon: Crown },
-  { label: "Hồ sơ", path: "/profile", icon: UserCircle },
+  { label: "Luy?n n?i", path: "/dashboard", icon: BookOpenText },
+  { label: "L? tr?nh h?c", path: "/learn", icon: GraduationCap },
+  { label: "B?ng x?p h?ng", path: "/leaderboard", icon: Trophy },
+  { label: "C?a h?ng", path: "/shop", icon: Storefront },
+  { label: "G?i h?c", path: "/subscription", icon: Crown },
+  { label: "H? s?", path: "/profile", icon: UserCircle },
 ];
-
 export const learnerTabItems = [
-  { label: "Tổng quan", path: "/dashboard", icon: HouseLine },
-  { label: "Học tập", path: "/learn", icon: GraduationCap },
-  { label: "Bảng xếp hạng", path: "/leaderboard", icon: Trophy },
-  { label: "Cửa hàng", path: "/shop", icon: Storefront },
-  { label: "Gói học", path: "/subscription", icon: Crown },
-  { label: "Hồ sơ", path: "/profile", icon: UserCircle },
+  { label: "Luy?n", path: "/dashboard", icon: BookOpenText },
+  { label: "H?c", path: "/learn", icon: GraduationCap },
+  { label: "BXH", path: "/leaderboard", icon: Trophy },
+  { label: "Shop", path: "/shop", icon: Storefront },
+  { label: "Pro", path: "/subscription", icon: Crown },
+  { label: "H? s?", path: "/profile", icon: UserCircle },
 ];
-
 export const adminNavItems = [
   { label: "Scenarios", anchor: "#scenario-library", icon: SquaresFour },
   { label: "Queue", anchor: "#generation-queue", icon: Sparkle },

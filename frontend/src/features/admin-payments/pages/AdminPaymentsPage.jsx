@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowClockwise, CheckCircle, CreditCard, Gift, GraduationCap, MagnifyingGlass, ProhibitInset, SquaresFour, UserList } from "@phosphor-icons/react";
+import { ArrowClockwise, CheckCircle, CreditCard, Gift, GraduationCap, MagnifyingGlass, ProhibitInset, Robot, SquaresFour, UserList } from "@phosphor-icons/react";
 
 import AdminShell from "@/features/admin-scenarios/components/AdminShell";
 import { adminPaymentsApi } from "@/features/admin-payments/api/adminPaymentsApi";
@@ -10,14 +10,6 @@ const DEFAULT_FILTERS = {
   page: 1,
   page_size: 12,
 };
-
-const adminNavItems = [
-  { label: "Users", icon: UserList, to: "/admin/users" },
-  { label: "Scenario Library", icon: SquaresFour, to: "/admin/scenarios" },
-  { label: "Curriculum", icon: GraduationCap, to: "/admin/curriculum" },
-  { label: "Shop", icon: Gift, to: "/admin/shop" },
-  { label: "Transactions", icon: CreditCard, to: "/admin/payments" },
-];
 
 const formatCurrency = (amount, currency) => {
   if (currency === "VND") {
@@ -208,7 +200,6 @@ const AdminPaymentsPage = () => {
 
   return (
     <AdminShell
-      navItems={adminNavItems}
       title="Payment Operations"
       subtitle="Monitor Stripe transactions, inspect payment state, and handle manual admin approval or cancellation when support workflows require intervention."
     >
