@@ -50,7 +50,6 @@ const ProfileSettingsPage = () => {
     level: gamification?.xp?.level || 1,
     totalXp: gamification?.xp?.total || 0,
     coin: gamification?.coin?.balance || 0,
-    checkInStreak: gamification?.check_in?.current_streak || 0,
   };
 
   return (

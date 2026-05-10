@@ -9,7 +9,7 @@ const QuickPracticeCard = () => {
         <span className="text-primary font-black text-[10px] tracking-[0.2em] uppercase mb-2">
           AI Tutor Live
         </span>
-        <Link to="/dashboard">
+        <Link to="/scenarios">
           <motion.span
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}

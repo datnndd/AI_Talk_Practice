@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import PlaylistSection from "@/features/dashboard/components/PlaylistSection";
 import { useAuth } from "@/features/auth/context/AuthContext";

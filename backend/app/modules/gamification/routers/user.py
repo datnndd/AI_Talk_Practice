@@ -11,6 +11,7 @@ from app.modules.gamification.schemas import (
     LeaderboardRead,
     ShopRedeemRequest,
     ShopRedeemResponse,
+    ShopRedemptionRead,
     ShopRead,
 )
 from app.modules.gamification.services import GamificationService
@@ -44,21 +45,20 @@ async def check_in(
 ):
     return await GamificationService.check_in(db, user)
 
-
-@router.post("/check-in/auto", response_model=CheckInResponse)
-async def auto_check_in(
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    return await GamificationService.check_in(db, user, allow_existing=True)
-
-
 @router.get("/shop", response_model=ShopRead)
 async def get_shop(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
     return await GamificationService.get_shop(db)
+
+
+@router.get("/shop/redemptions", response_model=list[ShopRedemptionRead])
+async def list_shop_redemptions(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await GamificationService.list_shop_redemptions(db, user)
 
 
 @router.post("/shop/redeem", response_model=ShopRedeemResponse)

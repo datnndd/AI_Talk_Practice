@@ -8,7 +8,6 @@ import {
   FloppyDiskBack,
   Gift,
   GraduationCap,
-  MagicWand,
   PencilSimple,
   Plus,
   ProhibitInset,
@@ -25,43 +24,40 @@ import { adminCurriculumApi } from "@/features/curriculum/api/curriculumApi";
 import { getApiBaseUrl } from "@/shared/api/httpClient";
 
 const EMPTY_CONTENT = {
-  vocab_pronunciation: {
-    words: [{ word: "hello", meaning_vi: "xin chao" }],
-  },
-  cloze_dictation: {
-    passage: "I would like a ___, please.",
-    blanks: [
-      {
-        answer: "coffee",
-        accepted_answers: ["coffee"],
-        meaning_vi: "ca phe",
-        explanation_vi: "A drink noun.",
-      },
-    ],
-  },
-  sentence_pronunciation: {
+  shadowing: {
     reference_text: "Could you help me with my reservation?",
+    meaning_vi: "B\u1ea1n c\u00f3 th\u1ec3 gi\u00fap t\u00f4i v\u1edbi \u0111\u1eb7t ch\u1ed7 c\u1ee7a t\u00f4i kh\u00f4ng?",
+    sample_audio_url: "",
+    slow_audio_url: "",
   },
-  interactive_conversation: {
-    scenario_id: 1,
+  read_aloud: {
+    text: "I would like to order breakfast, please.",
+    meaning_vi: "T\u00f4i mu\u1ed1n g\u1ecdi b\u1eefa s\u00e1ng.",
+    sample_audio_url: "",
   },
-  word_audio_choice: {
-    prompt_word: "reservation",
-    language: "en",
+  definition_choice: {
+    definition_text: "A booking made before you arrive.",
+    definition_audio_url: "",
     options: [
-      { word: "reservation", is_correct: true },
-      { word: "reception", is_correct: false },
-      { word: "recommendation", is_correct: false },
+      { word: "reservation", meaning_vi: "\u0111\u1eb7t ch\u1ed7", is_correct: true },
+      { word: "reception", meaning_vi: "l\u1ec5 t\u00e2n", is_correct: false },
+      { word: "recommendation", meaning_vi: "g\u1ee3i \u00fd", is_correct: false },
+      { word: "restaurant", meaning_vi: "nh\u00e0 h\u00e0ng", is_correct: false },
     ],
+  },
+  quick_qa: {
+    question_text: "What did you eat for breakfast?",
+    question_audio_url: "",
+    answer_hints: ["I ate bread.", "I had coffee.", "I ate noodles."],
+    min_words: 2,
   },
 };
 
 const EXERCISE_TYPES = [
-  { value: "vocab_pronunciation", label: "Vocabulary pronunciation" },
-  { value: "cloze_dictation", label: "Cloze dictation" },
-  { value: "sentence_pronunciation", label: "Sentence pronunciation" },
-  { value: "interactive_conversation", label: "Interactive conversation" },
-  { value: "word_audio_choice", label: "Word audio choice" },
+  { value: "shadowing", label: "Shadowing / Repeat" },
+  { value: "read_aloud", label: "Read aloud" },
+  { value: "definition_choice", label: "Definition choice" },
+  { value: "quick_qa", label: "Quick Q&A" },
 ];
 
 const pretty = (value) => JSON.stringify(value || {}, null, 2);
@@ -140,7 +136,7 @@ const toLessonForm = (lesson, selectedLevelId, nextOrder) => ({
 });
 
 const toExerciseForm = (exercise, selectedLessonId, nextOrder) => {
-  const type = exercise?.type || "vocab_pronunciation";
+  const type = exercise?.type || "shadowing";
   const content = exercise?.content || EMPTY_CONTENT[type];
   return {
     lesson_id: exercise?.lesson_id ?? selectedLessonId ?? "",
@@ -148,7 +144,6 @@ const toExerciseForm = (exercise, selectedLessonId, nextOrder) => {
     title: exercise?.title || `Lesson ${nextOrder + 1}`,
     order_index: exercise?.order_index ?? nextOrder,
     pass_score: exercise?.pass_score ?? 80,
-    is_required: exercise?.is_required ?? true,
     is_active: exercise?.is_active ?? true,
     content,
     contentJson: pretty(content),
@@ -180,90 +175,8 @@ const normalizeExercisePayload = (form) => ({
   title: form.title.trim(),
   order_index: parseNumber(form.order_index),
   pass_score: parseNumber(form.pass_score, 80),
-  is_required: Boolean(form.is_required),
   is_active: Boolean(form.is_active),
   content: JSON.parse(form.contentJson || "{}"),
-});
-
-const audioOptionsToText = (content) =>
-  (content.options || [])
-    .map((option) => `${option.is_correct ? "*" : ""}${option.word || ""}${option.audio_url ? ` | ${option.audio_url}` : ""}`)
-    .join("\n");
-
-const textToAudioChoice = (promptWord, language, value) => ({
-  prompt_word: promptWord,
-  language: language || "en",
-  options: value
-    .split(/\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const isCorrect = line.startsWith("*");
-      const cleanLine = isCorrect ? line.slice(1).trim() : line;
-      const [word, audioUrl] = cleanLine.split("|").map((item) => item.trim());
-      return { word, is_correct: isCorrect, ...(audioUrl ? { audio_url: audioUrl } : {}) };
-    }),
-});
-
-const normalizeVocabRows = (content = {}) => {
-  const rows = Array.isArray(content.words) ? content.words : [];
-  const normalized = rows.map((item) => {
-    if (typeof item === "string") {
-      return { word: item, meaning_vi: "", ipa: "", audio_url: "" };
-    }
-    return {
-      word: item?.word || "",
-      meaning_vi: item?.meaning_vi || "",
-      ipa: item?.ipa || "",
-      audio_url: item?.audio_url || "",
-    };
-  });
-  return normalized.length > 0 ? normalized : [{ word: "", meaning_vi: "", ipa: "", audio_url: "" }];
-};
-
-const rowsToVocabContent = (rows) => ({
-  words: rows
-    .map((row) => ({
-      word: row.word.trim(),
-      ...(row.meaning_vi?.trim() ? { meaning_vi: row.meaning_vi.trim() } : {}),
-      ...(row.ipa?.trim() ? { ipa: row.ipa.trim() } : {}),
-      ...(row.audio_url?.trim() ? { audio_url: row.audio_url.trim() } : {}),
-    }))
-    .filter((row) => row.word),
-});
-
-const normalizeClozeRows = (content = {}) => {
-  const rows = Array.isArray(content.blanks) ? content.blanks : [];
-  const normalized = rows.map((blank) => ({
-    answer: blank?.answer || "",
-    accepted_answers: Array.isArray(blank?.accepted_answers)
-      ? blank.accepted_answers.join(", ")
-      : blank?.accepted_answers || "",
-    meaning_vi: blank?.meaning_vi || "",
-    explanation_vi: blank?.explanation_vi || "",
-  }));
-  return normalized.length > 0
-    ? normalized
-    : [{ answer: "", accepted_answers: "", meaning_vi: "", explanation_vi: "" }];
-};
-
-const rowsToClozeContent = (content, rows) => ({
-  ...content,
-  blanks: rows
-    .map((row) => {
-      const answer = row.answer.trim();
-      const accepted = row.accepted_answers
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
-      return {
-        answer,
-        accepted_answers: accepted.length > 0 ? accepted : [answer],
-        ...(row.meaning_vi?.trim() ? { meaning_vi: row.meaning_vi.trim() } : {}),
-        ...(row.explanation_vi?.trim() ? { explanation_vi: row.explanation_vi.trim() } : {}),
-      };
-    })
-    .filter((row) => row.answer),
 });
 
 const absoluteApiUrl = (value) => {
@@ -360,297 +273,6 @@ const AudioAssetControl = ({ value, onChange, text = "", language = "en", lesson
 
 const curriculumKindLabel = (kind) => (kind === "level" ? "section" : kind === "lesson" ? "unit" : "lesson");
 
-const VocabWordsEditor = ({ content, onChange, lessonId = "" }) => {
-  const rows = normalizeVocabRows(content);
-  const [rowState, setRowState] = useState({});
-
-  const updateRows = (nextRows) => onChange(rowsToVocabContent(nextRows));
-  const updateRow = (index, patch) => {
-    updateRows(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
-  };
-  const setLookupState = (index, patch) => {
-    setRowState((current) => ({ ...current, [index]: { ...(current[index] || {}), ...patch } }));
-  };
-  const lookupWord = async (index, field) => {
-    const word = rows[index]?.word?.trim();
-    if (!word) {
-      setLookupState(index, { error: "Nhập từ tiếng Anh trước." });
-      return;
-    }
-
-    setLookupState(index, { loading: field, error: "" });
-    try {
-      const result = await adminCurriculumApi.lookupDictionary({ word, lang: "en", defLang: "vi" });
-      const patch = {
-        ...(result.ipa ? { ipa: result.ipa } : {}),
-      };
-      if (field === "meaning") {
-        patch.meaning_vi = result.meaning_vi || result.definitions?.[0] || "";
-      }
-      if (field === "audio") {
-        patch.audio_url = result.audio_url || `/api/curriculum/dictionary/audio?word=${encodeURIComponent(word)}&lang=en`;
-      }
-      updateRow(index, patch);
-    } catch (error) {
-      setLookupState(index, { error: getErrorMessage(error, "Không thể lấy dữ liệu từ điển.") });
-    } finally {
-      setLookupState(index, { loading: "" });
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="grid gap-2 rounded-[20px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950">
-        <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.15fr)_40px] gap-2 px-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500 md:grid">
-          <span>English word</span>
-          <span>Vietnamese meaning</span>
-          <span>Audio</span>
-          <span />
-        </div>
-        {rows.map((row, index) => {
-          const state = rowState[index] || {};
-          return (
-            <div
-              key={index}
-              className="grid gap-2 rounded-[18px] border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.15fr)_40px]"
-            >
-              <div>
-                <FieldLabel>English</FieldLabel>
-                <input
-                  data-testid={`vocab-word-input-${index}`}
-                  value={row.word}
-                  onChange={(event) => updateRow(index, { word: event.target.value })}
-                  placeholder="reservation"
-                  className="w-full rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-                />
-              </div>
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <FieldLabel>Meaning VI</FieldLabel>
-                  <button
-                    type="button"
-                    onClick={() => lookupWord(index, "meaning")}
-                    disabled={state.loading === "meaning"}
-                    className="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-[11px] font-black text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                  >
-                    <MagicWand size={13} />
-                    {state.loading === "meaning" ? "Đang lấy" : "Lấy nghĩa"}
-                  </button>
-                </div>
-                <input
-                  data-testid={`vocab-meaning-input-${index}`}
-                  value={row.meaning_vi}
-                  onChange={(event) => updateRow(index, { meaning_vi: event.target.value })}
-                  placeholder="sự đặt trước"
-                  className="w-full rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-                />
-              </div>
-              <div>
-                <FieldLabel>Audio</FieldLabel>
-                <AudioAssetControl
-                  compact
-                  value={row.audio_url}
-                  text={row.word}
-                  language="en"
-                  lessonId={lessonId}
-                  onChange={(audioUrl) => updateRow(index, { audio_url: audioUrl })}
-                />
-                {state.error ? <p className="mt-2 text-xs font-semibold text-rose-600 dark:text-rose-300">{state.error}</p> : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => updateRows(rows.filter((_, rowIndex) => rowIndex !== index))}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] border border-zinc-200 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800 md:self-end"
-                aria-label="Remove word"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          );
-        })}
-      </div>
-      <button
-        type="button"
-        onClick={() => updateRows([...rows, { word: "", meaning_vi: "", ipa: "", audio_url: "" }])}
-        className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-      >
-        <Plus size={16} />
-        Add word
-      </button>
-    </div>
-  );
-};
-
-const ClozeDictationEditor = ({ content, onChange, lessonId = "" }) => {
-  const rows = normalizeClozeRows(content);
-  const [rowState, setRowState] = useState({});
-
-  const updateContent = (patch) => onChange({ ...content, ...patch });
-  const updateRows = (nextRows) => onChange(rowsToClozeContent(content, nextRows));
-  const updateRow = (index, patch) => {
-    updateRows(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
-  };
-  const setLookupState = (index, patch) => {
-    setRowState((current) => ({ ...current, [index]: { ...(current[index] || {}), ...patch } }));
-  };
-  const lookupMeaning = async (index) => {
-    const answer = rows[index]?.answer?.trim();
-    if (!answer) {
-      setLookupState(index, { error: "Nhập đáp án trước." });
-      return;
-    }
-
-    setLookupState(index, { loading: true, error: "" });
-    try {
-      const result = await adminCurriculumApi.lookupDictionary({ word: answer, lang: "en", defLang: "vi" });
-      updateRow(index, { meaning_vi: result.meaning_vi || result.definitions?.[0] || "" });
-    } catch (error) {
-      setLookupState(index, { error: getErrorMessage(error, "Không thể lấy nghĩa từ điển.") });
-    } finally {
-      setLookupState(index, { loading: false });
-    }
-  };
-  const syncRowsToPassage = () => {
-    const blankCount = (content.passage?.match(/_{3,}/g) || []).length;
-    if (blankCount <= rows.length) return;
-    updateRows([
-      ...rows,
-      ...Array.from({ length: blankCount - rows.length }, () => ({
-        answer: "",
-        accepted_answers: "",
-        meaning_vi: "",
-        explanation_vi: "",
-      })),
-    ]);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <FieldLabel>Passage</FieldLabel>
-        <textarea
-          value={content.passage || ""}
-          onChange={(event) => updateContent({ passage: event.target.value })}
-          placeholder="I would like a ___, please."
-          className="min-h-[110px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-        />
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={syncRowsToPassage}
-            className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-black text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-          >
-            Match ___ blanks
-          </button>
-          <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-            Dùng <span className="font-mono">___</span> trong passage để đánh dấu chỗ trống.
-          </p>
-        </div>
-      </div>
-
-      <div>
-        <FieldLabel>Prompt Audio</FieldLabel>
-        <AudioAssetControl
-          value={content.audio_url || ""}
-          text={content.passage || ""}
-          language={content.language || "en"}
-          lessonId={lessonId}
-          onChange={(audioUrl) => updateContent({ audio_url: audioUrl })}
-        />
-      </div>
-
-      <div>
-        <FieldLabel>Blank Answers</FieldLabel>
-        <div className="grid gap-2 rounded-[20px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950">
-          <div className="hidden grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_40px] gap-2 px-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500 md:grid">
-            <span>Answer</span>
-            <span>Accepted answers</span>
-            <span>Meaning VI</span>
-            <span>Explanation</span>
-            <span />
-          </div>
-          {rows.map((row, index) => {
-            const state = rowState[index] || {};
-            return (
-              <div
-                key={index}
-                className="grid gap-2 rounded-[18px] border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_40px]"
-              >
-                <div>
-                  <FieldLabel>Answer</FieldLabel>
-                  <input
-                    data-testid={`cloze-answer-input-${index}`}
-                    value={row.answer}
-                    onChange={(event) => updateRow(index, { answer: event.target.value })}
-                    placeholder="coffee"
-                    className="w-full rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Accepted</FieldLabel>
-                  <input
-                    value={row.accepted_answers}
-                    onChange={(event) => updateRow(index, { accepted_answers: event.target.value })}
-                    placeholder="coffee, cafe"
-                    className="w-full rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-                  />
-                </div>
-                <div>
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <FieldLabel>Meaning VI</FieldLabel>
-                    <button
-                      type="button"
-                      onClick={() => lookupMeaning(index)}
-                      disabled={state.loading}
-                      className="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-[11px] font-black text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                    >
-                      <MagicWand size={13} />
-                      {state.loading ? "Đang lấy" : "Lấy nghĩa"}
-                    </button>
-                  </div>
-                  <input
-                    data-testid={`cloze-meaning-input-${index}`}
-                    value={row.meaning_vi}
-                    onChange={(event) => updateRow(index, { meaning_vi: event.target.value })}
-                    placeholder="cà phê"
-                    className="w-full rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-                  />
-                  {state.error ? <p className="mt-2 text-xs font-semibold text-rose-600 dark:text-rose-300">{state.error}</p> : null}
-                </div>
-                <div>
-                  <FieldLabel>Explanation</FieldLabel>
-                  <input
-                    value={row.explanation_vi}
-                    onChange={(event) => updateRow(index, { explanation_vi: event.target.value })}
-                    placeholder="Danh từ chỉ đồ uống."
-                    className="w-full rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => updateRows(rows.filter((_, rowIndex) => rowIndex !== index))}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] border border-zinc-200 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800 md:self-end"
-                  aria-label="Remove blank"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        <button
-          type="button"
-          onClick={() => updateRows([...rows, { answer: "", accepted_answers: "", meaning_vi: "", explanation_vi: "" }])}
-          className="mt-3 inline-flex items-center gap-2 rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-black text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-        >
-          <Plus size={16} />
-          Add blank
-        </button>
-      </div>
-    </div>
-  );
-};
-
 const EntityModal = ({
   kind,
   form,
@@ -671,12 +293,6 @@ const EntityModal = ({
 
   const kindLabel = curriculumKindLabel(kind);
   const title = `${editingItem ? "Edit" : "New"} ${kindLabel}`;
-
-  useEffect(() => {
-    if (form.type === "interactive_conversation") {
-      void onNeedScenarios?.();
-    }
-  }, [form.type, onNeedScenarios]);
 
   const renderLevelFields = () => (
     <>
@@ -784,132 +400,121 @@ const EntityModal = ({
     </>
   );
 
+  const renderOptionsEditor = (content) => (
+    <div>
+      <FieldLabel>Options</FieldLabel>
+      <textarea
+        value={(content.options || []).map((option) => `${option.is_correct ? "*" : ""}${option.word || ""}${option.meaning_vi ? ` | ${option.meaning_vi}` : ""}`).join("\n")}
+        onChange={(event) => {
+          const options = event.target.value
+            .split(/\n/)
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              const isCorrect = line.startsWith("*");
+              const cleanLine = isCorrect ? line.slice(1).trim() : line;
+              const [word, meaningVi] = cleanLine.split("|").map((item) => item.trim());
+              return { word, meaning_vi: meaningVi || "", is_correct: isCorrect };
+            });
+          updateExerciseContent({ ...content, options });
+        }}
+        placeholder={"*reservation | \u0111\u1eb7t ch\u1ed7\nreception | l\u1ec5 t\u00e2n\nrecommendation | g\u1ee3i \u00fd\nrestaurant | nh\u00e0 h\u00e0ng"}
+        className="min-h-[150px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-xs outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+      />
+      <p className="mt-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Prefix exactly one correct option with *. Use exactly four options.</p>
+    </div>
+  );
+
+  const renderHintsEditor = (content) => (
+    <div>
+      <FieldLabel>Answer Hints</FieldLabel>
+      <textarea
+        value={(content.answer_hints || []).join("\n")}
+        onChange={(event) => updateExerciseContent({
+          ...content,
+          answer_hints: event.target.value.split(/\n/).map((line) => line.trim()).filter(Boolean).slice(0, 3),
+        })}
+        placeholder={"I ate bread.\nI had coffee.\nI ate noodles."}
+        className="min-h-[110px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+      />
+    </div>
+  );
+
   const renderExerciseBuilder = () => {
     const content = form.content || {};
 
-    if (form.type === "vocab_pronunciation") {
-      return (
-        <div>
-          <FieldLabel>Words</FieldLabel>
-          <VocabWordsEditor content={content} onChange={updateExerciseContent} lessonId={form.lesson_id} />
-        </div>
-      );
-    }
-
-    if (form.type === "cloze_dictation") {
-      return (
-        <ClozeDictationEditor content={content} onChange={updateExerciseContent} lessonId={form.lesson_id} />
-      );
-    }
-
-    if (form.type === "sentence_pronunciation") {
+    if (form.type === "shadowing") {
       return (
         <div className="space-y-4">
           <div>
             <FieldLabel>Reference Text</FieldLabel>
-            <textarea
-              value={content.reference_text || ""}
-              onChange={(event) => updateExerciseContent({ ...content, reference_text: event.target.value })}
-              className="min-h-[130px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-            />
+            <textarea value={content.reference_text || ""} onChange={(event) => updateExerciseContent({ ...content, reference_text: event.target.value })} className="min-h-[110px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
+          </div>
+          <div>
+            <FieldLabel>Meaning VI</FieldLabel>
+            <textarea value={content.meaning_vi || ""} onChange={(event) => updateExerciseContent({ ...content, meaning_vi: event.target.value })} className="min-h-[90px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
           </div>
           <div>
             <FieldLabel>Sample Audio</FieldLabel>
-            <AudioAssetControl
-              value={content.sample_audio_url || ""}
-              text={content.reference_text || ""}
-              language={content.language || "en"}
-              lessonId={form.lesson_id}
-              onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })}
-            />
+            <AudioAssetControl value={content.sample_audio_url || ""} text={content.reference_text || ""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })} />
+          </div>
+          <div>
+            <FieldLabel>Slow Audio (optional)</FieldLabel>
+            <AudioAssetControl value={content.slow_audio_url || ""} text={content.reference_text || ""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, slow_audio_url: audioUrl })} />
           </div>
         </div>
       );
     }
 
-    if (form.type === "word_audio_choice") {
+    if (form.type === "read_aloud") {
       return (
-        <>
-          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_120px]">
-            <div>
-              <FieldLabel>Prompt Word</FieldLabel>
-              <input
-                value={content.prompt_word || ""}
-                onChange={(event) => updateExerciseContent({ ...content, prompt_word: event.target.value })}
-                className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-              />
-            </div>
-            <div>
-              <FieldLabel>Language</FieldLabel>
-              <input
-                value={content.language || "en"}
-                onChange={(event) => updateExerciseContent({ ...content, language: event.target.value })}
-                className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-              />
-            </div>
+        <div className="space-y-4">
+          <div>
+            <FieldLabel>Text</FieldLabel>
+            <textarea value={content.text || ""} onChange={(event) => updateExerciseContent({ ...content, text: event.target.value })} className="min-h-[150px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
           </div>
           <div>
-            <FieldLabel>Audio Options</FieldLabel>
-            <textarea
-              value={audioOptionsToText(content)}
-              onChange={(event) => updateExerciseContent(textToAudioChoice(content.prompt_word || "", content.language || "en", event.target.value))}
-              placeholder={"*reservation\nreception\nrecommendation"}
-              className="min-h-[150px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-xs outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-            />
-            <p className="mt-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-              Prefix exactly one correct option with *. Generate or upload audio below to set Supabase URLs.
-            </p>
-            <div className="mt-3 space-y-3">
-              {(content.options || []).map((option, index) => (
-                <div key={`${option.word}-${index}`} className="rounded-[18px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950">
-                  <FieldLabel>{option.is_correct ? "Correct" : "Option"}: {option.word}</FieldLabel>
-                  <AudioAssetControl
-                    value={option.audio_url || ""}
-                    text={option.word || content.prompt_word || ""}
-                    language={content.language || "en"}
-                    lessonId={form.lesson_id}
-                    onChange={(audioUrl) => updateExerciseContent({
-                      ...content,
-                      options: (content.options || []).map((currentOption, optionIndex) => (
-                        optionIndex === index ? { ...currentOption, audio_url: audioUrl } : currentOption
-                      )),
-                    })}
-                  />
-                </div>
-              ))}
-            </div>
+            <FieldLabel>Meaning VI</FieldLabel>
+            <textarea value={content.meaning_vi || ""} onChange={(event) => updateExerciseContent({ ...content, meaning_vi: event.target.value })} className="min-h-[90px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
           </div>
-        </>
+          <div>
+            <FieldLabel>Sample Audio (optional)</FieldLabel>
+            <AudioAssetControl value={content.sample_audio_url || ""} text={content.text || ""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })} />
+          </div>
+        </div>
+      );
+    }
+
+    if (form.type === "definition_choice") {
+      return (
+        <div className="space-y-4">
+          <div>
+            <FieldLabel>Definition Text (admin only)</FieldLabel>
+            <textarea value={content.definition_text || ""} onChange={(event) => updateExerciseContent({ ...content, definition_text: event.target.value })} className="min-h-[110px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
+          </div>
+          <div>
+            <FieldLabel>Definition Audio</FieldLabel>
+            <AudioAssetControl value={content.definition_audio_url || ""} text={content.definition_text || ""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, definition_audio_url: audioUrl })} />
+          </div>
+          {renderOptionsEditor(content)}
+        </div>
       );
     }
 
     return (
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_160px]">
+      <div className="space-y-4">
         <div>
-          <FieldLabel>Scenario</FieldLabel>
-          <select
-            value={String(content.scenario_id || "")}
-            onChange={(event) => updateExerciseContent({ scenario_id: parseNumber(event.target.value) })}
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-          >
-            <option value="">Manual ID</option>
-            {scenarios.map((scenario) => (
-              <option key={scenario.id} value={scenario.id}>
-                #{scenario.id} - {scenario.title}
-              </option>
-            ))}
-          </select>
+          <FieldLabel>Question Text</FieldLabel>
+          <textarea value={content.question_text || ""} onChange={(event) => updateExerciseContent({ ...content, question_text: event.target.value })} className="min-h-[110px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
         </div>
         <div>
-          <FieldLabel>Scenario ID</FieldLabel>
-          <input
-            data-testid="scenario-id-input"
-            type="number"
-            min="1"
-            value={content.scenario_id || ""}
-            onChange={(event) => updateExerciseContent({ scenario_id: parseNumber(event.target.value) })}
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-          />
+          <FieldLabel>Question Audio (optional)</FieldLabel>
+          <AudioAssetControl value={content.question_audio_url || ""} text={content.question_text || ""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, question_audio_url: audioUrl })} />
+        </div>
+        {renderHintsEditor(content)}
+        <div>
+          <FieldLabel>Minimum Words</FieldLabel>
+          <input type="number" min="1" value={content.min_words || 2} onChange={(event) => updateExerciseContent({ ...content, min_words: parseNumber(event.target.value, 2) })} className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
         </div>
       </div>
     );
@@ -940,9 +545,6 @@ const EntityModal = ({
             onChange={(event) => {
               const type = event.target.value;
               const content = EMPTY_CONTENT[type];
-              if (type === "interactive_conversation") {
-                void onNeedScenarios?.();
-              }
               updateForm({ type, content, contentJson: pretty(content) });
             }}
             className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
@@ -965,7 +567,7 @@ const EntityModal = ({
           className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
         />
       </div>
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <FieldLabel>Order</FieldLabel>
           <input
@@ -987,7 +589,6 @@ const EntityModal = ({
             className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
           />
         </div>
-        <ToggleField label="Required" checked={form.is_required} onChange={(value) => updateForm({ is_required: value })} />
         <ToggleField label="Active" checked={form.is_active} onChange={(value) => updateForm({ is_active: value })} />
       </div>
       <div className="flex gap-2 rounded-[20px] bg-zinc-100 p-1 dark:bg-zinc-950">

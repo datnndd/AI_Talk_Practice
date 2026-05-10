@@ -27,10 +27,19 @@ async def _seed_reward_lesson(db_session, *, xp_reward=50, coin_reward=2):
     await db_session.flush()
     lesson = Lesson(
         unit_id=unit.id,
-        type="cloze_dictation",
-        title="Cloze",
+        type="definition_choice",
+        title="Choice",
         order_index=0,
-        content={"passage": "I drink ___.", "blanks": [{"answer": "coffee"}]},
+        content={
+            "definition_audio_url": "/static/uploads/lesson-audio/coffee.wav",
+            "definition_text": "A hot drink.",
+            "options": [
+                {"word": "coffee", "is_correct": True},
+                {"word": "tea", "is_correct": False},
+                {"word": "milk", "is_correct": False},
+                {"word": "water", "is_correct": False},
+            ],
+        },
         pass_score=80,
     )
     db_session.add(lesson)
@@ -51,8 +60,37 @@ async def test_gamification_dashboard_initializes_simple_defaults(test_client):
     assert body["xp"]["level_size"] == 100
     assert body["coin"]["balance"] == 0
     assert body["check_in"]["checked_in_today"] is False
+    assert body["check_in"]["current_streak"] == 0
     assert body["check_in"]["today_coin_reward"] == 1
+    assert len(body["check_in"]["calendar_days"]) >= 28
 
+@pytest.mark.asyncio
+async def test_daily_checkin_duplicate_manual_and_calendar(test_client):
+    first = await test_client.post("/api/gamification/check-in")
+
+    assert first.status_code == 200
+    today = date.today()
+    calendar_today = next(
+        day for day in first.json()["dashboard"]["check_in"]["calendar_days"] if day["date"] == today.isoformat()
+    )
+    assert calendar_today["checked_in"] is True
+    assert calendar_today["is_today"] is True
+    assert calendar_today["streak_day"] == 1
+
+    duplicate = await test_client.post("/api/gamification/check-in")
+
+    assert duplicate.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_daily_checkin_continues_streak_from_yesterday(test_client, db_session, test_user):
+    db_session.add(DailyCheckin(user_id=test_user.id, date=date.today() - timedelta(days=1), streak_day=4, coin_earned=2))
+    await db_session.commit()
+
+    continued = await test_client.post("/api/gamification/check-in")
+
+    assert continued.status_code == 200
+    assert continued.json()["streak_day"] == 5
 
 @pytest.mark.asyncio
 async def test_lesson_completion_awards_configured_xp_coin_once(test_client, db_session, test_user):
@@ -60,7 +98,7 @@ async def test_lesson_completion_awards_configured_xp_coin_once(test_client, db_
 
     response = await test_client.post(
         f"/api/lessons/{lesson.id}/attempt",
-        json={"answer": {"blanks": ["coffee"]}},
+        json={"answer": {"selected_word": "coffee"}},
     )
 
     assert response.status_code == 201
@@ -73,7 +111,7 @@ async def test_lesson_completion_awards_configured_xp_coin_once(test_client, db_
 
     retry = await test_client.post(
         f"/api/lessons/{lesson.id}/attempt",
-        json={"answer": {"blanks": ["coffee"]}},
+        json={"answer": {"selected_word": "coffee"}},
     )
     assert retry.status_code == 201
     assert retry.json()["reward"] is None
@@ -93,7 +131,7 @@ async def test_level_curve_and_level_coin_rewards(test_client, admin_client, db_
 
     response = await test_client.post(
         f"/api/lessons/{lesson.id}/attempt",
-        json={"answer": {"blanks": ["coffee"]}},
+        json={"answer": {"selected_word": "coffee"}},
     )
 
     assert response.status_code == 201
@@ -105,79 +143,6 @@ async def test_level_curve_and_level_coin_rewards(test_client, admin_client, db_
     assert dashboard["xp"]["level_progress"] == 50
     assert dashboard["xp"]["level_size"] == 100
     assert dashboard["coin"]["balance"] == 30
-
-
-@pytest.mark.asyncio
-async def test_daily_checkin_default_duplicate_and_admin_tier_rewards(
-    test_client,
-    admin_client,
-    db_session,
-    test_user,
-):
-    first = await test_client.post("/api/gamification/check-in")
-    assert first.status_code == 200
-    assert first.json()["coin_earned"] == 1
-    assert first.json()["streak_day"] == 1
-
-    duplicate = await test_client.post("/api/gamification/check-in")
-    assert duplicate.status_code == 400
-
-    today = date.today()
-    checkin = (
-        await db_session.execute(
-            DailyCheckin.__table__.select().where(DailyCheckin.user_id == test_user.id)
-        )
-    ).first()
-    await db_session.execute(
-        DailyCheckin.__table__.update()
-        .where(DailyCheckin.id == checkin.id)
-        .values(date=today - timedelta(days=1), streak_day=1)
-    )
-    await db_session.commit()
-
-    update = await admin_client.put(
-        "/api/admin/gamification/settings",
-        json={"daily_checkin_coin_rewards": {"1": 1, "2": 3}, "reason": "checkin tiers"},
-    )
-    assert update.status_code == 200
-
-    second = await test_client.post("/api/gamification/check-in")
-    assert second.status_code == 200
-    assert second.json()["streak_day"] == 2
-    assert second.json()["coin_earned"] == 3
-
-
-@pytest.mark.asyncio
-async def test_auto_checkin_is_idempotent_and_reports_existing(test_client):
-    first = await test_client.post("/api/gamification/check-in/auto")
-    assert first.status_code == 200
-    assert first.json()["coin_earned"] == 1
-    assert first.json()["already_checked_in"] is False
-
-    second = await test_client.post("/api/gamification/check-in/auto")
-    assert second.status_code == 200
-    assert second.json()["coin_earned"] == 0
-    assert second.json()["already_checked_in"] is True
-    assert second.json()["dashboard"]["check_in"]["checked_in_today"] is True
-
-
-@pytest.mark.asyncio
-async def test_missed_checkin_day_resets_streak(test_client, db_session, test_user):
-    db_session.add(
-        DailyCheckin(
-            user_id=test_user.id,
-            date=date.today() - timedelta(days=2),
-            streak_day=5,
-            coin_earned=5,
-        )
-    )
-    await db_session.commit()
-
-    response = await test_client.post("/api/gamification/check-in")
-
-    assert response.status_code == 200
-    assert response.json()["streak_day"] == 1
-    assert response.json()["coin_earned"] == 1
 
 
 @pytest.mark.asyncio
@@ -240,6 +205,79 @@ async def test_shop_hides_inactive_and_out_of_stock_products(test_client, db_ses
 
     assert response.status_code == 200
     assert [item["code"] for item in response.json()["items"]] == ["active"]
+
+
+@pytest.mark.asyncio
+async def test_shop_redemptions_returns_only_current_user_orders_sorted(test_client, db_session, test_user):
+    other_user = User(
+        email="other-shop@example.com",
+        password_hash=hash_password("password123"),
+        display_name="Other Shop User",
+        level="beginner",
+        preferences={"is_admin": False},
+    )
+    product = ShopProduct(
+        code="notebook",
+        name="Notebook",
+        description="Notebook",
+        price_coin=100,
+        stock_quantity=10,
+        is_active=True,
+    )
+    db_session.add_all([other_user, product])
+    await db_session.flush()
+    older = ShopRedemption(
+        user_id=test_user.id,
+        product_id=product.id,
+        product_name="Old Notebook",
+        price_coin=100,
+        recipient_name="Nguyen Van A",
+        phone="0900000000",
+        address="Old address",
+        note="Old note",
+        status="pending",
+    )
+    newer = ShopRedemption(
+        user_id=test_user.id,
+        product_id=product.id,
+        product_name="New Notebook",
+        price_coin=120,
+        recipient_name="Nguyen Van A",
+        phone="0900000001",
+        address="New address",
+        note=None,
+        status="shipping",
+    )
+    other = ShopRedemption(
+        user_id=other_user.id,
+        product_id=product.id,
+        product_name="Other Notebook",
+        price_coin=100,
+        recipient_name="Other User",
+        phone="0900000002",
+        address="Other address",
+        status="completed",
+    )
+    db_session.add_all([older, newer, other])
+    await db_session.flush()
+    newer.created_at = older.created_at + timedelta(minutes=5)
+    await db_session.commit()
+
+    response = await test_client.get("/api/gamification/shop/redemptions")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [item["product_name"] for item in body] == ["New Notebook", "Old Notebook"]
+    assert body[0]["status"] == "shipping"
+    assert body[0]["price_coin"] == 120
+    assert all(item["product_name"] != "Other Notebook" for item in body)
+
+
+@pytest.mark.asyncio
+async def test_shop_redemptions_requires_auth(client):
+    response = await client.get("/api/gamification/shop/redemptions")
+
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio

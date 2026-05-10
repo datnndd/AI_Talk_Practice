@@ -5,16 +5,12 @@ export const gamificationApi = {
     const { data } = await httpClient.get("/gamification/me");
     return data;
   },
-  checkIn: async () => {
-    const { data } = await httpClient.post("/gamification/check-in");
-    return data;
-  },
-  autoCheckIn: async () => {
-    const { data } = await httpClient.post("/gamification/check-in/auto");
-    return data;
-  },
   getShop: async () => {
     const { data } = await httpClient.get("/gamification/shop");
+    return data;
+  },
+  getShopRedemptions: async () => {
+    const { data } = await httpClient.get("/gamification/shop/redemptions");
     return data;
   },
   redeemShopProduct: async (payload) => {

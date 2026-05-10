@@ -8,29 +8,9 @@ import {
 
 export const AuthContext = createContext();
 
-const DAILY_CHECKIN_REWARD_KEY = "daily_checkin_reward";
-
-const readStoredDailyReward = () => {
-  try {
-    const raw = sessionStorage.getItem(DAILY_CHECKIN_REWARD_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
-const storeDailyReward = (reward) => {
-  sessionStorage.setItem(DAILY_CHECKIN_REWARD_KEY, JSON.stringify(reward));
-};
-
-const clearStoredDailyReward = () => {
-  sessionStorage.removeItem(DAILY_CHECKIN_REWARD_KEY);
-};
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [gamification, setGamification] = useState(null);
-  const [dailyCheckinReward, setDailyCheckinReward] = useState(() => readStoredDailyReward());
   const [token, setToken] = useState(localStorage.getItem("access_token"));
   const [isLoading, setIsLoading] = useState(true);
 
@@ -40,13 +20,6 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setGamification(null);
-    setDailyCheckinReward(null);
-    clearStoredDailyReward();
-  }, []);
-
-  const clearDailyCheckinReward = useCallback(() => {
-    setDailyCheckinReward(null);
-    clearStoredDailyReward();
   }, []);
 
   const refreshGamification = useCallback(async () => {
@@ -55,26 +28,17 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   }, []);
 
-  const runAutoCheckIn = useCallback(async () => {
-    try {
-      const response = await httpClient.post("/gamification/check-in/auto");
-      setGamification(response.data.dashboard);
-      if (!response.data.already_checked_in && response.data.coin_earned > 0) {
-        storeDailyReward(response.data);
-        setDailyCheckinReward(response.data);
-      }
-      return response.data;
-    } catch (error) {
-      console.error("Failed to auto check in", error);
-      return null;
-    }
+  const checkInDaily = useCallback(async () => {
+    const response = await httpClient.post("/gamification/check-in");
+    setGamification(response.data.dashboard);
+    return response.data;
   }, []);
 
   const fetchUser = useCallback(async () => {
     try {
       const response = await httpClient.get("/auth/me");
       setUser(response.data);
-      await runAutoCheckIn();
+      await refreshGamification().catch(() => null);
       return response.data;
     } catch (error) {
       console.error("Failed to fetch user", error);
@@ -83,7 +47,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [logout, runAutoCheckIn]);
+  }, [logout, refreshGamification]);
 
   useEffect(() => {
     if (token) {
@@ -208,8 +172,7 @@ export const AuthProvider = ({ children }) => {
         refreshUser: fetchUser,
         gamification,
         refreshGamification,
-        dailyCheckinReward,
-        clearDailyCheckinReward,
+        checkInDaily,
         isAuthenticated: !!user,
         isLoading,
         subscription,

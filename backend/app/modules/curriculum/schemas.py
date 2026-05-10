@@ -6,12 +6,13 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+VALID_LESSON_TYPES = {"shadowing", "read_aloud", "definition_choice", "quick_qa"}
+
 LessonType = Literal[
-    "vocab_pronunciation",
-    "cloze_dictation",
-    "sentence_pronunciation",
-    "interactive_conversation",
-    "word_audio_choice",
+    "shadowing",
+    "read_aloud",
+    "definition_choice",
+    "quick_qa",
 ]
 
 
@@ -69,29 +70,34 @@ class UnitUpdate(BaseModel):
 def _validate_lesson_content(exercise_type: str | None, value: dict[str, Any]) -> dict[str, Any]:
     if not exercise_type:
         return value
-    if exercise_type == "vocab_pronunciation":
-        if not isinstance(value.get("words"), list) or not value.get("words"):
-            raise ValueError("vocab_pronunciation requires content.words")
-    elif exercise_type == "cloze_dictation":
-        if not value.get("passage") or not isinstance(value.get("blanks"), list) or not value.get("blanks"):
-            raise ValueError("cloze_dictation requires content.passage and content.blanks")
-    elif exercise_type == "sentence_pronunciation":
+    if exercise_type == "shadowing":
         if not value.get("reference_text"):
-            raise ValueError("sentence_pronunciation requires content.reference_text")
-    elif exercise_type == "interactive_conversation":
-        if not value.get("scenario_id"):
-            raise ValueError("interactive_conversation requires content.scenario_id")
-    elif exercise_type == "word_audio_choice":
+            raise ValueError("shadowing requires content.reference_text")
+        if not value.get("sample_audio_url"):
+            raise ValueError("shadowing requires content.sample_audio_url")
+    elif exercise_type == "read_aloud":
+        if not value.get("text"):
+            raise ValueError("read_aloud requires content.text")
+    elif exercise_type == "definition_choice":
         options = value.get("options")
-        if not value.get("prompt_word") or not isinstance(options, list) or len(options) < 2:
-            raise ValueError("word_audio_choice requires content.prompt_word and at least two content.options")
+        if not value.get("definition_audio_url"):
+            raise ValueError("definition_choice requires content.definition_audio_url")
+        if not isinstance(options, list) or len(options) != 4:
+            raise ValueError("definition_choice requires exactly four content.options")
         correct = [item for item in options if isinstance(item, dict) and item.get("is_correct") is True]
         words = [item.get("word") for item in options if isinstance(item, dict) and item.get("word")]
         if len(correct) != 1:
-            raise ValueError("word_audio_choice requires exactly one correct option")
+            raise ValueError("definition_choice requires exactly one correct option")
         if len(words) != len(options):
-            raise ValueError("word_audio_choice options require word")
+            raise ValueError("definition_choice options require word")
+    elif exercise_type == "quick_qa":
+        if not value.get("question_text"):
+            raise ValueError("quick_qa requires content.question_text")
+        hints = value.get("answer_hints") or []
+        if hints and (not isinstance(hints, list) or len(hints) > 3):
+            raise ValueError("quick_qa content.answer_hints must contain up to three hints")
     return value
+
 
 
 class LessonBase(BaseModel):
@@ -100,7 +106,6 @@ class LessonBase(BaseModel):
     order_index: int = Field(default=0, ge=0)
     content: dict[str, Any] = Field(default_factory=dict)
     pass_score: float = Field(default=80, ge=0, le=100)
-    is_required: bool = True
     is_active: bool = True
 
     @field_validator("content")
@@ -120,7 +125,6 @@ class LessonUpdate(BaseModel):
     order_index: int | None = Field(default=None, ge=0)
     content: dict[str, Any] | None = None
     pass_score: float | None = Field(default=None, ge=0, le=100)
-    is_required: bool | None = None
     is_active: bool | None = None
 
     @field_validator("content")
@@ -155,7 +159,6 @@ class LessonRead(ORMModel):
     order_index: int
     content: dict[str, Any]
     pass_score: float
-    is_required: bool
     is_active: bool
     progress: ProgressSummary | None = None
     created_at: datetime
@@ -236,26 +239,3 @@ class LessonAttemptRead(ORMModel):
     progress: ProgressSummary
     unit_completed: bool = False
     reward: dict[str, Any] | None = None
-
-
-class StartConversationLessonRequest(BaseModel):
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class StartConversationLessonResponse(BaseModel):
-    session_id: int
-    scenario_id: int
-    result_url: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class DictionaryLookupRead(BaseModel):
-    word: str
-    language: str = "en"
-    definition_language: str = "vi"
-    meaning_vi: str | None = None
-    ipa: str | None = None
-    audio_url: str | None = None
-    source: str = "dict.minhqnd.com"
-    exists: bool = False
-    definitions: list[str] = Field(default_factory=list)

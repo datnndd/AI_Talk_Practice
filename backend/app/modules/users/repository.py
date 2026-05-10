@@ -22,7 +22,6 @@ class UserRepository:
     def _admin_query() -> Select[tuple[User]]:
         return select(User).options(
             selectinload(User.subscription),
-            selectinload(User.daily_checkins),
             selectinload(User.daily_stats),
         )
 

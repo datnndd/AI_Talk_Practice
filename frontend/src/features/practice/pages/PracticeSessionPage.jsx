@@ -860,7 +860,7 @@ const PracticeSession = () => {
   const handleBackToConversationMenu = async () => {
     closeSocket(true);
     await teardownAudioPipeline();
-    navigate("/dashboard");
+    navigate("/scenarios");
   };
 
   const handleRequestHint = async () => {
@@ -907,7 +907,7 @@ const PracticeSession = () => {
             </div>
           </div>
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/scenarios")}
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-zinc-950 px-5 py-3 text-sm font-bold text-white"
           >
             <ArrowLeft size={18} weight="bold" />

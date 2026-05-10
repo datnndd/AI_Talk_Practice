@@ -62,10 +62,7 @@ export const curriculumApi = {
     const { data } = await httpClient.post(`/lessons/${lessonId}/attempt`, payload);
     return data;
   },
-  startConversationLesson: async (lessonId, payload = {}) => {
-    const { data } = await httpClient.post(`/lessons/${lessonId}/start-conversation`, payload);
-    return data;
-  },
+
 };
 
 export const adminCurriculumApi = {
@@ -123,12 +120,6 @@ export const adminCurriculumApi = {
   },
   reorderLessons: async (items) => {
     const { data } = await httpClient.post("/admin/curriculum/lessons/reorder", { items });
-    return data;
-  },
-  lookupDictionary: async ({ word, lang = "en", defLang = "vi" }) => {
-    const { data } = await httpClient.get("/admin/curriculum/dictionary/lookup", {
-      params: { word, lang, def_lang: defLang },
-    });
     return data;
   },
   createLessonAudioTts: async (payload) => {

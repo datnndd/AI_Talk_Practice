@@ -8,6 +8,7 @@ from .admin_gamification import (
     GamificationSettingsUpdateRequest,
 )
 from .gamification import (
+    CheckInCalendarDayRead,
     CheckInRead,
     CheckInResponse,
     CoinRead,
@@ -31,6 +32,7 @@ __all__ = [
     "AdminShopProductWrite",
     "AdminShopRedemptionRead",
     "AdminShopRedemptionStatusUpdate",
+    "CheckInCalendarDayRead",
     "CheckInRead",
     "CheckInResponse",
     "CoinRead",

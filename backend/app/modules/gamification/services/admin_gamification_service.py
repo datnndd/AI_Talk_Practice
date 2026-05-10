@@ -18,7 +18,6 @@ from app.modules.gamification.schemas.admin_gamification import (
     GamificationSettingsRead,
     GamificationSettingsUpdateRequest,
 )
-from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.gamification.models.gamification_setting import GamificationSetting
 from app.modules.gamification.models.shop_product import ShopProduct
@@ -146,7 +145,6 @@ class AdminGamificationService:
         rules = await get_effective_rules(db)
         return GamificationSettingsRead(
             level_coin_rewards=rules.level_coin_rewards,
-            daily_checkin_coin_rewards=rules.daily_checkin_coin_rewards,
         )
 
     @staticmethod
@@ -188,8 +186,6 @@ class AdminGamificationService:
 
         if body.level_coin_rewards is not None:
             values["level_coin_rewards"] = body.level_coin_rewards
-        if body.daily_checkin_coin_rewards is not None:
-            values["daily_checkin_coin_rewards"] = body.daily_checkin_coin_rewards
 
         await cls._upsert_setting(
             db,
@@ -197,13 +193,6 @@ class AdminGamificationService:
             value=values["level_coin_rewards"],
             actor_id=actor.id,
             description="Coin rewards granted when users reach specific levels",
-        )
-        await cls._upsert_setting(
-            db,
-            key="daily_checkin_coin_rewards",
-            value=values["daily_checkin_coin_rewards"],
-            actor_id=actor.id,
-            description="Tiered Coin rewards granted by daily check-in streak day",
         )
         await db.commit()
         return await cls.get_settings(db)
@@ -230,10 +219,6 @@ class AdminGamificationService:
         }
         active_today = today_daily_user_ids | today_session_user_ids
 
-        checkins_today = int(
-            (await db.execute(select(func.count(DailyCheckin.id)).where(DailyCheckin.date == target_date))).scalar_one()
-            or 0
-        )
         coins_in_circulation = int(
             (
                 await db.execute(select(func.coalesce(func.sum(User.coin_balance), 0)).where(User.deleted_at.is_(None)))
@@ -262,7 +247,6 @@ class AdminGamificationService:
         return AdminGamificationOverviewRead(
             date=target_date,
             active_users_today=len(active_today),
-            checkins_today=checkins_today,
             coins_in_circulation=coins_in_circulation,
             pro_upgrade_rate=pro_upgrade_rate,
         )

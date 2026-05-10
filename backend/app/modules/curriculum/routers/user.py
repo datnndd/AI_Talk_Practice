@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user, get_db
@@ -9,11 +9,9 @@ from app.modules.curriculum.schemas import (
     CurriculumTreeRead,
     LessonAttemptRead,
     LessonAttemptRequest,
-    StartConversationLessonRequest,
-    StartConversationLessonResponse,
     UnitRead,
 )
-from app.modules.curriculum.services import CurriculumService, DictionaryApiService
+from app.modules.curriculum.services import CurriculumService
 from app.modules.users.models.user import User
 
 router = APIRouter(tags=["curriculum"])
@@ -70,22 +68,3 @@ async def attempt_lesson(
     user: User = Depends(get_current_user),
 ):
     return await CurriculumService.attempt_lesson(db, user=user, lesson_id=lesson_id, payload=body)
-
-
-@router.post("/lessons/{lesson_id}/start-conversation", response_model=StartConversationLessonResponse)
-async def start_conversation_lesson(
-    lesson_id: int,
-    body: StartConversationLessonRequest,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    return await CurriculumService.start_conversation_lesson(db, user=user, lesson_id=lesson_id, payload=body)
-
-
-@router.get("/curriculum/dictionary/audio")
-async def dictionary_audio(
-    word: str = Query(min_length=1),
-    lang: str = Query(default="en", min_length=2, max_length=10),
-    db: AsyncSession = Depends(get_db),
-):
-    return await DictionaryApiService.get_audio_response(db, word=word, language=lang)

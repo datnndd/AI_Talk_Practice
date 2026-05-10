@@ -3,35 +3,33 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle, Circle } from "@phosphor-icons/react";
 import { curriculumApi } from "@/features/curriculum/api/curriculumApi";
 
-const VocabularyPronunciationExercise = lazy(() => import("@/features/curriculum/components/VocabularyPronunciationExercise"));
-const ClozeDictationExercise = lazy(() => import("@/features/curriculum/components/ClozeDictationExercise"));
-const SentencePronunciationExercise = lazy(() => import("@/features/curriculum/components/SentencePronunciationExercise"));
-const ConversationExerciseLauncher = lazy(() => import("@/features/curriculum/components/ConversationExerciseLauncher"));
-const WordAudioChoiceExercise = lazy(() => import("@/features/curriculum/components/WordAudioChoiceExercise"));
+const ShadowingExercise = lazy(() => import("@/features/curriculum/components/ShadowingExercise"));
+const ReadAloudExercise = lazy(() => import("@/features/curriculum/components/ReadAloudExercise"));
+const DefinitionChoiceExercise = lazy(() => import("@/features/curriculum/components/DefinitionChoiceExercise"));
+const QuickQaExercise = lazy(() => import("@/features/curriculum/components/QuickQaExercise"));
 
 const renderExercise = (exercise, onAttempt) => {
-  if (exercise.type === "vocab_pronunciation") {
-    return <VocabularyPronunciationExercise exercise={exercise} onAttempt={onAttempt} />;
+  if (exercise.type === "shadowing") {
+    return <ShadowingExercise exercise={exercise} onAttempt={onAttempt} />;
   }
-  if (exercise.type === "cloze_dictation") {
-    return <ClozeDictationExercise exercise={exercise} onAttempt={onAttempt} />;
+  if (exercise.type === "read_aloud") {
+    return <ReadAloudExercise exercise={exercise} onAttempt={onAttempt} />;
   }
-  if (exercise.type === "sentence_pronunciation") {
-    return <SentencePronunciationExercise exercise={exercise} onAttempt={onAttempt} />;
+  if (exercise.type === "definition_choice") {
+    return <DefinitionChoiceExercise exercise={exercise} onAttempt={onAttempt} />;
   }
-  if (exercise.type === "interactive_conversation") {
-    return <ConversationExerciseLauncher exercise={exercise} onAttempt={onAttempt} />;
-  }
-  if (exercise.type === "word_audio_choice") {
-    return <WordAudioChoiceExercise exercise={exercise} onAttempt={onAttempt} />;
+  if (exercise.type === "quick_qa") {
+    return <QuickQaExercise exercise={exercise} onAttempt={onAttempt} />;
   }
   return <p className="text-sm text-muted-foreground">Unsupported exercise type.</p>;
 };
 
+const buildLessonQueue = (lessons = []) => lessons.filter((item) => item.progress?.status !== "completed").map((item) => item.id);
+
 const LessonPlayerPage = () => {
   const { unitId } = useParams();
   const [unit, setUnit] = useState(null);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [lessonQueue, setLessonQueue] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [rewardNotice, setRewardNotice] = useState("");
@@ -40,16 +38,14 @@ const LessonPlayerPage = () => {
     const cachedUnit = curriculumApi.getCachedUnit(unitId);
     if (cachedUnit) {
       setUnit(cachedUnit);
-      const firstOpen = cachedUnit.lessons.findIndex((item) => item.progress?.status !== "completed");
-      setActiveIndex(firstOpen >= 0 ? firstOpen : 0);
+      setLessonQueue(buildLessonQueue(cachedUnit.lessons));
     }
     setIsLoading(!cachedUnit);
     setError("");
     try {
       const data = await curriculumApi.getUnit(unitId);
       setUnit(data);
-      const firstOpen = data.lessons.findIndex((item) => item.progress?.status !== "completed");
-      setActiveIndex(firstOpen >= 0 ? firstOpen : 0);
+      setLessonQueue(buildLessonQueue(data.lessons));
     } catch (err) {
       setError(err?.response?.data?.detail || "Không thể tải unit.");
     } finally {
@@ -62,13 +58,22 @@ const LessonPlayerPage = () => {
     if (curriculumApi.getCachedUnit(unitId)) {
       void curriculumApi.getUnit(unitId, { force: true }).then((data) => {
         setUnit(data);
-        const firstOpen = data.lessons.findIndex((item) => item.progress?.status !== "completed");
-        setActiveIndex(firstOpen >= 0 ? firstOpen : 0);
+        setLessonQueue(buildLessonQueue(data.lessons));
       }).catch(() => null);
     }
   }, [loadUnit]);
 
-  const activeExercise = useMemo(() => unit?.lessons?.[activeIndex], [unit, activeIndex]);
+  const activeLessonId = lessonQueue[0] || unit?.lessons?.find((item) => item.progress?.status !== "completed")?.id || unit?.lessons?.[0]?.id;
+  const activeExercise = useMemo(
+    () => unit?.lessons?.find((item) => item.id === activeLessonId) || null,
+    [unit, activeLessonId],
+  );
+
+  const refreshUnit = useCallback(async () => {
+    const data = await curriculumApi.getUnit(unitId, { force: true });
+    setUnit(data);
+    setLessonQueue(buildLessonQueue(data.lessons));
+  }, [unitId]);
 
   const handleAttempt = (result) => {
     if (result.reward) {
@@ -86,9 +91,20 @@ const LessonPlayerPage = () => {
         ),
       };
     });
+    setLessonQueue((currentQueue) => {
+      const remaining = currentQueue.filter((lessonId) => lessonId !== result.lesson_id);
+      if (result.progress?.status === "completed") {
+        if (remaining.length === 0 && !result.unit_completed) {
+          void refreshUnit().catch(() => null);
+        }
+        return remaining;
+      }
+      return [...remaining, result.lesson_id];
+    });
   };
 
-  const canGoNext = activeExercise?.progress?.status === "completed";
+  const activeQueuePosition = activeExercise ? Math.max(lessonQueue.indexOf(activeExercise.id), 0) : 0;
+  const queueTotal = lessonQueue.length;
 
   if (isLoading) {
     return <div className="py-8 text-sm font-semibold text-muted-foreground">Đang tải bài học...</div>;
@@ -118,15 +134,15 @@ const LessonPlayerPage = () => {
           {unit.description && <p className="mt-2 text-sm leading-6 text-muted-foreground">{unit.description}</p>}
         </div>
         <div className="space-y-2">
-          {unit.lessons.map((exercise, index) => {
+          {unit.lessons.map((exercise) => {
             const completed = exercise.progress?.status === "completed";
             return (
               <button
                 key={exercise.id}
                 type="button"
-                onClick={() => setActiveIndex(index)}
+                onClick={() => setLessonQueue((currentQueue) => [exercise.id, ...currentQueue.filter((lessonId) => lessonId !== exercise.id)])}
                 className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm font-bold ${
-                  activeIndex === index ? "border-primary bg-primary/5" : "border-border bg-card"
+                  activeExercise?.id === exercise.id ? "border-primary bg-primary/5" : "border-border bg-card"
                 }`}
               >
                 {completed ? <CheckCircle size={18} weight="fill" className="text-emerald-600" /> : <Circle size={18} />}
@@ -159,15 +175,10 @@ const LessonPlayerPage = () => {
             <Suspense fallback={<div className="py-6 text-sm font-semibold text-muted-foreground">Đang tải nội dung bài...</div>}>
               {renderExercise(activeExercise, handleAttempt)}
             </Suspense>
-            <div className="mt-8 flex justify-end">
-              <button
-                type="button"
-                disabled={!canGoNext || activeIndex >= unit.lessons.length - 1}
-                onClick={() => setActiveIndex((current) => Math.min(current + 1, unit.lessons.length - 1))}
-                className="rounded-xl bg-zinc-950 px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Lesson tiếp theo
-              </button>
+            <div className="mt-8 rounded-xl bg-zinc-50 px-4 py-3 text-sm font-bold text-muted-foreground dark:bg-zinc-900">
+              {queueTotal > 0
+                ? `H?ng ??i luy?n t?p: ${activeQueuePosition + 1}/${queueTotal}. Sai th? b?i s? quay l?i cu?i h?ng.`
+                : "B?n ?? ho?n th?nh t?t c? b?i trong h?ng ??i."}
             </div>
           </>
         )}

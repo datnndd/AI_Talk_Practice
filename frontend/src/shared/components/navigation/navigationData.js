@@ -20,7 +20,7 @@ export const publicNavItems = [
 ];
 
 export const learnerNavItems = [
-  { label: "Luy?n n?i", path: "/dashboard", icon: BookOpenText },
+  { label: "Luy?n n?i", path: "/scenarios", icon: BookOpenText },
   { label: "L? tr?nh h?c", path: "/learn", icon: GraduationCap },
   { label: "B?ng x?p h?ng", path: "/leaderboard", icon: Trophy },
   { label: "C?a h?ng", path: "/shop", icon: Storefront },
@@ -28,7 +28,7 @@ export const learnerNavItems = [
   { label: "H? s?", path: "/profile", icon: UserCircle },
 ];
 export const learnerTabItems = [
-  { label: "Luy?n", path: "/dashboard", icon: BookOpenText },
+  { label: "Luy?n", path: "/scenarios", icon: BookOpenText },
   { label: "H?c", path: "/learn", icon: GraduationCap },
   { label: "BXH", path: "/leaderboard", icon: Trophy },
   { label: "Shop", path: "/shop", icon: Storefront },

@@ -6,7 +6,7 @@ import { isRouteActive } from "./navigationData";
 import BrandMark from "./BrandMark";
 
 const NAV_ITEMS = [
-  { label: "Luyện nói", path: "/dashboard", Icon: ChatCircleText },
+  { label: "Luyện nói", path: "/scenarios", Icon: ChatCircleText },
   { label: "Lộ trình học", path: "/learn", Icon: GraduationCap },
   { label: "Bảng xếp hạng", path: "/leaderboard", Icon: Trophy },
   { label: "Cửa hàng", path: "/shop", Icon: Storefront },
@@ -20,7 +20,7 @@ const AppSidebar = () => {
   return (
     <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-border bg-card px-4 py-6 lg:flex">
       <div className="mb-10 px-2 flex-shrink-0">
-        <BrandMark to="/dashboard" />
+        <BrandMark to="/scenarios" />
       </div>
       
       <nav className="flex-1 space-y-1">

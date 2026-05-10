@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Crown, Headphones, LockSimple, MagnifyingGlass, PlayCircle, Sparkle, Target, Timer } from "@phosphor-icons/react";
+import { Crown, Headphones, LockSimple, MagnifyingGlass, PlayCircle, Sparkle, Target } from "@phosphor-icons/react";
 
 import fallbackScenarioImage from "@/assets/buddy_talk_logo.jpg";
 import { practiceApi } from "@/features/practice/api/practiceApi";
@@ -130,21 +130,14 @@ const PlaylistSection = ({ scenarios = [], isLoading = false, error = "", hasPro
   return (
     <section className="relative mb-8 mt-12 space-y-6">
       <div className="overflow-hidden rounded-[36px] bg-gradient-to-br from-zinc-950 via-indigo-950 to-primary p-6 text-white shadow-2xl shadow-primary/10 md:p-8">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] backdrop-blur">
-              <Sparkle size={15} weight="fill" /> Roleplay Command Center
-            </div>
-            <h2 className="mt-5 text-4xl font-black tracking-tight md:text-5xl">Chọn bối cảnh, vào vai, nói thật tự nhiên</h2>
-            <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/70">
-              Lọc kịch bản theo cấp độ và chủ đề, xem nhiệm vụ trước khi bước vào phòng hội thoại AI.
-            </p>
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] backdrop-blur">
+            <Sparkle size={15} weight="fill" /> Roleplay Command Center
           </div>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-3xl bg-white/10 p-4 backdrop-blur"><p className="text-3xl font-black">{scenarios.length}</p><p className="text-[10px] font-black uppercase text-white/60">Scenarios</p></div>
-            <div className="rounded-3xl bg-white/10 p-4 backdrop-blur"><p className="text-3xl font-black">{categories.length}</p><p className="text-[10px] font-black uppercase text-white/60">Topics</p></div>
-            <div className="rounded-3xl bg-white/10 p-4 backdrop-blur"><Timer className="mx-auto" size={28} weight="fill" /><p className="mt-1 text-[10px] font-black uppercase text-white/60">3-5 min</p></div>
-          </div>
+          <h2 className="mt-5 text-4xl font-black tracking-tight md:text-5xl">Chọn bối cảnh, vào vai, nói thật tự nhiên</h2>
+          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/70">
+            Lọc kịch bản theo cấp độ và chủ đề, xem nhiệm vụ trước khi bước vào phòng hội thoại AI.
+          </p>
         </div>
       </div>
 

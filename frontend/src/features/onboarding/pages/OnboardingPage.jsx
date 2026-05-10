@@ -48,7 +48,7 @@ const OnboardingPage = () => {
     setIsSubmitting(true);
     try {
       await onboard(formData);
-      navigate("/dashboard");
+      navigate("/scenarios");
     } catch (err) {
       console.error(err);
       setIsSubmitting(false);
@@ -86,7 +86,7 @@ const OnboardingPage = () => {
 
   return (
     <div className="min-h-screen bg-background font-body text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed overflow-x-hidden flex flex-col">
-      <FlowHeader currentStep={step + 1} totalSteps={totalSteps} onExit={() => navigate("/dashboard")} />
+      <FlowHeader currentStep={step + 1} totalSteps={totalSteps} onExit={() => navigate("/scenarios")} />
 
       <main className="relative flex w-full flex-grow flex-col items-center pb-32 pt-[116px]">
         <AnimatePresence mode="wait">

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle, Clock, Target } from "@phosphor-icons/react";
 
@@ -94,7 +94,7 @@ const ScenarioPreviewPage = () => {
     return (
       <div className="app-page-narrow py-6">
         <p className="rounded-2xl bg-rose-50 px-5 py-4 text-sm font-bold text-rose-700">{error || "Không tìm thấy tình huống."}</p>
-        <Link to="/dashboard" className="mt-5 inline-flex items-center gap-2 text-sm font-black text-primary">
+        <Link to="/scenarios" className="mt-5 inline-flex items-center gap-2 text-sm font-black text-primary">
           <ArrowLeft size={18} weight="bold" />
           Quay lại
         </Link>
@@ -110,7 +110,7 @@ const ScenarioPreviewPage = () => {
 
   return (
     <div className="app-page-wide">
-      <Link to="/dashboard" className="mb-6 inline-flex items-center gap-2 text-sm font-black uppercase tracking-wide text-muted-foreground hover:text-foreground">
+      <Link to="/scenarios" className="mb-6 inline-flex items-center gap-2 text-sm font-black uppercase tracking-wide text-muted-foreground hover:text-foreground">
         <ArrowLeft size={18} weight="bold" />
         Back
       </Link>

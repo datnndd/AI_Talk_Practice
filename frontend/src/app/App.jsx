@@ -1,4 +1,4 @@
-﻿import { Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import { AppLayout } from "@/app/layouts";
@@ -67,7 +67,7 @@ function App() {
         <Route path="/profile" element={<PrivateRoute>{withAppLayout(<ProfileSettingsPage />)}</PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute>{withAppLayout(<UserSettingsPage />)}</PrivateRoute>} />
         <Route path="/leaderboard" element={<PrivateRoute>{withAppLayout(<LeaderboardPage />)}</PrivateRoute>} />
-        <Route path="/dashboard" element={<PrivateRoute>{withAppLayout(<DashboardPage />)}</PrivateRoute>} />
+        <Route path="/scenarios" element={<PrivateRoute>{withAppLayout(<DashboardPage />)}</PrivateRoute>} />
         <Route path="/learn" element={<PrivateRoute>{withAppLayout(<LearnPage />)}</PrivateRoute>} />
         <Route path="/learn/units/:unitId" element={<PrivateRoute>{withAppLayout(<LessonPlayerPage />)}</PrivateRoute>} />
         <Route path="/shop" element={<PrivateRoute>{withAppLayout(<ShopPage />)}</PrivateRoute>} />

@@ -119,7 +119,7 @@ const request = async ({ method = "GET", path, params, data, headers = {}, _retr
   };
 
   if (data !== undefined && !isFormData) {
-    requestHeaders["Content-Type"] = "application/json";
+    requestHeaders["Content-Type"] = "application/json; charset=utf-8";
   }
 
   if (accessToken) {

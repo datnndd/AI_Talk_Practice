@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.gamification.models.gamification_setting import GamificationSetting
 
-DEFAULT_DAILY_CHECKIN_COIN_REWARDS = {"1": 1}
 DEFAULT_LEVEL_COIN_REWARDS: dict[str, int] = {}
+DEFAULT_DAILY_CHECKIN_COIN_REWARDS: dict[str, int] = {"1": 1, "3": 2, "7": 5}
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,13 @@ class LevelProgress:
 class GamificationRules:
     level_coin_rewards: dict[str, int]
     daily_checkin_coin_rewards: dict[str, int]
+
+
+def tiered_coin_reward(rewards: dict[str, int], streak_day: int) -> int:
+    eligible = [int(key) for key in rewards if str(key).isdigit() and int(key) <= streak_day]
+    if not eligible:
+        return 0
+    return int(rewards.get(str(max(eligible)), 0))
 
 
 def xp_required_for_level(level: int) -> int:
@@ -51,13 +58,6 @@ def level_from_total_xp(total_xp: int) -> int:
     return level_progress_from_total_xp(total_xp).level
 
 
-def tiered_coin_reward(rewards: dict[str, int], streak_day: int) -> int:
-    eligible = [int(key) for key in rewards if str(key).isdigit() and int(key) <= streak_day]
-    if not eligible:
-        return 0
-    return int(rewards[str(max(eligible))])
-
-
 def default_rules() -> GamificationRules:
     return GamificationRules(
         level_coin_rewards=dict(DEFAULT_LEVEL_COIN_REWARDS),
@@ -74,7 +74,6 @@ async def get_effective_rules(db: AsyncSession) -> GamificationRules:
     level_coin_rewards.update(
         {str(key): int(value) for key, value in (rows.get("level_coin_rewards") or {}).items()}
     )
-
     daily_checkin_coin_rewards = dict(rules.daily_checkin_coin_rewards)
     daily_checkin_coin_rewards.update(
         {str(key): int(value) for key, value in (rows.get("daily_checkin_coin_rewards") or {}).items()}

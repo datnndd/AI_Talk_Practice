@@ -11,7 +11,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -100,7 +99,6 @@ class Lesson(Base, TimestampMixin):
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     content: Mapped[Any] = mapped_column(JSONB, nullable=False, server_default="{}")
     pass_score: Mapped[float] = mapped_column(Float, nullable=False, server_default="80")
-    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
 
     unit: Mapped["Unit"] = relationship("Unit", back_populates="lessons", lazy="select")
@@ -130,7 +128,7 @@ class Lesson(Base, TimestampMixin):
         UniqueConstraint("unit_id", "order_index", name="uq_lessons_unit_order"),
         Index("ix_lessons_unit_active_order", "unit_id", "is_active", "order_index"),
         CheckConstraint(
-            "type IN ('vocab_pronunciation','cloze_dictation','sentence_pronunciation','interactive_conversation','word_audio_choice')",
+            "type IN ('shadowing','read_aloud','definition_choice','quick_qa')",
             name="ck_lessons_type",
         ),
         CheckConstraint("order_index >= 0", name="ck_lessons_order_nonnegative"),
@@ -221,22 +219,4 @@ class LessonAttempt(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_lesson_attempts_user_lesson_created", "user_id", "lesson_id", "created_at"),
         CheckConstraint("score >= 0 AND score <= 100", name="ck_lesson_attempts_score"),
-    )
-
-
-class DictionaryAudioCache(Base, TimestampMixin):
-    __tablename__ = "dictionary_audio_cache"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    normalized_word: Mapped[str] = mapped_column(String(200), nullable=False)
-    language: Mapped[str] = mapped_column(String(10), nullable=False, server_default="en")
-    source: Mapped[str] = mapped_column(String(100), nullable=False, server_default="dict.minhqnd.com")
-    source_url: Mapped[str] = mapped_column(String(1000), nullable=False)
-    content_type: Mapped[str] = mapped_column(String(100), nullable=False, server_default="audio/wav")
-    audio_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
-    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-
-    __table_args__ = (
-        UniqueConstraint("normalized_word", "language", name="uq_dictionary_audio_cache_word_language"),
-        Index("ix_dictionary_audio_cache_word", "normalized_word"),
     )

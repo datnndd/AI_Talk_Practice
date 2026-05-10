@@ -52,10 +52,6 @@ class Settings(BaseSettings):
     azure_speech_key: str | None = Field(default=None, description="Azure Speech Service key")
     azure_speech_region: str | None = Field(default=None, description="Azure Speech Service region")
     azure_speech_language: str = Field(default="en-US", description="Azure Speech assessment language")
-    dictionary_api_base_url: str = Field(
-        default="https://dict.minhqnd.com",
-        description="Public dictionary API base URL used for pronunciation audio",
-    )
     lesson_audio_upload_max_bytes: int = Field(
         default=10 * 1024 * 1024,
         description="Maximum uploaded lesson audio size in bytes",

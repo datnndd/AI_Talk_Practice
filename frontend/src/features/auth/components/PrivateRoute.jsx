@@ -17,7 +17,7 @@ const PrivateRoute = ({ children, requireAdmin = false }) => {
   }
 
   if (requireAdmin && !user?.is_admin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/scenarios" replace />;
   }
 
   return children;

@@ -1,21 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CaretLeft,
   CheckCircle,
-  Fire,
-  Gift,
   LockKey,
   PlayCircle,
-  Sparkle,
   Star,
-  Target,
-  Trophy,
   X,
 } from "@phosphor-icons/react";
 import { curriculumApi } from "@/features/curriculum/api/curriculumApi";
-import { useAuth } from "@/features/auth/context/AuthContext";
 
 const sectionColors = [
   "from-sky-500 to-cyan-400",
@@ -42,8 +34,6 @@ const getUnitRewards = (unit) => {
     { xp: Number(unit.xp_reward || 0), coin: Number(unit.coin_reward || 0) },
   );
 };
-
-const getAllUnits = (sections = []) => sections.flatMap((section) => (section.units || []).map((unit) => ({ ...unit, section })));
 
 const LessonNode = ({ unit, index, status, accent, onSelect }) => {
   const Icon = status === "completed" ? CheckCircle : status === "locked" ? LockKey : status === "current" ? PlayCircle : Star;
@@ -78,61 +68,6 @@ const LessonNode = ({ unit, index, status, accent, onSelect }) => {
         <span className="rounded-full bg-white/80 px-2.5 py-1 text-sky-600">+{rewards.xp} XP</span>
       </div>
     </motion.button>
-  );
-};
-
-const QuestHero = ({ nextUnit, progress, gamification }) => {
-  const rewards = nextUnit ? getUnitRewards(nextUnit) : { xp: 0, coin: 0 };
-  return (
-    <motion.section
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="overflow-hidden rounded-[36px] bg-gradient-to-br from-primary via-sky-500 to-cyan-400 p-6 text-white shadow-2xl shadow-sky-900/20 md:p-8"
-    >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] backdrop-blur">
-            <Sparkle size={16} weight="fill" /> Daily Quest
-          </div>
-          <h1 className="mt-5 text-4xl font-black tracking-tight md:text-5xl">Tiếp tục hành trình hôm nay</h1>
-          <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/80">
-            Hoàn thành bài tiếp theo để nhận XP, coin và giữ nhịp học mỗi ngày.
-          </p>
-
-          <div className="mt-6 rounded-3xl bg-white/15 p-4 backdrop-blur">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-white/70">Next lesson</p>
-                <h2 className="mt-1 text-2xl font-black">{nextUnit?.title || "Bạn đã hoàn thành lộ trình"}</h2>
-              </div>
-              {nextUnit && (
-                <Link to={`/learn/units/${nextUnit.id}`} className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-primary shadow-lg transition hover:-translate-y-0.5">
-                  <PlayCircle size={18} weight="fill" /> Start
-                </Link>
-              )}
-            </div>
-            <div className="mt-5 h-4 overflow-hidden rounded-full bg-white/20">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.8 }} className="h-full rounded-full bg-lime-300" />
-            </div>
-            <p className="mt-2 text-xs font-bold text-white/70">Course progress {progress}%</p>
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-          {[
-            [Fire, "Streak", gamification?.check_in?.current_streak || 0, "text-orange-200"],
-            [Trophy, "Level", gamification?.xp?.level || 1, "text-lime-200"],
-            [Gift, "Reward", `+${rewards.coin}`, "text-amber-200"],
-          ].map(([Icon, label, value, color]) => (
-            <div key={label} className="rounded-3xl bg-white/15 p-4 backdrop-blur">
-              <Icon size={28} weight="fill" className={color} />
-              <p className="mt-3 text-3xl font-black">{value}</p>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-white/65">{label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </motion.section>
   );
 };
 
@@ -191,7 +126,6 @@ const PreviewDrawer = ({ unit, onClose }) => {
 };
 
 const LearnPage = () => {
-  const { gamification } = useAuth();
   const [data, setData] = useState(null);
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -232,30 +166,43 @@ const LearnPage = () => {
     };
   }, []);
 
-  const allUnits = useMemo(() => getAllUnits(data?.sections || []), [data]);
-  const completedCount = allUnits.filter((unit) => unit.progress_status === "completed").length;
-  const progress = allUnits.length ? Math.round((completedCount / allUnits.length) * 100) : 0;
-  const nextUnit = allUnits.find((unit) => unit.id === data?.current_unit_id) || allUnits.find((unit) => !unit.is_locked && unit.progress_status !== "completed") || allUnits[0];
-
   if (isLoading) {
     return <div className="py-8 text-sm font-semibold text-muted-foreground">Đang tải lộ trình...</div>;
   }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-10">
-      <header className="sticky top-0 z-20 flex h-[72px] items-center border-b border-border bg-background/80 backdrop-blur-md">
-        <Link to="/dashboard" className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground">
-          <CaretLeft size={20} weight="bold" />
-          <span>Back</span>
-        </Link>
-      </header>
+      <div className="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-zinc-950 via-indigo-950 to-primary p-5 text-white shadow-xl shadow-primary/10 md:p-6">
+        <div className="pointer-events-none absolute -right-14 -top-20 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/2 h-48 w-48 rounded-full bg-sky-300/20 blur-3xl" />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] backdrop-blur">
+              <Star size={13} weight="fill" /> Learning Path
+            </div>
+            <h1 className="mt-3 max-w-3xl text-2xl font-black tracking-tight md:text-3xl">Học theo lộ trình, mở khóa từng nhiệm vụ</h1>
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/70">
+              Hoàn thành bài học ngắn, luyện nói từng bước, tích XP và coin rồi tiếp tục lên cấp theo đúng tiến độ của bạn.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 text-[11px] font-black">
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2 backdrop-blur">
+              <Star size={15} weight="fill" /> Start
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2 backdrop-blur">
+              <PlayCircle size={15} weight="fill" /> Practice
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2 backdrop-blur">
+              <CheckCircle size={15} weight="fill" /> Level up
+            </div>
+          </div>
+        </div>
+      </div>
 
       {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div>}
 
-      <QuestHero nextUnit={nextUnit} progress={progress} gamification={gamification} />
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-8">
+      <div className="space-y-8">
           {(data?.sections || []).map((section, sectionIndex) => {
             const accent = sectionColors[sectionIndex % sectionColors.length];
             return (
@@ -284,23 +231,6 @@ const LearnPage = () => {
               </section>
             );
           })}
-        </div>
-
-        <aside className="hidden lg:block">
-          <div className="sticky top-24 rounded-[32px] border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Target size={26} weight="fill" /></span>
-              <div>
-                <p className="text-sm font-black">Daily focus</p>
-                <p className="text-xs font-semibold text-muted-foreground">Finish one quest today</p>
-              </div>
-            </div>
-            <div className="mt-5 space-y-3">
-              <div className="rounded-2xl bg-zinc-50 p-4 dark:bg-zinc-900"><p className="text-xs font-black uppercase text-zinc-500">Completed</p><p className="mt-1 text-3xl font-black">{completedCount}/{allUnits.length}</p></div>
-              <div className="rounded-2xl bg-amber-50 p-4 text-amber-700"><p className="text-xs font-black uppercase">Coin balance</p><p className="mt-1 text-3xl font-black">{Number(gamification?.coin?.balance || 0).toLocaleString("en-US")}</p></div>
-            </div>
-          </div>
-        </aside>
       </div>
 
       <PreviewDrawer unit={selectedUnit} onClose={() => setSelectedUnit(null)} />

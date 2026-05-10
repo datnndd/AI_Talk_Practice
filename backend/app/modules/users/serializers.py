@@ -27,7 +27,6 @@ def _admin_gamification_payload(user: User, rules: GamificationRules) -> dict[st
     today_stat = next((item for item in getattr(user, "daily_stats", []) if item.date == today), None)
     total_xp = user.total_xp or 0
     progress = level_progress_from_total_xp(total_xp)
-    today_checkin = next((item for item in getattr(user, "daily_checkins", []) if item.date == today), None)
     return {
         "xp": {
             "total": total_xp,
@@ -38,11 +37,6 @@ def _admin_gamification_payload(user: User, rules: GamificationRules) -> dict[st
             "xp_to_next_level": progress.xp_to_next_level,
         },
         "coin": {"balance": user.coin_balance or 0},
-        "check_in": {
-            "checked_in_today": today_checkin is not None,
-            "current_streak": today_checkin.streak_day if today_checkin else 0,
-            "today_coin_reward": today_checkin.coin_earned if today_checkin else 0,
-        },
     }
 
 

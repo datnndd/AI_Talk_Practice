@@ -22,10 +22,21 @@ class CoinRead(BaseModel):
     balance: int
 
 
+class CheckInCalendarDayRead(BaseModel):
+    date: date
+    day: int
+    checked_in: bool
+    streak_day: int | None = None
+    coin_earned: int = 0
+    is_today: bool = False
+
+
 class CheckInRead(BaseModel):
     checked_in_today: bool
     current_streak: int
     today_coin_reward: int
+    calendar_month: str
+    calendar_days: list[CheckInCalendarDayRead]
 
 
 class GamificationDashboard(BaseModel):
@@ -51,7 +62,6 @@ class CheckInResponse(BaseModel):
     streak_day: int
     coin_earned: int
     dashboard: GamificationDashboard
-    already_checked_in: bool = False
 
 
 class ShopItemRead(BaseModel):

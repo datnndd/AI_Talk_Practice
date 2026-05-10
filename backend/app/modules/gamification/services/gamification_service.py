@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from calendar import monthrange
 from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import func, select
@@ -8,11 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import BadRequestError
 from app.modules.curriculum.models import Unit
 from app.modules.gamification.models.coin_transaction import CoinTransaction
+from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.shop_product import ShopProduct
 from app.modules.gamification.models.shop_redemption import ShopRedemption
-from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.gamification.schemas import (
+    CheckInCalendarDayRead,
     CheckInRead,
     CheckInResponse,
     CoinRead,
@@ -164,7 +166,7 @@ class GamificationService:
         )
 
     @classmethod
-    async def check_in(cls, db: AsyncSession, user: User, *, allow_existing: bool = False) -> CheckInResponse:
+    async def check_in(cls, db: AsyncSession, user: User) -> CheckInResponse:
         await cls._ensure_user_state(user)
         rules = await get_effective_rules(db)
         today = _today()
@@ -172,16 +174,6 @@ class GamificationService:
             await db.execute(select(DailyCheckin).where(DailyCheckin.user_id == user.id, DailyCheckin.date == today))
         ).scalar_one_or_none()
         if existing is not None:
-            if allow_existing:
-                dashboard = await cls._build_dashboard(db, user, rules)
-                await db.commit()
-                return CheckInResponse(
-                    date=today,
-                    streak_day=existing.streak_day,
-                    coin_earned=0,
-                    dashboard=dashboard,
-                    already_checked_in=True,
-                )
             raise BadRequestError("You have already checked in today.")
 
         latest = await cls._latest_checkin(db, user.id)
@@ -206,7 +198,6 @@ class GamificationService:
             streak_day=streak_day,
             coin_earned=coin_earned,
             dashboard=dashboard,
-            already_checked_in=False,
         )
 
     @staticmethod
@@ -219,6 +210,17 @@ class GamificationService:
             )
         ).scalars().all()
         return ShopRead(items=[ShopItemRead.model_validate(item, from_attributes=True) for item in rows])
+
+    @staticmethod
+    async def list_shop_redemptions(db: AsyncSession, user: User) -> list[ShopRedemptionRead]:
+        rows = (
+            await db.execute(
+                select(ShopRedemption)
+                .where(ShopRedemption.user_id == user.id)
+                .order_by(ShopRedemption.created_at.desc(), ShopRedemption.id.desc())
+            )
+        ).scalars().all()
+        return [ShopRedemptionRead.model_validate(row, from_attributes=True) for row in rows]
 
     @classmethod
     async def redeem_shop_product(cls, db: AsyncSession, user: User, body) -> ShopRedeemResponse:
@@ -295,7 +297,7 @@ class GamificationService:
             await db.execute(
                 select(DailyCheckin)
                 .where(DailyCheckin.user_id == user_id)
-                .order_by(DailyCheckin.date.desc(), DailyCheckin.id.desc())
+                .order_by(DailyCheckin.date.desc())
                 .limit(1)
             )
         ).scalar_one_or_none()
@@ -311,7 +313,6 @@ class GamificationService:
         daily_stat = await cls._get_or_create_daily_stat(db, user.id, today)
         progress = level_progress_from_total_xp(user.total_xp or 0)
         check_in = await cls._checkin_read(db, user.id, rules)
-
         return GamificationDashboard(
             xp=XPRead(
                 total=user.total_xp or 0,
@@ -329,17 +330,22 @@ class GamificationService:
     async def _checkin_read(cls, db: AsyncSession, user_id: int, rules: GamificationRules) -> CheckInRead:
         today = _today()
         latest = await cls._latest_checkin(db, user_id)
+        calendar_days = await cls._checkin_calendar_days(db, user_id, today)
         if latest is None:
             return CheckInRead(
                 checked_in_today=False,
                 current_streak=0,
                 today_coin_reward=tiered_coin_reward(rules.daily_checkin_coin_rewards, 1),
+                calendar_month=today.strftime("%Y-%m"),
+                calendar_days=calendar_days,
             )
         if latest.date == today:
             return CheckInRead(
                 checked_in_today=True,
                 current_streak=latest.streak_day,
                 today_coin_reward=latest.coin_earned,
+                calendar_month=today.strftime("%Y-%m"),
+                calendar_days=calendar_days,
             )
         current_streak = latest.streak_day if latest.date == today - timedelta(days=1) else 0
         next_streak_day = current_streak + 1 if current_streak else 1
@@ -347,7 +353,35 @@ class GamificationService:
             checked_in_today=False,
             current_streak=current_streak,
             today_coin_reward=tiered_coin_reward(rules.daily_checkin_coin_rewards, next_streak_day),
+            calendar_month=today.strftime("%Y-%m"),
+            calendar_days=calendar_days,
         )
+
+    @staticmethod
+    async def _checkin_calendar_days(db: AsyncSession, user_id: int, today: date) -> list[CheckInCalendarDayRead]:
+        month_start = today.replace(day=1)
+        month_end = today.replace(day=monthrange(today.year, today.month)[1])
+        rows = (
+            await db.execute(
+                select(DailyCheckin).where(
+                    DailyCheckin.user_id == user_id,
+                    DailyCheckin.date >= month_start,
+                    DailyCheckin.date <= month_end,
+                )
+            )
+        ).scalars().all()
+        checkins_by_date = {row.date: row for row in rows}
+        return [
+            CheckInCalendarDayRead(
+                date=current_date,
+                day=current_date.day,
+                checked_in=current_date in checkins_by_date,
+                streak_day=checkins_by_date[current_date].streak_day if current_date in checkins_by_date else None,
+                coin_earned=checkins_by_date[current_date].coin_earned if current_date in checkins_by_date else 0,
+                is_today=current_date == today,
+            )
+            for current_date in (month_start + timedelta(days=offset) for offset in range((month_end - month_start).days + 1))
+        ]
 
     @staticmethod
     def _level_coin_reward(rules: GamificationRules, *, before_level: int, after_level: int) -> int:

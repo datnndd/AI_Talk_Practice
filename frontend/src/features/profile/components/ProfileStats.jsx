@@ -1,4 +1,4 @@
-import { CalendarCheck, Coins, Lightning, Star } from "@phosphor-icons/react";
+import { Coins, Lightning, Star } from "@phosphor-icons/react";
 
 const ProfileStats = ({ stats }) => {
   const statItems = [
@@ -19,12 +19,6 @@ const ProfileStats = ({ stats }) => {
       value: stats.coin || 0,
       Icon: Coins,
       color: "#ff4b4b",
-    },
-    {
-      label: "Check-in streak",
-      value: stats.checkInStreak || 0,
-      Icon: CalendarCheck,
-      color: "#ffc800",
     },
   ];
 

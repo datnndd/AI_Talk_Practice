@@ -74,7 +74,7 @@ const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) =
                   </div>
                 </div>
                 <Link
-                  to="/dashboard"
+                  to="/scenarios"
                   className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-black text-primary-foreground shadow-sm shadow-primary/20 transition hover:bg-primary/90"
                 >
                   <HouseLine size={16} weight="bold" />
@@ -106,7 +106,7 @@ const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) =
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Link
-                    to="/dashboard"
+                    to="/scenarios"
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 text-xs font-black uppercase tracking-[0.14em] text-primary transition hover:bg-primary hover:text-primary-foreground"
                   >
                     <HouseLine size={16} weight="bold" />

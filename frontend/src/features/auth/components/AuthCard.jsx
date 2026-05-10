@@ -21,7 +21,7 @@ const resolvePostLoginPath = (user) => {
     return "/admin/scenarios";
   }
 
-  return user?.is_onboarding_completed ? "/dashboard" : "/onboarding";
+  return user?.is_onboarding_completed ? "/scenarios" : "/onboarding";
 };
 
 const normalizeEmail = (value) => value.trim().toLowerCase();

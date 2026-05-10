@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle, Crown, Lightning } from "@phosphor-icons/react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -208,7 +208,7 @@ const SubscriptionPage = () => {
       {actionError ? <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700 shadow-sm">{actionError}</div> : null}
 
       {isSubscribed ? (
-        <Link to="/dashboard" className="inline-flex rounded-2xl border border-zinc-200 px-5 py-3 text-sm font-black text-zinc-700 hover:bg-zinc-50">Tiếp tục luyện tập</Link>
+        <Link to="/scenarios" className="inline-flex rounded-2xl border border-zinc-200 px-5 py-3 text-sm font-black text-zinc-700 hover:bg-zinc-50">Tiếp tục luyện tập</Link>
       ) : null}
     </div>
   );

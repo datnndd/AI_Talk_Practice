@@ -3,7 +3,6 @@ from datetime import date, datetime, timedelta, timezone
 import pytest
 
 from app.modules.gamification.models.coin_transaction import CoinTransaction
-from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.gamification.models.shop_product import ShopProduct
 from app.modules.gamification.models.shop_redemption import ShopRedemption
@@ -45,25 +44,22 @@ async def test_admin_user_detail_includes_gamification_and_admin_coin_adjustment
 
 
 @pytest.mark.asyncio
-async def test_admin_gamification_settings_manage_level_and_checkin_coin_rewards(
+async def test_admin_gamification_settings_manage_level_coin_rewards(
     admin_client,
 ):
     defaults = await admin_client.get("/api/admin/gamification/settings")
     assert defaults.status_code == 200
     assert defaults.json()["level_coin_rewards"] == {}
-    assert defaults.json()["daily_checkin_coin_rewards"]["1"] == 1
 
     update = await admin_client.put(
         "/api/admin/gamification/settings",
         json={
             "level_coin_rewards": {"2": 10},
-            "daily_checkin_coin_rewards": {"1": 1, "3": 5},
             "reason": "balance test",
         },
     )
     assert update.status_code == 200
     assert update.json()["level_coin_rewards"]["2"] == 10
-    assert update.json()["daily_checkin_coin_rewards"]["3"] == 5
 
 
 @pytest.mark.asyncio
@@ -77,8 +73,7 @@ async def test_admin_gamification_overview_counts_daily_metrics(
     today = date(2026, 4, 19)
     db_session.add_all(
         [
-            DailyStat(user_id=test_user.id, date=today, lessons_completed=2, speaking_lessons_completed=1),
-            DailyCheckin(user_id=test_user.id, date=today, streak_day=1, coin_earned=1),
+            DailyStat(user_id=test_user.id, date=today, lessons_completed=2),
             Session(
                 user_id=test_user.id,
                 scenario_id=test_scenario.id,
@@ -97,7 +92,6 @@ async def test_admin_gamification_overview_counts_daily_metrics(
     assert response.status_code == 200
     body = response.json()
     assert body["active_users_today"] == 1
-    assert body["checkins_today"] == 1
     assert body["coins_in_circulation"] == 100
     assert body["pro_upgrade_rate"] == 0.5
 

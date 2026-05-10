@@ -10,10 +10,6 @@ import uuid
 import wave
 from datetime import date, datetime, timezone
 from typing import Any
-from urllib.parse import urlencode
-
-import httpx
-from fastapi.responses import Response
 from sqlalchemy import Select, String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -24,7 +20,6 @@ from app.infra.supabase_storage import supabase_storage
 from app.infra.contracts import TTSConfig
 from app.infra.factory import create_tts
 from app.modules.curriculum.models import (
-    DictionaryAudioCache,
     LearningSection,
     Lesson,
     LessonAudioAsset,
@@ -43,14 +38,11 @@ from app.modules.curriculum.schemas import (
     LessonUpdate,
     ProgressSummary,
     ReorderRequest,
-    StartConversationLessonRequest,
-    StartConversationLessonResponse,
     UnitCreate,
     UnitUpdate,
+    VALID_LESSON_TYPES,
     _validate_lesson_content,
 )
-from app.modules.sessions.schemas.session import SessionCreate
-from app.modules.sessions.services.session import SessionService
 from app.modules.users.models.user import User
 
 
@@ -138,157 +130,6 @@ def _validate_wav_audio(audio_bytes: bytes) -> None:
         raise BadRequestError("Audio duration is empty")
 
 
-class DictionaryApiService:
-    source = "dict.minhqnd.com"
-
-    @staticmethod
-    def _language(value: str | None) -> str:
-        language = (value or "en").strip().lower()
-        if not re.fullmatch(r"[a-z]{2,10}(-[a-z0-9]{2,10})?", language):
-            raise BadRequestError("Invalid dictionary language")
-        return language
-
-    @classmethod
-    async def get_audio_response(cls, db: AsyncSession, *, word: str, language: str | None = None) -> Response:
-        cache = await cls.get_or_fetch_audio(db, word=word, language=language)
-        return Response(
-            content=cache.audio_bytes,
-            media_type=cache.content_type or "audio/wav",
-            headers={
-                "X-Dictionary-Source": cls.source,
-                "Cache-Control": "public, max-age=604800",
-            },
-        )
-
-    @classmethod
-    async def lookup_word(
-        cls,
-        *,
-        word: str,
-        language: str | None = None,
-        definition_language: str | None = None,
-    ) -> dict[str, Any]:
-        normalized = _normalize_word(word)
-        if not normalized:
-            raise BadRequestError("Word is required")
-        lang = cls._language(language)
-        def_lang = cls._language(definition_language or "vi")
-
-        base_url = str(settings.dictionary_api_base_url).rstrip("/")
-        source_url = f"{base_url}/api/v1/lookup"
-        try:
-            async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-                response = await client.get(
-                    source_url,
-                    params={"word": normalized, "lang": lang, "def_lang": def_lang},
-                )
-                response.raise_for_status()
-                payload = response.json()
-        except Exception as exc:
-            raise UpstreamServiceError("Unable to look up dictionary word") from exc
-
-        results = payload.get("results") if isinstance(payload, dict) else []
-        result = next(
-            (item for item in results or [] if isinstance(item, dict) and item.get("lang_code") == lang),
-            None,
-        )
-        if result is None and results:
-            result = next((item for item in results if isinstance(item, dict)), None)
-
-        meanings = result.get("meanings") if isinstance(result, dict) else []
-        definitions = [
-            str(item.get("definition")).strip()
-            for item in meanings or []
-            if isinstance(item, dict)
-            and item.get("definition_lang") == def_lang
-            and str(item.get("definition") or "").strip()
-        ]
-
-        if not definitions and isinstance(result, dict):
-            translations = result.get("translations") or []
-            definitions = [
-                str(item.get("translation")).strip()
-                for item in translations
-                if isinstance(item, dict)
-                and item.get("lang_code") == def_lang
-                and str(item.get("translation") or "").strip()
-            ]
-
-        pronunciations = result.get("pronunciations") if isinstance(result, dict) else []
-        ipa = next(
-            (
-                str(item.get("ipa")).strip()
-                for item in pronunciations or []
-                if isinstance(item, dict) and str(item.get("ipa") or "").strip()
-            ),
-            None,
-        )
-        audio_query = urlencode({"word": normalized, "lang": lang})
-
-        return {
-            "word": normalized,
-            "language": lang,
-            "definition_language": def_lang,
-            "meaning_vi": definitions[0] if definitions and def_lang == "vi" else None,
-            "ipa": ipa,
-            "audio_url": f"/api/curriculum/dictionary/audio?{audio_query}",
-            "source": cls.source,
-            "exists": bool(payload.get("exists")) if isinstance(payload, dict) else bool(definitions),
-            "definitions": definitions,
-        }
-
-    @classmethod
-    async def get_or_fetch_audio(
-        cls,
-        db: AsyncSession,
-        *,
-        word: str,
-        language: str | None = None,
-    ) -> DictionaryAudioCache:
-        normalized = _normalize_word(word)
-        if not normalized:
-            raise BadRequestError("Word is required")
-        lang = cls._language(language)
-
-        cached = (
-            await db.execute(
-                select(DictionaryAudioCache).where(
-                    DictionaryAudioCache.normalized_word == normalized,
-                    DictionaryAudioCache.language == lang,
-                )
-            )
-        ).scalar_one_or_none()
-        if cached is not None:
-            return cached
-
-        base_url = str(settings.dictionary_api_base_url).rstrip("/")
-        source_url = f"{base_url}/api/v1/tts"
-        try:
-            async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-                response = await client.get(source_url, params={"word": normalized, "lang": lang})
-                response.raise_for_status()
-        except Exception as exc:
-            raise UpstreamServiceError("Unable to fetch dictionary audio") from exc
-
-        content_type = response.headers.get("content-type", "audio/wav").split(";", 1)[0] or "audio/wav"
-        if not response.content:
-            raise UpstreamServiceError("Dictionary audio response was empty")
-
-        cache = DictionaryAudioCache(
-            normalized_word=normalized,
-            language=lang,
-            source=cls.source,
-            source_url=str(response.url),
-            content_type=content_type,
-            audio_bytes=response.content,
-            fetched_at=_utcnow(),
-        )
-        db.add(cache)
-        await db.commit()
-        await db.refresh(cache)
-        return cache
-
-
 class PronunciationAssessmentService:
     @staticmethod
     def _fallback(reference_text: str, fallback_answer: Any = None, source: str = "local_fallback") -> dict[str, Any]:
@@ -373,6 +214,58 @@ class PronunciationAssessmentService:
                 except OSError:
                     pass
 
+class SpeechTranscriptionService:
+    @classmethod
+    def transcribe(cls, *, audio_bytes: bytes | None, fallback_answer: Any = None) -> dict[str, Any]:
+        fallback_text = ""
+        if isinstance(fallback_answer, dict):
+            fallback_text = str(fallback_answer.get("transcript") or fallback_answer.get("text") or "").strip()
+        elif fallback_answer is not None:
+            fallback_text = str(fallback_answer).strip()
+        if not audio_bytes:
+            return {"transcript": fallback_text, "source": "fallback_no_audio"}
+        if not settings.azure_speech_key or not settings.azure_speech_region:
+            return {"transcript": fallback_text, "source": "fallback_missing_config"}
+
+        _validate_wav_audio(audio_bytes)
+
+        try:
+            import azure.cognitiveservices.speech as speechsdk
+        except Exception as exc:
+            raise UpstreamServiceError("Azure Speech SDK is not installed") from exc
+
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
+                temp_file.write(audio_bytes)
+                temp_path = temp_file.name
+
+            speech_config = speechsdk.SpeechConfig(
+                subscription=settings.azure_speech_key,
+                region=settings.azure_speech_region,
+            )
+            speech_config.speech_recognition_language = settings.azure_speech_language or "en-US"
+            audio_config = speechsdk.AudioConfig(filename=temp_path)
+            recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
+            result = recognizer.recognize_once()
+            if result.reason == speechsdk.ResultReason.Canceled:
+                details = speechsdk.CancellationDetails(result)
+                raise UpstreamServiceError(f"Azure speech recognition canceled: {details.reason}")
+            if result.reason == speechsdk.ResultReason.NoMatch:
+                return {"transcript": fallback_text, "source": "azure_no_match"}
+            return {"transcript": str(result.text or "").strip(), "source": "azure"}
+        except UpstreamServiceError:
+            raise
+        except Exception as exc:
+            raise UpstreamServiceError("Azure speech recognition failed") from exc
+        finally:
+            if temp_path:
+                try:
+                    os.unlink(temp_path)
+                except OSError:
+                    pass
+
+
 
 class CurriculumService:
     @staticmethod
@@ -413,7 +306,7 @@ class CurriculumService:
             lesson.id
             for unit in units
             for lesson in unit.__dict__.get("lessons", [])
-            if lesson.is_active
+            if lesson.is_active and lesson.type in VALID_LESSON_TYPES
         ] if include_lesson_progress else []
 
         unit_progress = {}
@@ -479,7 +372,7 @@ class CurriculumService:
         if unit is None:
             raise NotFoundError("Unit not found")
 
-        lesson_ids = [lesson.id for lesson in unit.lessons if lesson.is_active]
+        lesson_ids = [lesson.id for lesson in unit.lessons if lesson.is_active and lesson.type in VALID_LESSON_TYPES]
         lesson_progress = {}
         if lesson_ids:
             rows = (
@@ -555,133 +448,93 @@ class CurriculumService:
         payload: LessonAttemptRequest,
     ) -> tuple[float, dict[str, Any], Any]:
         content = lesson.content or {}
-        if lesson.type == "cloze_dictation":
-            return cls._score_cloze(content, payload.answer)
-        if lesson.type == "vocab_pronunciation":
-            return await cls._score_vocab_pronunciation(content, payload)
-        if lesson.type == "sentence_pronunciation":
-            return cls._score_sentence_pronunciation(content, payload)
-        if lesson.type == "interactive_conversation":
-            return await cls._score_conversation(db, user=user, lesson=lesson, payload=payload)
-        if lesson.type == "word_audio_choice":
-            return cls._score_word_audio_choice(content, payload.answer)
+        if lesson.type == "shadowing":
+            return cls._score_shadowing(content, payload)
+        if lesson.type == "read_aloud":
+            return cls._score_read_aloud(content, payload)
+        if lesson.type == "definition_choice":
+            return cls._score_definition_choice(content, payload.answer)
+        if lesson.type == "quick_qa":
+            return cls._score_quick_qa(content, payload)
         raise BadRequestError("Unsupported lesson type")
 
     @staticmethod
-    def _score_cloze(content: dict[str, Any], answer: Any) -> tuple[float, dict[str, Any], Any]:
-        submitted = answer if isinstance(answer, dict) else {}
-        submitted_blanks = submitted.get("blanks") or submitted.get("answers") or answer or []
-        if isinstance(submitted_blanks, dict):
-            submitted_values = submitted_blanks
-        elif isinstance(submitted_blanks, list):
-            submitted_values = {str(index): value for index, value in enumerate(submitted_blanks)}
-        else:
-            submitted_values = {}
-
-        blanks = content.get("blanks") or []
-        results = []
-        correct = 0
-        for index, blank in enumerate(blanks):
-            accepted = [blank.get("answer"), *(blank.get("accepted_answers") or [])]
-            accepted_norm = {_normalize_answer(item) for item in accepted if item}
-            value = submitted_values.get(str(index), submitted_values.get(index, ""))
-            value_norm = _normalize_answer(value)
-            is_correct = bool(value_norm and value_norm in accepted_norm)
-            correct += 1 if is_correct else 0
-            results.append(
-                {
-                    "index": index,
-                    "submitted": value,
-                    "correct": is_correct,
-                    "answer": blank.get("answer"),
-                    "meaning_vi": blank.get("meaning_vi"),
-                    "explanation_vi": None if is_correct else blank.get("explanation_vi"),
-                }
-            )
-        score = round((correct / len(blanks)) * 100, 2) if blanks else 0
-        return score, {"blank_results": results, "correct": correct, "total": len(blanks)}, submitted
-
-    @staticmethod
-    async def _score_vocab_pronunciation(
-        content: dict[str, Any],
+    def _score_pronunciation_lesson(
+        *,
+        reference_text: str,
         payload: LessonAttemptRequest,
+        missing_message: str,
     ) -> tuple[float, dict[str, Any], Any]:
-        submitted = payload.answer if isinstance(payload.answer, dict) else {}
-        target_word = submitted.get("word") or submitted.get("target_word")
-        words = content.get("words") or []
-        if not target_word and words:
-            target_word = words[0].get("word") if isinstance(words[0], dict) else str(words[0])
-        if not target_word:
-            raise BadRequestError("Vocabulary pronunciation attempt requires a target word")
-
-        audio_bytes = _decode_audio_base64(payload.audio_base64)
-        assessment = PronunciationAssessmentService.assess(
-            reference_text=str(target_word),
-            audio_bytes=audio_bytes,
-            fallback_answer=submitted.get("transcript"),
-        )
-        score = round(float(assessment.get("score") or 0), 2)
-        attempted_words = {str(target_word)}
-        failed_words = []
-        for word_item in words:
-            word = word_item.get("word") if isinstance(word_item, dict) else str(word_item)
-            if word in attempted_words and score < float(content.get("pass_score") or 80):
-                failed_words.append(word)
-        return score, {"target_word": target_word, "assessment": assessment, "failed_words": failed_words}, submitted
-
-    @staticmethod
-    def _score_sentence_pronunciation(
-        content: dict[str, Any],
-        payload: LessonAttemptRequest,
-    ) -> tuple[float, dict[str, Any], Any]:
-        reference_text = str(content.get("reference_text") or "").strip()
-        if not reference_text:
-            raise BadRequestError("Sentence pronunciation lesson has no reference_text")
+        reference = str(reference_text or "").strip()
+        if not reference:
+            raise BadRequestError(missing_message)
         submitted = payload.answer if isinstance(payload.answer, dict) else {"transcript": payload.answer}
         audio_bytes = _decode_audio_base64(payload.audio_base64)
         assessment = PronunciationAssessmentService.assess(
-            reference_text=reference_text,
+            reference_text=reference,
             audio_bytes=audio_bytes,
             fallback_answer=submitted.get("transcript") if isinstance(submitted, dict) else submitted,
         )
         score = round(float(assessment.get("score") or 0), 2)
-        return score, {"reference_text": reference_text, "assessment": assessment}, submitted
+        return score, {"reference_text": reference, "assessment": assessment}, submitted
+
+    @classmethod
+    def _score_shadowing(cls, content: dict[str, Any], payload: LessonAttemptRequest) -> tuple[float, dict[str, Any], Any]:
+        return cls._score_pronunciation_lesson(
+            reference_text=str(content.get("reference_text") or ""),
+            payload=payload,
+            missing_message="shadowing lesson has no reference_text",
+        )
+
+    @classmethod
+    def _score_read_aloud(cls, content: dict[str, Any], payload: LessonAttemptRequest) -> tuple[float, dict[str, Any], Any]:
+        return cls._score_pronunciation_lesson(
+            reference_text=str(content.get("text") or ""),
+            payload=payload,
+            missing_message="read_aloud lesson has no text",
+        )
 
     @staticmethod
-    async def _score_conversation(
-        db: AsyncSession,
-        *,
-        user: User,
-        lesson: Lesson,
-        payload: LessonAttemptRequest,
-    ) -> tuple[float, dict[str, Any], Any]:
-        if payload.session_id is None:
-            raise BadRequestError("interactive_conversation attempt requires session_id")
-        session = await SessionService.get_by_id(db, payload.session_id, user.id)
-        if session.status != "completed":
-            raise BadRequestError("Conversation session must be completed before scoring")
-        if not session.score:
-            score = 0.0
-        else:
-            score = round(float(session.score.overall_score or 0) * 10, 2)
-        return score, {"session_id": session.id, "overall_score": score}, {"session_id": session.id}
-
-    @staticmethod
-    def _score_word_audio_choice(content: dict[str, Any], answer: Any) -> tuple[float, dict[str, Any], Any]:
+    def _score_definition_choice(content: dict[str, Any], answer: Any) -> tuple[float, dict[str, Any], Any]:
         submitted = answer if isinstance(answer, dict) else {}
         selected_word = _normalize_word(str(submitted.get("selected_word") or submitted.get("word") or ""))
         options = content.get("options") or []
         correct_option = next((item for item in options if isinstance(item, dict) and item.get("is_correct") is True), None)
         if not correct_option:
-            raise BadRequestError("word_audio_choice lesson is missing a correct option")
+            raise BadRequestError("definition_choice lesson is missing a correct option")
         correct_word = _normalize_word(str(correct_option.get("word") or ""))
         if not selected_word:
-            raise BadRequestError("word_audio_choice attempt requires selected_word")
+            raise BadRequestError("definition_choice attempt requires selected_word")
         passed = selected_word == correct_word
         return (
             100.0 if passed else 0.0,
             {"selected_word": selected_word, "correct_word": correct_word, "correct": passed},
             submitted,
+        )
+
+    @staticmethod
+    def _score_quick_qa(content: dict[str, Any], payload: LessonAttemptRequest) -> tuple[float, dict[str, Any], Any]:
+        question_text = str(content.get("question_text") or "").strip()
+        if not question_text:
+            raise BadRequestError("quick_qa lesson has no question_text")
+        min_words = int(content.get("min_words") or 2)
+        audio_bytes = _decode_audio_base64(payload.audio_base64)
+        submitted = payload.answer if isinstance(payload.answer, dict) else {"transcript": payload.answer}
+        transcription = SpeechTranscriptionService.transcribe(audio_bytes=audio_bytes, fallback_answer=submitted)
+        transcript = str(transcription.get("transcript") or "").strip()
+        word_count = len(WORD_RE.findall(transcript.lower()))
+        passed = word_count >= min_words
+        return (
+            100.0 if passed else 0.0,
+            {
+                "question_text": question_text,
+                "transcript": transcript,
+                "word_count": word_count,
+                "min_words": min_words,
+                "source": transcription.get("source"),
+                "correct": passed,
+            },
+            {**submitted, "transcript": transcript} if isinstance(submitted, dict) else {"transcript": transcript},
         )
 
     @staticmethod
@@ -693,25 +546,6 @@ class CurriculumService:
         target_passed: bool,
     ) -> dict[str, Any]:
         state = dict(progress.state or {})
-        if lesson.type == "vocab_pronunciation":
-            previous_failed = set(state.get("retry_words") or [])
-            passed_words = set(state.get("passed_words") or [])
-            target = feedback.get("target_word")
-            if target and target_passed:
-                previous_failed.discard(target)
-                passed_words.add(target)
-            elif target:
-                previous_failed.add(target)
-                passed_words.discard(target)
-            all_words = [
-                item.get("word") if isinstance(item, dict) else str(item)
-                for item in (lesson.content or {}).get("words", [])
-            ]
-            for word in all_words:
-                if word not in passed_words:
-                    previous_failed.add(word)
-            state["retry_words"] = sorted(previous_failed)
-            state["passed_words"] = sorted(passed_words)
         state["last_feedback"] = feedback
         state["target_passed"] = target_passed
         return state
@@ -723,55 +557,10 @@ class CurriculumService:
         state: dict[str, Any],
         target_passed: bool,
     ) -> bool:
-        if not target_passed:
-            return False
-        if lesson.type != "vocab_pronunciation":
-            return True
-        words = [
-            item.get("word") if isinstance(item, dict) else str(item)
-            for item in (lesson.content or {}).get("words", [])
-        ]
-        passed_words = set(state.get("passed_words") or [])
-        return bool(words) and all(word in passed_words for word in words)
+        return target_passed
 
-    @classmethod
-    async def start_conversation_lesson(
-        cls,
-        db: AsyncSession,
-        *,
-        user: User,
-        lesson_id: int,
-        payload: StartConversationLessonRequest,
-    ) -> StartConversationLessonResponse:
-        lesson = await cls._get_active_lesson(db, lesson_id)
-        if lesson.type != "interactive_conversation":
-            raise BadRequestError("Lesson is not an interactive conversation")
-        await cls.get_user_unit(db, user_id=user.id, unit_id=lesson.unit_id)
-        scenario_id = int((lesson.content or {}).get("scenario_id") or 0)
-        if not scenario_id:
-            raise BadRequestError("Conversation lesson is missing scenario_id")
 
-        metadata = {
-            **(payload.metadata or {}),
-            "curriculum_mode": True,
-            "unit_id": lesson.unit_id,
-            "lesson_id": lesson.id,
-        }
-        session = await SessionService.start_session(
-            db,
-            user_id=user.id,
-            user=user,
-            payload=SessionCreate(
-                scenario_id=scenario_id,
-                metadata=metadata,
-            ),
-        )
-        return StartConversationLessonResponse(
-            session_id=session.id,
-            scenario_id=scenario_id,
-            result_url=f"/sessions/{session.id}/result",
-            metadata=dict(session.session_metadata or {}),
-        )
+
 
     @staticmethod
     async def _get_active_lesson(db: AsyncSession, lesson_id: int, *, include_unit_lessons: bool = True) -> Lesson:
@@ -829,20 +618,20 @@ class CurriculumService:
             progress.status = "in_progress"
             progress.started_at = progress.started_at or _utcnow()
 
-        required_lessons = [item for item in unit.lessons if item.is_active and item.is_required]
-        if not required_lessons:
+        tracked_lessons = [item for item in unit.lessons if item.is_active and item.type in VALID_LESSON_TYPES]
+        if not tracked_lessons:
             return False, None
         rows = (
             await db.execute(
                 select(UserLessonProgress).where(
                     UserLessonProgress.user_id == user.id,
-                    UserLessonProgress.lesson_id.in_([item.id for item in required_lessons]),
+                    UserLessonProgress.lesson_id.in_([item.id for item in tracked_lessons]),
                 )
             )
         ).scalars().all()
         by_lesson = {item.lesson_id: item for item in rows}
-        completed = all(by_lesson.get(item.id) and by_lesson[item.id].status == "completed" for item in required_lessons)
-        scores = [by_lesson[item.id].best_score or 0 for item in required_lessons if by_lesson.get(item.id)]
+        completed = all(by_lesson.get(item.id) and by_lesson[item.id].status == "completed" for item in tracked_lessons)
+        scores = [by_lesson[item.id].best_score or 0 for item in tracked_lessons if by_lesson.get(item.id)]
         progress.best_score = round(sum(scores) / len(scores), 2) if scores else None
         reward = None
         if completed and progress.status != "completed":
@@ -856,10 +645,10 @@ class CurriculumService:
 
     @staticmethod
     def _update_user_completion_counters(user: User, unit: Unit, score: float | None) -> None:
-        lesson_types = {lesson.type for lesson in unit.lessons}
-        if lesson_types & {"vocab_pronunciation", "word_audio_choice"}:
+        lesson_types = {lesson.type for lesson in unit.lessons if lesson.type in VALID_LESSON_TYPES}
+        if lesson_types & {"definition_choice"}:
             user.total_vocabulary_lessons_completed = (user.total_vocabulary_lessons_completed or 0) + 1
-        if lesson_types & {"sentence_pronunciation", "interactive_conversation"}:
+        if lesson_types & {"shadowing", "read_aloud", "quick_qa"}:
             user.total_speaking_lessons_completed = (user.total_speaking_lessons_completed or 0) + 1
         if score is not None and score >= 90:
             user.perfect_score_count = (user.perfect_score_count or 0) + 1
@@ -1043,7 +832,7 @@ class AdminCurriculumService:
         section = await AdminCurriculumService.get_section(db, section_id)
         section.is_active = False
         await db.commit()
-        return section
+        return await AdminCurriculumService.get_section(db, section_id)
 
     @staticmethod
     async def create_unit(db: AsyncSession, body: UnitCreate) -> Unit:
@@ -1083,7 +872,7 @@ class AdminCurriculumService:
         unit = await AdminCurriculumService.get_unit(db, unit_id)
         unit.is_active = False
         await db.commit()
-        return unit
+        return await AdminCurriculumService.get_unit(db, unit_id)
 
     @staticmethod
     async def create_lesson(db: AsyncSession, body: LessonCreate) -> Lesson:
@@ -1125,7 +914,7 @@ class AdminCurriculumService:
         lesson = await AdminCurriculumService.get_lesson(db, lesson_id)
         lesson.is_active = False
         await db.commit()
-        return lesson
+        return await AdminCurriculumService.get_lesson(db, lesson_id)
 
     @staticmethod
     async def reorder(db: AsyncSession, *, model: type, body: ReorderRequest) -> None:

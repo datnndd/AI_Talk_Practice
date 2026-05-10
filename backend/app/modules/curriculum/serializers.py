@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.modules.curriculum.models import LearningSection, Lesson, Unit, UserLessonProgress, UserUnitProgress
-from app.modules.curriculum.schemas import LearningSectionRead, LessonRead, ProgressSummary, UnitRead
+from app.modules.curriculum.schemas import LearningSectionRead, LessonRead, ProgressSummary, UnitRead, VALID_LESSON_TYPES
 
 
 def _enriched_lesson_content(lesson: Lesson) -> dict:
@@ -31,7 +31,6 @@ def serialize_lesson(
             "order_index": lesson.order_index,
             "content": _enriched_lesson_content(lesson) if include_content else {},
             "pass_score": lesson.pass_score,
-            "is_required": lesson.is_required,
             "is_active": lesson.is_active,
             "progress": progress_read,
             "created_at": lesson.created_at,
@@ -72,7 +71,7 @@ def serialize_unit(
                     include_content=include_lesson_content,
                 )
                 for item in sorted(lessons, key=lambda lesson: (lesson.order_index, lesson.id))
-                if include_lessons and (include_inactive or item.is_active)
+                if include_lessons and item.type in VALID_LESSON_TYPES and (include_inactive or item.is_active)
             ],
             "created_at": unit.created_at,
             "updated_at": unit.updated_at,

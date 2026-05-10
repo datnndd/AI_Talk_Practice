@@ -29,7 +29,6 @@ from app.modules.sessions.models.session_score import SessionScore
 
 # Curriculum
 from app.modules.curriculum.models import (
-    DictionaryAudioCache,
     LearningSection,
     Lesson,
     LessonAttempt,
@@ -53,9 +52,8 @@ __all__ = [
     "Character",
     "CoinTransaction",
     "Correction",
-    "DailyCheckin",
     "DailyStat",
-    "DictionaryAudioCache",
+    "DailyCheckin",
     "EmailOTP",
     "GamificationSetting",
     "Message",

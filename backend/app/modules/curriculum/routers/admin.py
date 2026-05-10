@@ -7,7 +7,6 @@ from app.api.dependencies import get_db, require_admin_user
 from app.modules.curriculum.models import LearningSection, Lesson, Unit
 from app.modules.curriculum.serializers import serialize_lesson, serialize_section, serialize_unit
 from app.modules.curriculum.schemas import (
-    DictionaryLookupRead,
     LearningSectionCreate,
     LearningSectionRead,
     LearningSectionUpdate,
@@ -21,20 +20,10 @@ from app.modules.curriculum.schemas import (
     UnitRead,
     UnitUpdate,
 )
-from app.modules.curriculum.services import AdminCurriculumService, DictionaryApiService
+from app.modules.curriculum.services import AdminCurriculumService
 from app.modules.users.models.user import User
 
 router = APIRouter(prefix="/admin/curriculum", tags=["admin-curriculum"])
-
-
-@router.get("/dictionary/lookup", response_model=DictionaryLookupRead)
-async def dictionary_lookup(
-    word: str,
-    lang: str = "en",
-    def_lang: str = "vi",
-    _: User = Depends(require_admin_user),
-):
-    return await DictionaryApiService.lookup_word(word=word, language=lang, definition_language=def_lang)
 
 
 @router.post("/audio/tts", response_model=LessonAudioAssetRead, status_code=status.HTTP_201_CREATED)
