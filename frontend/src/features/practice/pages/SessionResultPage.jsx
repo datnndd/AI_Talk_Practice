@@ -223,7 +223,7 @@ const SessionResultPage = () => {
   const corrections = scoreMeta.corrections || [];
   const nextSteps = scoreMeta.next_steps || [];
   const objectiveCompletion = scoreMeta.objective_completion;
-  const advancedMetrics = [
+  const detailedMetrics = [
     { label: "Pronunciation", value: scoreMeta.pronunciation_score || score?.pronunciation_score || "Preview" },
     { label: "Vocabulary", value: skillBreakdown.vocabulary ?? "Preview" },
     { label: "Fluency", value: skillBreakdown.fluency ?? "Preview" },
@@ -448,7 +448,7 @@ const SessionResultPage = () => {
           <div>
             <div className="flex items-center gap-2">
               <Crown size={16} weight="fill" className="text-amber-600" />
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Advanced Feedback</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Detailed Feedback</p>
             </div>
             <h2 className="mt-1 font-display text-lg font-black text-zinc-950">
               {hasProAccess ? "Pro insights unlocked" : "Pro insights preview"}
@@ -460,7 +460,7 @@ const SessionResultPage = () => {
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[360px]">
-            {advancedMetrics.map((metric) => (
+            {detailedMetrics.map((metric) => (
               <div key={metric.label} className={`rounded-lg border px-3 py-2 ${hasProAccess ? "border-white/80 bg-white/80" : "border-zinc-200 bg-zinc-50"}`}>
                 <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">{metric.label}</p>
                 <p className="mt-1 text-sm font-black text-zinc-950">

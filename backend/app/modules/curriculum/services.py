@@ -52,7 +52,6 @@ LESSON_AUDIO_UPLOAD_DIR = os.path.join("static", "uploads", "lesson-audio")
 LESSON_AUDIO_URL_PREFIX = "/static/uploads/lesson-audio"
 MIN_PRONUNCIATION_SAMPLE_RATE = 16000
 CEFR_ORDER = {"A1": 0, "A2": 1, "B1": 2, "B2": 3, "C1": 4, "C2": 5}
-LEGACY_LEVEL_TO_CEFR = {"beginner": "A1", "intermediate": "B1", "advanced": "C1"}
 
 
 def _utcnow() -> datetime:
@@ -67,7 +66,7 @@ def _normalize_cefr_level(value: str | None) -> str:
     if not value:
         return "A1"
     normalized = value.strip()
-    return LEGACY_LEVEL_TO_CEFR.get(normalized.lower(), normalized.upper())
+    return normalized.upper()
 
 
 def _cefr_rank(value: str | None) -> int:

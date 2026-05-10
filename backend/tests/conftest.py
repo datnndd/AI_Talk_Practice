@@ -109,7 +109,7 @@ async def test_user(db_session):
         email="test@example.com",
         password_hash=hash_password("password123"),
         display_name="Test User",
-        level="beginner",
+        level="A1",
         preferences={"is_admin": False}
     )
     db_session.add(user)
@@ -131,7 +131,7 @@ async def test_admin_user(db_session):
         email="admin@example.com",
         password_hash=hash_password("admin123"),
         display_name="Admin User",
-        level="advanced",
+        level="C1",
         preferences={"is_admin": True}
     )
     db_session.add(user)
@@ -154,7 +154,7 @@ async def test_google_user(db_session):
         password_hash=None,
         auth_provider="google",
         display_name="Google User",
-        level="intermediate",
+        level="B1",
         preferences={"is_admin": False},
     )
     db_session.add(user)

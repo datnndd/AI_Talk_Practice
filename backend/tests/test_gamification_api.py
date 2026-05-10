@@ -213,7 +213,7 @@ async def test_shop_redemptions_returns_only_current_user_orders_sorted(test_cli
         email="other-shop@example.com",
         password_hash=hash_password("password123"),
         display_name="Other Shop User",
-        level="beginner",
+        level="A1",
         preferences={"is_admin": False},
     )
     product = ShopProduct(
@@ -299,7 +299,7 @@ async def test_leaderboard_returns_current_week_xp_by_default(test_client, db_se
         email="leader@example.com",
         password_hash=hash_password("leader123"),
         display_name="Leaderboard Pro",
-        level="advanced",
+        level="C1",
         total_xp=2000,
         preferences={"is_admin": False},
     )

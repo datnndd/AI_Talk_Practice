@@ -38,7 +38,7 @@ def make_scenario(*, tasks=None):
 
 def test_lesson_runtime_generates_package_and_advances():
     scenario = make_scenario()
-    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
+    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="A1")
     state = LessonRuntimeService.initial_state(package)
 
     assert package.lesson_id
@@ -77,7 +77,7 @@ def test_lesson_runtime_generates_package_and_advances():
 
 def test_lesson_hint_fallback_explains_current_question():
     scenario = make_scenario(tasks=["ordering food"])
-    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
+    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="A1")
     state = LessonRuntimeService.initial_state(package)
     state.last_question = "What would you like to order today?"
 
@@ -99,7 +99,7 @@ def test_lesson_hint_fallback_explains_current_question():
 @pytest.mark.asyncio
 async def test_lesson_hint_dynamic_sends_current_question_to_llm():
     scenario = make_scenario(tasks=["ordering food"])
-    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
+    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="A1")
     state = LessonRuntimeService.initial_state(package)
     state.last_question = "Would you like that hot or iced?"
     llm = HintLLM(json.dumps({
@@ -135,7 +135,7 @@ async def test_lesson_hint_dynamic_sends_current_question_to_llm():
 @pytest.mark.asyncio
 async def test_lesson_hint_dynamic_invalid_json_can_fallback():
     scenario = make_scenario(tasks=["ordering food"])
-    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
+    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="A1")
     state = LessonRuntimeService.initial_state(package)
     state.last_question = "What would you like to order today?"
     llm = HintLLM("not json")
@@ -159,7 +159,7 @@ async def test_lesson_hint_dynamic_invalid_json_can_fallback():
 
 def test_lesson_hint_cache_key_uses_question_and_follow_up_index():
     scenario = make_scenario(tasks=["ordering food"])
-    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
+    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="A1")
     state = LessonRuntimeService.initial_state(package)
     state.last_question = "What would you like to order today?"
     hint = LessonRuntimeService.build_hint(package=package, state=state, user_last_answer=None)
@@ -238,22 +238,22 @@ def test_lesson_package_uses_prompt_generated_goals_by_level():
         ],
     }
 
-    beginner_package = LessonRuntimeService.create_lesson_package_from_plan(
+    a1_package = LessonRuntimeService.create_lesson_package_from_plan(
         scenario=scenario,
-        level="beginner",
+        level="A1",
         plan=plan,
     )
-    advanced_package = LessonRuntimeService.create_lesson_package_from_plan(
+    c1_package = LessonRuntimeService.create_lesson_package_from_plan(
         scenario=scenario,
-        level="advanced",
+        level="C1",
         plan=plan,
     )
 
-    assert len(beginner_package.objectives) == 2
-    assert len(advanced_package.objectives) == 4
-    assert advanced_package.objectives[0].main_question == plan["opening_message"]
-    assert advanced_package.objectives[0].expected_points == ["target role", "relevant experience"]
-    assert advanced_package.objectives[0].follow_up_questions == ["What experience is most relevant?"]
+    assert len(a1_package.objectives) == 2
+    assert len(c1_package.objectives) == 4
+    assert c1_package.objectives[0].main_question == plan["opening_message"]
+    assert c1_package.objectives[0].expected_points == ["target role", "relevant experience"]
+    assert c1_package.objectives[0].follow_up_questions == ["What experience is most relevant?"]
 
 
 def test_lesson_package_uses_prompt_generated_useful_phrases():
@@ -273,7 +273,7 @@ def test_lesson_package_uses_prompt_generated_useful_phrases():
 
     package = LessonRuntimeService.create_lesson_package_from_plan(
         scenario=scenario,
-        level="beginner",
+        level="A1",
         plan=plan,
     )
 
@@ -301,7 +301,7 @@ def test_prompt_generated_follow_up_avoids_generic_teacher_prompt():
         ],
     }
 
-    package = LessonRuntimeService.create_lesson_package_from_plan(scenario=scenario, level="advanced", plan=plan)
+    package = LessonRuntimeService.create_lesson_package_from_plan(scenario=scenario, level="C1", plan=plan)
     state = LessonRuntimeService.initial_state(package)
     result = LessonRuntimeService.advance(
         scenario=scenario,
@@ -336,7 +336,7 @@ def test_meta_opening_from_plan_is_replaced_with_roleplay_line():
 
     package = LessonRuntimeService.create_lesson_package_from_plan(
         scenario=scenario,
-        level="beginner",
+        level="A1",
         plan=plan,
     )
 
@@ -357,7 +357,7 @@ def test_fallback_contextualizes_vague_vocabulary_objectives():
     scenario.ai_role = "Hiring manager"
     scenario.ai_system_prompt = "You are an interviewer hiring a candidate."
 
-    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="beginner")
+    package = LessonRuntimeService.create_lesson_package(scenario=scenario, level="A1")
     state = LessonRuntimeService.initial_state(package)
     state_read = LessonRuntimeService.build_state_read(
         session_id=99,

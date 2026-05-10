@@ -12,18 +12,11 @@ from app.modules.users.schemas.user import ChangePasswordRequest, OnboardingRequ
 logger = logging.getLogger(__name__)
 
 
-LEGACY_LEVEL_TO_CEFR = {
-    "beginner": "A1",
-    "intermediate": "B1",
-    "advanced": "C1",
-}
-
-
 def _normalize_cefr_level(level: str | None) -> str | None:
     if not level:
         return None
     normalized = level.strip()
-    return LEGACY_LEVEL_TO_CEFR.get(normalized.lower(), normalized.upper())
+    return normalized.upper()
 
 class UserService:
     @staticmethod

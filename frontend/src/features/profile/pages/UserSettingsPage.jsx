@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CaretLeft, Camera, SignOut } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -16,7 +16,7 @@ const UserSettingsPage = () => {
     display_name: user?.display_name || "",
     avatar: user?.avatar || "",
     age: user?.age || "",
-    level: user?.level || "beginner",
+    level: user?.level || "A1",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -39,7 +39,7 @@ const UserSettingsPage = () => {
         display_name: user.display_name || "",
         avatar: user.avatar || "",
         age: user.age || "",
-        level: user.level || "beginner",
+        level: user.level || "A1",
       });
     }
   }, [user]);
@@ -202,9 +202,6 @@ const UserSettingsPage = () => {
                   value={formData.level}
                   onChange={(event) => setFormData({ ...formData, level: event.target.value })}
                 >
-                  <option value="beginner">beginner</option>
-                  <option value="intermediate">intermediate</option>
-                  <option value="advanced">advanced</option>
                   <option value="A1">A1</option>
                   <option value="A2">A2</option>
                   <option value="B1">B1</option>

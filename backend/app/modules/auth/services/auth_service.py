@@ -43,7 +43,7 @@ class AuthService:
     async def _create_user_with_free_tier(db: AsyncSession, **kwargs) -> User:
         """Centralized helper to create a user and assign a free subscription."""
         kwargs.setdefault("display_name", "")
-        kwargs.setdefault("level", "beginner")
+        kwargs.setdefault("level", "A1")
 
         user = await UserRepository.create(db, **kwargs)
         sub = Subscription(user_id=user.id, tier="FREE", status="active", features={})

@@ -174,7 +174,7 @@ test.describe('Admin Curriculum Management', () => {
         id: 1,
         code: 'A1',
         cefr_level: 'A1',
-        title: 'Beginner',
+        title: 'A1 Starter',
         description: 'Starter path',
         order_index: 0,
         is_active: true,
@@ -368,7 +368,7 @@ test.describe('Admin Curriculum Management', () => {
 
   test('loads curriculum tree', async ({ page }) => {
     await page.goto('/admin/curriculum');
-    await expect(page.getByRole('button', { name: /1\. Beginner/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /1\\. A1 Starter/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /1\. Greetings/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /1\. Say hello/ })).toBeVisible();
   });
@@ -378,7 +378,7 @@ test.describe('Admin Curriculum Management', () => {
 
     await page.getByTestId('new-section-button').click();
     await page.getByTestId('level-code-input').fill('B1');
-    await page.getByTestId('level-title-input').fill('Intermediate');
+    await page.getByTestId('level-title-input').fill('B1 Independent');
     await page.getByTestId('save-curriculum-entity').click();
     await expect(page.getByText('section saved.')).toBeVisible();
 

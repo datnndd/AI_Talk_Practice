@@ -83,7 +83,7 @@ def build_lesson_hint_user_prompt(
         title=scenario.title,
         description=scenario.description,
         persona=persona,
-        level=level or "intermediate",
+        level=level or "B1",
         current_question=current_question,
         goal=goal,
         expected_points=_compact_list(expected_points),

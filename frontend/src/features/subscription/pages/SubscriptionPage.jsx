@@ -191,7 +191,7 @@ const SubscriptionPage = () => {
                   {savingPercent > 0 ? <p className="mt-2 inline-flex rounded-full bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">Tiết kiệm khoảng {savingPercent}%/tháng</p> : null}
                 </div>
                 <ul className="mt-7 space-y-3 text-sm font-semibold text-zinc-600">
-                  {["Kịch bản VIP", "AI tutor không giới hạn", "Advanced feedback"].map((item) => (
+                  {["Kịch bản VIP", "AI tutor không giới hạn", "Detailed feedback"].map((item) => (
                     <li key={item} className="flex items-center gap-2"><CheckCircle size={17} weight="fill" className="text-emerald-500" />{item}</li>
                   ))}
                 </ul>

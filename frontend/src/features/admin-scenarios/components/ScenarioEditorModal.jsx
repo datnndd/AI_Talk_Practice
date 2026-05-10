@@ -299,7 +299,7 @@ const ScenarioEditorModal = ({
                   value={form.tags}
                   onChange={(value) => updateField("tags", value)}
                   helperText="Dùng cho tìm kiếm và lọc."
-                  placeholder={"travel\nhotel\nbeginner"}
+                  placeholder={"travel\\nhotel\\nA1"}
                   rows={3}
                 />
 

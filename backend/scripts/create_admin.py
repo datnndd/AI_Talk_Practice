@@ -23,7 +23,7 @@ async def create_admin(email, password):
                 email=email,
                 password_hash=hash_password(password),
                 display_name="Admin User",
-                level="advanced",
+                level="C1",
                 is_onboarding_completed=True,
                 preferences={"is_admin": True}
             )

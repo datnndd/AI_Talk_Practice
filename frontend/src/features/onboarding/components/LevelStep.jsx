@@ -3,12 +3,12 @@ import { motion } from "framer-motion";
 import { CheckCircle, Circle, Sparkle, TrendUp, TreeStructure } from "@phosphor-icons/react";
 
 const levels = [
-  { value: "A1", title: "A1 Starter", group: "Beginner", description: "You know a few words and want to build core phrases.", icon: Sparkle, color: "text-secondary", iconBg: "bg-secondary-container text-on-secondary-container" },
-  { value: "A2", title: "A2 Elementary", group: "Beginner", description: "You can handle simple sentences and everyday topics.", icon: Sparkle, color: "text-secondary", iconBg: "bg-secondary-container text-on-secondary-container" },
-  { value: "B1", title: "B1 Intermediate", group: "Recommended", description: "You can hold basic conversations and want smoother speaking.", icon: TrendUp, color: "text-[#2F80ED]", iconBg: "bg-primary-fixed text-on-primary-fixed" },
-  { value: "B2", title: "B2 Upper Intermediate", group: "Intermediate", description: "You can discuss familiar topics and want more nuance.", icon: TrendUp, color: "text-[#2F80ED]", iconBg: "bg-primary-fixed text-on-primary-fixed" },
-  { value: "C1", title: "C1 Advanced", group: "Advanced", description: "You speak fluently and want professional precision.", icon: TreeStructure, color: "text-tertiary", iconBg: "bg-tertiary-fixed text-on-tertiary-fixed" },
-  { value: "C2", title: "C2 Mastery", group: "Advanced", description: "You want native-like control, rhetoric, and polish.", icon: TreeStructure, color: "text-tertiary", iconBg: "bg-tertiary-fixed text-on-tertiary-fixed" },
+  { value: "A1", title: "A1 Starter", group: "Starter", description: "You know a few words and want to build core phrases.", icon: Sparkle, color: "text-secondary", iconBg: "bg-secondary-container text-on-secondary-container" },
+  { value: "A2", title: "A2 Elementary", group: "Starter", description: "You can handle simple sentences and everyday topics.", icon: Sparkle, color: "text-secondary", iconBg: "bg-secondary-container text-on-secondary-container" },
+  { value: "B1", title: "B1 Independent", group: "Recommended", description: "You can hold basic conversations and want smoother speaking.", icon: TrendUp, color: "text-[#2F80ED]", iconBg: "bg-primary-fixed text-on-primary-fixed" },
+  { value: "B2", title: "B2 Independent", group: "Independent", description: "You can discuss familiar topics and want more nuance.", icon: TrendUp, color: "text-[#2F80ED]", iconBg: "bg-primary-fixed text-on-primary-fixed" },
+  { value: "C1", title: "C1 Proficient", group: "Proficient", description: "You speak fluently and want professional precision.", icon: TreeStructure, color: "text-tertiary", iconBg: "bg-tertiary-fixed text-on-tertiary-fixed" },
+  { value: "C2", title: "C2 Mastery", group: "Proficient", description: "You want native-like control, rhetoric, and polish.", icon: TreeStructure, color: "text-tertiary", iconBg: "bg-tertiary-fixed text-on-tertiary-fixed" },
 ];
 
 const LevelStep = ({ formData, updateData }) => {

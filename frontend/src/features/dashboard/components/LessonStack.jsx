@@ -31,9 +31,9 @@ const LessonItem = ({ emoji, title, level, duration, xp, delay }) => (
 
 const LessonStack = () => {
   const [lessons, setLessons] = useState([
-    { id: 1, emoji: "☕", title: "Cafe Conversations", level: "Intermediate", duration: 8, xp: 45 },
-    { id: 2, emoji: "✈️", title: "Airport Logistics", level: "Beginner", duration: 12, xp: 30 },
-    { id: 3, emoji: "💼", title: "Business Etiquette", level: "Advanced", duration: 15, xp: 60 },
+    { id: 1, emoji: "☕", title: "Cafe Conversations", level: "B1", duration: 8, xp: 45 },
+    { id: 2, emoji: "✈️", title: "Airport Logistics", level: "A1", duration: 12, xp: 30 },
+    { id: 3, emoji: "💼", title: "Business Etiquette", level: "C1", duration: 15, xp: 60 },
   ]);
 
   useEffect(() => {

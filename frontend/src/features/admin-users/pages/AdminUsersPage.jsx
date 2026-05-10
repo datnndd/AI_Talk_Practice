@@ -28,9 +28,6 @@ const DEFAULT_FILTERS = {
 };
 
 const LEVEL_OPTIONS = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
   { value: "A1", label: "A1" },
   { value: "A2", label: "A2" },
   { value: "B1", label: "B1" },
@@ -89,7 +86,7 @@ const buildUpdatePayload = (formData) => ({
 const toFormState = (user) => ({
   display_name: user?.display_name ?? "",
   age: user?.age ?? "",
-  level: user?.level ?? "intermediate",
+  level: user?.level ?? "A1",
   learning_purpose: toCommaSeparated(user?.learning_purpose),
   favorite_topics: toCommaSeparated(user?.favorite_topics),
   main_challenge: user?.main_challenge ?? "",

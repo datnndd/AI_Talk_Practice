@@ -102,18 +102,18 @@ def _persona(scenario: Scenario) -> str:
 
 def _max_follow_ups_for_level(level: str) -> int:
     normalized = (level or "").lower()
-    if normalized in {"beginner", "easy", "a1", "a2"}:
+    if normalized in {"a1", "a2"}:
         return 2
-    if normalized in {"intermediate", "b1", "b2", "medium"}:
+    if normalized in {"b1", "b2"}:
         return 2
     return 3
 
 
 def _min_words_for_level(level: str) -> int:
     normalized = (level or "").lower()
-    if normalized in {"beginner", "easy", "a1", "a2"}:
+    if normalized in {"a1", "a2"}:
         return 4
-    if normalized in {"intermediate", "b1", "b2", "medium"}:
+    if normalized in {"b1", "b2"}:
         return 6
     return 8
 
@@ -193,16 +193,16 @@ class ObjectiveBlueprint:
 
 def _level_band(level: str | None) -> str:
     normalized = (level or "").lower()
-    if normalized in {"beginner", "easy", "a1", "a2"}:
-        return "beginner"
-    if normalized in {"advanced", "hard", "c1", "c2"}:
-        return "advanced"
-    return "intermediate"
+    if normalized in {"a1", "a2"}:
+        return "A1"
+    if normalized in {"c1", "c2"}:
+        return "C1"
+    return "B1"
 
 
 def _objective_count_for_level(level: str | None, available: int) -> int:
     band = _level_band(level)
-    desired = {"beginner": 2, "intermediate": 3, "advanced": 4}[band]
+    desired = {"A1": 2, "B1": 3, "C1": 4}[band]
     return max(1, min(desired, available))
 
 
@@ -420,7 +420,7 @@ class LessonRuntimeService:
     ) -> LessonPackage:
         topic = _title_case_topic(scenario)
         assigned_task = _assigned_task(scenario)
-        resolved_level = (level or "intermediate").strip()
+        resolved_level = (level or "B1").strip()
         blueprints = _fallback_blueprints(
             scenario=scenario,
             level=resolved_level,
@@ -443,7 +443,7 @@ class LessonRuntimeService:
         strict: bool = False,
     ) -> LessonPackage:
         topic = _title_case_topic(scenario)
-        resolved_level = (level or "intermediate").strip()
+        resolved_level = (level or "B1").strip()
         goals = plan.get("goals")
         if not isinstance(goals, list):
             if strict:
@@ -526,7 +526,7 @@ class LessonRuntimeService:
                     hint_seed=LessonHintSeed(
                         focus=blueprint.goal,
                         grammar=", ".join(blueprint.vocabulary),
-                        max_length=2 if level.lower() in {"beginner", "easy", "a1", "a2"} else 4,
+                        max_length=2 if level.lower() in {"a1", "a2"} else 4,
                     ),
                 )
             )

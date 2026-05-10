@@ -42,7 +42,7 @@ class AdminUserUpdateRequest(BaseModel):
     age: int | None = Field(default=None, ge=1, le=120)
     level: str | None = Field(
         default=None,
-        pattern=r"^(A1|A2|B1|B2|C1|C2|beginner|intermediate|advanced)$",
+        pattern=r"^(A1|A2|B1|B2|C1|C2)$",
     )
     learning_purpose: Any | None = None
     main_challenge: str | None = Field(default=None, max_length=500)

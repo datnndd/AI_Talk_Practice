@@ -33,7 +33,7 @@ class Scenario(Base, TimestampMixin):
     Design notes:
     - `ai_system_prompt` is the scenario-specific instruction used at runtime.
     - `tasks` JSONB: learner tasks required to complete the conversation.
-    - `tags` JSONB: ["airport", "formal", "beginner-friendly"] — aids recommendation.
+    - `tags` JSONB: ["airport", "formal", "A1-friendly"] — aids recommendation.
     - `estimated_duration` in seconds — used for session time predictions in the UI.
     - Soft-delete via `deleted_at` — never hard-delete published scenarios.
     """

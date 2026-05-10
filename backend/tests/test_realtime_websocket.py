@@ -303,7 +303,7 @@ async def test_user(clean_realtime_tables):
             email="ws-test@example.com",
             password_hash=hash_password("password123"),
             display_name="Realtime Tester",
-            level="beginner",
+            level="A1",
         )
         session.add(user)
         await session.commit()

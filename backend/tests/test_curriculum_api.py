@@ -4,11 +4,10 @@ import pytest
 
 from app.core.security import create_access_token
 from app.modules.curriculum.models import LearningSection, Lesson, LessonAudioAsset, Unit
-from app.modules.curriculum.services import _normalize_cefr_level
 
 
 async def seed_curriculum(db_session):
-    section = LearningSection(code="A1", title="Beginner", cefr_level="A1", order_index=0)
+    section = LearningSection(code="A1", title="A1 Starter", cefr_level="A1", order_index=0)
     db_session.add(section)
     await db_session.flush()
     unit_1 = Unit(section_id=section.id, title="First unit", order_index=0, estimated_minutes=5)
@@ -157,10 +156,10 @@ async def test_curriculum_falls_back_to_a1_without_user_cefr(client, db_session,
 
 
 @pytest.mark.asyncio
-async def test_curriculum_maps_legacy_level_to_cefr(client, db_session, test_user):
+async def test_curriculum_uses_user_level_when_current_cefr_missing(client, db_session, test_user):
     seeded = await seed_cefr_curriculum(db_session)
     test_user.current_cefr = None
-    test_user.level = "intermediate"
+    test_user.level = "B1"
     await db_session.commit()
     headers = {"Authorization": f"Bearer {create_access_token(test_user.id)}"}
 
@@ -168,7 +167,6 @@ async def test_curriculum_maps_legacy_level_to_cefr(client, db_session, test_use
 
     assert response.status_code == 200
     data = response.json()
-    assert _normalize_cefr_level(test_user.level) == "B1"
     assert data["current_cefr"] == "B1"
     assert data["current_unit_id"] == seeded["B1"]["unit"].id
 
@@ -261,7 +259,7 @@ async def test_definition_choice_scores_selected_word(client, db_session, test_u
 async def test_admin_can_create_curriculum_with_definition_choice_lesson(admin_client):
     section_response = await admin_client.post(
         "/api/admin/curriculum/sections",
-        json={"code": "B1", "title": "Intermediate", "cefr_level": "B1", "order_index": 1},
+        json={"code": "B1", "title": "B1 Independent", "cefr_level": "B1", "order_index": 1},
     )
     assert section_response.status_code == 201
     section_id = section_response.json()["id"]
