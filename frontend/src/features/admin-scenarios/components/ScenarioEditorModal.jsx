@@ -1,7 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkle, X, Image as ImageIcon, UploadSimple } from "@phosphor-icons/react";
-import { adminApi } from "../api/adminScenariosApi";
-
 import ListEditorField from "./ListEditorField";
 import { getApiErrorMessage } from "@/shared/api/httpClient";
 
@@ -40,25 +38,23 @@ const ScenarioEditorModal = ({
   const [form, setForm] = useState(() => createInitialState(scenario));
   const [formError, setFormError] = useState("");
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
+
+  useEffect(() => () => {
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+  }, [imagePreviewUrl]);
 
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
-  const handleImageUpload = async (event) => {
+  const handleImageSelect = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    try {
-      setIsUploading(true);
-      const data = await adminApi.uploadImage(file);
-      if (data.url) {
-        updateField("image_url", data.url);
-      }
-    } catch (error) {
-      setFormError(getApiErrorMessage(error, "Failed to upload image."));
-    } finally {
-      setIsUploading(false);
-    }
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImageFile(file);
+    setImagePreviewUrl(URL.createObjectURL(file));
+    setFormError("");
+    event.target.value = "";
   };
 
   const handleSubmit = async (event) => {
@@ -92,7 +88,7 @@ const ScenarioEditorModal = ({
       };
 
       setFormError("");
-      await onSubmit(payload);
+      await onSubmit(payload, imageFile);
     } catch (error) {
       setFormError(getApiErrorMessage(error, "Please check the form before saving."));
     }
@@ -177,22 +173,22 @@ const ScenarioEditorModal = ({
                       <ImageIcon size={16} /> Cover Image
                     </span>
                     <div className="flex items-center gap-4">
-                      {form.image_url && (
+                      {(imagePreviewUrl || form.image_url) && (
                         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-200">
-                          <img src={form.image_url.startsWith('http') ? form.image_url : `http://localhost:8000${form.image_url}`} alt="Scenario Cover" className="h-full w-full object-cover" />
+                          <img src={imagePreviewUrl || (form.image_url.startsWith('http') ? form.image_url : `http://localhost:8000${form.image_url}`)} alt="Scenario Cover" className="h-full w-full object-cover" />
                         </div>
                       )}
                       <div className="relative flex-1">
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={handleImageUpload}
-                          disabled={isUploading}
+                          onChange={handleImageSelect}
+                          disabled={isSaving}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                         />
                         <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-400">
                           <UploadSimple size={18} />
-                          {isUploading ? "Uploading..." : "Click to upload an image"}
+                          {imageFile ? "Image selected. Uploads when saved." : "Click to choose an image"}
                         </div>
                       </div>
                     </div>

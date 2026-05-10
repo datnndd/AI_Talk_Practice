@@ -46,7 +46,6 @@ class OnboardingRequest(BaseModel):
     learning_purpose: Any | None = None
     main_challenge: str | None = Field(default=None, max_length=500)
     favorite_topics: list[str] | str | None = None
-    daily_goal: int | None = Field(default=None, ge=1, le=1440)
     preferences: dict[str, Any] | None = None
 
     @field_validator("favorite_topics", "learning_purpose", mode="before")
@@ -76,7 +75,6 @@ class ProfileUpdateRequest(BaseModel):
     learning_purpose: Any | None = None
     main_challenge: str | None = Field(default=None, max_length=500)
     favorite_topics: list[str] | str | None = None
-    daily_goal: int | None = Field(default=None, ge=1, le=1440)
     preferences: dict[str, Any] | None = None
 
     @field_validator("favorite_topics", "learning_purpose", mode="before")
@@ -125,7 +123,6 @@ class UserRead(ORMModel):
     favorite_topics: Any | None = None
     learning_purpose: Any | None = None
     main_challenge: str | None = None
-    daily_goal: int | None = None
     is_onboarding_completed: bool
     preferences: dict[str, Any] | None = None
     subscription: SubscriptionRead | None = None

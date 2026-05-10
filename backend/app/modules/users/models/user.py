@@ -53,7 +53,6 @@ class User(Base, TimestampMixin):
     favorite_topics: Mapped[Optional[Any]] = mapped_column(JSONB)
     learning_purpose: Mapped[Optional[Any]] = mapped_column(JSONB)
     main_challenge: Mapped[Optional[str]] = mapped_column(String(500))
-    daily_goal: Mapped[Optional[int]] = mapped_column(SmallInteger)
     is_onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     # Extension

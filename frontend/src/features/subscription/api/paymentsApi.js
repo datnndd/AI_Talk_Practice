@@ -10,11 +10,6 @@ export const listSubscriptionPlans = async () => {
   return response.data;
 };
 
-export const quotePromotionCode = async (payload) => {
-  const response = await httpClient.post("/payments/promo/quote", payload);
-  return response.data;
-};
-
 export const getCheckoutStatus = async (orderCode) => {
   const response = await httpClient.get(`/payments/transactions/${orderCode}`);
   return response.data;

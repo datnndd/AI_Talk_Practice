@@ -1,4 +1,4 @@
-import { CreditCard, Gift, GlobeHemisphereWest, GraduationCap, Moon, Robot, Sun, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
+import { CreditCard, Gift, GlobeHemisphereWest, GraduationCap, HouseLine, Moon, Robot, Sun, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -73,13 +73,20 @@ const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) =
                     <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{user?.email}</p>
                   </div>
                 </div>
+                <Link
+                  to="/dashboard"
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-black text-primary-foreground shadow-sm shadow-primary/20 transition hover:bg-primary/90"
+                >
+                  <HouseLine size={16} weight="bold" />
+                  User view
+                </Link>
                 <button
                   type="button"
                   onClick={() => {
                     logout();
                     navigate("/login");
                   }}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
                   <SignOut size={16} />
                   Logout
@@ -97,15 +104,24 @@ const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) =
                     <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>
                   ) : null}
                 </div>
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  aria-label="Chuyển chế độ sáng/tối"
-                  title="Chuyển chế độ sáng/tối"
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground/70 transition-colors hover:bg-muted"
-                >
-                  {isDark ? <Sun size={20} weight="bold" /> : <Moon size={20} weight="bold" />}
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Link
+                    to="/dashboard"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 text-xs font-black uppercase tracking-[0.14em] text-primary transition hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <HouseLine size={16} weight="bold" />
+                    <span className="hidden sm:inline">User view</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    aria-label="Chuyển chế độ sáng/tối"
+                    title="Chuyển chế độ sáng/tối"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground/70 transition-colors hover:bg-muted"
+                  >
+                    {isDark ? <Sun size={20} weight="bold" /> : <Moon size={20} weight="bold" />}
+                  </button>
+                </div>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2 lg:hidden">

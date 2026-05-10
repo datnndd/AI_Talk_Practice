@@ -147,6 +147,25 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const updateProfileWithAvatar = async (profileData, avatarFile) => {
+    const formData = new FormData();
+    Object.entries(profileData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) formData.append(key, value);
+    });
+    if (avatarFile) formData.append("file", avatarFile);
+    const response = await httpClient.patch("/users/me/with-avatar", formData);
+    setUser(response.data);
+    return response.data;
+  };
+
+  const uploadAvatar = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await httpClient.post("/users/me/avatar", formData);
+    setUser(response.data);
+    return response.data;
+  };
+
   const changePassword = async (passwordData) => {
     const response = await httpClient.post("/users/me/change-password", passwordData);
     return response.data;
@@ -182,6 +201,8 @@ export const AuthProvider = ({ children }) => {
         resetPassword,
         onboard,
         updateProfile,
+        updateProfileWithAvatar,
+        uploadAvatar,
         changePassword,
         logout,
         refreshUser: fetchUser,

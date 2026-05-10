@@ -119,14 +119,14 @@ const AdminScenarios = () => {
     setIsScenarioModalOpen(true);
   };
 
-  const handleSaveScenario = async (payload) => {
+  const handleSaveScenario = async (payload, imageFile) => {
     setIsSavingScenario(true);
     setError("");
     try {
       if (editingScenario) {
-        await adminApi.updateScenario(editingScenario.id, payload);
+        await adminApi.updateScenarioWithImage(editingScenario.id, payload, imageFile);
       } else {
-        await adminApi.createScenario(payload);
+        await adminApi.createScenarioWithImage(payload, imageFile);
       }
       setNotice(editingScenario ? "Scenario updated." : "Scenario created.");
       setIsScenarioModalOpen(false);

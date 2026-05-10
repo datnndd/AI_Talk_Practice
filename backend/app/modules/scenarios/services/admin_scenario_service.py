@@ -231,6 +231,7 @@ class AdminScenarioService:
             character_id=body.character_id,
             is_active=body.is_active,
             is_pro=body.is_pro,
+            image_url=body.image_url,
         )
         await db.commit()
         return await cls.get_scenario(db, scenario.id)

@@ -9,8 +9,28 @@ export const adminApi = {
     const { data } = await httpClient.post("/admin/scenarios", payload);
     return data;
   },
+  createScenarioWithImage: async (payload, imageFile) => {
+    const formData = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      formData.append(key, Array.isArray(value) ? JSON.stringify(value) : value);
+    });
+    if (imageFile) formData.append("image", imageFile);
+    const { data } = await httpClient.post("/admin/scenarios/with-image", formData);
+    return data;
+  },
   updateScenario: async (scenarioId, payload) => {
     const { data } = await httpClient.put(`/admin/scenarios/${scenarioId}`, payload);
+    return data;
+  },
+  updateScenarioWithImage: async (scenarioId, payload, imageFile) => {
+    const formData = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      formData.append(key, Array.isArray(value) ? JSON.stringify(value) : value);
+    });
+    if (imageFile) formData.append("image", imageFile);
+    const { data } = await httpClient.put(`/admin/scenarios/${scenarioId}/with-image`, formData);
     return data;
   },
   deleteScenario: async (scenarioId) => {
@@ -31,12 +51,6 @@ export const adminApi = {
   },
   bulkAction: async (payload) => {
     const { data } = await httpClient.post("/admin/scenarios/bulk-actions", payload);
-    return data;
-  },
-  uploadImage: async (file) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const { data } = await httpClient.post("/admin/scenarios/upload-image", formData);
     return data;
   },
 };

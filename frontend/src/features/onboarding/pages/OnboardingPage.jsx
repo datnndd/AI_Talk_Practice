@@ -26,7 +26,6 @@ const OnboardingPage = () => {
     learning_purpose: "",
     main_challenge: "",
     favorite_topics: "",
-    daily_goal: 15,
   });
 
   const updateData = (field, value) => {

@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, status
+import json
+import logging
+import os
+import re
+import uuid
+from urllib.parse import unquote, urlparse
+
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, require_admin_user
@@ -17,8 +24,77 @@ from app.modules.scenarios.schemas import (
 )
 from app.modules.scenarios.serializers import serialize_admin_scenario
 from app.modules.scenarios.services.admin_scenario_service import AdminScenarioService
+from app.core.config import settings
+from app.core.exceptions import BadRequestError
+from app.infra.supabase_storage import supabase_storage
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+logger = logging.getLogger(__name__)
+
+
+def _parse_json_list(value: str | None) -> list[str]:
+    if not value:
+        return []
+    parsed = json.loads(value)
+    return parsed if isinstance(parsed, list) else []
+
+
+def _scenario_body_from_form(
+    *,
+    title: str,
+    description: str,
+    category: str,
+    difficulty: str,
+    ai_role: str,
+    user_role: str,
+    tasks: str | None,
+    ai_system_prompt: str,
+    tags: str | None,
+    estimated_duration_minutes: int,
+    character_id: int | None,
+    is_active: bool,
+    is_pro: bool,
+    image_url: str | None,
+    update: bool = False,
+) -> ScenarioAdminCreate | ScenarioAdminUpdate:
+    schema = ScenarioAdminUpdate if update else ScenarioAdminCreate
+    return schema(
+        title=title,
+        description=description,
+        category=category,
+        difficulty=difficulty,
+        ai_role=ai_role,
+        user_role=user_role,
+        tasks=_parse_json_list(tasks),
+        ai_system_prompt=ai_system_prompt,
+        tags=_parse_json_list(tags),
+        estimated_duration_minutes=estimated_duration_minutes,
+        character_id=character_id,
+        is_active=is_active,
+        is_pro=is_pro,
+        image_url=image_url or None,
+    )
+
+
+def _scenario_storage_path_from_url(url: str | None) -> str | None:
+    if not url or not settings.supabase_url:
+        return None
+    parsed = urlparse(url)
+    storage_prefix = f"/storage/v1/object/public/{settings.supabase_images_bucket}/"
+    if parsed.netloc != urlparse(settings.supabase_url).netloc or not parsed.path.startswith(storage_prefix):
+        return None
+    path = unquote(parsed.path[len(storage_prefix):])
+    return path if path.startswith("scenario-images/") else None
+
+
+async def _delete_scenario_image_by_url(url: str | None) -> None:
+    path = _scenario_storage_path_from_url(url)
+    if not path or not supabase_storage.is_configured:
+        return
+    try:
+        await supabase_storage.delete_object(bucket=settings.supabase_images_bucket, path=path)
+    except Exception:
+        logger.warning("Failed to delete scenario image", exc_info=True)
 
 
 @router.post("/scenarios/generate-default-prompt", response_model=GenerateDefaultPromptResponse)
@@ -99,6 +175,55 @@ async def create_admin_scenario(
     )
 
 
+@router.post("/scenarios/with-image", response_model=ScenarioAdminRead, status_code=status.HTTP_201_CREATED)
+async def create_admin_scenario_with_image(
+    title: str = Form(...),
+    description: str = Form(...),
+    category: str = Form(...),
+    difficulty: str = Form(...),
+    ai_role: str = Form(default=""),
+    user_role: str = Form(default=""),
+    tasks: str | None = Form(default=None),
+    ai_system_prompt: str = Form(...),
+    tags: str | None = Form(default=None),
+    estimated_duration_minutes: int = Form(default=10),
+    character_id: int | None = Form(default=None),
+    is_active: bool = Form(default=True),
+    is_pro: bool = Form(default=False),
+    image_url: str | None = Form(default=None),
+    image: UploadFile | None = File(default=None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin_user),
+):
+    body = _scenario_body_from_form(
+        title=title,
+        description=description,
+        category=category,
+        difficulty=difficulty,
+        ai_role=ai_role,
+        user_role=user_role,
+        tasks=tasks,
+        ai_system_prompt=ai_system_prompt,
+        tags=tags,
+        estimated_duration_minutes=estimated_duration_minutes,
+        character_id=character_id,
+        is_active=is_active,
+        is_pro=is_pro,
+        image_url=image_url,
+    )
+    if image is not None:
+        uploaded = await upload_scenario_image(image, user)
+        body.image_url = uploaded["url"]
+    try:
+        scenario = await AdminScenarioService.create_scenario(db, user_id=user.id, body=body)
+    except Exception:
+        if image is not None:
+            await _delete_scenario_image_by_url(body.image_url)
+        raise
+    usage_count = await AdminScenarioService.get_scenario_usage_count(db, scenario.id)
+    return serialize_admin_scenario(scenario, usage_count=usage_count)
+
+
 @router.put("/scenarios/{scenario_id}", response_model=ScenarioAdminRead)
 async def update_admin_scenario(
     scenario_id: int,
@@ -112,6 +237,61 @@ async def update_admin_scenario(
         scenario,
         usage_count=usage_count,
     )
+
+
+@router.put("/scenarios/{scenario_id}/with-image", response_model=ScenarioAdminRead)
+async def update_admin_scenario_with_image(
+    scenario_id: int,
+    title: str = Form(...),
+    description: str = Form(...),
+    category: str = Form(...),
+    difficulty: str = Form(...),
+    ai_role: str = Form(default=""),
+    user_role: str = Form(default=""),
+    tasks: str | None = Form(default=None),
+    ai_system_prompt: str = Form(...),
+    tags: str | None = Form(default=None),
+    estimated_duration_minutes: int = Form(default=10),
+    character_id: int | None = Form(default=None),
+    is_active: bool = Form(default=True),
+    is_pro: bool = Form(default=False),
+    image_url: str | None = Form(default=None),
+    image: UploadFile | None = File(default=None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin_user),
+):
+    body = _scenario_body_from_form(
+        title=title,
+        description=description,
+        category=category,
+        difficulty=difficulty,
+        ai_role=ai_role,
+        user_role=user_role,
+        tasks=tasks,
+        ai_system_prompt=ai_system_prompt,
+        tags=tags,
+        estimated_duration_minutes=estimated_duration_minutes,
+        character_id=character_id,
+        is_active=is_active,
+        is_pro=is_pro,
+        image_url=image_url,
+        update=True,
+    )
+    old_scenario = await AdminScenarioService.get_scenario(db, scenario_id)
+    old_image_url = old_scenario.image_url
+    if image is not None:
+        uploaded = await upload_scenario_image(image, user)
+        body.image_url = uploaded["url"]
+    try:
+        scenario = await AdminScenarioService.update_scenario(db, scenario_id=scenario_id, user_id=user.id, body=body)
+    except Exception:
+        if image is not None:
+            await _delete_scenario_image_by_url(body.image_url)
+        raise
+    if image is not None:
+        await _delete_scenario_image_by_url(old_image_url)
+    usage_count = await AdminScenarioService.get_scenario_usage_count(db, scenario.id)
+    return serialize_admin_scenario(scenario, usage_count=usage_count)
 
 
 @router.delete("/scenarios/{scenario_id}", response_model=ScenarioAdminRead)
@@ -155,18 +335,9 @@ async def toggle_admin_scenario(
         usage_count=usage_count,
     )
 
-import os
-import re
-import uuid
-from fastapi import UploadFile, File
-from app.core.config import settings
-from app.core.exceptions import BadRequestError
-from app.infra.supabase_storage import supabase_storage
-
-@router.post("/scenarios/upload-image")
 async def upload_scenario_image(
-    file: UploadFile = File(...),
-    _: User = Depends(require_admin_user),
+    file: UploadFile,
+    _: User,
 ):
     normalized_content_type = (file.content_type or "").split(";", 1)[0].strip().lower()
     if not normalized_content_type.startswith("image/"):

@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { User, CalendarBlank, Target, Lightning } from "@phosphor-icons/react";
+import { User, CalendarBlank, Lightning } from "@phosphor-icons/react";
 
 const FinalStep = ({ formData, updateData }) => {
   const itemVariants = {
@@ -10,7 +10,7 @@ const FinalStep = ({ formData, updateData }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    updateData(name, name === "age" || name === "daily_goal" ? parseInt(value) || "" : value);
+    updateData(name, name === "age" ? parseInt(value) || "" : value);
   };
 
   return (
@@ -66,25 +66,6 @@ const FinalStep = ({ formData, updateData }) => {
           />
         </motion.div>
 
-        {/* Daily Goal */}
-        <motion.div variants={itemVariants} className="flex flex-col gap-2">
-          <label className="text-sm font-bold text-zinc-700 flex items-center gap-2">
-            <Target size={18} /> Daily Goal (Minutes)
-          </label>
-          <div className="flex gap-3">
-            {[5, 15, 30, 60].map(mins => (
-              <button
-                key={mins}
-                type="button"
-                onClick={() => updateData("daily_goal", mins)}
-                className={`flex-1 py-3 rounded-xl border-2 font-bold transition-all ${formData.daily_goal === mins ? 'bg-primary/10 border-primary text-primary' : 'bg-surface-container-lowest border-outline-variant/30 text-zinc-500 hover:border-primary/30'}`}
-              >
-                {mins} m
-              </button>
-            ))}
-          </div>
-        </motion.div>
-        
         {/* Main Challenge */}
         <motion.div variants={itemVariants} className="flex flex-col gap-2">
           <label className="text-sm font-bold text-zinc-700 flex items-center gap-2">

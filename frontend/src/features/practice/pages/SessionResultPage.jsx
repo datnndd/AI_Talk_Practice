@@ -5,7 +5,6 @@ import {
   ArrowRight,
   ChatCenteredText,
   CheckCircle,
-  Clock,
   Crown,
   Lightning,
   Textbox,
@@ -231,61 +230,131 @@ const SessionResultPage = () => {
   ];
 
   const completionBadge = {
-    completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle },
-    partial: { label: "Partial", color: "bg-amber-100 text-amber-700 border-amber-200", icon: WarningCircle },
-    not_completed: { label: "Not completed", color: "bg-rose-100 text-rose-700 border-rose-200", icon: XCircle },
+    completed: { label: "Ho?n th?nh", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle },
+    partial: { label: "G?n ho?n th?nh", color: "bg-amber-100 text-amber-700 border-amber-200", icon: WarningCircle },
+    not_completed: { label: "C?n luy?n th?m", color: "bg-rose-100 text-rose-700 border-rose-200", icon: XCircle },
   }[objectiveCompletion] || null;
+  const scenarioId = session.scenario?.id;
+  const scenarioTitle = session.scenario?.title || "Conversation session";
+  const hasRetryTarget = Number.isFinite(Number(scenarioId));
+  const heroTitle = score ? "B?n ?? ho?n th?nh k?ch b?n" : "?? l?u b?i n?i c?a b?n";
+  const heroMessage = score
+    ? "T?t l?m. Xem nhanh ph?n h?i r?i ti?p t?c b?i h?c k? ti?p."
+    : "B?n c? th? ti?p t?c h?c ngay. AI feedback s? c?p nh?t khi ph?n t?ch xong.";
+  const quickFeedbackSections = [
+    {
+      title: "?i?m m?nh",
+      icon: Trophy,
+      tone: "border-emerald-200 bg-emerald-50 text-emerald-950",
+      titleClass: "text-emerald-700",
+      iconClass: "text-emerald-600",
+      items: strengths,
+      empty: score ? "Ch?a c? ?i?m m?nh n?i b?t trong l?n ph?n t?ch n?y." : "?ang ch? AI ph?n t?ch ?i?m m?nh.",
+    },
+    {
+      title: "C?n c?i thi?n",
+      icon: WarningCircle,
+      tone: "border-amber-200 bg-amber-50 text-amber-950",
+      titleClass: "text-amber-700",
+      iconClass: "text-amber-600",
+      items: improvements,
+      empty: score ? "Ch?a c? g?i ? c?i thi?n c? th?." : "?ang ch? AI t?m ?i?m c?n luy?n th?m.",
+    },
+    {
+      title: "B??c ti?p theo",
+      icon: ArrowRight,
+      tone: "border-primary/20 bg-primary/5 text-zinc-800",
+      titleClass: "text-primary",
+      iconClass: "text-primary",
+      items: nextSteps,
+      empty: score ? "Ti?p t?c h?c ?? gi? nh?p luy?n n?i h?m nay." : "Ti?p t?c h?c trong l?c feedback ???c t?o.",
+    },
+  ];
 
   return (
     <div className="flex w-full flex-col gap-5">
-      <button
-        type="button"
-        onClick={() => navigate("/dashboard")}
-        className="inline-flex w-fit items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-700 shadow-sm transition hover:bg-zinc-50"
-      >
-        <ArrowLeft size={18} weight="bold" />
-        Back to topics
-      </button>
-
-      {/* Header */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Practice Result</p>
-        <h1 className="mt-2 font-display text-3xl font-black tracking-tight text-zinc-950">
-          {session.scenario?.title || "Conversation session"}
-        </h1>
-        <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-          {session.scenario?.description || "Your speaking session is ready for review."}
-        </p>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Status</p>
-            <p className="mt-2 text-lg font-black capitalize text-zinc-950">{session.status}</p>
-          </div>
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Reason</p>
-            <p className="mt-2 text-lg font-black text-zinc-950">{endReason}</p>
-          </div>
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-              <Clock size={14} weight="bold" />
-              Duration
+      <section className="overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-primary/10 p-6 shadow-sm">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+              <CheckCircle size={14} weight="fill" />
+              {score ? "Ho?n th?nh" : "?? l?u b?i"}
             </div>
-            <p className="mt-2 text-lg font-black text-zinc-950">{formatDuration(session.duration_seconds)}</p>
+            <p className="mt-4 text-[11px] font-black uppercase tracking-[0.24em] text-primary">K?t qu? luy?n n?i</p>
+            <h1 className="mt-2 font-display text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">
+              {heroTitle}
+            </h1>
+            <p className="mt-3 text-base font-bold text-zinc-800">{scenarioTitle}</p>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+              {session.scenario?.description || heroMessage}
+            </p>
+            <p className="mt-3 text-sm font-semibold text-emerald-700">{heroMessage}</p>
           </div>
+
+          <div className="rounded-2xl border border-white/80 bg-white/90 p-5 shadow-sm lg:min-w-[260px]">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">?i?m t?ng</p>
+                <p className="mt-2 text-4xl font-black text-zinc-950">
+                  {score ? Number(score.overall_score || 0).toFixed(1) : "--"}
+                </p>
+              </div>
+              {score ? (
+                <div className="relative flex items-center justify-center">
+                  <ScoreRing score={score.overall_score} size={84} />
+                  <span className="absolute text-xs font-black uppercase tracking-wider text-zinc-500">/10</span>
+                </div>
+              ) : (
+                <div className="h-16 w-16 animate-spin rounded-full border-4 border-sky-100 border-t-sky-500" />
+              )}
+            </div>
+            <div className="mt-5 grid gap-2 text-sm">
+              <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2">
+                <span className="font-bold text-zinc-500">Th?i l??ng</span>
+                <span className="font-black text-zinc-950">{formatDuration(session.duration_seconds)}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2">
+                <span className="font-bold text-zinc-500">Tr?ng th?i</span>
+                <span className="font-black capitalize text-zinc-950">{session.status}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2">
+                <span className="font-bold text-zinc-500">L? do</span>
+                <span className="text-right font-black text-zinc-950">{endReason}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard")}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-950 px-6 py-3 text-sm font-black text-white shadow-sm transition hover:bg-zinc-800"
+          >
+            Ti?p t?c h?c
+            <ArrowRight size={18} weight="bold" />
+          </button>
+          {hasRetryTarget ? (
+            <button
+              type="button"
+              onClick={() => navigate(`/practice/${scenarioId}/preview`)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3 text-sm font-black text-zinc-800 shadow-sm transition hover:bg-zinc-50"
+            >
+              Luy?n l?i k?ch b?n
+            </button>
+          ) : null}
         </div>
       </section>
 
-      {/* Overall Score + Objective */}
       {isAnalysisPending && (
-        <section className="rounded-xl border border-sky-200 bg-sky-50 p-6 shadow-sm">
+        <section className="rounded-xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
           <div className="flex items-start gap-3">
             <div className="mt-1 h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-sky-200 border-t-sky-600" />
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-sky-700">AI Analysis</p>
-              <h2 className="mt-1 font-display text-xl font-black text-sky-950">Generating detailed feedback</h2>
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-sky-700">AI Feedback</p>
+              <h2 className="mt-1 font-display text-xl font-black text-sky-950">?ang t?o ph?n h?i chi ti?t</h2>
               <p className="mt-2 text-sm leading-relaxed text-sky-800">
-                Your conversation has been saved. The analysis LLM is scoring your speaking, writing feedback, and extracting durable learning signals.
+                B?i n?i ?? ???c l?u. B?n c? th? ti?p t?c h?c, feedback s? t? c?p nh?t khi AI ph?n t?ch xong.
               </p>
             </div>
           </div>
@@ -293,97 +362,71 @@ const SessionResultPage = () => {
       )}
 
       {!score && isTerminalAnalysisStatus(analysisStatus) && analysisStatus !== "completed" && (
-        <section className="rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-700">AI Analysis</p>
-          <h2 className="mt-1 font-display text-xl font-black text-amber-950">Analysis unavailable</h2>
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-700">AI Feedback</p>
+          <h2 className="mt-1 font-display text-xl font-black text-amber-950">Ch?a c? ph?n t?ch chi ti?t</h2>
           <p className="mt-2 text-sm leading-relaxed text-amber-900">
-            The conversation was saved, but the analysis LLM did not finish. Reason: {finalEvaluation.reason || analysisStatus}.
+            B?i n?i ?? ???c l?u, nh?ng AI ch?a ho?n t?t ph?n t?ch. L? do: {finalEvaluation.reason || analysisStatus}.
           </p>
         </section>
       )}
 
-      {score && (
-        <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Score</p>
-          <div className="mt-4 flex flex-col gap-6 sm:flex-row sm:items-start">
-            <div className="flex flex-col items-center gap-2">
-              <div className="relative flex items-center justify-center">
-                <ScoreRing score={score.overall_score} size={100} />
-                <div className="absolute flex flex-col items-center">
-                  <span className="text-2xl font-black text-zinc-900">{Number(score.overall_score || 0).toFixed(1)}</span>
-                  <span className="text-[9px] font-black uppercase tracking-wider text-zinc-500">overall</span>
-                </div>
+      {score?.feedback_summary ? (
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">T?m t?t feedback</p>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-700 italic">{score.feedback_summary}</p>
+          {completionBadge && (() => {
+            const BadgeIcon = completionBadge.icon;
+            return (
+              <span className={`mt-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black ${completionBadge.color}`}>
+                <BadgeIcon size={13} weight="fill" />
+                {completionBadge.label}
+              </span>
+            );
+          })()}
+        </section>
+      ) : null}
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {quickFeedbackSections.map((section) => {
+          const Icon = section.icon;
+          return (
+            <section key={section.title} className={`rounded-xl border p-5 shadow-sm ${section.tone}`}>
+              <div className="flex items-center gap-2">
+                <Icon size={18} weight="fill" className={section.iconClass} />
+                <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${section.titleClass}`}>{section.title}</p>
               </div>
-              {completionBadge && (() => {
-                const BadgeIcon = completionBadge.icon;
-                return (
-                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black ${completionBadge.color}`}>
-                    <BadgeIcon size={13} weight="fill" />
-                    {completionBadge.label}
-                  </span>
-                );
-              })()}
-            </div>
-            <div className="flex-1">
-              {score.feedback_summary && (
-                <p className="text-sm leading-relaxed text-zinc-700 italic">{score.feedback_summary}</p>
-              )}
-              {profileExtractionStatus ? (
-                <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
-                  Learner signals: {profileExtractionStatus}
-                </p>
-              ) : null}
-              {Object.keys(skillBreakdown).length > 0 && (
-                <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {Object.entries(skillBreakdown).map(([key, val]) => (
-                    <SkillCard key={key} skillKey={key} value={val} />
-                  ))}
-                </div>
-              )}
-            </div>
+              <ul className="mt-4 space-y-2">
+                {section.items.length > 0 ? section.items.slice(0, 3).map((item, index) => (
+                  <li key={`${section.title}-${index}`} className="flex items-start gap-2 text-sm">
+                    <CheckCircle size={15} weight="fill" className={`mt-0.5 shrink-0 ${section.iconClass}`} />
+                    <span>{item}</span>
+                  </li>
+                )) : (
+                  <li className="text-sm leading-relaxed opacity-80">{section.empty}</li>
+                )}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+
+      {Object.keys(skillBreakdown).length > 0 && (
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">K? n?ng</p>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {Object.entries(skillBreakdown).map(([key, val]) => (
+              <SkillCard key={key} skillKey={key} value={val} />
+            ))}
           </div>
+          {profileExtractionStatus ? (
+            <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
+              Learner signals: {profileExtractionStatus}
+            </p>
+          ) : null}
         </section>
       )}
 
-      {/* Strengths + Improvements */}
-      {(strengths.length > 0 || improvements.length > 0) && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {strengths.length > 0 && (
-            <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Trophy size={18} weight="fill" className="text-emerald-600" />
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-emerald-700">Strengths</p>
-              </div>
-              <ul className="mt-4 space-y-2">
-                {strengths.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-emerald-950">
-                    <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-emerald-500" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-          {improvements.length > 0 && (
-            <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-              <div className="flex items-center gap-2">
-                <WarningCircle size={18} weight="fill" className="text-amber-600" />
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-700">Areas to improve</p>
-              </div>
-              <ul className="mt-4 space-y-2">
-                {improvements.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-amber-950">
-                    <ArrowRight size={16} className="mt-0.5 shrink-0 text-amber-500" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
-      )}
-
-      {/* Corrections */}
       {corrections.length > 0 && (
         <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Language Corrections</p>
@@ -396,76 +439,60 @@ const SessionResultPage = () => {
         </section>
       )}
 
-      {/* Next Steps */}
-      {nextSteps.length > 0 && (
-        <section className="rounded-xl border border-primary/20 bg-primary/5 p-5 shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Next Steps</p>
-          <ul className="mt-4 space-y-2">
-            {nextSteps.map((step, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-zinc-800">
-                <ArrowRight size={16} weight="bold" className="mt-0.5 shrink-0 text-primary" />
-                {step}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className={`rounded-xl border p-6 shadow-sm ${
+      <section className={`rounded-xl border p-4 shadow-sm ${
         hasProAccess
           ? "border-amber-200 bg-gradient-to-br from-amber-50 to-purple-50"
           : "border-zinc-200 bg-white"
       }`}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-700">Advanced Feedback</p>
-            <h2 className="mt-1 font-display text-xl font-black text-zinc-950">
+            <div className="flex items-center gap-2">
+              <Crown size={16} weight="fill" className="text-amber-600" />
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Advanced Feedback</p>
+            </div>
+            <h2 className="mt-1 font-display text-lg font-black text-zinc-950">
               {hasProAccess ? "Pro insights unlocked" : "Pro insights preview"}
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+            <p className="mt-1 text-sm leading-relaxed text-zinc-600">
               {hasProAccess
-                ? "Theo dõi phát âm, vốn từ, độ trôi chảy và gợi ý câu trả lời tốt hơn."
-                : "Nâng cấp Pro để mở khóa phân tích sâu sau mỗi buổi luyện nói."}
+                ? "Theo d?i ph?t ?m, v?n t? v? ?? tr?i ch?y sau m?i bu?i luy?n n?i."
+                : "N?ng c?p Pro ?? m? kh?a ph?n t?ch s?u sau m?i bu?i luy?n n?i."}
             </p>
           </div>
-          <div className="inline-flex w-fit items-center gap-2 rounded-full bg-amber-100 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">
-            <Crown size={14} weight="fill" />
-            {hasProAccess ? "Unlocked" : "Locked"}
+          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[360px]">
+            {advancedMetrics.map((metric) => (
+              <div key={metric.label} className={`rounded-lg border px-3 py-2 ${hasProAccess ? "border-white/80 bg-white/80" : "border-zinc-200 bg-zinc-50"}`}>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">{metric.label}</p>
+                <p className="mt-1 text-sm font-black text-zinc-950">
+                  {typeof metric.value === "number" ? Number(metric.value).toFixed(1) : metric.value}
+                </p>
+              </div>
+            ))}
           </div>
+          {!hasProAccess ? (
+            <button
+              type="button"
+              onClick={() => navigate("/subscription")}
+              className="inline-flex w-fit items-center gap-2 rounded-lg bg-zinc-950 px-4 py-2.5 text-sm font-black text-white"
+            >
+              <Crown size={16} weight="fill" />
+              N?ng c?p Pro
+            </button>
+          ) : null}
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {advancedMetrics.map((metric) => (
-            <div key={metric.label} className={`rounded-lg border p-4 ${hasProAccess ? "border-white/80 bg-white/80" : "border-zinc-200 bg-zinc-50"}`}>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">{metric.label}</p>
-              <p className="mt-2 text-lg font-black text-zinc-950">
-                {typeof metric.value === "number" ? Number(metric.value).toFixed(1) : metric.value}
-              </p>
-            </div>
-          ))}
-        </div>
-        {!hasProAccess ? (
-          <button
-            type="button"
-            onClick={() => navigate("/subscription")}
-            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-zinc-950 px-5 py-3 text-sm font-black text-white"
-          >
-            <Crown size={16} weight="fill" />
-            Nâng cấp Pro
-          </button>
-        ) : null}
       </section>
 
-      {/* Conversation transcript */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Saved Conversation</p>
-            <h2 className="mt-1 font-display text-2xl font-black text-zinc-950">{userMessages.length} speaking turns</h2>
+            <h2 className="mt-1 font-display text-xl font-black text-zinc-950">{userMessages.length} speaking turns</h2>
+            <p className="mt-1 text-sm text-zinc-500">Transcript l?u l?i ?? xem sau khi c?n ?n l?i c? th?.</p>
           </div>
-          <ChatCenteredText size={28} weight="fill" className="text-primary" />
+          <ChatCenteredText size={26} weight="fill" className="text-primary" />
         </div>
 
-        <div className="mt-5 space-y-3">
+        <div className="mt-4 space-y-2">
           {messages.length ? messages.map((message) => (
             <div
               key={message.id}
@@ -489,6 +516,7 @@ const SessionResultPage = () => {
       </section>
     </div>
   );
+
 };
 
 export default SessionResultPage;

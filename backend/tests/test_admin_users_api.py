@@ -53,7 +53,6 @@ async def test_admin_can_get_and_update_user(admin_client, test_user):
             "display_name": "Updated Learner",
             "level": "B2",
             "favorite_topics": ["travel", "networking"],
-            "daily_goal": 25,
         },
     )
 
@@ -62,7 +61,6 @@ async def test_admin_can_get_and_update_user(admin_client, test_user):
     assert data["display_name"] == "Updated Learner"
     assert data["level"] == "B2"
     assert data["favorite_topics"] == ["travel", "networking"]
-    assert data["daily_goal"] == 25
 
 
 @pytest.mark.asyncio

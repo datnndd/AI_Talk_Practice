@@ -338,7 +338,7 @@ class PaymentService:
         if provider != "stripe":
             raise BadRequestError(f"Unsupported payment provider: {provider}")
         plan_code = (body.plan_code or "PRO_30D").strip().upper()
-        quote = await cls.quote_checkout(db, plan_code=plan_code, promo_code=body.promo_code)
+        quote = await cls.quote_checkout(db, plan_code=plan_code)
         subscription_plan: SubscriptionPlan = quote["plan"]
         promo: PromotionCode | None = quote["promo"]
 

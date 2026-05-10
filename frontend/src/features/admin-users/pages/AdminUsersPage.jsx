@@ -81,7 +81,6 @@ const buildUpdatePayload = (formData) => ({
   display_name: formData.display_name.trim() || null,
   age: formData.age === "" ? null : Number(formData.age),
   level: formData.level || null,
-  daily_goal: formData.daily_goal === "" ? null : Number(formData.daily_goal),
   learning_purpose: parseCommaSeparated(formData.learning_purpose),
   favorite_topics: parseCommaSeparated(formData.favorite_topics),
   main_challenge: formData.main_challenge.trim() || null,
@@ -91,7 +90,6 @@ const toFormState = (user) => ({
   display_name: user?.display_name ?? "",
   age: user?.age ?? "",
   level: user?.level ?? "intermediate",
-  daily_goal: user?.daily_goal ?? "",
   learning_purpose: toCommaSeparated(user?.learning_purpose),
   favorite_topics: toCommaSeparated(user?.favorite_topics),
   main_challenge: user?.main_challenge ?? "",
@@ -116,6 +114,7 @@ const AdminUsersPage = () => {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState("FREE");
+  const [subscriptionDurationDays, setSubscriptionDurationDays] = useState("30");
   const [activeUserTab, setActiveUserTab] = useState("overview");
   const [coinDelta, setCoinDelta] = useState("");
   const [coinReason, setCoinReason] = useState("");
@@ -186,12 +185,17 @@ const AdminUsersPage = () => {
 
   useEffect(() => {
     setSelectedPlan(getPlanBadge(selectedUser));
+    setSubscriptionDurationDays("30");
   }, [selectedUser]);
 
   const currentPayload = useMemo(() => buildUpdatePayload(formData), [formData]);
   const baselinePayload = useMemo(() => buildUpdatePayload(toFormState(selectedUser)), [selectedUser]);
   const hasFormChanges = JSON.stringify(currentPayload) !== JSON.stringify(baselinePayload);
   const hasPlanChange = selectedPlan !== getPlanBadge(selectedUser);
+  const parsedSubscriptionDurationDays = Number(subscriptionDurationDays);
+  const requiresSubscriptionDuration = selectedPlan !== "FREE";
+  const hasValidSubscriptionDuration =
+    !requiresSubscriptionDuration || (Number.isInteger(parsedSubscriptionDurationDays) && parsedSubscriptionDurationDays > 0);
   const parsedCoinDelta = Number(coinDelta);
   const hasCoinAdjustment = coinDelta !== "" && Number.isInteger(parsedCoinDelta) && parsedCoinDelta !== 0;
   const isSelfSelected = selectedUser?.id === currentUser?.id;
@@ -492,9 +496,6 @@ const AdminUsersPage = () => {
                     <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Learning</p>
                       <p className="mt-2 text-sm font-semibold">Level: {selectedUser.level || "Not set"}</p>
-                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                        Daily goal: {selectedUser.daily_goal ? `${selectedUser.daily_goal} minutes` : "Not set"}
-                      </p>
                     </div>
                     <div className="rounded-[24px] bg-amber-50 p-4 text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-200">Coin Balance</p>
@@ -542,31 +543,17 @@ const AdminUsersPage = () => {
                     />
                   </div>
                 </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <FieldLabel>Level</FieldLabel>
-                    <select
-                      value={formData.level}
-                      onChange={(event) => setFormData((current) => ({ ...current, level: event.target.value }))}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-                    >
-                      {LEVEL_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <FieldLabel>Daily Goal</FieldLabel>
-                    <input
-                      type="number"
-                      min="1"
-                      max="1440"
-                      value={formData.daily_goal}
-                      onChange={(event) => setFormData((current) => ({ ...current, daily_goal: event.target.value }))}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-                    />
-                  </div>
+                <div>
+                  <FieldLabel>Level</FieldLabel>
+                  <select
+                    value={formData.level}
+                    onChange={(event) => setFormData((current) => ({ ...current, level: event.target.value }))}
+                    className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                  >
+                    {LEVEL_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -639,7 +626,7 @@ const AdminUsersPage = () => {
                       </p>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_150px_180px]">
                       <select
                         value={selectedPlan}
                         onChange={(event) => setSelectedPlan(event.target.value)}
@@ -653,12 +640,27 @@ const AdminUsersPage = () => {
                         ))}
                       </select>
 
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={subscriptionDurationDays}
+                        onChange={(event) => setSubscriptionDurationDays(event.target.value)}
+                        disabled={!selectedUserId || isRunningAction || selectedPlan === "FREE"}
+                        placeholder="Days"
+                        className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
+                      />
+
                       <button
                         type="button"
-                        disabled={!selectedUserId || isRunningAction || !hasPlanChange}
+                        disabled={!selectedUserId || isRunningAction || !hasPlanChange || !hasValidSubscriptionDuration}
                         onClick={() => {
+                          const payload = {
+                            tier: selectedPlan,
+                            ...(selectedPlan !== "FREE" ? { duration_days: parsedSubscriptionDurationDays } : {}),
+                          };
                           void runAction(
-                            (userId) => adminUsersApi.updateSubscription(userId, { tier: selectedPlan }),
+                            (userId) => adminUsersApi.updateSubscription(userId, payload),
                             `Subscription updated to ${selectedPlan}.`,
                           );
                         }}
@@ -671,7 +673,11 @@ const AdminUsersPage = () => {
 
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       Current plan: <span className="font-semibold">{getPlanBadge(selectedUser)}</span>
+                      {selectedUser?.subscription?.expires_at ? ` · Expires ${formatDateTime(selectedUser.subscription.expires_at)}` : ""}
                     </p>
+                    {requiresSubscriptionDuration && !hasValidSubscriptionDuration ? (
+                      <p className="text-xs font-semibold text-rose-600">Paid plans require a positive duration in days.</p>
+                    ) : null}
                   </div>
                 </div>
 

@@ -164,15 +164,13 @@ class AdminUserService:
         now = datetime.now(timezone.utc)
         if tier == "FREE":
             subscription.expires_at = None
-        elif tier == "PRO":
+        else:
             current_expiry = (
                 subscription.expires_at
                 if subscription.expires_at and subscription.expires_at > now
                 else now
             )
-            subscription.expires_at = current_expiry + timedelta(days=30)
-        else:
-            subscription.expires_at = None
+            subscription.expires_at = current_expiry + timedelta(days=body.duration_days or 0)
 
         await db.commit()
         logger.info("Admin updated subscription tier=%s for user id=%s", tier, user.id)

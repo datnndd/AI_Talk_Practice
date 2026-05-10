@@ -61,7 +61,6 @@ def _build_user_payload(user: User) -> dict[str, object]:
         "favorite_topics": user.favorite_topics,
         "learning_purpose": user.learning_purpose,
         "main_challenge": user.main_challenge,
-        "daily_goal": user.daily_goal,
         "is_onboarding_completed": user.is_onboarding_completed,
         "preferences": user.preferences or {},
         "subscription": user.subscription,

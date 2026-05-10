@@ -19,7 +19,6 @@ test.describe("Edit Profile", () => {
           avatar: "",
           target_language: "de",
           favorite_topics: ["Daily Life", "Travel"],
-          daily_goal: 20,
           auth_provider: "google",
           has_password: false,
           is_admin: false,
@@ -55,7 +54,6 @@ test.describe("Edit Profile", () => {
           avatar: "",
           target_language: "fr",
           favorite_topics: ["Daily Life", "Travel", "Business"],
-          daily_goal: 35,
           auth_provider: "google",
           has_password: false,
           is_admin: false,
@@ -83,13 +81,6 @@ test.describe("Edit Profile", () => {
     await page.getByLabel("BIO").fill("Focused on fluency for meetings and travel.");
     await page.getByRole("button", { name: "Business" }).click();
     await page.getByLabel("Target Language").selectOption("fr");
-    await page.locator("#daily-goal").evaluate((element) => {
-      const input = element as HTMLInputElement;
-      const descriptor = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value");
-      descriptor?.set?.call(input, "35");
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-    });
     await page.getByLabel("Set profile theme to blue").click();
 
     await page.getByRole("button", { name: "Save Changes" }).click();
@@ -102,7 +93,6 @@ test.describe("Edit Profile", () => {
       avatar: null,
       target_language: "fr",
       favorite_topics: ["Daily Life", "Travel", "Business"],
-      daily_goal: 35,
       preferences: {
         bio: "Focused on fluency for meetings and travel.",
         handle: "alex_quest",

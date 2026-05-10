@@ -47,7 +47,6 @@ class AdminUserUpdateRequest(BaseModel):
     learning_purpose: Any | None = None
     main_challenge: str | None = Field(default=None, max_length=500)
     favorite_topics: list[str] | str | None = None
-    daily_goal: int | None = Field(default=None, ge=1, le=1440)
     is_admin: bool | None = None
 
     @field_validator("favorite_topics", "learning_purpose", mode="before")
@@ -74,6 +73,13 @@ class AdminUserUpdateRequest(BaseModel):
 
 class AdminUserSubscriptionUpdateRequest(BaseModel):
     tier: Literal["FREE", "PRO", "ENTERPRISE"]
+    duration_days: int | None = Field(default=None, ge=1, le=3650)
+
+    @model_validator(mode="after")
+    def validate_paid_tier_duration(self) -> "AdminUserSubscriptionUpdateRequest":
+        if self.tier != "FREE" and self.duration_days is None:
+            raise ValueError("duration_days must be provided for paid subscriptions")
+        return self
 
 
 class AdminUserBalanceAdjustmentRequest(BaseModel):
