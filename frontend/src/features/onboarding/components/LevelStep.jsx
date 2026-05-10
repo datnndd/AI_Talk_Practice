@@ -1,129 +1,75 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Sparkle, TrendUp, TreeStructure, CheckCircle, Circle } from "@phosphor-icons/react";
+import { CheckCircle, Circle, Sparkle, TrendUp, TreeStructure } from "@phosphor-icons/react";
+
+const levels = [
+  { value: "A1", title: "A1 Starter", group: "Beginner", description: "You know a few words and want to build core phrases.", icon: Sparkle, color: "text-secondary", iconBg: "bg-secondary-container text-on-secondary-container" },
+  { value: "A2", title: "A2 Elementary", group: "Beginner", description: "You can handle simple sentences and everyday topics.", icon: Sparkle, color: "text-secondary", iconBg: "bg-secondary-container text-on-secondary-container" },
+  { value: "B1", title: "B1 Intermediate", group: "Recommended", description: "You can hold basic conversations and want smoother speaking.", icon: TrendUp, color: "text-[#2F80ED]", iconBg: "bg-primary-fixed text-on-primary-fixed" },
+  { value: "B2", title: "B2 Upper Intermediate", group: "Intermediate", description: "You can discuss familiar topics and want more nuance.", icon: TrendUp, color: "text-[#2F80ED]", iconBg: "bg-primary-fixed text-on-primary-fixed" },
+  { value: "C1", title: "C1 Advanced", group: "Advanced", description: "You speak fluently and want professional precision.", icon: TreeStructure, color: "text-tertiary", iconBg: "bg-tertiary-fixed text-on-tertiary-fixed" },
+  { value: "C2", title: "C2 Mastery", group: "Advanced", description: "You want native-like control, rhetoric, and polish.", icon: TreeStructure, color: "text-tertiary", iconBg: "bg-tertiary-fixed text-on-tertiary-fixed" },
+];
 
 const LevelStep = ({ formData, updateData }) => {
   const selectedLevel = formData.level;
 
   const cardVariants = {
     hidden: { opacity: 0, scale: 0.95, y: 30 },
-    visible: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 20 } }
-  };
-
-  const setLevel = (level) => {
-    updateData("level", level);
+    visible: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 20 } },
   };
 
   return (
-    <motion.section 
+    <motion.section
       initial="hidden"
       animate="visible"
       exit="hidden"
-      variants={{
-        visible: { transition: { staggerChildren: 0.1 } }
-      }}
-      className="max-w-5xl mx-auto w-full px-6 pt-12 pb-32 flex flex-col items-center"
+      variants={{ visible: { transition: { staggerChildren: 0.07 } } }}
+      className="mx-auto flex w-full max-w-6xl flex-col items-center px-6 pb-32 pt-12"
     >
-      <motion.div variants={cardVariants} className="w-full mt-12 mb-20">
-        <div className="mb-4 inline-flex items-center px-3 py-1 bg-surface-variant rounded-sm">
-          <span className="text-[0.625rem] font-bold tracking-widest uppercase text-on-surface-variant font-label">Step 02 / 04</span>
+      <motion.div variants={cardVariants} className="mb-14 mt-12 w-full">
+        <div className="mb-4 inline-flex items-center rounded-sm bg-surface-variant px-3 py-1">
+          <span className="font-label text-[0.625rem] font-bold uppercase tracking-widest text-on-surface-variant">Step 02 / 04</span>
         </div>
-        <h1 className="text-5xl md:text-6xl font-display font-extrabold tracking-tight text-on-surface max-w-2xl leading-[1.1]">
+        <h1 className="max-w-2xl font-display text-5xl font-extrabold leading-[1.1] tracking-tight text-on-surface md:text-6xl">
           What is your current level?
         </h1>
       </motion.div>
 
-      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
-        {/* Beginner Card */}
-        <motion.div 
-          variants={cardVariants}
-          onClick={() => setLevel("beginner")}
-          className={`group relative rounded-xl p-8 flex flex-col h-full border transition-all duration-300 cursor-pointer shadow-diffusion ${selectedLevel === 'beginner' ? 'bg-[#f0f7ff] border-primary' : 'bg-surface-container-lowest border-transparent hover:bg-surface-container-low'}`}
-        >
-          <div className="mb-8 w-14 h-14 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
-            <Sparkle weight="fill" className="text-3xl" />
-          </div>
-          <div className="flex-grow">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-bold font-sans text-secondary uppercase tracking-widest">A1 - A2</span>
-            </div>
-            <h3 className="text-2xl font-display font-bold text-on-surface mb-3">Beginner</h3>
-            <p className="text-on-surface-variant leading-relaxed text-sm font-medium">
-              You are starting from scratch or know a few phrases. We'll build your foundation with core vocabulary and basic structures.
-            </p>
-          </div>
-          <div className="mt-8 flex justify-end">
-            {selectedLevel === 'beginner' ? (
-              <CheckCircle weight="fill" className="text-primary text-2xl" />
-            ) : (
-              <Circle className="text-outline group-hover:text-primary transition-colors text-2xl" />
-            )}
-          </div>
-        </motion.div>
-
-        {/* Intermediate Card */}
-        <motion.div 
-          variants={cardVariants}
-          onClick={() => setLevel("intermediate")}
-          className={`group relative rounded-xl p-8 flex flex-col h-full border transition-all duration-300 cursor-pointer shadow-diffusion md:-translate-y-4 ${selectedLevel === 'intermediate' ? 'bg-[#f0f7ff] border-[#2F80ED] border-[2px] shadow-[0_0_20px_rgba(47,128,237,0.15)]' : 'bg-surface-container-lowest border-transparent hover:bg-surface-container-low'}`}
-        >
-          {selectedLevel !== 'intermediate' && (
-            <div className="absolute -top-3 left-8 px-4 py-1 bg-[#2F80ED] text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-full">
-              Recommended
-            </div>
-          )}
-          
-          <div className="mb-8 w-14 h-14 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed">
-            <TrendUp weight="fill" className="text-3xl" />
-          </div>
-          <div className="flex-grow">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-bold font-sans text-[#2F80ED] uppercase tracking-widest">B1 - B2</span>
-            </div>
-            <h3 className="text-2xl font-display font-bold text-on-surface mb-3">Intermediate</h3>
-            <p className="text-on-surface-variant leading-relaxed text-sm font-medium">
-              You can hold basic conversations. We'll focus on fluid transitions, complex tenses, and natural idiomatic expressions.
-            </p>
-          </div>
-          <div className="mt-8 flex justify-end">
-            {selectedLevel === 'intermediate' ? (
-              <CheckCircle weight="fill" className="text-[#2F80ED] text-2xl" />
-            ) : (
-              <Circle className="text-outline group-hover:text-[#2F80ED] transition-colors text-2xl" />
-            )}
-          </div>
-        </motion.div>
-
-        {/* Advanced Card */}
-        <motion.div 
-          variants={cardVariants}
-          onClick={() => setLevel("advanced")}
-          className={`group relative rounded-xl p-8 flex flex-col h-full border transition-all duration-300 cursor-pointer shadow-diffusion ${selectedLevel === 'advanced' ? 'bg-[#f0f7ff] border-tertiary' : 'bg-surface-container-lowest border-transparent hover:bg-surface-container-low'}`}
-        >
-          <div className="mb-8 w-14 h-14 rounded-full bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed">
-            <TreeStructure weight="fill" className="text-3xl" />
-          </div>
-          <div className="flex-grow">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-bold font-sans text-tertiary uppercase tracking-widest">C1 - C2</span>
-            </div>
-            <h3 className="text-2xl font-display font-bold text-on-surface mb-3">Advanced</h3>
-            <p className="text-on-surface-variant leading-relaxed text-sm font-medium">
-              You speak fluently but seek nuance. We'll refine your professional vocabulary and master native-level rhetoric.
-            </p>
-          </div>
-          <div className="mt-8 flex justify-end">
-            {selectedLevel === 'advanced' ? (
-              <CheckCircle weight="fill" className="text-tertiary text-2xl" />
-            ) : (
-              <Circle className="text-outline group-hover:text-tertiary transition-colors text-2xl" />
-            )}
-          </div>
-        </motion.div>
+      <div className="relative z-10 grid w-full grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {levels.map((level) => {
+          const Icon = level.icon;
+          const selected = selectedLevel === level.value;
+          return (
+            <motion.button
+              key={level.value}
+              type="button"
+              variants={cardVariants}
+              onClick={() => updateData("level", level.value)}
+              className={`group relative flex h-full cursor-pointer flex-col rounded-xl border p-6 text-left shadow-diffusion transition-all duration-300 ${
+                selected ? "border-primary bg-[#f0f7ff] shadow-[0_0_20px_rgba(47,128,237,0.15)]" : "border-transparent bg-surface-container-lowest hover:bg-surface-container-low"
+              }`}
+            >
+              <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-full ${level.iconBg}`}>
+                <Icon weight="fill" className="text-3xl" />
+              </div>
+              <div className="flex-grow">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className={`font-sans text-xs font-bold uppercase tracking-widest ${level.color}`}>{level.value} · {level.group}</span>
+                </div>
+                <h3 className="mb-3 font-display text-2xl font-bold text-on-surface">{level.title}</h3>
+                <p className="text-sm font-medium leading-relaxed text-on-surface-variant">{level.description}</p>
+              </div>
+              <div className="mt-8 flex justify-end">
+                {selected ? <CheckCircle weight="fill" className="text-2xl text-primary" /> : <Circle className="text-2xl text-outline transition-colors group-hover:text-primary" />}
+              </div>
+            </motion.button>
+          );
+        })}
       </div>
-      
-      <div className="fixed top-1/2 -right-24 -z-10 w-96 h-96 bg-primary-container/5 rounded-full blur-[100px]"></div>
-      <div className="fixed bottom-0 -left-24 -z-10 w-64 h-64 bg-secondary-container/5 rounded-full blur-[80px]"></div>
+
+      <div className="fixed -right-24 top-1/2 -z-10 h-96 w-96 rounded-full bg-primary-container/5 blur-[100px]" />
+      <div className="fixed -bottom-0 -left-24 -z-10 h-64 w-64 rounded-full bg-secondary-container/5 blur-[80px]" />
     </motion.section>
   );
 };

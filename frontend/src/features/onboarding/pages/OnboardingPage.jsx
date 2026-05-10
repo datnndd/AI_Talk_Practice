@@ -22,7 +22,7 @@ const OnboardingPage = () => {
     display_name: "",
     avatar: "user1",
     age: "",
-    level: "intermediate", // Default to recommended
+    level: "B1",
     learning_purpose: "",
     main_challenge: "",
     favorite_topics: "",
@@ -48,7 +48,7 @@ const OnboardingPage = () => {
     setIsSubmitting(true);
     try {
       await onboard(formData);
-      navigate("/scenarios");
+      navigate("/learn");
     } catch (err) {
       console.error(err);
       setIsSubmitting(false);

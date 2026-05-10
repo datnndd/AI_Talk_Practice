@@ -120,6 +120,7 @@ class UserRead(ORMModel):
     avatar: str | None = None
     age: int | None = None
     level: str | None = None
+    current_cefr: str | None = None
     favorite_topics: Any | None = None
     learning_purpose: Any | None = None
     main_challenge: str | None = None

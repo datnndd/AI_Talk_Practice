@@ -51,6 +51,8 @@ MAX_PRONUNCIATION_AUDIO_BYTES = 10 * 1024 * 1024
 LESSON_AUDIO_UPLOAD_DIR = os.path.join("static", "uploads", "lesson-audio")
 LESSON_AUDIO_URL_PREFIX = "/static/uploads/lesson-audio"
 MIN_PRONUNCIATION_SAMPLE_RATE = 16000
+CEFR_ORDER = {"A1": 0, "A2": 1, "B1": 2, "B2": 3, "C1": 4, "C2": 5}
+LEGACY_LEVEL_TO_CEFR = {"beginner": "A1", "intermediate": "B1", "advanced": "C1"}
 
 
 def _utcnow() -> datetime:
@@ -59,6 +61,17 @@ def _utcnow() -> datetime:
 
 def _today() -> date:
     return _utcnow().date()
+
+
+def _normalize_cefr_level(value: str | None) -> str:
+    if not value:
+        return "A1"
+    normalized = value.strip()
+    return LEGACY_LEVEL_TO_CEFR.get(normalized.lower(), normalized.upper())
+
+
+def _cefr_rank(value: str | None) -> int:
+    return CEFR_ORDER.get(_normalize_cefr_level(value), CEFR_ORDER["A1"])
 
 
 def _normalize_word(value: str) -> str:
@@ -295,12 +308,18 @@ class CurriculumService:
         db: AsyncSession,
         user_id: int,
         *,
+        user_cefr: str | None = None,
         include_lessons: bool = False,
         include_lesson_progress: bool = False,
     ) -> tuple[list[LearningSection], dict[int, UserUnitProgress], dict[int, UserLessonProgress], set[int], int | None]:
         include_lessons = include_lessons or include_lesson_progress
         sections = list((await db.execute(cls._active_sections_stmt(include_lessons=include_lessons))).scalars().unique().all())
         units = cls._flatten_units(sections)
+        unit_cefr_levels = {
+            unit.id: section.cefr_level
+            for section in sections
+            for unit in section.__dict__.get("units", [])
+        }
         unit_ids = [unit.id for unit in units]
         lesson_ids = [
             lesson.id
@@ -333,10 +352,16 @@ class CurriculumService:
             ).scalars().all()
             lesson_progress = {item.lesson_id: item for item in rows}
 
+        start_rank = _cefr_rank(user_cefr)
         completed_so_far = True
         unlocked: set[int] = set()
         current_unit_id: int | None = None
         for unit in units:
+            unit_rank = _cefr_rank(unit_cefr_levels.get(unit.id))
+            if unit_rank < start_rank:
+                unlocked.add(unit.id)
+                continue
+
             if completed_so_far:
                 unlocked.add(unit.id)
                 progress = unit_progress.get(unit.id)
@@ -351,10 +376,14 @@ class CurriculumService:
         cls,
         db: AsyncSession,
         *,
-        user_id: int,
+        user: User,
         unit_id: int,
     ) -> tuple[Unit, dict[int, UserLessonProgress], bool, UserUnitProgress | None]:
-        sections, unit_progress, _, unlocked, _ = await cls.curriculum_tree(db, user_id)
+        sections, unit_progress, _, unlocked, _ = await cls.curriculum_tree(
+            db,
+            user.id,
+            user_cefr=user.current_cefr or user.level,
+        )
         active_unit_ids = {item.id for item in cls._flatten_units(sections)}
         if unit_id not in active_unit_ids:
             raise NotFoundError("Unit not found")
@@ -378,7 +407,7 @@ class CurriculumService:
             rows = (
                 await db.execute(
                     select(UserLessonProgress).where(
-                        UserLessonProgress.user_id == user_id,
+                        UserLessonProgress.user_id == user.id,
                         UserLessonProgress.lesson_id.in_(lesson_ids),
                     )
                 )
@@ -396,7 +425,7 @@ class CurriculumService:
         payload: LessonAttemptRequest,
     ) -> LessonAttemptRead:
         lesson = await cls._get_active_lesson(db, lesson_id, include_unit_lessons=False)
-        await cls.get_user_unit(db, user_id=user.id, unit_id=lesson.unit_id)
+        await cls.get_user_unit(db, user=user, unit_id=lesson.unit_id)
 
         score, feedback, answer_payload = await cls._score_lesson(db, user=user, lesson=lesson, payload=payload)
         target_passed = score >= lesson.pass_score

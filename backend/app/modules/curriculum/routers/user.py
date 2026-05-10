@@ -12,6 +12,7 @@ from app.modules.curriculum.schemas import (
     UnitRead,
 )
 from app.modules.curriculum.services import CurriculumService
+from app.modules.curriculum.services import _normalize_cefr_level
 from app.modules.users.models.user import User
 
 router = APIRouter(tags=["curriculum"])
@@ -25,6 +26,7 @@ async def get_curriculum(
     sections, unit_progress, lesson_progress, unlocked, current_unit_id = await CurriculumService.curriculum_tree(
         db,
         user.id,
+        user_cefr=user.current_cefr or user.level,
     )
     return CurriculumTreeRead(
         sections=[
@@ -37,6 +39,7 @@ async def get_curriculum(
             for section in sections
         ],
         current_unit_id=current_unit_id,
+        current_cefr=_normalize_cefr_level(user.current_cefr or user.level),
     )
 
 
@@ -48,7 +51,7 @@ async def get_unit(
 ):
     unit, lesson_progress, is_unlocked, unit_progress = await CurriculumService.get_user_unit(
         db,
-        user_id=user.id,
+        user=user,
         unit_id=unit_id,
     )
     return serialize_unit(

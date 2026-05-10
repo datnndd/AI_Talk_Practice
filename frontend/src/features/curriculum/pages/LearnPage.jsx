@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "react-router-dom";
 import {
   CheckCircle,
   LockKey,
@@ -22,6 +23,16 @@ const unitStatus = (unit, currentUnitId) => {
   if (unit.is_locked) return "locked";
   if (unit.id === currentUnitId) return "current";
   return "open";
+};
+
+const cefrOrder = { A1: 0, A2: 1, B1: 2, B2: 3, C1: 4, C2: 5 };
+
+const getUnitLabel = (unit) => {
+  if (unit.progress_status === "completed") return "Completed";
+  if (unit.is_locked) return "Complete previous units";
+  if (unit.id === unit.current_unit_id) return "Recommended";
+  if ((cefrOrder[unit.section_cefr_level] ?? 0) < (cefrOrder[unit.current_cefr] ?? 0)) return "Review";
+  return "Open";
 };
 
 const getUnitRewards = (unit) => {
@@ -63,6 +74,9 @@ const LessonNode = ({ unit, index, status, accent, onSelect }) => {
         <Icon size={34} weight="fill" className={status === "completed" ? "text-emerald-500" : status === "current" ? "text-primary" : ""} />
       </span>
       <p className="relative z-10 line-clamp-2 text-sm font-black">{unit.title}</p>
+      <span className="relative z-10 mt-2 rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+        {getUnitLabel(unit)}
+      </span>
       <div className="relative z-10 mt-3 flex flex-wrap justify-center gap-2 text-[10px] font-black uppercase tracking-[0.14em]">
         <span className="rounded-full bg-white/80 px-2.5 py-1 text-amber-600">+{rewards.coin} coin</span>
         <span className="rounded-full bg-white/80 px-2.5 py-1 text-sky-600">+{rewards.xp} XP</span>
@@ -76,6 +90,7 @@ const PreviewDrawer = ({ unit, onClose }) => {
   const rewards = getUnitRewards(unit);
   const lessons = unit.lessons || [];
   const locked = unit.is_locked;
+  const lockedCopy = getUnitLabel(unit);
 
   return (
     <AnimatePresence>
@@ -117,7 +132,7 @@ const PreviewDrawer = ({ unit, onClose }) => {
 
           <Link to={locked ? "#" : `/learn/units/${unit.id}`} className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-black text-white transition ${locked ? "pointer-events-none bg-zinc-300" : "bg-primary hover:-translate-y-0.5"}`}>
             {locked ? <LockKey size={18} weight="fill" /> : <PlayCircle size={18} weight="fill" />}
-            {locked ? "Locked" : "Start Quest"}
+            {locked ? lockedCopy : "Start Quest"}
           </Link>
         </motion.aside>
       </motion.div>
@@ -220,7 +235,12 @@ const LearnPage = () => {
                   {(section.units || []).map((unit, unitIndex) => (
                     <LessonNode
                       key={unit.id}
-                      unit={unit}
+                      unit={{
+                        ...unit,
+                        current_unit_id: data?.current_unit_id,
+                        current_cefr: data?.current_cefr,
+                        section_cefr_level: section.cefr_level,
+                      }}
                       index={unitIndex}
                       status={unitStatus(unit, data?.current_unit_id)}
                       accent={accent}

@@ -11,6 +11,20 @@ from app.modules.users.schemas.user import ChangePasswordRequest, OnboardingRequ
 
 logger = logging.getLogger(__name__)
 
+
+LEGACY_LEVEL_TO_CEFR = {
+    "beginner": "A1",
+    "intermediate": "B1",
+    "advanced": "C1",
+}
+
+
+def _normalize_cefr_level(level: str | None) -> str | None:
+    if not level:
+        return None
+    normalized = level.strip()
+    return LEGACY_LEVEL_TO_CEFR.get(normalized.lower(), normalized.upper())
+
 class UserService:
     @staticmethod
     async def update_profile(db: AsyncSession, user: User, body: ProfileUpdateRequest) -> User:
@@ -20,7 +34,10 @@ class UserService:
 
         for field, value in update_data.items():
             if hasattr(user, field):
-                setattr(user, field, value)
+                setattr(user, field, _normalize_cefr_level(value) if field == "level" else value)
+
+        if "level" in update_data:
+            user.current_cefr = _normalize_cefr_level(update_data.get("level"))
 
         await db.commit()
         await db.refresh(user)
@@ -35,7 +52,10 @@ class UserService:
         update_data = body.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             if hasattr(user, field):
-                setattr(user, field, value)
+                setattr(user, field, _normalize_cefr_level(value) if field == "level" else value)
+
+        if "level" in update_data:
+            user.current_cefr = _normalize_cefr_level(update_data.get("level"))
             
         user.is_onboarding_completed = True
         await db.commit()

@@ -52,6 +52,7 @@ def _build_user_payload(user: User) -> dict[str, object]:
         "avatar": user.avatar,
         "age": user.age,
         "level": user.level,
+        "current_cefr": user.current_cefr,
         "favorite_topics": user.favorite_topics,
         "learning_purpose": user.learning_purpose,
         "main_challenge": user.main_challenge,

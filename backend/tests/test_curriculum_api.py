@@ -4,6 +4,7 @@ import pytest
 
 from app.core.security import create_access_token
 from app.modules.curriculum.models import LearningSection, Lesson, LessonAudioAsset, Unit
+from app.modules.curriculum.services import _normalize_cefr_level
 
 
 async def seed_curriculum(db_session):
@@ -42,6 +43,37 @@ async def seed_curriculum(db_session):
     db_session.add_all([lesson_1, lesson_2])
     await db_session.commit()
     return section, unit_1, unit_2, lesson_1, lesson_2
+
+
+async def seed_cefr_curriculum(db_session):
+    seeded = {}
+    for index, cefr in enumerate(["A1", "A2", "B1", "B2"]):
+        section = LearningSection(code=f"{cefr}_PATH", title=f"{cefr} Path", cefr_level=cefr, order_index=index)
+        db_session.add(section)
+        await db_session.flush()
+        unit = Unit(section_id=section.id, title=f"{cefr} Unit", order_index=0, estimated_minutes=5)
+        db_session.add(unit)
+        await db_session.flush()
+        lesson = Lesson(
+            unit_id=unit.id,
+            type="definition_choice",
+            title=f"{cefr} Lesson",
+            order_index=0,
+            content={
+                "definition_text": "A hot drink.",
+                "options": [
+                    {"word": "coffee", "is_correct": True},
+                    {"word": "tea", "is_correct": False},
+                    {"word": "milk", "is_correct": False},
+                    {"word": "water", "is_correct": False},
+                ],
+            },
+            pass_score=100,
+        )
+        db_session.add(lesson)
+        seeded[cefr] = {"section": section, "unit": unit, "lesson": lesson}
+    await db_session.commit()
+    return seeded
 
 
 @pytest.mark.asyncio
@@ -83,6 +115,62 @@ async def test_curriculum_locks_next_unit_until_previous_completed(client, db_se
     units = response.json()["sections"][0]["units"]
     assert units[0]["progress_status"] == "completed"
     assert units[1]["is_locked"] is False
+
+
+@pytest.mark.asyncio
+async def test_curriculum_starts_at_user_current_cefr(client, db_session, test_user):
+    seeded = await seed_cefr_curriculum(db_session)
+    test_user.current_cefr = "B1"
+    await db_session.commit()
+    headers = {"Authorization": f"Bearer {create_access_token(test_user.id)}"}
+
+    response = await client.get("/api/curriculum", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    units_by_cefr = {section["cefr_level"]: section["units"][0] for section in data["sections"]}
+    assert data["current_cefr"] == "B1"
+    assert data["current_unit_id"] == seeded["B1"]["unit"].id
+    assert units_by_cefr["A1"]["is_locked"] is False
+    assert units_by_cefr["A2"]["is_locked"] is False
+    assert units_by_cefr["B1"]["is_locked"] is False
+    assert units_by_cefr["B2"]["is_locked"] is True
+
+    locked_response = await client.get(f"/api/units/{seeded['B2']['unit'].id}", headers=headers)
+    assert locked_response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_curriculum_falls_back_to_a1_without_user_cefr(client, db_session, test_user):
+    seeded = await seed_cefr_curriculum(db_session)
+    test_user.current_cefr = None
+    test_user.level = None
+    await db_session.commit()
+    headers = {"Authorization": f"Bearer {create_access_token(test_user.id)}"}
+
+    response = await client.get("/api/curriculum", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["current_cefr"] == "A1"
+    assert data["current_unit_id"] == seeded["A1"]["unit"].id
+
+
+@pytest.mark.asyncio
+async def test_curriculum_maps_legacy_level_to_cefr(client, db_session, test_user):
+    seeded = await seed_cefr_curriculum(db_session)
+    test_user.current_cefr = None
+    test_user.level = "intermediate"
+    await db_session.commit()
+    headers = {"Authorization": f"Bearer {create_access_token(test_user.id)}"}
+
+    response = await client.get("/api/curriculum", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert _normalize_cefr_level(test_user.level) == "B1"
+    assert data["current_cefr"] == "B1"
+    assert data["current_unit_id"] == seeded["B1"]["unit"].id
 
 
 @pytest.mark.asyncio

@@ -221,6 +221,7 @@ class LearningSectionRead(ORMModel):
 class CurriculumTreeRead(BaseModel):
     sections: list[LearningSectionRead]
     current_unit_id: int | None = None
+    current_cefr: str = "A1"
 
 
 class LessonAttemptRequest(BaseModel):
