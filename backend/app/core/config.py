@@ -213,10 +213,6 @@ class Settings(BaseSettings):
     )
     tts_voice: str = Field(default="myvoice", description="DashScope Qwen TTS voice ID")
     tts_language: str = Field(default="en", description="TTS language")
-    tts_instructions: str | None = Field(
-        default="Speak in a natural, friendly English tutor voice with clear pronunciation.",
-        description="Qwen instruct TTS speaking style instructions",
-    )
     tts_optimize_instructions: bool = Field(
         default=True,
         description="Let Qwen instruct TTS optimize speaking style instructions",

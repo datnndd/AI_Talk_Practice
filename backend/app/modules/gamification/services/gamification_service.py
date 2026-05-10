@@ -133,7 +133,6 @@ class GamificationService:
         coin_earned = lesson_coin_earned + level_coin_reward
 
         user.coin_balance = (user.coin_balance or 0) + coin_earned
-        user.total_lessons_completed = (user.total_lessons_completed or 0) + 1
         daily_stat.xp_earned = (daily_stat.xp_earned or 0) + xp_earned
         daily_stat.lessons_completed = (daily_stat.lessons_completed or 0) + 1
         await cls._record_coin_transaction(
@@ -276,7 +275,6 @@ class GamificationService:
     async def _ensure_user_state(user: User) -> None:
         user.total_xp = user.total_xp or 0
         user.coin_balance = user.coin_balance or 0
-        user.total_lessons_completed = user.total_lessons_completed or 0
 
     @staticmethod
     async def _get_or_create_daily_stat(db: AsyncSession, user_id: int, stat_date: date) -> DailyStat:

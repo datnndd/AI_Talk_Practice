@@ -477,6 +477,7 @@ async def websocket_conversation(websocket: WebSocket):
                     session_id = session.id
                     character_payload = get_session_character_payload(session) or {}
                     tts_voice = character_payload.get("tts_voice") or settings.tts_voice
+                    tts_instructions = (character_payload.get("description") or "").strip() or None
                     asr_language = msg.get("language") or settings.asr_language
                     finalized_user_messages = len([item for item in session.messages if item.role == "user"])
                     trace(
@@ -531,6 +532,7 @@ async def websocket_conversation(websocket: WebSocket):
                         on_error=on_error,
                         language=asr_language,
                         voice=tts_voice,
+                        tts_instructions=tts_instructions,
                         on_no_input=on_no_input,
                         on_user_message=lambda text: persist_message("user", text),
                         on_assistant_message=on_assistant_message_persist,

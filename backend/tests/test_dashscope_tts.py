@@ -81,7 +81,14 @@ async def test_dashscope_tts_commits_and_yields_audio(monkeypatch):
         yield "Hello there."
 
     chunks = []
-    async for chunk in tts.synthesize_stream(text_stream(), config=TTSConfig(voice="myvoice", language="en")):
+    async for chunk in tts.synthesize_stream(
+        text_stream(),
+        config=TTSConfig(
+            voice="myvoice",
+            language="en",
+            instructions="Speak in a natural, friendly English tutor voice with clear pronunciation.",
+        ),
+    ):
         chunks.append(chunk)
 
     assert chunks == [b"pcm-bytes"]

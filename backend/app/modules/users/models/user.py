@@ -43,11 +43,6 @@ class User(Base, TimestampMixin):
     # Gamification progress
     total_xp: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     coin_balance: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    total_lessons_completed: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    total_speaking_lessons_completed: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    total_vocabulary_lessons_completed: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    perfect_score_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    total_practice_minutes: Mapped[int] = mapped_column(Integer, server_default="0")
 
     # Onboarding JSONB
     favorite_topics: Mapped[Optional[Any]] = mapped_column(JSONB)

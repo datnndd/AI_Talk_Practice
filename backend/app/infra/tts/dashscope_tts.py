@@ -161,8 +161,8 @@ class DashScopeTTS(TTSBase):
             "mode": "commit",
             "language_type": cfg.language,
         }
-        if "instruct" in self._config.tts_model.lower() and self._config.tts_instructions:
-            session_payload["instructions"] = self._config.tts_instructions
+        if "instruct" in self._config.tts_model.lower() and cfg.instructions:
+            session_payload["instructions"] = cfg.instructions
             session_payload["enable_instructions_optimization"] = self._config.tts_optimize_instructions
 
         await self._run_blocking(

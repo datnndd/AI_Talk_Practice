@@ -59,7 +59,6 @@ class CharacterService:
             tts_language=body.tts_language.strip(),
             is_active=body.is_active,
             sort_order=body.sort_order,
-            character_metadata=body.metadata or {},
         )
         await db.commit()
         return await cls.get_character(db, character.id)
@@ -68,9 +67,6 @@ class CharacterService:
     async def update_character(cls, db: AsyncSession, character_id: int, body: CharacterUpdate) -> Character:
         character = await cls.get_character(db, character_id)
         update_data = body.model_dump(exclude_unset=True)
-        metadata = update_data.pop("metadata", None)
-        if metadata is not None:
-            character.character_metadata = metadata
 
         for key, value in update_data.items():
             if isinstance(value, str):

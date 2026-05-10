@@ -665,21 +665,10 @@ class CurriculumService:
         if completed and progress.status != "completed":
             progress.status = "completed"
             progress.completed_at = _utcnow()
-            cls._update_user_completion_counters(user, unit, progress.best_score)
             from app.modules.gamification.services import GamificationService
 
             reward = await GamificationService.award_lesson_completion(db, user=user, lesson=unit)
         return completed, reward
-
-    @staticmethod
-    def _update_user_completion_counters(user: User, unit: Unit, score: float | None) -> None:
-        lesson_types = {lesson.type for lesson in unit.lessons if lesson.type in VALID_LESSON_TYPES}
-        if lesson_types & {"definition_choice"}:
-            user.total_vocabulary_lessons_completed = (user.total_vocabulary_lessons_completed or 0) + 1
-        if lesson_types & {"shadowing", "read_aloud", "quick_qa"}:
-            user.total_speaking_lessons_completed = (user.total_speaking_lessons_completed or 0) + 1
-        if score is not None and score >= 90:
-            user.perfect_score_count = (user.perfect_score_count or 0) + 1
 
     @staticmethod
     def _progress_summary(progress: UserLessonProgress | None) -> ProgressSummary:

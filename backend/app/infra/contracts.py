@@ -31,6 +31,7 @@ class Message:
 class TTSConfig:
     voice: str = "Cherry"
     language: str = "en"
+    instructions: str | None = None
     sample_rate: int = 24000
 
 

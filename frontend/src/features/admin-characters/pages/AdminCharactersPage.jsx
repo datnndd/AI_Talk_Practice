@@ -51,7 +51,6 @@ const CharacterEditorModal = ({ character, onClose, onSubmit, isSaving }) => {
         tts_language: form.tts_language.trim(),
         sort_order: Number(form.sort_order || 0),
         is_active: form.is_active,
-        metadata: {},
       });
     } catch (error) {
       setFormError(getApiErrorMessage(error, "Please check the character form."));

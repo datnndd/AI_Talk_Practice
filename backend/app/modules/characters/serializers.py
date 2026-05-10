@@ -17,7 +17,6 @@ def serialize_character(character: Character) -> CharacterRead:
             "tts_language": character.tts_language,
             "is_active": character.is_active,
             "sort_order": character.sort_order,
-            "metadata": character.character_metadata or {},
             "deleted_at": character.deleted_at,
             "created_at": character.created_at,
             "updated_at": character.updated_at,

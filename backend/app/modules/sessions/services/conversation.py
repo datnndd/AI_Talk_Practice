@@ -68,6 +68,7 @@ class ConversationSession:
         self._system_prompt: Optional[str] = None
         self._language = config.asr_language
         self._voice = config.tts_voice
+        self._tts_instructions: Optional[str] = None
         self._response_task: Optional[asyncio.Task] = None
         self._current_response_text = ""
         self._latest_partial_transcript = ""
@@ -89,6 +90,7 @@ class ConversationSession:
         system_prompt: Optional[str] = None,
         language: Optional[str] = None,
         voice: Optional[str] = None,
+        tts_instructions: Optional[str] = None,
         on_no_input: Optional[Callable[[str, dict], Awaitable[None]]] = None,
         on_user_message: Optional[Callable[[str], Awaitable[dict[str, Any] | None]]] = None,
         on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None,
@@ -111,6 +113,7 @@ class ConversationSession:
             self._language = language
         if voice:
             self._voice = voice
+        self._tts_instructions = tts_instructions.strip() if tts_instructions else None
 
         try:
             self._asr = create_asr(self._config)
@@ -532,6 +535,7 @@ class ConversationSession:
             tts_config = TTSConfig(
                 voice=self._voice,
                 language=self._language,
+                instructions=self._tts_instructions,
             )
             async for audio_chunk in self._tts.synthesize_stream(
                 _queue_text_stream(),
@@ -623,6 +627,7 @@ class ConversationSession:
             tts_config = TTSConfig(
                 voice=self._voice,
                 language=self._language,
+                instructions=self._tts_instructions,
             )
             async for audio_chunk in self._tts.synthesize_stream(_queue_text_stream(), config=tts_config):
                 if "tts_first_audio" not in self._turn_timing:
@@ -696,6 +701,7 @@ class ConversationSession:
             tts_config = TTSConfig(
                 voice=self._voice,
                 language=self._language,
+                instructions=self._tts_instructions,
             )
             async for audio_chunk in self._tts.synthesize_stream(_text_stream(), config=tts_config):
                 if "tts_first_audio" not in self._turn_timing:
@@ -786,7 +792,7 @@ class ConversationSession:
                 yield chunk
 
         try:
-            tts_config = TTSConfig(voice=self._voice, language=self._language)
+            tts_config = TTSConfig(voice=self._voice, language=self._language, instructions=self._tts_instructions)
             async for audio_chunk in self._tts.synthesize_stream(_text_stream(), config=tts_config):
                 self._mark_turn_phase("tts_first_audio")
                 if self._on_audio_chunk:

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -20,7 +18,6 @@ class CharacterBase(BaseModel):
     tts_language: str = Field(default="en", min_length=1, max_length=20)
     is_active: bool = True
     sort_order: int = 0
-    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class CharacterCreate(CharacterBase):
@@ -37,7 +34,6 @@ class CharacterUpdate(BaseModel):
     tts_language: str | None = Field(default=None, min_length=1, max_length=20)
     is_active: bool | None = None
     sort_order: int | None = None
-    metadata: dict[str, Any] | None = None
 
 
 class CharacterRead(ORMModel):
@@ -51,7 +47,6 @@ class CharacterRead(ORMModel):
     tts_language: str
     is_active: bool
     sort_order: int
-    metadata: dict[str, Any] = Field(default_factory=dict)
     deleted_at: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None

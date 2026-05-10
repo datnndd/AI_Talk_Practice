@@ -59,7 +59,6 @@ def build_character_snapshot(character: Character | None) -> dict[str, Any] | No
         "tts_language": character.tts_language,
         "is_active": character.is_active,
         "sort_order": character.sort_order,
-        "metadata": character.character_metadata or {},
     }
 
 

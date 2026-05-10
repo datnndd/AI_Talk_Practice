@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base, TimestampMixin
@@ -31,7 +30,6 @@ class Character(Base, TimestampMixin):
     tts_language: Mapped[str] = mapped_column(String(20), nullable=False, server_default="en")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
-    character_metadata: Mapped[Optional[Any]] = mapped_column("metadata", JSONB, server_default="{}")
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     scenarios: Mapped[list["Scenario"]] = relationship(
