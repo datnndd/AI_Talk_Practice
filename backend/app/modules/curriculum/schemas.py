@@ -218,6 +218,13 @@ class LearningSectionRead(ORMModel):
     updated_at: datetime
 
 
+class LearningSectionListResponse(BaseModel):
+    items: list[LearningSectionRead]
+    total: int
+    page: int
+    page_size: int
+
+
 class CurriculumTreeRead(BaseModel):
     sections: list[LearningSectionRead]
     current_unit_id: int | None = None

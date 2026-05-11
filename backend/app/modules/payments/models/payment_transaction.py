@@ -24,7 +24,6 @@ class PaymentTransaction(Base, TimestampMixin):
     duration_days: Mapped[Optional[int]] = mapped_column(Integer)
     original_amount: Mapped[Optional[int]] = mapped_column(Integer)
     discount_amount: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    promo_code: Mapped[Optional[str]] = mapped_column(String(40), index=True)
     amount: Mapped[int] = mapped_column(Integer)
     currency: Mapped[str] = mapped_column(String(10))
     status: Mapped[str] = mapped_column(String(20), index=True)

@@ -13,7 +13,6 @@ const createInitialForm = (character) => ({
   description: character?.description || "",
   model_url: character?.model_url || DEFAULT_MODEL_URL,
   core_url: character?.core_url || DEFAULT_CORE_URL,
-  thumbnail_url: character?.thumbnail_url || "",
   tts_voice: character?.tts_voice || "Cherry",
   tts_language: character?.tts_language || "en",
   sort_order: character?.sort_order ?? 0,
@@ -46,7 +45,6 @@ const CharacterEditorModal = ({ character, onClose, onSubmit, isSaving }) => {
         description: form.description.trim() || null,
         model_url: form.model_url.trim(),
         core_url: form.core_url.trim(),
-        thumbnail_url: form.thumbnail_url.trim() || null,
         tts_voice: form.tts_voice.trim(),
         tts_language: form.tts_language.trim(),
         sort_order: Number(form.sort_order || 0),
@@ -153,15 +151,6 @@ const CharacterEditorModal = ({ character, onClose, onSubmit, isSaving }) => {
                 required
                 value={form.core_url}
                 onChange={(event) => updateField("core_url", event.target.value)}
-                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Thumbnail URL</span>
-              <input
-                value={form.thumbnail_url}
-                onChange={(event) => updateField("thumbnail_url", event.target.value)}
                 className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
               />
             </label>

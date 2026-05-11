@@ -6,6 +6,7 @@ const curriculumCache = {
 };
 
 const unitCache = new Map();
+const sectionCache = new Map();
 
 const getUnitCacheKey = (unitId) => String(unitId);
 
@@ -30,6 +31,28 @@ export const curriculumApi = {
     return curriculumCache.promise;
   },
   getCachedCurriculum: () => curriculumCache.data,
+  getSection: async (sectionId, { force = false } = {}) => {
+    const key = String(sectionId);
+    const cached = sectionCache.get(key);
+    if (!force && cached?.data) {
+      return cached.data;
+    }
+    if (!force && cached?.promise) {
+      return cached.promise;
+    }
+
+    const promise = httpClient.get(`/curriculum/sections/${sectionId}`).then(({ data }) => {
+      const section = data.sections?.[0] || null;
+      sectionCache.set(key, { data: section });
+      return section;
+    }).catch((error) => {
+      sectionCache.delete(key);
+      throw error;
+    });
+
+    sectionCache.set(key, { promise });
+    return promise;
+  },
   getUnit: async (unitId, { force = false } = {}) => {
     const key = getUnitCacheKey(unitId);
     const cached = unitCache.get(key);
@@ -66,8 +89,12 @@ export const curriculumApi = {
 };
 
 export const adminCurriculumApi = {
-  listSections: async () => {
-    const { data } = await httpClient.get("/admin/curriculum/sections");
+  listSectionSummariesPaged: async (params = {}) => {
+    const { data } = await httpClient.get("/admin/curriculum/sections/summary-paged", { params });
+    return data;
+  },
+  getSection: async (sectionId) => {
+    const { data } = await httpClient.get(`/admin/curriculum/sections/${sectionId}`);
     return data;
   },
   createSection: async (payload) => {

@@ -25,7 +25,6 @@ class Character(Base, TimestampMixin):
     description: Mapped[Optional[str]] = mapped_column(Text)
     model_url: Mapped[str] = mapped_column(String(1000), nullable=False)
     core_url: Mapped[str] = mapped_column(String(1000), nullable=False)
-    thumbnail_url: Mapped[Optional[str]] = mapped_column(String(1000))
     tts_voice: Mapped[str] = mapped_column(String(100), nullable=False, server_default="Cherry")
     tts_language: Mapped[str] = mapped_column(String(20), nullable=False, server_default="en")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")

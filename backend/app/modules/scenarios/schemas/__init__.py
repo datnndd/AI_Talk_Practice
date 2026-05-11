@@ -13,7 +13,6 @@ from .admin_scenario import (
     GenerateDefaultPromptResponse,
     BulkScenarioActionRequest,
     BulkScenarioActionResponse,
-    PromptQualityAssessment,
 )
 
 __all__ = [
@@ -29,5 +28,4 @@ __all__ = [
     "GenerateDefaultPromptResponse",
     "BulkScenarioActionRequest",
     "BulkScenarioActionResponse",
-    "PromptQualityAssessment",
 ]

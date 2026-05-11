@@ -3,18 +3,11 @@ import {
   ArrowClockwise,
   ArrowDown,
   ArrowUp,
-  CheckCircle,
-  Code,
   FloppyDiskBack,
-  Gift,
-  GraduationCap,
   PencilSimple,
   Plus,
   ProhibitInset,
-  Robot,
   SpeakerHigh,
-  SquaresFour,
-  UserList,
   X,
 } from "@phosphor-icons/react";
 
@@ -59,6 +52,14 @@ const EXERCISE_TYPES = [
   { value: "definition_choice", label: "Definition choice" },
   { value: "quick_qa", label: "Quick Q&A" },
 ];
+
+const CURRICULUM_STATUS_FILTERS = [
+  { value: "", label: "All statuses" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+
+const CEFR_FILTERS = ["", "A1", "A2", "B1", "B2", "C1", "C2"];
 
 const pretty = (value) => JSON.stringify(value || {}, null, 2);
 
@@ -113,6 +114,34 @@ const StatusBadge = ({ children, isActive = true }) => (
 const EmptyState = ({ children }) => (
   <div className="rounded-[24px] border border-dashed border-zinc-200 bg-zinc-50 px-4 py-8 text-center text-sm font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
     {children}
+  </div>
+);
+
+const RowActions = ({ item, kind, items, onEdit, onToggle, onMove, disabled }) => (
+  <div className="flex shrink-0 flex-wrap justify-end gap-1">
+    <button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Edit">
+      <PencilSimple size={13} />
+    </button>
+    <button type="button" onClick={(event) => { event.stopPropagation(); onToggle(); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-rose-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label={item.is_active ? "Deactivate" : "Restore"}>
+      <ProhibitInset size={13} />
+    </button>
+    <button type="button" disabled={disabled || items.findIndex((entry) => entry.id === item.id) <= 0} onClick={(event) => { event.stopPropagation(); onMove(kind, items, item.id, -1); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary disabled:opacity-30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Move up">
+      <ArrowUp size={13} />
+    </button>
+    <button type="button" disabled={disabled || items.findIndex((entry) => entry.id === item.id) >= items.length - 1} onClick={(event) => { event.stopPropagation(); onMove(kind, items, item.id, 1); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary disabled:opacity-30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Move down">
+      <ArrowDown size={13} />
+    </button>
+  </div>
+);
+
+const CurriculumTreeSkeleton = () => (
+  <div className="space-y-2">
+    {[0, 1, 2].map((item) => (
+      <div key={item} className="rounded-[18px] bg-white px-3 py-3 dark:bg-zinc-900">
+        <div className="h-4 w-2/3 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
+        <div className="mt-2 h-3 w-1/3 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
+      </div>
+    ))}
   </div>
 );
 
@@ -701,28 +730,33 @@ const AdminCurriculumPage = () => {
   const [selectedLevelId, setSelectedLevelId] = useState(null);
   const [selectedLessonId, setSelectedLessonId] = useState(null);
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
-  const [activeNode, setActiveNode] = useState(null);
+  const [sectionDetailCache, setSectionDetailCache] = useState({});
+  const [loadingSectionId, setLoadingSectionId] = useState(null);
+  const [sectionDetailError, setSectionDetailError] = useState("");
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
-  const [loadingExerciseId, setLoadingExerciseId] = useState(null);
+  const [filters, setFilters] = useState({ search: "", status: "", cefr_level: "", page: 1, page_size: 30 });
+  const [sectionTotal, setSectionTotal] = useState(0);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
-  const selectedLevel = useMemo(() => levels.find((item) => item.id === selectedLevelId) || null, [levels, selectedLevelId]);
+  const selectedLevel = useMemo(
+    () => sectionDetailCache[selectedLevelId] || levels.find((item) => item.id === selectedLevelId) || null,
+    [levels, sectionDetailCache, selectedLevelId],
+  );
   const selectedLessons = useMemo(() => sortedByOrder(selectedLevel?.lessons || []), [selectedLevel]);
   const selectedLesson = useMemo(
     () => selectedLessons.find((item) => item.id === selectedLessonId) || null,
     [selectedLessons, selectedLessonId],
   );
   const selectedExercises = useMemo(() => sortedByOrder(selectedLesson?.exercises || []), [selectedLesson]);
-  const selectedExercise = useMemo(
-    () => selectedExercises.find((item) => item.id === selectedExerciseId) || null,
-    [selectedExercises, selectedExerciseId],
+  const allLessons = useMemo(
+    () => Object.values(sectionDetailCache).flatMap((level) => level.lessons || []),
+    [sectionDetailCache],
   );
-  const allLessons = useMemo(() => levels.flatMap((level) => level.lessons || []), [levels]);
 
   const replaceExercise = useCallback((exerciseId, patch) => {
     setLevels((currentLevels) =>
@@ -736,6 +770,22 @@ const AdminCurriculumPage = () => {
         })),
       })),
     );
+    setSectionDetailCache((currentCache) =>
+      Object.fromEntries(
+        Object.entries(currentCache).map(([levelId, level]) => [
+          levelId,
+          {
+            ...level,
+            lessons: (level.lessons || []).map((lesson) => ({
+              ...lesson,
+              exercises: (lesson.exercises || []).map((exercise) =>
+                exercise.id === exerciseId ? { ...exercise, ...patch } : exercise
+              ),
+            })),
+          },
+        ]),
+      ),
+    );
   }, []);
 
   const loadExerciseDetail = useCallback(
@@ -743,7 +793,6 @@ const AdminCurriculumPage = () => {
       if (!exercise || hasLessonContent(exercise)) {
         return exercise;
       }
-      setLoadingExerciseId(exercise.id);
       try {
         const detail = normalizeExerciseNode(await adminCurriculumApi.getLesson(exercise.id));
         replaceExercise(exercise.id, detail);
@@ -751,8 +800,6 @@ const AdminCurriculumPage = () => {
       } catch (detailError) {
         setError(getErrorMessage(detailError, "Failed to load lesson content."));
         return exercise;
-      } finally {
-        setLoadingExerciseId(null);
       }
     },
     [replaceExercise],
@@ -776,19 +823,54 @@ const AdminCurriculumPage = () => {
     setIsLoading(true);
     setError("");
     try {
-      const response = await adminCurriculumApi.listSections();
-      const ordered = normalizeSectionTree(response);
+      const params = Object.fromEntries(Object.entries(filters).filter(([, value]) => value));
+      const response = await adminCurriculumApi.listSectionSummariesPaged(params);
+      const ordered = normalizeSectionTree(response.items || []);
       setLevels(ordered);
+      setSectionTotal(response.total || 0);
       setSelectedLevelId((current) => (current && ordered.some((item) => item.id === current) ? current : ordered[0]?.id || null));
+      setSectionDetailCache({});
+      setSectionDetailError("");
     } catch (loadError) {
       setError(getErrorMessage(loadError, "Failed to load curriculum."));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [filters]);
+
+  const updateFilter = (key, value) => {
+    setFilters((current) => ({ ...current, [key]: value, page: 1 }));
+  };
+
+  const resetFilters = () => {
+    setFilters({ search: "", status: "", cefr_level: "", page: 1, page_size: 30 });
+  };
+
+  const totalSectionPages = Math.max(1, Math.ceil(sectionTotal / filters.page_size));
+
+  const loadSectionDetail = useCallback(async (levelId, { force = false } = {}) => {
+    if (!force && sectionDetailCache[levelId]) {
+      return sectionDetailCache[levelId];
+    }
+    setLoadingSectionId(levelId);
+    setSectionDetailError("");
+    try {
+      const detail = normalizeSectionTree([await adminCurriculumApi.getSection(levelId)])[0];
+      setSectionDetailCache((current) => ({ ...current, [levelId]: detail }));
+      return detail;
+    } catch (loadError) {
+      setSectionDetailError(getErrorMessage(loadError, "Failed to load section detail."));
+      return null;
+    } finally {
+      setLoadingSectionId(null);
+    }
+  }, [sectionDetailCache]);
 
   useEffect(() => {
-    void loadLevels();
+    const timer = window.setTimeout(() => {
+      void loadLevels();
+    }, 350);
+    return () => window.clearTimeout(timer);
   }, [loadLevels]);
 
   useEffect(() => {
@@ -806,12 +888,6 @@ const AdminCurriculumPage = () => {
     }
     setSelectedExerciseId((current) => (current && selectedExercises.some((item) => item.id === current) ? current : selectedExercises[0]?.id || null));
   }, [selectedLesson, selectedExercises]);
-
-  useEffect(() => {
-    if (selectedExercise && !hasLessonContent(selectedExercise)) {
-      void loadExerciseDetail(selectedExercise);
-    }
-  }, [loadExerciseDetail, selectedExercise]);
 
   const openModal = async (kind, item = null) => {
     const nextLevelOrder = levels.length;
@@ -866,7 +942,7 @@ const AdminCurriculumPage = () => {
       }
       setNotice(`${curriculumKindLabel(modal.kind)} saved.`);
       closeModal();
-      await loadLevels();
+      await refreshCurrentData(modal.kind);
     } catch (submitError) {
       setError(getErrorMessage(submitError, `Failed to save ${curriculumKindLabel(modal.kind)}.`));
     } finally {
@@ -897,7 +973,7 @@ const AdminCurriculumPage = () => {
         await adminCurriculumApi.deleteLesson(item.id);
       }
       setNotice(nextActive ? `${curriculumKindLabel(kind)} restored.` : `${curriculumKindLabel(kind)} deactivated.`);
-      await loadLevels();
+      await refreshCurrentData(kind);
     } catch (toggleError) {
       setError(getErrorMessage(toggleError, `Failed to update ${curriculumKindLabel(kind)}.`));
     }
@@ -924,7 +1000,7 @@ const AdminCurriculumPage = () => {
         await adminCurriculumApi.reorderLessons(payload);
       }
       setNotice(`${curriculumKindLabel(kind)} order updated.`);
-      await loadLevels();
+      await refreshCurrentData(kind);
     } catch (reorderError) {
       setError(getErrorMessage(reorderError, `Failed to reorder ${curriculumKindLabel(kind)}.`));
     } finally {
@@ -932,39 +1008,32 @@ const AdminCurriculumPage = () => {
     }
   };
 
-  const selectLevelNode = (levelId) => {
+  const selectLevelNode = async (levelId) => {
     setSelectedLevelId(levelId);
-    setActiveNode({ kind: "level", id: levelId });
+    setSelectedLessonId(null);
+    setSelectedExerciseId(null);
+    void loadSectionDetail(levelId);
   };
 
-  const selectLessonNode = (levelId, lessonId) => {
+  const selectLessonNode = async (levelId, lessonId) => {
     setSelectedLevelId(levelId);
     setSelectedLessonId(lessonId);
-    setActiveNode({ kind: "lesson", id: lessonId });
+    setSelectedExerciseId(null);
   };
 
-  const selectExerciseNode = (levelId, lessonId, exerciseId) => {
+  const selectExerciseNode = async (levelId, lessonId, exerciseId) => {
     setSelectedLevelId(levelId);
     setSelectedLessonId(lessonId);
     setSelectedExerciseId(exerciseId);
-    setActiveNode({ kind: "exercise", id: exerciseId });
   };
 
-  const activeItem =
-    activeNode?.kind === "level"
-      ? levels.find((level) => level.id === activeNode.id) || null
-      : activeNode?.kind === "lesson"
-        ? allLessons.find((lesson) => lesson.id === activeNode.id) || null
-        : activeNode?.kind === "exercise"
-          ? allLessons.flatMap((lesson) => lesson.exercises || []).find((exercise) => exercise.id === activeNode.id) || null
-          : null;
-
-  const activeParentLesson =
-    activeNode?.kind === "exercise"
-      ? allLessons.find((lesson) => (lesson.exercises || []).some((exercise) => exercise.id === activeNode.id)) || null
-      : null;
-
-  const activeKindLabel = activeNode ? curriculumKindLabel(activeNode.kind) : "item";
+  const refreshCurrentData = async (kind = modal?.kind) => {
+    if (kind === "level" || !selectedLevelId) {
+      await loadLevels();
+      return;
+    }
+    await loadSectionDetail(selectedLevelId, { force: true });
+  };
 
   const summaryCards = [
     { label: "Sections", value: levels.length },
@@ -1003,216 +1072,199 @@ const AdminCurriculumPage = () => {
         <section id="curriculum-library">
           <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <PanelHeader
-              eyebrow="Curriculum Tree"
-              title="Sections, units, lessons"
+              eyebrow="Curriculum Browser"
+              title="Sections ? Units ? Lessons"
               actionLabel="New Section"
               actionTestId="new-section-button"
               onAction={() => openModal("level")}
               onRefresh={loadLevels}
             />
 
-            <div className="mt-5 space-y-3">
-              {isLoading && <EmptyState>Loading curriculum...</EmptyState>}
-              {!isLoading && levels.length === 0 && <EmptyState>No sections created yet.</EmptyState>}
-              {!isLoading && levels.map((level, levelIndex) => (
-                <div key={level.id} className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="mt-5 grid gap-3 rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950 md:grid-cols-[1fr_180px_160px_auto]">
+              <input
+                type="search"
+                value={filters.search}
+                onChange={(event) => updateFilter("search", event.target.value)}
+                placeholder="Search sections..."
+                className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+              />
+              <select
+                value={filters.status}
+                onChange={(event) => updateFilter("status", event.target.value)}
+                className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+              >
+                {CURRICULUM_STATUS_FILTERS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <select
+                value={filters.cefr_level}
+                onChange={(event) => updateFilter("cefr_level", event.target.value)}
+                className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+              >
+                {CEFR_FILTERS.map((level) => (
+                  <option key={level || "all"} value={level}>{level || "All CEFR"}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-700 transition hover:bg-white dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+              >
+                Reset
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 xl:grid-cols-3">
+              <div className="rounded-[26px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+                <div className="mb-3 flex items-center justify-between gap-3 px-2">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Sections</p>
+                    <p className="mt-1 text-xs font-semibold text-zinc-500">{levels.length} items</p>
+                  </div>
+                  <button type="button" onClick={() => openModal("level")} className="rounded-xl bg-primary px-3 py-2 text-xs font-black text-white">New</button>
+                </div>
+                <div className="space-y-2">
+                  {isLoading && <EmptyState>Loading curriculum...</EmptyState>}
+                  {!isLoading && levels.length === 0 && <EmptyState>No sections created yet.</EmptyState>}
+                  {!isLoading && levels.map((level, levelIndex) => (
+                    <div
+                      key={level.id}
+                      role="button"
+                      tabIndex={0}
+                      data-testid={`curriculum-level-row-${level.id}`}
+                      onClick={() => selectLevelNode(level.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") selectLevelNode(level.id);
+                      }}
+                      className={`flex w-full items-start justify-between gap-3 rounded-[18px] px-3 py-3 text-left transition ${
+                        selectedLevelId === level.id ? "bg-primary/10 text-primary dark:text-white" : "bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black">{levelIndex + 1}. {level.title}</p>
+                        <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{level.cefr_level || level.code} ? Order {level.order_index ?? 0}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <StatusBadge isActive={level.is_active}>{level.is_active ? "Active" : "Inactive"}</StatusBadge>
+                        <RowActions item={level} kind="level" items={levels} onEdit={() => openModal("level", level)} onToggle={() => toggleActive("level", level)} onMove={moveItem} disabled={isReordering} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-2 border-t border-zinc-200 px-2 pt-3 text-xs font-bold text-zinc-500 dark:border-zinc-800">
                   <button
                     type="button"
-                    data-testid={`curriculum-level-row-${level.id}`}
-                    onClick={() => selectLevelNode(level.id)}
-                    className={`flex w-full items-start justify-between gap-3 rounded-[18px] px-3 py-3 text-left transition ${
-                      activeNode?.kind === "level" && activeNode.id === level.id
-                        ? "bg-primary/10 text-primary dark:text-white"
-                        : "hover:bg-white dark:hover:bg-zinc-900"
-                    }`}
+                    disabled={filters.page <= 1 || isLoading}
+                    onClick={() => setFilters((current) => ({ ...current, page: Math.max(1, current.page - 1) }))}
+                    className="rounded-xl border border-zinc-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-700"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black">{levelIndex + 1}. {level.title}</p>
-                      <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                        {level.cefr_level || level.code} ? {(level.lessons || []).length} units
-                      </p>
-                    </div>
-                    <StatusBadge isActive={level.is_active}>{level.is_active ? "Active" : "Inactive"}</StatusBadge>
+                    Prev
                   </button>
+                  <span>Page {filters.page}/{totalSectionPages} · {sectionTotal} total</span>
+                  <button
+                    type="button"
+                    disabled={filters.page >= totalSectionPages || isLoading}
+                    onClick={() => setFilters((current) => ({ ...current, page: Math.min(totalSectionPages, current.page + 1) }))}
+                    className="rounded-xl border border-zinc-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-700"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
 
-                  <div className="mt-2 space-y-2 border-l border-zinc-200 pl-4 dark:border-zinc-800">
-                    {sortedByOrder(level.lessons || []).map((lesson, lessonIndex) => (
-                      <div key={lesson.id}>
-                        <button
-                          type="button"
-                          data-testid={`curriculum-lesson-row-${lesson.id}`}
-                          onClick={() => selectLessonNode(level.id, lesson.id)}
-                          className={`flex w-full items-start justify-between gap-3 rounded-[18px] px-3 py-2 text-left transition ${
-                            activeNode?.kind === "lesson" && activeNode.id === lesson.id
-                              ? "bg-primary/10 text-primary dark:text-white"
-                              : "hover:bg-white dark:hover:bg-zinc-900"
-                          }`}
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold">{levelIndex + 1}.{lessonIndex + 1} {lesson.title}</p>
-                            <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                              {lesson.xp_reward || 0} XP ? {lesson.coin_reward || 0} coins ? {(lesson.exercises || []).length} lessons
-                            </p>
-                          </div>
-                          <StatusBadge isActive={lesson.is_active}>{lesson.is_active ? "Active" : "Inactive"}</StatusBadge>
-                        </button>
-
-                        <div className="mt-1 space-y-1 border-l border-zinc-200 pl-4 dark:border-zinc-800">
-                          {sortedByOrder(lesson.exercises || []).map((exercise, exerciseIndex) => (
-                            <button
-                              key={exercise.id}
-                              type="button"
-                              data-testid={`curriculum-exercise-row-${exercise.id}`}
-                              onClick={() => selectExerciseNode(level.id, lesson.id, exercise.id)}
-                              className={`flex w-full items-start justify-between gap-3 rounded-[16px] px-3 py-2 text-left transition ${
-                                activeNode?.kind === "exercise" && activeNode.id === exercise.id
-                                  ? "bg-primary/10 text-primary dark:text-white"
-                                  : "hover:bg-white dark:hover:bg-zinc-900"
-                              }`}
-                            >
-                              <div className="min-w-0">
-                                <p className="truncate text-xs font-black">
-                                  {levelIndex + 1}.{lessonIndex + 1}.{exerciseIndex + 1} {exercise.title}
-                                </p>
-                                <p className="mt-1 truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
-                                  {exercise.type} ? pass {exercise.pass_score}
-                                </p>
-                              </div>
-                              <StatusBadge isActive={exercise.is_active}>{exercise.is_active ? "Active" : "Inactive"}</StatusBadge>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+              <div className="rounded-[26px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+                <div className="mb-3 flex items-center justify-between gap-3 px-2">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Units</p>
+                    <p className="mt-1 text-xs font-semibold text-zinc-500">{selectedLevel ? selectedLevel.title : "Select a section"}</p>
                   </div>
+                  <button
+                    type="button"
+                    disabled={!selectedLevelId}
+                    onClick={() => openModal("lesson")}
+                    className="rounded-xl bg-primary px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Add Unit
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="space-y-2">
+                  {!selectedLevelId && <EmptyState>Select a section first.</EmptyState>}
+                  {sectionDetailError && <div className="rounded-[18px] bg-rose-50 px-3 py-3 text-xs font-bold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{sectionDetailError}</div>}
+                  {loadingSectionId === selectedLevelId && !sectionDetailCache[selectedLevelId] && <CurriculumTreeSkeleton />}
+                  {selectedLevelId && sectionDetailCache[selectedLevelId] && selectedLessons.length === 0 && <EmptyState>No units in this section yet.</EmptyState>}
+                  {selectedLessons.map((lesson, lessonIndex) => (
+                    <div
+                      key={lesson.id}
+                      role="button"
+                      tabIndex={0}
+                      data-testid={`curriculum-lesson-row-${lesson.id}`}
+                      onClick={() => selectLessonNode(selectedLevelId, lesson.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") selectLessonNode(selectedLevelId, lesson.id);
+                      }}
+                      className={`flex w-full items-start justify-between gap-3 rounded-[18px] px-3 py-3 text-left transition ${
+                        selectedLessonId === lesson.id ? "bg-primary/10 text-primary dark:text-white" : "bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black">{lessonIndex + 1}. {lesson.title}</p>
+                        <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{lesson.xp_reward || 0} XP ? {lesson.coin_reward || 0} coins ? {(lesson.exercises || []).length} lessons</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <StatusBadge isActive={lesson.is_active}>{lesson.is_active ? "Active" : "Inactive"}</StatusBadge>
+                        <RowActions item={lesson} kind="lesson" items={selectedLessons} onEdit={() => openModal("lesson", lesson)} onToggle={() => toggleActive("lesson", lesson)} onMove={moveItem} disabled={isReordering} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-          <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-3xl overflow-y-auto border-l border-zinc-200 bg-zinc-50 p-4 shadow-2xl transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950 ${activeNode ? "translate-x-0" : "translate-x-full"}`}>
-            <div className="mb-4 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">{activeKindLabel} Detail</p>
-                  <h2 className="mt-1 truncate text-2xl font-black">{activeItem?.title || "Select a curriculum item"}</h2>
-                  <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                    Tree stays visible while this drawer handles editing, ordering, and preview.
-                  </p>
+              <div className="rounded-[26px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+                <div className="mb-3 flex items-center justify-between gap-3 px-2">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Lessons</p>
+                    <p className="mt-1 text-xs font-semibold text-zinc-500">{selectedLesson ? selectedLesson.title : "Select a unit"}</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!selectedLessonId}
+                    onClick={() => openModal("exercise")}
+                    className="rounded-xl bg-primary px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Add Lesson
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveNode(null)}
-                  className="rounded-2xl border border-zinc-200 p-3 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                  aria-label="Close curriculum detail"
-                >
-                  <X size={18} />
-                </button>
+                <div className="space-y-2">
+                  {!selectedLessonId && <EmptyState>Select a unit first.</EmptyState>}
+                  {selectedLessonId && selectedExercises.length === 0 && <EmptyState>No lessons in this unit yet.</EmptyState>}
+                  {selectedExercises.map((exercise, exerciseIndex) => (
+                    <div
+                      key={exercise.id}
+                      role="button"
+                      tabIndex={0}
+                      data-testid={`curriculum-exercise-row-${exercise.id}`}
+                      onClick={() => selectExerciseNode(selectedLevelId, selectedLessonId, exercise.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") selectExerciseNode(selectedLevelId, selectedLessonId, exercise.id);
+                      }}
+                      className={`flex w-full items-start justify-between gap-3 rounded-[18px] px-3 py-3 text-left transition ${
+                        selectedExerciseId === exercise.id ? "bg-primary/10 text-primary dark:text-white" : "bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black">{exerciseIndex + 1}. {exercise.title}</p>
+                        <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{exercise.type} ? pass {exercise.pass_score}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <StatusBadge isActive={exercise.is_active}>{exercise.is_active ? "Active" : "Inactive"}</StatusBadge>
+                        <RowActions item={exercise} kind="exercise" items={selectedExercises} onEdit={() => openModal("exercise", exercise)} onToggle={() => toggleActive("exercise", exercise)} onMove={moveItem} disabled={isReordering} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-
-            {!activeItem && <EmptyState>Select a section, unit, or lesson from the tree.</EmptyState>}
-
-            {activeItem && (
-              <div className="space-y-4">
-                <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">Overview</p>
-                      <h3 className="mt-2 text-xl font-black">{activeItem.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-                        {activeItem.description || activeItem.type || activeItem.code || "No description."}
-                      </p>
-                    </div>
-                    <StatusBadge isActive={activeItem.is_active}>{activeItem.is_active ? "Active" : "Inactive"}</StatusBadge>
-                  </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-[22px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Order</p>
-                      <p className="mt-2 text-2xl font-black">{activeItem.order_index ?? 0}</p>
-                    </div>
-                    <div className="rounded-[22px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Type</p>
-                      <p className="mt-2 text-sm font-black capitalize">{activeKindLabel}</p>
-                    </div>
-                    <div className="rounded-[22px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Children</p>
-                      <p className="mt-2 text-2xl font-black">
-                        {activeNode.kind === "level" ? (activeItem.lessons || []).length : activeNode.kind === "lesson" ? (activeItem.exercises || []).length : 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Quick Actions</p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => openModal(activeNode.kind, activeItem)}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5"
-                    >
-                      <PencilSimple size={16} />
-                      Edit {activeKindLabel}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleActive(activeNode.kind, activeItem)}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                    >
-                      <ProhibitInset size={16} />
-                      {activeItem.is_active ? "Deactivate" : "Restore"}
-                    </button>
-                    {activeNode.kind === "level" && (
-                      <button
-                        type="button"
-                        onClick={() => openModal("lesson")}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-black text-primary transition hover:-translate-y-0.5 dark:text-white"
-                      >
-                        <Plus size={16} />
-                        Add Unit
-                      </button>
-                    )}
-                    {activeNode.kind === "lesson" && (
-                      <button
-                        type="button"
-                        onClick={() => openModal("exercise")}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-black text-primary transition hover:-translate-y-0.5 dark:text-white"
-                      >
-                        <Plus size={16} />
-                        Add Lesson
-                      </button>
-                    )}
-                  </div>
-
-                  <ItemActions
-                    kind={activeNode.kind}
-                    item={activeItem}
-                    items={activeNode.kind === "level" ? levels : activeNode.kind === "lesson" ? selectedLessons : selectedExercises}
-                    onEdit={() => openModal(activeNode.kind, activeItem)}
-                    onToggle={() => toggleActive(activeNode.kind, activeItem)}
-                    onMove={moveItem}
-                    disabled={isReordering}
-                  />
-                </div>
-
-                {activeNode.kind === "exercise" && (
-                  <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-                        <Code size={14} />
-                        Content Preview
-                      </div>
-                      {activeParentLesson && <span className="text-xs font-semibold text-zinc-500">Unit: {activeParentLesson.title}</span>}
-                    </div>
-                    <pre className="mt-3 max-h-[420px] overflow-auto whitespace-pre-wrap break-words rounded-[18px] bg-zinc-950 p-4 font-mono text-xs text-zinc-50">
-                      {loadingExerciseId === activeItem.id ? "Loading content..." : pretty(activeItem.content)}
-                    </pre>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </section>
 
@@ -1273,57 +1325,5 @@ const PanelHeader = ({ eyebrow, title, actionLabel, actionTestId, onAction, onRe
   </div>
 );
 
-const ItemActions = ({ kind, item, items, onEdit, onToggle, onMove, disabled }) => {
-  if (!item) {
-    return null;
-  }
-  const currentIndex = items.findIndex((entry) => entry.id === item.id);
-  return (
-    <div className="mt-5 grid gap-2 sm:grid-cols-2">
-      <button
-        type="button"
-        data-testid={`edit-${kind}-button`}
-        onClick={onEdit}
-        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-      >
-        <PencilSimple size={16} />
-        Edit
-      </button>
-      <button
-        type="button"
-        data-testid={`toggle-${kind}-button`}
-        onClick={onToggle}
-        className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black ${
-          item.is_active
-            ? "border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300"
-            : "bg-emerald-600 text-white"
-        }`}
-      >
-        {item.is_active ? <ProhibitInset size={16} /> : <CheckCircle size={16} />}
-        {item.is_active ? "Deactivate" : "Restore"}
-      </button>
-      <button
-        type="button"
-        data-testid={`move-${kind}-up`}
-        disabled={disabled || currentIndex <= 0}
-        onClick={() => onMove(kind, items, item.id, -1)}
-        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-      >
-        <ArrowUp size={16} />
-        Move Up
-      </button>
-      <button
-        type="button"
-        data-testid={`move-${kind}-down`}
-        disabled={disabled || currentIndex < 0 || currentIndex >= items.length - 1}
-        onClick={() => onMove(kind, items, item.id, 1)}
-        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-      >
-        <ArrowDown size={16} />
-        Move Down
-      </button>
-    </div>
-  );
-};
-
 export default AdminCurriculumPage;
+

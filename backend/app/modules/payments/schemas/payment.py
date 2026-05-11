@@ -33,7 +33,6 @@ class PaymentCheckoutResponse(BaseModel):
     duration_days: int | None = None
     original_amount: int | None = None
     discount_amount: int = 0
-    promo_code: str | None = None
     amount: int
     currency: str
     status: str
@@ -52,7 +51,6 @@ class PaymentStatusResponse(BaseModel):
     duration_days: int | None = None
     original_amount: int | None = None
     discount_amount: int = 0
-    promo_code: str | None = None
     amount: int
     currency: str
     status: str

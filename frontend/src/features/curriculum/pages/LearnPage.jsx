@@ -143,8 +143,39 @@ const PreviewDrawer = ({ unit, onClose }) => {
 const LearnPage = () => {
   const [data, setData] = useState(null);
   const [selectedUnit, setSelectedUnit] = useState(null);
+  const [expandedSectionIds, setExpandedSectionIds] = useState(() => new Set());
+  const [loadingSectionId, setLoadingSectionId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const loadSectionDetail = async (sectionId) => {
+    setLoadingSectionId(sectionId);
+    setError("");
+    try {
+      const section = await curriculumApi.getSection(sectionId);
+      setData((current) => ({
+        ...current,
+        sections: (current?.sections || []).map((item) => (item.id === sectionId ? section : item)),
+      }));
+      setExpandedSectionIds((current) => new Set(current).add(sectionId));
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Không thể tải chi tiết section.");
+    } finally {
+      setLoadingSectionId(null);
+    }
+  };
+
+  const toggleSection = async (sectionId) => {
+    if (expandedSectionIds.has(sectionId)) {
+      setExpandedSectionIds((current) => {
+        const next = new Set(current);
+        next.delete(sectionId);
+        return next;
+      });
+      return;
+    }
+    await loadSectionDetail(sectionId);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -220,17 +251,25 @@ const LearnPage = () => {
       <div className="space-y-8">
           {(data?.sections || []).map((section, sectionIndex) => {
             const accent = sectionColors[sectionIndex % sectionColors.length];
+            const isExpanded = expandedSectionIds.has(section.id);
+            const isSectionLoading = loadingSectionId === section.id;
             return (
               <section key={section.id} className="rounded-[36px] border border-border bg-card p-5 shadow-sm">
-                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <button type="button" onClick={() => toggleSection(section.id)} className="mb-5 flex w-full flex-wrap items-center justify-between gap-3 text-left">
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">{section.cefr_level || section.code || "Path"}</p>
                     <h2 className="mt-1 text-2xl font-black text-foreground">{section.title}</h2>
                     {section.description && <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-muted-foreground">{section.description}</p>}
                   </div>
-                  <div className={`rounded-2xl bg-gradient-to-br ${accent} px-4 py-3 text-sm font-black text-white shadow-lg`}>{(section.units || []).length} quests</div>
-                </div>
+                  <div className="flex items-center gap-2">
+                    {isSectionLoading && <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Đang tải</span>}
+                    <div className={`rounded-2xl bg-gradient-to-br ${accent} px-4 py-3 text-sm font-black text-white shadow-lg`}>
+                      {isExpanded ? `${(section.units || []).length} quests` : "Xem chi tiết"}
+                    </div>
+                  </div>
+                </button>
 
+                {isExpanded && (
                 <div className="relative grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {(section.units || []).map((unit, unitIndex) => (
                     <LessonNode
@@ -248,6 +287,7 @@ const LearnPage = () => {
                     />
                   ))}
                 </div>
+                )}
               </section>
             );
           })}

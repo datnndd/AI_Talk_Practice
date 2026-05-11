@@ -807,12 +807,68 @@ class AdminCurriculumService:
         )
 
     @staticmethod
-    async def list_sections(db: AsyncSession, include_inactive: bool = True) -> list[LearningSection]:
-        stmt = select(LearningSection).options(selectinload(LearningSection.units).selectinload(Unit.lessons))
+    async def list_sections(
+        db: AsyncSession,
+        include_inactive: bool = True,
+        include_units: bool = True,
+        search: str | None = None,
+        status: str | None = None,
+        cefr_level: str | None = None,
+        page: int | None = None,
+        page_size: int | None = None,
+    ) -> list[LearningSection]:
+        stmt = select(LearningSection)
+        if include_units:
+            stmt = stmt.options(selectinload(LearningSection.units).selectinload(Unit.lessons))
         if not include_inactive:
             stmt = stmt.where(_truthy(LearningSection.is_active))
+        if status == "active":
+            stmt = stmt.where(_truthy(LearningSection.is_active))
+        elif status == "inactive":
+            stmt = stmt.where(~_truthy(LearningSection.is_active))
+        if cefr_level:
+            stmt = stmt.where(func.lower(LearningSection.cefr_level) == cefr_level.lower())
+        if search:
+            keyword = f"%{search.strip().lower()}%"
+            stmt = stmt.where(
+                or_(
+                    func.lower(LearningSection.code).like(keyword),
+                    func.lower(LearningSection.title).like(keyword),
+                    func.lower(LearningSection.description).like(keyword),
+                )
+            )
         stmt = stmt.order_by(LearningSection.order_index.asc(), LearningSection.id.asc())
+        if page is not None and page_size is not None:
+            stmt = stmt.offset((max(page, 1) - 1) * page_size).limit(page_size)
         return list((await db.execute(stmt)).scalars().unique().all())
+
+    @staticmethod
+    async def count_sections(
+        db: AsyncSession,
+        include_inactive: bool = True,
+        search: str | None = None,
+        status: str | None = None,
+        cefr_level: str | None = None,
+    ) -> int:
+        stmt = select(func.count(LearningSection.id))
+        if not include_inactive:
+            stmt = stmt.where(_truthy(LearningSection.is_active))
+        if status == "active":
+            stmt = stmt.where(_truthy(LearningSection.is_active))
+        elif status == "inactive":
+            stmt = stmt.where(~_truthy(LearningSection.is_active))
+        if cefr_level:
+            stmt = stmt.where(func.lower(LearningSection.cefr_level) == cefr_level.lower())
+        if search:
+            keyword = f"%{search.strip().lower()}%"
+            stmt = stmt.where(
+                or_(
+                    func.lower(LearningSection.code).like(keyword),
+                    func.lower(LearningSection.title).like(keyword),
+                    func.lower(LearningSection.description).like(keyword),
+                )
+            )
+        return int((await db.execute(stmt)).scalar_one() or 0)
 
     @staticmethod
     async def create_section(db: AsyncSession, body: LearningSectionCreate) -> LearningSection:

@@ -85,6 +85,7 @@ def serialize_section(
     unit_progress: dict[int, UserUnitProgress] | None = None,
     lesson_progress: dict[int, UserLessonProgress] | None = None,
     unlocked_unit_ids: set[int] | None = None,
+    include_units: bool = True,
     include_lessons: bool = False,
     include_inactive: bool = False,
     include_lesson_content: bool = True,
@@ -111,7 +112,7 @@ def serialize_section(
                     include_lesson_content=include_lesson_content,
                 )
                 for unit in sorted(units, key=lambda item: (item.order_index, item.id))
-                if include_inactive or unit.is_active
+                if include_units and (include_inactive or unit.is_active)
             ],
             "created_at": section.created_at,
             "updated_at": section.updated_at,

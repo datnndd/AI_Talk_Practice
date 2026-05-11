@@ -39,7 +39,6 @@ const LEVEL_OPTIONS = [
 const PLAN_OPTIONS = [
   { value: "FREE", label: "Free" },
   { value: "PRO", label: "Pro" },
-  { value: "ENTERPRISE", label: "Enterprise" },
 ];
 
 const toCommaSeparated = (value) => {
@@ -332,7 +331,6 @@ const AdminUsersPage = () => {
                 <option value="">All plans</option>
                 <option value="FREE">Free</option>
                 <option value="PRO">Pro</option>
-                <option value="ENTERPRISE">Enterprise</option>
               </select>
             </div>
 

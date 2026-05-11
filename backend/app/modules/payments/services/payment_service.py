@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.modules.payments.models import PaymentTransaction, PaymentWebhookEvent, PromotionCode, SubscriptionPlan
+from app.modules.payments.models import PaymentTransaction, PaymentWebhookEvent, SubscriptionPlan
 from app.modules.payments.schemas.payment import PaymentCheckoutRequest
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
@@ -36,11 +36,6 @@ DEFAULT_SUBSCRIPTION_PLANS = [
 
 
 class PaymentService:
-    @staticmethod
-    def _normalize_promo_code(code: str | None) -> str | None:
-        normalized = (code or "").strip().upper()
-        return normalized or None
-
     @staticmethod
     async def ensure_default_subscription_plans(db: AsyncSession) -> None:
         for item in DEFAULT_SUBSCRIPTION_PLANS:
@@ -75,41 +70,14 @@ class PaymentService:
         return plan
 
     @classmethod
-    async def _get_valid_promotion_code(cls, db: AsyncSession, promo_code: str | None) -> PromotionCode | None:
-        normalized = cls._normalize_promo_code(promo_code)
-        if not normalized:
-            return None
-        promo = (
-            await db.execute(select(PromotionCode).where(PromotionCode.code == normalized))
-        ).scalar_one_or_none()
-        if promo is None or not promo.is_active:
-            raise BadRequestError("Promotion code is invalid.")
-        now = datetime.now(timezone.utc)
-        starts_at = promo.starts_at.replace(tzinfo=timezone.utc) if promo.starts_at and promo.starts_at.tzinfo is None else promo.starts_at
-        ends_at = promo.ends_at.replace(tzinfo=timezone.utc) if promo.ends_at and promo.ends_at.tzinfo is None else promo.ends_at
-        if starts_at and starts_at > now:
-            raise BadRequestError("Promotion code is not active yet.")
-        if ends_at and ends_at < now:
-            raise BadRequestError("Promotion code has expired.")
-        if promo.max_redemptions is not None and promo.redeemed_count >= promo.max_redemptions:
-            raise BadRequestError("Promotion code redemption limit reached.")
-        return promo
-
-    @classmethod
-    async def quote_checkout(cls, db: AsyncSession, *, plan_code: str, promo_code: str | None = None) -> dict[str, Any]:
+    async def quote_checkout(cls, db: AsyncSession, *, plan_code: str) -> dict[str, Any]:
         plan = await cls._get_subscription_plan(db, plan_code)
-        promo = await cls._get_valid_promotion_code(db, promo_code)
         original_amount = plan.price_amount
-        discount_amount = (original_amount * promo.discount_percent // 100) if promo else 0
-        amount = max(original_amount - discount_amount, 0)
-        if amount <= 0:
-            raise BadRequestError("Promotion discount cannot reduce checkout amount to zero.")
         return {
             "plan": plan,
-            "promo": promo,
             "original_amount": original_amount,
-            "discount_amount": discount_amount,
-            "amount": amount,
+            "discount_amount": 0,
+            "amount": original_amount,
             "currency": plan.currency.upper(),
         }
 
@@ -229,13 +197,6 @@ class PaymentService:
             activated_at=paid_at,
         )
 
-        if payment.promo_code:
-            promo = (
-                await db.execute(select(PromotionCode).where(PromotionCode.code == payment.promo_code))
-            ).scalar_one_or_none()
-            if promo:
-                promo.redeemed_count += 1
-
         payment.status = "paid"
         payment.paid_at = paid_at
         payment.expires_at = subscription.expires_at
@@ -308,7 +269,6 @@ class PaymentService:
                 "plan": payment.plan,
                 "plan_code": payment.plan_code or "",
                 "duration_days": str(payment.duration_days or ""),
-                "promo_code": payment.promo_code or "",
             },
         )
         return {
@@ -340,7 +300,6 @@ class PaymentService:
         plan_code = (body.plan_code or "PRO_30D").strip().upper()
         quote = await cls.quote_checkout(db, plan_code=plan_code)
         subscription_plan: SubscriptionPlan = quote["plan"]
-        promo: PromotionCode | None = quote["promo"]
 
         payment = PaymentTransaction(
             user_id=user.id,
@@ -350,7 +309,6 @@ class PaymentService:
             duration_days=subscription_plan.duration_days,
             original_amount=quote["original_amount"],
             discount_amount=quote["discount_amount"],
-            promo_code=promo.code if promo else None,
             amount=quote["amount"],
             currency=quote["currency"],
             status="pending",
@@ -489,3 +447,5 @@ class PaymentService:
         await db.commit()
 
         return {"received": True, "event_type": event_type}
+
+

@@ -43,8 +43,6 @@ const AdminPaymentsPage = () => {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [plans, setPlans] = useState([]);
-  const [promotions, setPromotions] = useState([]);
-  const [promoForm, setPromoForm] = useState({ code: "", discount_percent: 10, is_active: true, starts_at: "", ends_at: "", max_redemptions: "" });
 
   const updateFilter = (field, value) => {
     setFilters((current) => ({
@@ -80,12 +78,8 @@ const AdminPaymentsPage = () => {
   }, [filters]);
 
   const loadBillingSettings = useCallback(async () => {
-    const [planData, promoData] = await Promise.all([
-      adminPaymentsApi.listPlans(),
-      adminPaymentsApi.listPromotions(),
-    ]);
+    const planData = await adminPaymentsApi.listPlans();
     setPlans(planData);
-    setPromotions(promoData);
   }, []);
 
   const loadTransactionDetail = useCallback(async (paymentId) => {
@@ -176,26 +170,6 @@ const AdminPaymentsPage = () => {
       setError(saveError?.response?.data?.detail || "Failed to save plan.");
     }
   };
-
-  const savePromotion = async () => {
-    setError("");
-    try {
-      await adminPaymentsApi.createPromotion({
-        code: promoForm.code,
-        discount_percent: Number(promoForm.discount_percent || 0),
-        is_active: Boolean(promoForm.is_active),
-        starts_at: promoForm.starts_at || null,
-        ends_at: promoForm.ends_at || null,
-        max_redemptions: promoForm.max_redemptions ? Number(promoForm.max_redemptions) : null,
-      });
-      setNotice("Promotion code created.");
-      setPromoForm({ code: "", discount_percent: 10, is_active: true, starts_at: "", ends_at: "", max_redemptions: "" });
-      await loadBillingSettings();
-    } catch (saveError) {
-      setError(saveError?.response?.data?.detail || "Failed to save promotion.");
-    }
-  };
-
   const totalPages = Math.max(1, Math.ceil(total / filters.page_size));
 
   return (
@@ -244,29 +218,6 @@ const AdminPaymentsPage = () => {
                     <input type="checkbox" checked={Boolean(plan.is_active)} onChange={(event) => updatePlanField(plan.code, "is_active", event.target.checked)} /> Active
                   </label>
                   <button type="button" onClick={() => savePlan(plan)} className="rounded-xl bg-zinc-950 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white dark:bg-white dark:text-zinc-950">Save</button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Promotion Codes</p>
-            <h2 className="mt-1 font-display text-3xl font-black tracking-tight">Discounts</h2>
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
-              <input placeholder="PROMO10" value={promoForm.code} onChange={(event) => setPromoForm((current) => ({ ...current, code: event.target.value }))} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm font-bold uppercase dark:border-zinc-700 dark:bg-zinc-950" />
-              <input type="number" min="1" max="100" value={promoForm.discount_percent} onChange={(event) => setPromoForm((current) => ({ ...current, discount_percent: event.target.value }))} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm font-bold dark:border-zinc-700 dark:bg-zinc-950" />
-              <input type="datetime-local" value={promoForm.starts_at} onChange={(event) => setPromoForm((current) => ({ ...current, starts_at: event.target.value }))} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm font-bold dark:border-zinc-700 dark:bg-zinc-950" />
-              <input type="datetime-local" value={promoForm.ends_at} onChange={(event) => setPromoForm((current) => ({ ...current, ends_at: event.target.value }))} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm font-bold dark:border-zinc-700 dark:bg-zinc-950" />
-              <input type="number" min="1" placeholder="Max redemptions" value={promoForm.max_redemptions} onChange={(event) => setPromoForm((current) => ({ ...current, max_redemptions: event.target.value }))} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm font-bold dark:border-zinc-700 dark:bg-zinc-950" />
-              <button type="button" onClick={savePromotion} className="rounded-xl bg-primary px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white">Create code</button>
-            </div>
-            <div className="mt-5 space-y-2">
-              {promotions.map((promo) => (
-                <div key={promo.code} className="flex items-center justify-between rounded-xl border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800">
-                  <span className="font-black">{promo.code}</span>
-                  <span className="font-bold text-amber-600">-{promo.discount_percent}%</span>
-                  <span className="text-xs font-semibold text-zinc-500">{promo.redeemed_count}/{promo.max_redemptions || "∞"}</span>
-                  <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${promo.is_active ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}>{promo.is_active ? "Active" : "Off"}</span>
                 </div>
               ))}
             </div>
@@ -492,3 +443,4 @@ const AdminPaymentsPage = () => {
 };
 
 export default AdminPaymentsPage;
+

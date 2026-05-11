@@ -26,12 +26,6 @@ PLAN_FEATURES = {
         "advanced_scenarios": True,
         "premium_tutor": True,
     },
-    "ENTERPRISE": {
-        "live_ai_practice": True,
-        "advanced_scenarios": True,
-        "premium_tutor": True,
-        "enterprise_support": True,
-    },
 }
 
 

@@ -72,7 +72,7 @@ class AdminUserUpdateRequest(BaseModel):
 
 
 class AdminUserSubscriptionUpdateRequest(BaseModel):
-    tier: Literal["FREE", "PRO", "ENTERPRISE"]
+    tier: Literal["FREE", "PRO"]
     duration_days: int | None = Field(default=None, ge=1, le=3650)
 
     @model_validator(mode="after")

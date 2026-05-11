@@ -296,9 +296,9 @@ async def test_admin_can_create_curriculum_with_definition_choice_lesson(admin_c
     assert "is_required" not in lesson_response.json()
     assert "audio_url" not in lesson_response.json()["content"]["options"][0]
 
-    list_response = await admin_client.get("/api/admin/curriculum/sections")
-    assert list_response.status_code == 200
-    assert list_response.json()[0]["units"][0]["lessons"][0]["title"] == "Pick reservation"
+    detail_response = await admin_client.get(f"/api/admin/curriculum/sections/{section_id}")
+    assert detail_response.status_code == 200
+    assert detail_response.json()["units"][0]["lessons"][0]["title"] == "Pick reservation"
 
 
 @pytest.mark.asyncio

@@ -12,7 +12,6 @@ def serialize_character(character: Character) -> CharacterRead:
             "description": character.description,
             "model_url": character.model_url,
             "core_url": character.core_url,
-            "thumbnail_url": character.thumbnail_url,
             "tts_voice": character.tts_voice,
             "tts_language": character.tts_language,
             "is_active": character.is_active,

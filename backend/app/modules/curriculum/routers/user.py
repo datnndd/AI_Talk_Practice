@@ -35,8 +35,40 @@ async def get_curriculum(
                 unit_progress=unit_progress,
                 lesson_progress=lesson_progress,
                 unlocked_unit_ids=unlocked,
+                include_units=False,
             )
             for section in sections
+        ],
+        current_unit_id=current_unit_id,
+        current_cefr=_normalize_cefr_level(user.current_cefr or user.level),
+    )
+
+
+@router.get("/curriculum/sections/{section_id}", response_model=CurriculumTreeRead)
+async def get_curriculum_section(
+    section_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    sections, unit_progress, lesson_progress, unlocked, current_unit_id = await CurriculumService.curriculum_tree(
+        db,
+        user.id,
+        user_cefr=user.current_cefr or user.level,
+    )
+    section = next((item for item in sections if item.id == section_id), None)
+    if section is None:
+        from app.core.exceptions import NotFoundError
+
+        raise NotFoundError("Section not found")
+    return CurriculumTreeRead(
+        sections=[
+            serialize_section(
+                section,
+                unit_progress=unit_progress,
+                lesson_progress=lesson_progress,
+                unlocked_unit_ids=unlocked,
+                include_lessons=False,
+            )
         ],
         current_unit_id=current_unit_id,
         current_cefr=_normalize_cefr_level(user.current_cefr or user.level),

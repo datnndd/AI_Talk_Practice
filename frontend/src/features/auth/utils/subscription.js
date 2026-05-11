@@ -1,5 +1,5 @@
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active"]);
-const PAID_SUBSCRIPTION_TIERS = new Set(["PRO", "PREMIUM", "SUBSCRIPTION", "ENTERPRISE"]);
+const PAID_SUBSCRIPTION_TIERS = new Set(["PRO", "PREMIUM", "SUBSCRIPTION"]);
 
 export const normalizeSubscription = (subscription) => {
   const tier = String(subscription?.tier || "FREE").toUpperCase();

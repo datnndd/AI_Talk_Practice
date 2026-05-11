@@ -13,7 +13,6 @@ from app.modules.sessions.models.session import Session
 from app.modules.scenarios.repository import ScenarioRepository
 from app.modules.scenarios.schemas.admin_scenario import (
     BulkScenarioActionRequest,
-    PromptQualityAssessment,
     ScenarioAdminCreate,
     ScenarioAdminUpdate,
 )
@@ -77,73 +76,6 @@ class AdminScenarioService:
             tasks=tasks,
         )
 
-    @classmethod
-    def assess_prompt_quality(
-        cls,
-        *,
-        prompt: str,
-        description: str,
-        tasks: list[str] | None,
-    ) -> PromptQualityAssessment:
-        normalized = (prompt or "").strip()
-        warnings: list[str] = []
-        suggestions: list[str] = []
-        score = 25
-
-        if len(normalized) >= 80:
-            score += 15
-        else:
-            warnings.append("System prompt is too short for a reusable teaching scenario.")
-            suggestions.append("Add role, constraints, and coaching behavior details.")
-
-        if any(marker in normalized.lower() for marker in ("you are", "your role", "act as")):
-            score += 15
-        else:
-            warnings.append("Prompt should explicitly define the AI partner's role.")
-
-        if any(marker in normalized.lower() for marker in ("ask follow-up", "follow-up", "clarify")):
-            score += 10
-        else:
-            suggestions.append("Tell the AI when to ask follow-up questions.")
-
-        if any(marker in normalized.lower() for marker in ("stay in character", "tone", "persona")):
-            score += 10
-        else:
-            suggestions.append("Specify tone or persona constraints so scenario behavior stays consistent.")
-
-        if any(marker in normalized.lower() for marker in ("correct", "feedback", "coach", "encourage")):
-            score += 10
-        else:
-            suggestions.append("Include correction or coaching behavior for the learner.")
-
-        if description and description.lower() in normalized.lower():
-            score += 5
-
-        task_items = [item.strip() for item in (tasks or []) if item.strip()]
-        if task_items and any(task.lower() in normalized.lower() for task in task_items):
-            score += 10
-        elif task_items:
-            suggestions.append("Reference the learner tasks directly in the prompt.")
-
-        if any(marker in normalized.lower() for marker in ("avoid", "do not", "never")):
-            score += 5
-        else:
-            suggestions.append("Add at least one negative constraint to reduce prompt drift.")
-
-        if len(normalized.split()) >= 35:
-            score += 10
-
-        score = max(0, min(score, 100))
-        if score < 70 and "System prompt is too short for a reusable teaching scenario." not in warnings:
-            warnings.append("Prompt quality is below the admin threshold.")
-
-        return PromptQualityAssessment(
-            score=score,
-            is_acceptable=score >= 70,
-            warnings=warnings,
-            suggestions=suggestions,
-        )
-
     @staticmethod
     async def _scenario_usage_counts(db: AsyncSession, scenario_ids: list[int]) -> dict[int, int]:
         if not scenario_ids:
@@ -204,16 +136,6 @@ class AdminScenarioService:
         ai_system_prompt = body.ai_system_prompt.strip()
         if not ai_system_prompt:
             raise BadRequestError("System prompt is required. Generate or enter a prompt before saving.")
-        quality = cls.assess_prompt_quality(
-            prompt=ai_system_prompt,
-            description=body.description,
-            tasks=body.tasks,
-        )
-        if not quality.is_acceptable:
-            raise BadRequestError(
-                "Prompt quality is below the admin threshold",
-                extra=quality.model_dump(),
-            )
         await CharacterService.ensure_active_character(db, body.character_id)
 
         scenario = await ScenarioRepository.create(
@@ -258,21 +180,10 @@ class AdminScenarioService:
         if "character_id" in update_data:
             await CharacterService.ensure_active_character(db, update_data["character_id"])
 
-        prompt_quality: PromptQualityAssessment | None = None
         if "ai_system_prompt" in update_data:
             update_data["ai_system_prompt"] = (update_data["ai_system_prompt"] or "").strip()
             if not update_data["ai_system_prompt"]:
                 raise BadRequestError("System prompt cannot be empty.")
-            prompt_quality = cls.assess_prompt_quality(
-                prompt=update_data["ai_system_prompt"],
-                description=update_data.get("description", scenario.description),
-                tasks=update_data.get("tasks", scenario.tasks or []),
-            )
-            if not prompt_quality.is_acceptable:
-                raise BadRequestError(
-                    "Prompt quality is below the admin threshold",
-                    extra=prompt_quality.model_dump(),
-                )
 
         for key, value in update_data.items():
             setattr(scenario, key, value)

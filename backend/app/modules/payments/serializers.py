@@ -18,7 +18,6 @@ def serialize_admin_payment_transaction(payment: PaymentTransaction) -> AdminPay
             "duration_days": payment.duration_days,
             "original_amount": payment.original_amount,
             "discount_amount": payment.discount_amount,
-            "promo_code": payment.promo_code,
             "amount": payment.amount,
             "currency": payment.currency,
             "status": payment.status,

@@ -11,7 +11,7 @@ class Subscription(Base, TimestampMixin):
     __tablename__ = "subscriptions"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
-    tier: Mapped[str] = mapped_column(String(20))          # FREE / PRO / ENTERPRISE
+    tier: Mapped[str] = mapped_column(String(20))          # FREE / PRO
     status: Mapped[str] = mapped_column(String(20))
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     features: Mapped[Optional[Any]] = mapped_column(JSONB)

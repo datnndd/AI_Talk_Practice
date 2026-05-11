@@ -17,7 +17,7 @@ from app.modules.users.models.user import User
 logger = logging.getLogger(__name__)
 
 
-VIP_TIERS = {"PRO", "ENTERPRISE"}
+VIP_TIERS = {"PRO"}
 
 
 def user_is_vip(user: User | None) -> bool:

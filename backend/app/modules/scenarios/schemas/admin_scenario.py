@@ -35,13 +35,6 @@ def _normalize_string_list(value: Any) -> list[str]:
     raise ValueError("Expected a list of strings")
 
 
-class PromptQualityAssessment(BaseModel):
-    score: int = Field(ge=0, le=100)
-    is_acceptable: bool
-    warnings: list[str] = Field(default_factory=list)
-    suggestions: list[str] = Field(default_factory=list)
-
-
 class ScenarioAdminBase(BaseModel):
     title: str = Field(min_length=3, max_length=200)
     description: str = Field(min_length=20)
@@ -137,7 +130,6 @@ class GenerateDefaultPromptRequest(BaseModel):
 
 class GenerateDefaultPromptResponse(BaseModel):
     prompt: str
-    quality: PromptQualityAssessment
 
 
 class BulkScenarioActionRequest(BaseModel):

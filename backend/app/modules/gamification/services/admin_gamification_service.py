@@ -236,7 +236,7 @@ class AdminGamificationService:
                     .where(
                         User.deleted_at.is_(None),
                         Subscription.status == "active",
-                        Subscription.tier.in_(["PRO", "ENTERPRISE"]),
+                        Subscription.tier == "PRO",
                     )
                 )
             ).scalar_one()

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, require_admin_user
@@ -8,6 +8,7 @@ from app.modules.curriculum.models import LearningSection, Lesson, Unit
 from app.modules.curriculum.serializers import serialize_lesson, serialize_section, serialize_unit
 from app.modules.curriculum.schemas import (
     LearningSectionCreate,
+    LearningSectionListResponse,
     LearningSectionRead,
     LearningSectionUpdate,
     LessonCreate,
@@ -56,22 +57,55 @@ async def upload_lesson_audio(
     )
 
 
-@router.get("/sections", response_model=list[LearningSectionRead])
-async def list_sections(
+@router.get("/sections/summary-paged", response_model=LearningSectionListResponse)
+async def list_section_summaries_paged(
+    search: str | None = Query(default=None),
+    status_filter: str | None = Query(default=None, alias="status"),
+    cefr_level: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=30, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin_user),
 ):
-    sections = await AdminCurriculumService.list_sections(db, include_inactive=True)
-    return [
-        serialize_section(
-            section,
-            unlocked_unit_ids={unit.id for unit in section.units},
-            include_lessons=True,
-            include_inactive=True,
-            include_lesson_content=False,
-        )
-        for section in sections
-    ]
+    sections = await AdminCurriculumService.list_sections(
+        db,
+        include_inactive=True,
+        include_units=False,
+        search=search,
+        status=status_filter,
+        cefr_level=cefr_level,
+        page=page,
+        page_size=page_size,
+    )
+    total = await AdminCurriculumService.count_sections(
+        db,
+        include_inactive=True,
+        search=search,
+        status=status_filter,
+        cefr_level=cefr_level,
+    )
+    return LearningSectionListResponse(
+        items=[serialize_section(section, unlocked_unit_ids=set(), include_lessons=False, include_inactive=True) for section in sections],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/sections/{section_id}", response_model=LearningSectionRead)
+async def get_section(
+    section_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin_user),
+):
+    section = await AdminCurriculumService.get_section(db, section_id)
+    return serialize_section(
+        section,
+        unlocked_unit_ids={unit.id for unit in section.units},
+        include_lessons=True,
+        include_inactive=True,
+        include_lesson_content=False,
+    )
 
 
 @router.post("/sections", response_model=LearningSectionRead, status_code=status.HTTP_201_CREATED)

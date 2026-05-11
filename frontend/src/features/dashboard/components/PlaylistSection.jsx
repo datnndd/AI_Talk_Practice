@@ -35,7 +35,6 @@ const getFullImageUrl = (url) => {
 
 const getScenarioImage = (scenario) =>
   getFullImageUrl(scenario?.image_url)
-    || getFullImageUrl(scenario?.thumbnail_url)
     || getFullImageUrl(scenario?.cover_url)
     || fallbackScenarioImage;
 

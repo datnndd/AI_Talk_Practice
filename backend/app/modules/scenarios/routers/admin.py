@@ -109,12 +109,7 @@ async def generate_default_prompt(
         user_role=body.user_role,
         tasks=body.tasks,
     )
-    quality = AdminScenarioService.assess_prompt_quality(
-        prompt=prompt,
-        description=body.description,
-        tasks=body.tasks,
-    )
-    return GenerateDefaultPromptResponse(prompt=prompt, quality=quality)
+    return GenerateDefaultPromptResponse(prompt=prompt)
 
 
 # NOTE: This MUST be declared before /scenarios/{scenario_id} routes so FastAPI

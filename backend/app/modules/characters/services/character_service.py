@@ -54,7 +54,6 @@ class CharacterService:
             description=(body.description or "").strip() or None,
             model_url=body.model_url.strip(),
             core_url=body.core_url.strip(),
-            thumbnail_url=(body.thumbnail_url or "").strip() or None,
             tts_voice=body.tts_voice.strip(),
             tts_language=body.tts_language.strip(),
             is_active=body.is_active,
@@ -71,7 +70,7 @@ class CharacterService:
         for key, value in update_data.items():
             if isinstance(value, str):
                 value = value.strip()
-                if key in {"description", "thumbnail_url"} and not value:
+                if key == "description" and not value:
                     value = None
             setattr(character, key, value)
 

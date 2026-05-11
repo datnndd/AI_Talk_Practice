@@ -7,12 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.modules.payments.models import PaymentTransaction, PromotionCode, SubscriptionPlan
-from app.modules.payments.schemas.admin_payment import (
-    AdminPromotionCodeCreateRequest,
-    AdminPromotionCodeUpdateRequest,
-    AdminSubscriptionPlanUpdateRequest,
-)
+from app.modules.payments.models import PaymentTransaction, SubscriptionPlan
+from app.modules.payments.schemas.admin_payment import AdminSubscriptionPlanUpdateRequest
 from app.modules.payments.schemas.admin_payment import PaymentOverviewRead
 from app.modules.payments.services.payment_service import PaymentService
 from app.modules.users.models.user import User
@@ -51,58 +47,6 @@ class AdminPaymentService:
         await db.commit()
         await db.refresh(plan)
         return plan
-
-    @staticmethod
-    async def list_promotion_codes(db: AsyncSession) -> list[PromotionCode]:
-        result = await db.execute(select(PromotionCode).order_by(PromotionCode.created_at.desc()))
-        return list(result.scalars().all())
-
-    @classmethod
-    async def create_promotion_code(
-        cls,
-        db: AsyncSession,
-        *,
-        body: AdminPromotionCodeCreateRequest,
-    ) -> PromotionCode:
-        code = cls._normalize_code(body.code)
-        existing = (await db.execute(select(PromotionCode).where(PromotionCode.code == code))).scalar_one_or_none()
-        if existing:
-            raise BadRequestError("Promotion code already exists")
-        promo = PromotionCode(
-            code=code,
-            discount_percent=body.discount_percent,
-            is_active=body.is_active,
-            starts_at=body.starts_at,
-            ends_at=body.ends_at,
-            max_redemptions=body.max_redemptions,
-            redeemed_count=0,
-        )
-        db.add(promo)
-        await db.commit()
-        await db.refresh(promo)
-        return promo
-
-    @classmethod
-    async def update_promotion_code(
-        cls,
-        db: AsyncSession,
-        *,
-        code: str,
-        body: AdminPromotionCodeUpdateRequest,
-    ) -> PromotionCode:
-        promo = (
-            await db.execute(select(PromotionCode).where(PromotionCode.code == cls._normalize_code(code)))
-        ).scalar_one_or_none()
-        if promo is None:
-            raise NotFoundError("Promotion code not found")
-        promo.discount_percent = body.discount_percent
-        promo.is_active = body.is_active
-        promo.starts_at = body.starts_at
-        promo.ends_at = body.ends_at
-        promo.max_redemptions = body.max_redemptions
-        await db.commit()
-        await db.refresh(promo)
-        return promo
 
     @staticmethod
     async def get_overview(db: AsyncSession) -> PaymentOverviewRead:

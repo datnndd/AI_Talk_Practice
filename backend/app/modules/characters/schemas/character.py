@@ -13,7 +13,6 @@ class CharacterBase(BaseModel):
     description: str | None = None
     model_url: str = Field(min_length=1, max_length=1000)
     core_url: str = Field(min_length=1, max_length=1000)
-    thumbnail_url: str | None = Field(default=None, max_length=1000)
     tts_voice: str = Field(default="Cherry", min_length=1, max_length=100)
     tts_language: str = Field(default="en", min_length=1, max_length=20)
     is_active: bool = True
@@ -29,7 +28,6 @@ class CharacterUpdate(BaseModel):
     description: str | None = None
     model_url: str | None = Field(default=None, min_length=1, max_length=1000)
     core_url: str | None = Field(default=None, min_length=1, max_length=1000)
-    thumbnail_url: str | None = Field(default=None, max_length=1000)
     tts_voice: str | None = Field(default=None, min_length=1, max_length=100)
     tts_language: str | None = Field(default=None, min_length=1, max_length=20)
     is_active: bool | None = None
@@ -42,7 +40,6 @@ class CharacterRead(ORMModel):
     description: str | None = None
     model_url: str
     core_url: str
-    thumbnail_url: str | None = None
     tts_voice: str
     tts_language: str
     is_active: bool

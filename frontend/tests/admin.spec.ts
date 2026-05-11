@@ -122,11 +122,10 @@ test.describe('Admin Scenario Management', () => {
     });
   });
 
-  test('displays scenario list with quality scores', async ({ page }) => {
+  test('displays scenario list', async ({ page }) => {
     await page.goto('/admin/scenarios');
     await expect(page.getByRole('button', { name: /Airport Check-in/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /Coffee Shop/ })).toBeVisible();
-    await expect(page.locator('text=/Prompt \\d+/')).toHaveCount(0);
   });
 
   test('performs bulk activation', async ({ page }) => {
@@ -251,8 +250,20 @@ test.describe('Admin Curriculum Management', () => {
         return;
       }
 
-      if (path === '/api/admin/curriculum/sections' && request.method() === 'GET') {
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sections) });
+      if (path === '/api/admin/curriculum/sections/summary-paged' && request.method() === 'GET') {
+        const summaries = sections.map(({ units, ...section }) => section);
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ items: summaries, total: summaries.length, page: 1, page_size: 30 }),
+        });
+        return;
+      }
+
+      const sectionMatch = path.match(/^\/api\/admin\/curriculum\/sections\/(\d+)$/);
+      if (sectionMatch && request.method() === 'GET') {
+        const section = sections.find(item => item.id === Number(sectionMatch[1]));
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(section) });
         return;
       }
 
@@ -336,6 +347,12 @@ test.describe('Admin Curriculum Management', () => {
       }
 
       const lessonMatch = path.match(/^\/api\/admin\/curriculum\/lessons\/(\d+)$/);
+      if (lessonMatch && request.method() === 'GET') {
+        const lesson = findLesson(Number(lessonMatch[1]));
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(lesson) });
+        return;
+      }
+
       if (lessonMatch && request.method() === 'PUT') {
         const lesson = findLesson(Number(lessonMatch[1]));
         Object.assign(lesson, request.postDataJSON());
@@ -366,11 +383,12 @@ test.describe('Admin Curriculum Management', () => {
     });
   });
 
-  test('loads curriculum tree', async ({ page }) => {
+  test('loads curriculum browser lazily', async ({ page }) => {
     await page.goto('/admin/curriculum');
-    await expect(page.getByRole('button', { name: /1\\. A1 Starter/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /1\. Greetings/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /1\. Say hello/ })).toBeVisible();
+    await expect(page.getByTestId('curriculum-level-row-1')).toContainText('A1 Starter');
+    await page.getByTestId('curriculum-level-row-1').click();
+    await expect(page.getByTestId('curriculum-lesson-row-10')).toContainText('Greetings');
+    await expect(page.getByTestId('curriculum-exercise-row-100')).toContainText('Say hello');
   });
 
   test('creates section, unit, and lesson from builder forms', async ({ page }) => {
