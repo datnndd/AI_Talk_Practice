@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.modules.gamification.models.coin_transaction import CoinTransaction
+from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.gamification.schemas.admin_gamification import (
     AdminGamificationOverviewRead,
     AdminShopProductRead,
@@ -114,6 +115,7 @@ class AdminGamificationService:
         redemption = await db.get(ShopRedemption, redemption_id)
         if redemption is None:
             raise NotFoundError("Shop redemption not found.")
+        previous_status = redemption.status
         redemption.status = body.status
         if body.status == "cancelled" and not redemption.refunded:
             user = await db.get(User, redemption.user_id)
@@ -130,6 +132,21 @@ class AdminGamificationService:
                     transaction_metadata={"status": "cancelled"},
                 )
             )
+        if previous_status != body.status:
+            status_messages = {
+                "processing": f"Your order for {redemption.product_name} is being processed.",
+                "shipped": f"Your order for {redemption.product_name} has been shipped.",
+                "completed": f"Your order for {redemption.product_name} is completed.",
+                "cancelled": f"Your order for {redemption.product_name} was cancelled and your coins were refunded.",
+            }
+            message = status_messages.get(body.status)
+            if message:
+                await NotificationService.create_system_notification(
+                    db,
+                    user_id=redemption.user_id,
+                    title="Order status updated",
+                    body=message,
+                )
         await db.commit()
         redemption = (
             await db.execute(

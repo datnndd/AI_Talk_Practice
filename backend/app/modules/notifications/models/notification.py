@@ -16,13 +16,13 @@ class Notification(Base, TimestampMixin):
     __tablename__ = "notifications"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    sender_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    sender_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     recipient_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     audience: Mapped[str] = mapped_column(String(20), nullable=False)
     title: Mapped[str] = mapped_column(String(120), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
 
-    sender: Mapped["User"] = relationship("User", foreign_keys=[sender_user_id])
+    sender: Mapped["User | None"] = relationship("User", foreign_keys=[sender_user_id])
     recipient: Mapped["User | None"] = relationship("User", foreign_keys=[recipient_user_id])
 
     __table_args__ = (

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, NotFoundError
+from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.payments.models import PaymentTransaction, PaymentWebhookEvent, SubscriptionPlan
 from app.modules.payments.schemas.payment import PaymentCheckoutRequest
 from app.modules.users.models.subscription import Subscription
@@ -203,6 +204,12 @@ class PaymentService:
         payment.external_transaction_id = external_transaction_id or payment.external_transaction_id
         payment.provider_payload = provider_payload
         payment.failure_reason = None
+        await NotificationService.create_system_notification(
+            db,
+            user_id=payment.user_id,
+            title="VIP activated",
+            body=f"Your Pro subscription is active until {subscription.expires_at.strftime('%Y-%m-%d') if subscription.expires_at else 'soon'}.",
+        )
         await db.flush()
         return payment
 
@@ -215,12 +222,20 @@ class PaymentService:
         provider_payload: dict[str, Any],
         status: str = "failed",
     ) -> PaymentTransaction:
-        if payment.status == "paid":
+        previous_status = payment.status
+        if previous_status == "paid":
             return payment
 
         payment.status = status
         payment.failure_reason = reason
         payment.provider_payload = provider_payload
+        if previous_status != status and status in {"failed", "cancelled"}:
+            await NotificationService.create_system_notification(
+                db,
+                user_id=payment.user_id,
+                title="Payment failed",
+                body="Your payment could not be completed. Please try again.",
+            )
         await db.flush()
         return payment
 

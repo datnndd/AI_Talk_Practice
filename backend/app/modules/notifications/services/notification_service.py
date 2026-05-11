@@ -8,7 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import NotFoundError
 from app.modules.notifications.models.notification import Notification, NotificationReadState
 from app.modules.notifications.schemas.notification import AdminNotificationCreateRequest, NotificationRead
+from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
+
+
+def _format_date(value: datetime | None) -> str:
+    if value is None:
+        return "soon"
+    normalized = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return normalized.astimezone(timezone.utc).strftime("%Y-%m-%d")
 
 
 def _serialize_notification(notification: Notification, read_at: datetime | None = None) -> NotificationRead:
@@ -24,6 +32,86 @@ def _serialize_notification(notification: Notification, read_at: datetime | None
 
 
 class NotificationService:
+    @staticmethod
+    async def _find_duplicate(
+        db: AsyncSession,
+        *,
+        user_id: int,
+        title: str,
+        body: str,
+    ) -> Notification | None:
+        return (
+            await db.execute(
+                select(Notification)
+                .where(
+                    Notification.recipient_user_id == user_id,
+                    Notification.title == title,
+                    Notification.body == body,
+                )
+                .limit(1)
+            )
+        ).scalars().first()
+
+    @classmethod
+    async def create_system_notification(
+        cls,
+        db: AsyncSession,
+        *,
+        user_id: int,
+        title: str,
+        body: str,
+    ) -> NotificationRead | None:
+        if await cls._find_duplicate(db, user_id=user_id, title=title, body=body):
+            return None
+
+        notification = Notification(
+            sender_user_id=None,
+            recipient_user_id=user_id,
+            audience="users",
+            title=title,
+            body=body,
+        )
+        db.add(notification)
+        await db.flush()
+        return _serialize_notification(notification)
+
+    @classmethod
+    async def ensure_vip_expiry_notifications(cls, db: AsyncSession, *, user: User) -> None:
+        subscription = getattr(user, "subscription", None)
+        if subscription is None:
+            subscription = (
+                await db.execute(select(Subscription).where(Subscription.user_id == user.id))
+            ).scalar_one_or_none()
+        if subscription is None or str(subscription.tier or "").upper() != "PRO":
+            return
+        if str(subscription.status or "").lower() != "active" or subscription.expires_at is None:
+            return
+
+        now = datetime.now(timezone.utc)
+        expires_at = subscription.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+        if expires_at <= now:
+            await cls.create_system_notification(
+                db,
+                user_id=user.id,
+                title="VIP expired",
+                body="Your Pro subscription has expired. Renew to keep Pro access.",
+            )
+            await db.commit()
+            return
+
+        days_left = (expires_at - now).total_seconds() / 86400
+        if 0 < days_left <= 3:
+            await cls.create_system_notification(
+                db,
+                user_id=user.id,
+                title="VIP expiring soon",
+                body=f"Your Pro subscription will expire on {_format_date(expires_at)}.",
+            )
+            await db.commit()
+
     @staticmethod
     async def create_admin_notifications(
         db: AsyncSession,
@@ -86,6 +174,7 @@ class NotificationService:
         page: int,
         page_size: int,
     ) -> tuple[list[NotificationRead], int]:
+        await NotificationService.ensure_vip_expiry_notifications(db, user=user)
         visibility = or_(Notification.recipient_user_id.is_(None), Notification.recipient_user_id == user.id)
         stmt = (
             select(Notification, NotificationReadState.read_at)

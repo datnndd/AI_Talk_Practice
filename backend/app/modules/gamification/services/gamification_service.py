@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError
 from app.modules.curriculum.models import Unit
+from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.gamification.models.coin_transaction import CoinTransaction
 from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.shop_product import ShopProduct
@@ -108,7 +109,6 @@ class GamificationService:
         await cls._ensure_user_state(user)
         rules = await get_effective_rules(db)
         dashboard = await cls._build_dashboard(db, user, rules)
-        await db.commit()
         return dashboard
 
     @classmethod
@@ -260,6 +260,12 @@ class GamificationService:
         )
         rules = await get_effective_rules(db)
         dashboard = await cls._build_dashboard(db, user, rules)
+        await NotificationService.create_system_notification(
+            db,
+            user_id=user.id,
+            title="Purchase successful",
+            body=f"You redeemed {product.name} for {product.price_coin} coins.",
+        )
         await db.commit()
         await db.refresh(redemption)
         await db.refresh(product)
