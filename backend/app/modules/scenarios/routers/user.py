@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user, get_db
 from app.modules.users.models.user import User
-from app.modules.scenarios.schemas import (
-    ScenarioCreate,
-    ScenarioListRead,
-    ScenarioRead,
-    ScenarioUpdate,
-)
+from app.modules.scenarios.schemas import ScenarioListRead, ScenarioRead
 from app.modules.scenarios.serializers import serialize_scenario, serialize_scenario_list_item
 from app.modules.scenarios.services.scenario_service import ScenarioService
 
@@ -37,33 +32,3 @@ async def get_scenario(
 ):
     scenario = await ScenarioService.get_by_id(db, scenario_id, user=user, enforce_access=True)
     return serialize_scenario(scenario)
-
-
-@router.post("", response_model=ScenarioRead, status_code=status.HTTP_201_CREATED)
-async def create_scenario(
-    body: ScenarioCreate,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    scenario = await ScenarioService.create(db, user.id, body)
-    return serialize_scenario(scenario)
-
-
-@router.put("/{scenario_id}", response_model=ScenarioRead)
-async def update_scenario(
-    scenario_id: int,
-    body: ScenarioUpdate,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
-):
-    scenario = await ScenarioService.update(db, scenario_id, body)
-    return serialize_scenario(scenario)
-
-
-@router.delete("/{scenario_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_scenario(
-    scenario_id: int,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
-):
-    await ScenarioService.delete(db, scenario_id)

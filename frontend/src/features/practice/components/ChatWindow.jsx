@@ -207,7 +207,8 @@ const ChatWindow = ({
   const endRef = useRef(null);
   const scenarioTitle = scenario?.title || guidance?.topic || "Practice session";
   const difficulty = scenario?.difficulty || "Easy";
-  const countdownLimit = timeLimitSeconds || scenario?.estimated_duration || 0;
+  const scenarioTimeLimitSeconds = scenario?.time_limit_minutes ? scenario.time_limit_minutes * 60 : 0;
+  const countdownLimit = timeLimitSeconds || scenarioTimeLimitSeconds;
   const remainingSeconds = countdownLimit ? Math.max(0, countdownLimit - durationSeconds) : null;
   const descriptionText = (scenario?.description || "").trim();
   const introMessage = descriptionText
@@ -230,7 +231,7 @@ const ChatWindow = ({
               {scenarioTitle}
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-[var(--page-subtle)]">
-              <span>{formatScenarioDuration(scenario?.estimated_duration)}</span>
+              <span>{formatScenarioDuration(scenarioTimeLimitSeconds)}</span>
               <span className="h-1 w-1 rounded-full bg-[var(--page-subtle)]/50" />
               <span className="capitalize">{difficulty}</span>
             </div>

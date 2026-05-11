@@ -29,9 +29,7 @@ def serialize_admin_scenario(
             "character": serialize_character(scenario.character) if scenario.character else None,
             "tasks": scenario.tasks or [],
             "tags": scenario.tags or [],
-            "estimated_duration_minutes": int(scenario.estimated_duration / 60)
-            if scenario.estimated_duration
-            else None,
+            "time_limit_minutes": scenario.time_limit_minutes,
             "is_active": scenario.is_active,
             "is_pro": scenario.is_pro,
             "deleted_at": scenario.deleted_at,
@@ -59,7 +57,7 @@ def serialize_scenario(
             "category": scenario.category,
             "difficulty": scenario.difficulty,
             "tags": scenario.tags,
-            "estimated_duration": scenario.estimated_duration,
+            "time_limit_minutes": scenario.time_limit_minutes,
             "is_active": scenario.is_active,
             "is_pro": scenario.is_pro,
             "character": serialize_character(scenario.character) if scenario.character else None,
@@ -85,7 +83,7 @@ def serialize_scenario_list_item(
             "category": scenario.category,
             "difficulty": scenario.difficulty,
             "tags": scenario.tags,
-            "estimated_duration": scenario.estimated_duration,
+            "time_limit_minutes": scenario.time_limit_minutes,
             "is_active": scenario.is_active,
             "is_pro": scenario.is_pro,
             "created_at": scenario.created_at,

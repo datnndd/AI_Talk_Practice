@@ -485,7 +485,7 @@ async def websocket_conversation(websocket: WebSocket):
                         scenario_id=session.scenario_id,
                         is_resume=is_resume,
                         finalized_user_messages=finalized_user_messages,
-                        max_duration_seconds=session.scenario.estimated_duration,
+                        max_duration_seconds=(session.scenario.time_limit_minutes or 0) * 60,
                     )
 
                     pending_finalize = _PENDING_RESUME_FINALIZE_TASKS.pop(session.id, None)
@@ -538,7 +538,7 @@ async def websocket_conversation(websocket: WebSocket):
                         on_assistant_message=on_assistant_message_persist,
                         on_generate_reply_stream=generate_reply_stream,
                     )
-                    max_duration_seconds = session.scenario.estimated_duration
+                    max_duration_seconds = (session.scenario.time_limit_minutes or 0) * 60
                     remaining_seconds = _remaining_session_seconds(session.started_at, max_duration_seconds)
                     if remaining_seconds is not None:
                         if remaining_seconds <= 0:

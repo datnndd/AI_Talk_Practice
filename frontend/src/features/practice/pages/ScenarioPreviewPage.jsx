@@ -133,7 +133,7 @@ const ScenarioPreviewPage = () => {
           <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between rounded-xl bg-black/35 px-3 py-2 text-xs font-semibold text-white backdrop-blur">
             <span className="inline-flex items-center gap-1.5">
               <Clock size={14} weight="bold" />
-              {formatDuration(scenario.estimated_duration)}
+              {formatDuration((scenario.time_limit_minutes || 0) * 60)}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Target size={14} weight="bold" />

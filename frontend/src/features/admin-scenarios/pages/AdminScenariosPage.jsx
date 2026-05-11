@@ -422,7 +422,7 @@ const AdminScenarios = () => {
                     ["Difficulty", selectedScenario.difficulty],
                     ["Character", selectedScenario.character?.name || "Not set"],
                     ["Usage", selectedScenario.usage_count],
-                    ["Duration", formatMinutes(selectedScenario.estimated_duration_minutes)],
+                    ["Duration", formatMinutes(selectedScenario.time_limit_minutes)],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-950">
                       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">

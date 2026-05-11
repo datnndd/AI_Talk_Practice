@@ -104,7 +104,7 @@ export const buildConversationGuidance = ({ scenario, messages, durationSeconds,
     : scenario?.description || "Stay on topic and respond naturally.";
 
   const turnTarget = Math.max(4, Math.min(8, (tasks.length || 3) * 2));
-  const durationTarget = scenario?.estimated_duration || 0;
+  const durationTarget = scenario?.time_limit_minutes ? scenario.time_limit_minutes * 60 : 0;
   const shouldWrapSoon =
     (durationTarget > 0 && durationSeconds >= durationTarget * 0.75) ||
     turnCount >= Math.max(3, turnTarget - 1);

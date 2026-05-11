@@ -12,7 +12,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    SmallInteger,
     String,
     Text,
 )
@@ -34,7 +33,7 @@ class Scenario(Base, TimestampMixin):
     - `ai_system_prompt` is the scenario-specific instruction used at runtime.
     - `tasks` JSONB: learner tasks required to complete the conversation.
     - `tags` JSONB: ["airport", "formal", "A1-friendly"] — aids recommendation.
-    - `estimated_duration` in seconds — used for session time predictions in the UI.
+    - `time_limit_minutes` — used for scenario duration display and session countdown.
     - Soft-delete via `deleted_at` — never hard-delete published scenarios.
     """
 
@@ -61,8 +60,7 @@ class Scenario(Base, TimestampMixin):
     tags: Mapped[Optional[Any]] = mapped_column(JSONB, server_default="[]")
 
     # ── Session parameters ────────────────────────────────────────────────────
-    estimated_duration: Mapped[Optional[int]] = mapped_column(SmallInteger)  # seconds
-    time_limit_minutes: Mapped[Optional[int]] = mapped_column(Integer)  # New: session time limit in minutes
+    time_limit_minutes: Mapped[Optional[int]] = mapped_column(Integer)
     character_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         ForeignKey("characters.id", ondelete="SET NULL"),

@@ -149,7 +149,7 @@ class AdminScenarioService:
             category=body.category,
             difficulty=body.difficulty,
             tags=body.tags,
-            estimated_duration=(body.estimated_duration_minutes or 10) * 60,
+            time_limit_minutes=body.time_limit_minutes or 10,
             character_id=body.character_id,
             is_active=body.is_active,
             is_pro=body.is_pro,
@@ -174,9 +174,8 @@ class AdminScenarioService:
             update_data["ai_role"] = update_data["ai_role"].strip()
         if "user_role" in update_data and update_data["user_role"] is not None:
             update_data["user_role"] = update_data["user_role"].strip()
-        if "estimated_duration_minutes" in update_data:
-            minutes = update_data.pop("estimated_duration_minutes")
-            update_data["estimated_duration"] = minutes * 60 if minutes is not None else None
+        if "time_limit_minutes" in update_data:
+            update_data["time_limit_minutes"] = update_data["time_limit_minutes"] or None
         if "character_id" in update_data:
             await CharacterService.ensure_active_character(db, update_data["character_id"])
 

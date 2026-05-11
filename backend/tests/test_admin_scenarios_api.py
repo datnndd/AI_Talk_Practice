@@ -46,7 +46,7 @@ async def test_admin_can_create_scenario(client, db_session):
         ),
         "tasks": ["Say your name", "Explain the missing reservation", "Ask for the next step"],
         "tags": ["hotel", "travel", "problem-solving"],
-        "estimated_duration_minutes": 12,
+        "time_limit_minutes": 12,
     }
 
     response = await client.post(
@@ -58,7 +58,7 @@ async def test_admin_can_create_scenario(client, db_session):
     body = response.json()
     assert body["title"] == payload["title"]
     assert body["tasks"] == payload["tasks"]
-    assert body["estimated_duration_minutes"] == 12
+    assert body["time_limit_minutes"] == 12
     assert "variation_count" not in body
     assert "active_variation_count" not in body
     assert "variations" not in body

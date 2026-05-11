@@ -31,8 +31,6 @@ class PaymentCheckoutResponse(BaseModel):
     plan: str
     plan_code: str | None = None
     duration_days: int | None = None
-    original_amount: int | None = None
-    discount_amount: int = 0
     amount: int
     currency: str
     status: str
@@ -49,8 +47,6 @@ class PaymentStatusResponse(BaseModel):
     plan: str
     plan_code: str | None = None
     duration_days: int | None = None
-    original_amount: int | None = None
-    discount_amount: int = 0
     amount: int
     currency: str
     status: str

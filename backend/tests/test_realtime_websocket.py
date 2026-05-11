@@ -590,7 +590,7 @@ async def test_time_limit_emits_conversation_end_and_session_finalized(
             category="business",
             difficulty="medium",
             is_active=True,
-            estimated_duration=1,
+            time_limit_minutes=1,
         )
         session.add(scenario)
         await session.commit()

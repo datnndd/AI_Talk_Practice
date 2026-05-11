@@ -15,8 +15,6 @@ async def test_admin_can_list_payment_transactions(admin_client, db_session, tes
         plan="PRO",
         plan_code="PRO_30D",
         duration_days=30,
-        original_amount=99000,
-        discount_amount=0,
         amount=99000,
         currency="VND",
         status="pending",
@@ -43,8 +41,6 @@ async def test_admin_can_approve_payment_and_activate_subscription(admin_client,
         plan="PRO",
         plan_code="PRO_30D",
         duration_days=30,
-        original_amount=99000,
-        discount_amount=0,
         amount=99000,
         currency="VND",
         status="pending",
@@ -81,8 +77,6 @@ async def test_admin_can_cancel_pending_payment(admin_client, db_session, test_u
         plan="PRO",
         plan_code="PRO_30D",
         duration_days=30,
-        original_amount=99000,
-        discount_amount=0,
         amount=99000,
         currency="VND",
         status="pending",
@@ -110,8 +104,6 @@ async def test_admin_payment_routes_forbid_non_admin(test_client, db_session, te
         plan="PRO",
         plan_code="PRO_30D",
         duration_days=30,
-        original_amount=99000,
-        discount_amount=0,
         amount=99000,
         currency="VND",
         status="pending",
@@ -145,25 +137,3 @@ async def test_admin_can_manage_subscription_plans(admin_client):
     assert response.status_code == 200
     assert response.json()["price_amount"] == 129000
     assert response.json()["currency"] == "VND"
-
-
-@pytest.mark.asyncio
-async def test_admin_can_create_promotion_and_user_can_quote(admin_client, test_client):
-    response = await admin_client.post(
-        "/api/admin/payments/promotions",
-        json={"code": "SAVE20", "discount_percent": 20, "is_active": True},
-    )
-    assert response.status_code == 200
-    assert response.json()["code"] == "SAVE20"
-
-    response = await test_client.post(
-        "/api/payments/promo/quote",
-        json={"plan_code": "PRO_30D", "promo_code": "SAVE20"},
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["original_amount"] == 99000
-    assert data["discount_amount"] == 19800
-    assert data["amount"] == 79200
-
-

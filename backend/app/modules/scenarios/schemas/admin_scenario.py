@@ -45,7 +45,7 @@ class ScenarioAdminBase(BaseModel):
     user_role: str = Field(default="", max_length=500)
     tasks: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
-    estimated_duration_minutes: int | None = Field(default=10, ge=1, le=180)
+    time_limit_minutes: int | None = Field(default=10, ge=1, le=180)
     character_id: int | None = None
     is_active: bool = True
     is_pro: bool = False
@@ -71,7 +71,7 @@ class ScenarioAdminUpdate(BaseModel):
     user_role: str | None = Field(default=None, max_length=500)
     tasks: list[str] | None = None
     tags: list[str] | None = None
-    estimated_duration_minutes: int | None = Field(default=None, ge=1, le=180)
+    time_limit_minutes: int | None = Field(default=None, ge=1, le=180)
     character_id: int | None = None
     is_active: bool | None = None
     is_pro: bool | None = None
@@ -97,7 +97,7 @@ class ScenarioAdminRead(ORMModel):
     user_role: str = ""
     tasks: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
-    estimated_duration_minutes: int | None = None
+    time_limit_minutes: int | None = None
     is_active: bool
     is_pro: bool
     image_url: str | None = None

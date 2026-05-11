@@ -16,8 +16,6 @@ def serialize_admin_payment_transaction(payment: PaymentTransaction) -> AdminPay
             "plan": payment.plan,
             "plan_code": payment.plan_code,
             "duration_days": payment.duration_days,
-            "original_amount": payment.original_amount,
-            "discount_amount": payment.discount_amount,
             "amount": payment.amount,
             "currency": payment.currency,
             "status": payment.status,

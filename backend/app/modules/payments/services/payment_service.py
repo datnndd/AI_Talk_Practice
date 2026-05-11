@@ -73,12 +73,9 @@ class PaymentService:
     @classmethod
     async def quote_checkout(cls, db: AsyncSession, *, plan_code: str) -> dict[str, Any]:
         plan = await cls._get_subscription_plan(db, plan_code)
-        original_amount = plan.price_amount
         return {
             "plan": plan,
-            "original_amount": original_amount,
-            "discount_amount": 0,
-            "amount": original_amount,
+            "amount": plan.price_amount,
             "currency": plan.currency.upper(),
         }
 
@@ -322,8 +319,6 @@ class PaymentService:
             plan=plan,
             plan_code=subscription_plan.code,
             duration_days=subscription_plan.duration_days,
-            original_amount=quote["original_amount"],
-            discount_amount=quote["discount_amount"],
             amount=quote["amount"],
             currency=quote["currency"],
             status="pending",

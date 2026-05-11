@@ -91,7 +91,7 @@ const ScenarioCard = ({ scenario, hasProAccess, featured = false }) => {
         <h3 className="line-clamp-2 min-h-[2.5rem] text-base font-black leading-tight text-foreground transition group-hover:text-primary">{scenario.title}</h3>
         <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-xs font-semibold leading-5 text-muted-foreground">{scenario.description}</p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px] font-black">
-          <div className="rounded-2xl bg-muted px-2 py-3"><Headphones className="mx-auto mb-1" size={17} weight="fill" />{formatDuration(scenario.estimated_duration)}</div>
+          <div className="rounded-2xl bg-muted px-2 py-3"><Headphones className="mx-auto mb-1" size={17} weight="fill" />{formatDuration((scenario.time_limit_minutes || 0) * 60)}</div>
           <div className="rounded-2xl bg-muted px-2 py-3"><Target className="mx-auto mb-1" size={17} weight="fill" />{scenario.tasks?.length || 0} tasks</div>
           <div className="rounded-2xl bg-muted px-2 py-3"><Sparkle className="mx-auto mb-1" size={17} weight="fill" />Live AI</div>
         </div>
