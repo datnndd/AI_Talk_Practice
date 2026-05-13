@@ -15,7 +15,6 @@ from app.modules.sessions.services.conversation_prompts import (
     build_dialogue_system_prompt,
     build_full_assessment_prompt,
     build_hint_prompt,
-    build_personal_info_extraction_prompt,
     build_realtime_correction_prompt,
     build_summary_prompt,
 )
@@ -57,12 +56,6 @@ class FinalEvaluationPayload(BaseModel):
     corrections: list[dict[str, Any]] = Field(default_factory=list)
     next_steps: list[str] = Field(default_factory=list)
     feedback_summary: str = ""
-
-
-class PersonalInfoPayload(BaseModel):
-    personal_info: dict[str, Any] = Field(default_factory=dict)
-    preferences: dict[str, Any] = Field(default_factory=dict)
-    notes: list[str] = Field(default_factory=list)
 
 
 class ConversationEndDecisionPayload(BaseModel):
@@ -349,28 +342,6 @@ class ConversationFinalEvaluationBuilder:
             model=FinalEvaluationPayload,
             system_prompt=system_prompt,
             user_text=compact_messages or session.scenario.title,
-            max_tokens=self.max_tokens,
-        )
-
-
-class ConversationPersonalInfoService:
-    def __init__(self, *, llm: LLMBase, max_tokens: int = 700):
-        self.llm = llm
-        self.max_tokens = max_tokens
-
-    async def extract(
-        self,
-        *,
-        session,
-        existing_preferences: dict[str, Any] | None = None,
-    ) -> PersonalInfoPayload:
-        system_prompt = build_personal_info_extraction_prompt(existing_preferences=existing_preferences)
-        transcript = session_full_turns_text(session)
-        return await _collect_json(
-            self.llm,
-            model=PersonalInfoPayload,
-            system_prompt=system_prompt,
-            user_text=transcript or session.scenario.title,
             max_tokens=self.max_tokens,
         )
 

@@ -168,26 +168,6 @@ def build_full_assessment_prompt(
     )
 
 
-def build_personal_info_extraction_prompt(
-    *,
-    existing_preferences: dict[str, Any] | None = None,
-) -> str:
-    return "\n".join(
-        [
-            "Extract durable personal information and preferences from a completed English speaking conversation.",
-            "Return only one JSON object. Do not include markdown.",
-            "Only include facts that seem stable and useful for future personalization.",
-            "Ignore temporary details, hypothetical statements, and assistant text that does not describe the learner.",
-            f"Existing preferences snapshot: {json.dumps(existing_preferences or {}, ensure_ascii=False)[:1600]}",
-            "JSON schema: {",
-            '  "personal_info": {"job":"...", "location":"...", "goal":"..."},',
-            '  "preferences": {"favorite_topics":["..."], "communication_style":"..."},',
-            '  "notes": ["short durable observations"]',
-            "}",
-        ]
-    )
-
-
 def build_conversation_end_check_prompt(
     *,
     scenario: Any,

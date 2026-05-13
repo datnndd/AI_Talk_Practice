@@ -54,12 +54,7 @@ async def test_final_evaluation_creates_session_score(db_session, test_user, tes
         "next_steps": ["Practice giving context in one sentence"],
         "feedback_summary": "Bạn nói rõ mục tiêu chính và nên thêm thời hạn cụ thể hơn.",
     }
-    personal_info_payload = {
-        "personal_info": {"goal": "writing support"},
-        "preferences": {"favorite_topics": ["documents"]},
-        "notes": ["Learner often asks about writing tasks."],
-    }
-    llm = EvaluationLLM([json.dumps(evaluation_payload), json.dumps(personal_info_payload)])
+    llm = EvaluationLLM([json.dumps(evaluation_payload)])
     service = SessionFinalEvaluationService(llm=llm, max_tokens=900)
 
     score = await service.evaluate_and_store(db_session, session_id=test_session.id)
@@ -73,9 +68,9 @@ async def test_final_evaluation_creates_session_score(db_session, test_user, tes
     assert score.score_metadata["source"] == "final_evaluation_llm"
     assert score.score_metadata["objective_completion"] == "completed"
     assert score.score_metadata["strengths"] == ["Clear request"]
-    assert len(llm.calls) == 2
+    assert len(llm.calls) == 1
     assert "Airport Check-in" in llm.calls[0]["system_prompt"]
-    assert test_user.preferences["conversation_profile"]["personal_info"]["goal"] == "writing support"
+    assert "conversation" + "_profile" not in (test_user.preferences or {})
 
 
 @pytest.mark.asyncio
@@ -105,7 +100,6 @@ async def test_final_evaluation_does_not_depend_on_message_scores(db_session, te
                     "feedback_summary": "Bạn bám đúng chủ đề.",
                 }
             ),
-            json.dumps({"personal_info": {}, "preferences": {}, "notes": []}),
         ]
     )
     service = SessionFinalEvaluationService(llm=llm, max_tokens=900)
@@ -117,7 +111,7 @@ async def test_final_evaluation_does_not_depend_on_message_scores(db_session, te
 
 
 @pytest.mark.asyncio
-async def test_final_evaluation_keeps_score_when_profile_extraction_fails(db_session, test_user, test_session):
+async def test_final_evaluation_does_not_run_profile_extraction(db_session, test_user, test_session):
     await SessionService.add_message(
         db_session,
         session_id=test_session.id,
@@ -143,8 +137,6 @@ async def test_final_evaluation_keeps_score_when_profile_extraction_fails(db_ses
                     "feedback_summary": "Bạn trả lời đúng bối cảnh và nên hỏi thêm về đặt phòng.",
                 }
             ),
-            "not json",
-            "still not json",
         ]
     )
     service = SessionFinalEvaluationService(llm=llm, max_tokens=900)
@@ -154,8 +146,9 @@ async def test_final_evaluation_keeps_score_when_profile_extraction_fails(db_ses
     assert isinstance(score, SessionScore)
     assert score.overall_score == 7.2
     assert score.feedback_summary == "Bạn trả lời đúng bối cảnh và nên hỏi thêm về đặt phòng."
+    assert len(llm.calls) == 1
     assert test_session.session_metadata["final_evaluation"]["evaluation_status"] == "completed"
-    assert test_session.session_metadata["final_evaluation"]["profile_extraction_status"] == "failed"
+    assert "profile" + "_extraction_status" not in test_session.session_metadata["final_evaluation"]
 
 
 @pytest.mark.asyncio

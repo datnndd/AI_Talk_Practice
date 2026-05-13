@@ -5,7 +5,6 @@ from app.modules.sessions.services.conversation_prompts import (
     build_dialogue_system_prompt,
     build_full_assessment_prompt,
     build_hint_prompt,
-    build_personal_info_extraction_prompt,
     build_realtime_correction_prompt,
     build_summary_prompt,
 )
@@ -92,17 +91,6 @@ def test_full_assessment_prompt_includes_score_contract():
     assert "pronunciation" not in prompt.lower()
     assert "objective_completion" in prompt
     assert "feedback_summary" in prompt
-
-
-def test_personal_info_prompt_collects_preferences_and_personal_info():
-    prompt = build_personal_info_extraction_prompt(
-        existing_preferences={"favorite_topics": ["travel"]},
-    )
-
-    assert "Existing preferences snapshot" in prompt
-    assert '"personal_info"' in prompt
-    assert '"preferences"' in prompt
-    assert '"notes"' in prompt
 
 
 def test_conversation_end_check_prompt_requires_yes_no_json_decision():

@@ -223,7 +223,6 @@ const SessionResultPage = () => {
   const scoreMeta = score?.metadata || {};
   const finalEvaluation = session.metadata?.final_evaluation || {};
   const analysisStatus = finalEvaluation.evaluation_status || (score ? "completed" : "pending");
-  const profileExtractionStatus = finalEvaluation.profile_extraction_status;
   const isAnalysisPending = !score && !isTerminalAnalysisStatus(analysisStatus);
   const skillBreakdown = Object.fromEntries(
     Object.entries(score?.skill_breakdown || {}).filter(([key]) => VISIBLE_SKILL_KEYS.has(key))
@@ -428,11 +427,6 @@ const SessionResultPage = () => {
               <SkillCard key={key} skillKey={key} value={val} />
             ))}
           </div>
-          {profileExtractionStatus ? (
-            <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-zinc-400">
-              Learner signals: {profileExtractionStatus}
-            </p>
-          ) : null}
         </section>
       )}
 
