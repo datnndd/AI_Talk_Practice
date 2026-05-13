@@ -77,7 +77,6 @@ const PracticeSession = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [scenarioError, setScenarioError] = useState("");
   const [messages, setMessages] = useState([]);
-  const [partialTranscript, setPartialTranscript] = useState("");
   const [assistantDraft, setAssistantDraft] = useState("");
   const [connectionState, setConnectionState] = useState("closed");
   const [recordingState, setRecordingState] = useState("idle");
@@ -389,7 +388,6 @@ const PracticeSession = () => {
       assistantDraftRef.current = "";
       suppressAssistantStreamRef.current = false;
       setAssistantDraft("");
-      setPartialTranscript("");
       setSessionError("");
       setLessonHint(null);
       isStoppingRecordingRef.current = false;
@@ -463,11 +461,6 @@ const PracticeSession = () => {
         setRecordingState("recording");
         setSessionError("");
         break;
-      case "transcript_partial":
-        if (payload.text) {
-          setPartialTranscript(payload.text);
-        }
-        break;
       case "transcript_final":
         captureActiveRef.current = false;
         isStoppingRecordingRef.current = false;
@@ -481,14 +474,12 @@ const PracticeSession = () => {
           ));
         }
         setLessonHint(null);
-        setPartialTranscript("");
         recordingStateRef.current = "processing";
         setRecordingState("processing");
         break;
       case "asr_no_input":
         captureActiveRef.current = false;
         isStoppingRecordingRef.current = false;
-        setPartialTranscript("");
         recordingStateRef.current = "idle";
         setRecordingState("idle");
         setMessages((current) => appendUniqueMessage(
@@ -542,7 +533,6 @@ const PracticeSession = () => {
       case "conversation_end":
         recordingStateRef.current = "idle";
         setRecordingState("idle");
-        setPartialTranscript("");
         setSessionEnded(true);
         if (payload.message) {
           setMessages((current) => appendUniqueMessage(
@@ -617,7 +607,6 @@ const PracticeSession = () => {
     if (resetConversation) {
       setMessages([]);
       setAssistantDraft("");
-      setPartialTranscript("");
       setSessionId(resumeSessionId || null);
       setSessionEnded(false);
       setAnalysisResultUrl("");
@@ -968,7 +957,6 @@ const PracticeSession = () => {
               userNativeLanguage="vi"
             />
             <TypewriterInput
-              partialTranscript={partialTranscript}
               recordingState={recordingState}
               connectionState={connectionState}
               sessionEnded={sessionEnded}

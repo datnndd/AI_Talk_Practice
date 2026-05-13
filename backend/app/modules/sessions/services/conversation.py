@@ -264,12 +264,6 @@ class ConversationSession:
                             self._remember_final_transcript(event.text)
                             self._schedule_asr_finalization("final_transcript")
 
-                        if (
-                            self._config.asr_emit_partial_transcripts
-                            and event.type == TranscriptType.PARTIAL
-                            and self._on_transcript
-                        ):
-                            await self._on_transcript(event.text, event.type.value, None)
                 await asyncio.sleep(0.03)
         except asyncio.CancelledError:
             pass
@@ -404,7 +398,6 @@ class ConversationSession:
                 await self._on_no_input(rejection_reason, metrics)
             return
 
-        self._latest_partial_transcript = text
         self._mark_turn_phase("asr_final_ready")
 
         self._messages.append(Message(role="user", content=text))

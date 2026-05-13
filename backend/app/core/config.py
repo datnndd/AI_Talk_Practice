@@ -189,10 +189,6 @@ class Settings(BaseSettings):
         default=1200,
         description="Delay after ASR speech-end/final events before closing the turn, so trailing audio can arrive",
     )
-    asr_emit_partial_transcripts: bool = Field(
-        default=True,
-        description="Send interim ASR transcripts to clients while the user is speaking.",
-    )
     asr_min_audio_ms: int = Field(
         default=200,
         description="Minimum recorded audio duration required before accepting a speech turn",

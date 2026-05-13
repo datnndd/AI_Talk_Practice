@@ -111,7 +111,7 @@ async def test_final_evaluation_does_not_depend_on_message_scores(db_session, te
 
 
 @pytest.mark.asyncio
-async def test_final_evaluation_does_not_run_profile_extraction(db_session, test_user, test_session):
+async def test_final_evaluation_only_runs_scoring_llm(db_session, test_user, test_session):
     await SessionService.add_message(
         db_session,
         session_id=test_session.id,

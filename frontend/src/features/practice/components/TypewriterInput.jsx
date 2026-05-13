@@ -21,7 +21,6 @@ const STATUS_COPY = {
 };
 
 const TypewriterInput = ({
-  partialTranscript,
   recordingState,
   connectionState,
   sessionEnded = false,
@@ -38,7 +37,7 @@ const TypewriterInput = ({
   const isRecording = recordingState === "recording";
   const isAssistantSpeaking = recordingState === "assistant";
   const isInterrupting = recordingState === "interrupting";
-  const transcript = partialTranscript || (sessionEnded ? STATUS_COPY.ended : STATUS_COPY[recordingState] || STATUS_COPY.idle);
+  const transcript = sessionEnded ? STATUS_COPY.ended : STATUS_COPY[recordingState] || STATUS_COPY.idle;
   const buttonLabel =
     sessionEnded
       ? "Conversation Ended"
@@ -111,7 +110,7 @@ const TypewriterInput = ({
       <div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center">
         <div className="min-w-0 flex-1 rounded-lg border border-border bg-muted px-3 py-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--page-subtle)]">Speech-to-Text</p>
-          <p className={`mt-1 min-h-6 text-sm leading-relaxed ${partialTranscript ? "font-semibold text-[var(--page-fg)]" : "text-[var(--page-muted)]"}`}>
+          <p className="mt-1 min-h-6 text-sm leading-relaxed text-[var(--page-muted)]">
             {transcript}
           </p>
           {error ? (

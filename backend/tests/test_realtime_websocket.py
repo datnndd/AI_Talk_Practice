@@ -775,7 +775,7 @@ async def test_speech_stopped_event_auto_finalizes_turn(test_user, test_scenario
 
 
 @pytest.mark.asyncio
-async def test_partial_transcripts_are_sent_to_client_while_recording(test_user, test_scenario, monkeypatch):
+async def test_partial_transcripts_are_not_sent_to_client_while_recording(test_user, test_scenario, monkeypatch):
     monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
     monkeypatch.setattr(ws_module, "create_llm", lambda config: StubLLM(config))
     monkeypatch.setattr(conversation_module, "create_asr", lambda config: PartialThenFinalASR(config))
@@ -802,10 +802,7 @@ async def test_partial_transcripts_are_sent_to_client_while_recording(test_user,
 
     await ws_module.websocket_conversation(websocket)
 
-    assert any(
-        message["type"] == "transcript_partial" and message["text"] == "This should stay hidden while recording"
-        for message in websocket.sent
-    )
+    assert not any(message["type"] == "transcript_partial" for message in websocket.sent)
     assert any(
         message["type"] == "transcript_final" and message["text"] == "Hello from the user"
         for message in websocket.sent

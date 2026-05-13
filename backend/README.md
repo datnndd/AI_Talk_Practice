@@ -84,7 +84,6 @@ TTS_VOICE=Cherry
 | Type | Data | Description |
 |------|------|-------------|
 | `ready` | — | Session initialized |
-| `transcript_partial` | `{text}` | Intermediate ASR result |
 | `transcript_final` | `{text}` | Final ASR result |
 | `llm_chunk` | `{text}` | LLM response chunk |
 | `llm_done` | `{text}` | Complete LLM response |
