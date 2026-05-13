@@ -139,11 +139,6 @@ const AdminScenarios = () => {
     }
   };
 
-  const handleGenerateDefaultPrompt = async (payload) => {
-    const data = await adminApi.generateDefaultPrompt(payload);
-    return data;
-  };
-
   const handleDeleteScenario = async (scenarioId) => {
     try {
       await adminApi.deleteScenario(scenarioId);
@@ -522,7 +517,6 @@ const AdminScenarios = () => {
           scenario={editingScenario}
           onClose={() => setIsScenarioModalOpen(false)}
           onSubmit={handleSaveScenario}
-          onGeneratePrompt={handleGenerateDefaultPrompt}
           characters={characters}
           isSaving={isSavingScenario}
         />

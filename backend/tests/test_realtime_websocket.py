@@ -273,8 +273,8 @@ class StubTTS:
 def realtime_background_tasks_stub(monkeypatch):
     async def fake_correct_realtime(db, *, session_id, user_id, payload):
         return RealtimeCorrectionResponse(
-            corrected_text=(payload.text or ""),
-            corrections=[],
+            is_good=True,
+            better_answer=None,
             persisted=False,
         )
 
@@ -318,7 +318,6 @@ async def test_scenario(clean_realtime_tables):
             title="Realtime Scenario",
             description="Scenario used for websocket tests",
             tasks=["Practice live conversation"],
-            ai_system_prompt="You are roleplaying a calm interviewer.",
             category="business",
             difficulty="medium",
             is_active=True,
@@ -586,7 +585,6 @@ async def test_time_limit_emits_conversation_end_and_session_finalized(
             title="Timeout Scenario",
             description="Scenario used for timeout tests",
             tasks=["Practice briefly"],
-            ai_system_prompt="You are a concise partner.",
             category="business",
             difficulty="medium",
             is_active=True,

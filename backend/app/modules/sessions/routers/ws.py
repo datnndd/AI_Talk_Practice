@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import io
 import json
 import logging
 import uuid
+import wave
 from contextlib import suppress
 from datetime import datetime, timezone
 
@@ -17,6 +19,7 @@ from app.core.exceptions import AppError
 from app.core.security import decode_token
 from app.db.session import AsyncSessionLocal
 from app.infra.factory import ConversationLLMClients, create_conversation_llm_clients, create_llm
+from app.infra.supabase_storage import supabase_storage
 from app.modules.sessions.schemas.session import MessageCreate, RealtimeCorrectionRequest, SessionCreate
 from app.modules.sessions.serializers import get_session_character_payload
 from app.modules.auth.services.auth_service import AuthService
@@ -55,6 +58,16 @@ def _result_url(session_id: int) -> str:
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _pcm16_mono_to_wav(audio_bytes: bytes, *, sample_rate: int = 24000) -> bytes:
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(audio_bytes)
+    return buffer.getvalue()
 
 
 def _create_conversation_llm_clients() -> ConversationLLMClients:
@@ -96,6 +109,8 @@ async def websocket_conversation(websocket: WebSocket):
     assistant_stream_chars = 0
     audio_stream_chunk_count = 0
     audio_stream_bytes = 0
+    assistant_audio_chunks: list[bytes] = []
+    user_audio_chunks: list[bytes] = []
 
     def trace(event: str, **fields) -> None:
         base_fields = {
@@ -155,7 +170,7 @@ async def websocket_conversation(websocket: WebSocket):
         await send_json_safe({"type": "llm_done" if is_done else "llm_chunk", "text": text})
 
     async def on_audio_chunk(audio_bytes: bytes | None):
-        nonlocal audio_stream_chunk_count, audio_stream_bytes
+        nonlocal audio_stream_chunk_count, audio_stream_bytes, assistant_audio_chunks
         if audio_bytes is None:
             trace(
                 "audio_done",
@@ -168,6 +183,7 @@ async def websocket_conversation(websocket: WebSocket):
             return
         audio_stream_chunk_count += 1
         audio_stream_bytes += len(audio_bytes)
+        assistant_audio_chunks.append(audio_bytes)
         audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
         await send_json_safe({"type": "audio_chunk", "data": audio_b64})
 
@@ -186,7 +202,25 @@ async def websocket_conversation(websocket: WebSocket):
             }
         )
 
-    async def persist_message(role: str, content: str):
+    async def upload_audio_chunks(chunks: list[bytes], *, folder: str, sample_rate: int) -> str | None:
+        if not chunks or not supabase_storage.is_configured or session_id is None:
+            return None
+        audio_bytes = b"".join(chunks)
+        try:
+            wav_bytes = _pcm16_mono_to_wav(audio_bytes, sample_rate=sample_rate)
+            upload = await supabase_storage.upload_public_object(
+                bucket=settings.supabase_audio_bucket,
+                path=f"{folder}/session-{session_id}/{uuid.uuid4().hex}.wav",
+                content=wav_bytes,
+                content_type="audio/wav",
+            )
+            return upload.public_url
+        except Exception:
+            logger.exception("Failed to upload conversation audio")
+            trace("audio_upload_error", folder=folder, audio_bytes=len(audio_bytes))
+            return None
+
+    async def persist_message(role: str, content: str, audio_url: str | None = None):
         nonlocal finalized_user_messages, pending_natural_close
         if not session_id or not content.strip():
             return None
@@ -203,7 +237,11 @@ async def websocket_conversation(websocket: WebSocket):
                         db_write,
                         session_id=session_id,
                         user_id=active_user_id,
-                        payload=SessionServiceMessageFactory.create(role=role, content=content.strip()),
+                        payload=SessionServiceMessageFactory.create(
+                            role=role,
+                            content=content.strip(),
+                            audio_url=audio_url,
+                        ),
                     )
                     await db_write.commit()
                     if role == "user":
@@ -255,8 +293,8 @@ async def websocket_conversation(websocket: WebSocket):
                 {
                     "type": "message_correction",
                     "message_id": message_id,
-                    "corrected_text": response.corrected_text,
-                    "corrections": [item.model_dump(mode="json") for item in response.corrections],
+                    "is_good": response.is_good,
+                    "better_answer": response.better_answer,
                     "persisted": response.persisted,
                 }
             )
@@ -280,6 +318,7 @@ async def websocket_conversation(websocket: WebSocket):
                     finalized_user_messages=finalized_user_messages,
                     metadata={"end_reason": reason, **(metadata or {})},
                 )
+                await db_final.commit()
         schedule_final_evaluation(session_id)
 
         status = finalized.status if finalized is not None else "completed"
@@ -328,8 +367,14 @@ async def websocket_conversation(websocket: WebSocket):
         asyncio.create_task(run())
 
     async def on_assistant_message_persist(text: str) -> None:
-        nonlocal pending_natural_close
-        await persist_message("assistant", text)
+        nonlocal pending_natural_close, assistant_audio_chunks
+        audio_url = await upload_audio_chunks(
+            assistant_audio_chunks,
+            folder="conversation-audio/assistant",
+            sample_rate=24000,
+        )
+        assistant_audio_chunks = []
+        await persist_message("assistant", text, audio_url=audio_url)
         if not pending_natural_close or finalized_by_server:
             return
         pending_natural_close = False
@@ -347,6 +392,16 @@ async def websocket_conversation(websocket: WebSocket):
             metadata={"conversation_closed_naturally": True},
         )
         await websocket.close()
+
+    async def on_user_message_persist(text: str) -> dict | None:
+        nonlocal user_audio_chunks
+        audio_url = await upload_audio_chunks(
+            user_audio_chunks,
+            folder="conversation-audio/user",
+            sample_rate=16000,
+        )
+        user_audio_chunks = []
+        return await persist_message("user", text, audio_url=audio_url)
 
     async def schedule_resume_finalize(user_message_count: int) -> None:
         if session_id is None:
@@ -534,7 +589,7 @@ async def websocket_conversation(websocket: WebSocket):
                         voice=tts_voice,
                         tts_instructions=tts_instructions,
                         on_no_input=on_no_input,
-                        on_user_message=lambda text: persist_message("user", text),
+                        on_user_message=on_user_message_persist,
                         on_assistant_message=on_assistant_message_persist,
                         on_generate_reply_stream=generate_reply_stream,
                     )
@@ -559,18 +614,15 @@ async def websocket_conversation(websocket: WebSocket):
                         }
                     )
 
-                    if conversation is not None and not is_resume:
-                        intro_text = (session.scenario.description or "").strip()
-                        if intro_text:
-                            trace("opening_description_start", text_len=len(intro_text), text=_clip_log_text(intro_text))
-                            await conversation.speak_opening(intro_text)
+                    if conversation is not None and not is_resume and not (session.messages or []):
                         opening_reply = await reply_service.generate_opening_reply(
                             session=session,
                             user_preferences=dict(user.preferences or {}),
                         )
                         if opening_reply:
                             trace("opening_reply_start", text_len=len(opening_reply), text=_clip_log_text(opening_reply))
-                            await conversation.speak_opening(opening_reply)
+                            await conversation.speak_assistant_text(opening_reply)
+
                     continue
 
                 if conversation is None:
@@ -589,6 +641,7 @@ async def websocket_conversation(websocket: WebSocket):
                         {"type": "config_updated", "language": active_language, "voice": active_voice}
                     )
                 elif msg_type == "start_recording":
+                    user_audio_chunks = []
                     trace("recording_start_requested", language=msg.get("language"))
                     await conversation.start_recording(language=msg.get("language"))
                     await send_json_safe({"type": "recording_started"})
@@ -608,7 +661,9 @@ async def websocket_conversation(websocket: WebSocket):
                     if not audio_b64:
                         continue
                     try:
-                        await conversation.feed_audio(base64.b64decode(audio_b64))
+                        user_audio = base64.b64decode(audio_b64)
+                        user_audio_chunks.append(user_audio)
+                        await conversation.feed_audio(user_audio)
                     except Exception:
                         trace("invalid_audio_data")
                         await send_json_safe({"type": "error", "message": "Invalid audio data"})
@@ -676,5 +731,5 @@ async def websocket_conversation(websocket: WebSocket):
 
 class SessionServiceMessageFactory:
     @staticmethod
-    def create(*, role: str, content: str) -> MessageCreate:
-        return MessageCreate(role=role, content=content)
+    def create(*, role: str, content: str, audio_url: str | None = None) -> MessageCreate:
+        return MessageCreate(role=role, content=content, audio_url=audio_url)

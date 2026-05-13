@@ -40,7 +40,6 @@ class ScenarioAdminBase(BaseModel):
     description: str = Field(min_length=20)
     category: str = Field(min_length=2, max_length=50)
     difficulty: str = Field(default="medium", pattern=r"^(easy|medium|hard)$")
-    ai_system_prompt: str = ""
     ai_role: str = Field(default="", max_length=500)
     user_role: str = Field(default="", max_length=500)
     tasks: list[str] = Field(default_factory=list)
@@ -66,7 +65,6 @@ class ScenarioAdminUpdate(BaseModel):
     description: str | None = Field(default=None, min_length=20)
     category: str | None = Field(default=None, min_length=2, max_length=50)
     difficulty: str | None = Field(default=None, pattern=r"^(easy|medium|hard)$")
-    ai_system_prompt: str | None = None
     ai_role: str | None = Field(default=None, max_length=500)
     user_role: str | None = Field(default=None, max_length=500)
     tasks: list[str] | None = None
@@ -92,7 +90,6 @@ class ScenarioAdminRead(ORMModel):
     description: str
     category: str
     difficulty: str
-    ai_system_prompt: str
     ai_role: str = ""
     user_role: str = ""
     tasks: list[str] = Field(default_factory=list)
@@ -113,23 +110,6 @@ class ScenarioListResponse(BaseModel):
     total: int
     page: int
     page_size: int
-
-
-class GenerateDefaultPromptRequest(BaseModel):
-    title: str = Field(min_length=3, max_length=200)
-    description: str = Field(min_length=20)
-    ai_role: str = Field(default="", max_length=500)
-    user_role: str = Field(default="", max_length=500)
-    tasks: list[str] = Field(default_factory=list)
-
-    @field_validator("tasks", mode="before")
-    @classmethod
-    def parse_prompt_list_fields(cls, value: Any) -> list[str]:
-        return _normalize_string_list(value)
-
-
-class GenerateDefaultPromptResponse(BaseModel):
-    prompt: str
 
 
 class BulkScenarioActionRequest(BaseModel):

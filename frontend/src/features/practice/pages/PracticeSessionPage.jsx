@@ -55,15 +55,14 @@ const wait = (milliseconds) => new Promise((resolve) => {
   window.setTimeout(resolve, milliseconds);
 });
 
-const upsertMessageCorrection = (messages, payload) => messages.map((message) => {
+const upsertMessageRealtimeFeedback = (messages, payload) => messages.map((message) => {
   if (message.serverMessageId !== payload.message_id) {
     return message;
   }
   return {
     ...message,
-    correctedText: payload.corrected_text || message.correctedText || "",
-    corrections: Array.isArray(payload.corrections) ? payload.corrections : message.corrections || [],
-    correctionsPersisted: Boolean(payload.persisted),
+    correctionIsGood: Boolean(payload.is_good),
+    betterAnswer: payload.better_answer || "",
   };
 });
 
@@ -126,9 +125,8 @@ const PracticeSession = () => {
     const {
       serverMessageId = null,
       orderIndex = null,
-      correctedText = "",
-      corrections = [],
-      correctionsPersisted = false,
+      correctionIsGood = null,
+      betterAnswer = "",
     } = options;
     messageIdRef.current += 1;
     return {
@@ -137,9 +135,8 @@ const PracticeSession = () => {
       content,
       serverMessageId,
       orderIndex,
-      correctedText,
-      corrections,
-      correctionsPersisted,
+      correctionIsGood,
+      betterAnswer,
     };
   };
 
@@ -540,7 +537,7 @@ const PracticeSession = () => {
         setRecordingState("idle");
         break;
       case "message_correction":
-        setMessages((current) => upsertMessageCorrection(current, payload));
+        setMessages((current) => upsertMessageRealtimeFeedback(current, payload));
         break;
       case "conversation_end":
         recordingStateRef.current = "idle";
@@ -720,10 +717,10 @@ const PracticeSession = () => {
 
     const fetchScenario = async () => {
       const cachedScenario = practiceApi.getCachedScenario(scenarioId);
-      if (cachedScenario?.ai_system_prompt) {
+      if (cachedScenario?.description) {
         setScenario(cachedScenario);
       }
-      setIsLoading(!cachedScenario?.ai_system_prompt);
+      setIsLoading(!cachedScenario?.description);
       setScenarioError("");
 
       try {
@@ -931,8 +928,6 @@ const PracticeSession = () => {
     durationSeconds,
     turnCount: userTurnCount,
   });
-  const taskItems = Array.isArray(scenario?.tasks) ? scenario.tasks.filter(Boolean) : conversationGuidance.evaluationFocus;
-  const completedTaskCount = Math.min(taskItems.length, userTurnCount);
   const live2DStatus = getLive2DStatus({
     connectionState,
     recordingState,
@@ -955,7 +950,6 @@ const PracticeSession = () => {
           <ScenarioSidebar
             scenario={scenario}
             guidance={conversationGuidance}
-            completedCount={completedTaskCount}
             character={activeCharacter}
             live2DStatus={live2DStatus}
             lipSyncLevel={live2DLipSyncLevel}
@@ -985,7 +979,6 @@ const PracticeSession = () => {
               hint={lessonHint}
               isHintLoading={isHintLoading}
               onRequestHint={handleRequestHint}
-              userNativeLanguage="vi"
               analysisResultUrl={analysisResultUrl}
               onViewAnalysis={() => navigate(analysisResultUrl)}
             />

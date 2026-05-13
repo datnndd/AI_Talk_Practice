@@ -15,8 +15,6 @@ from app.modules.users.models.user import User
 from app.modules.scenarios.schemas import (
     BulkScenarioActionRequest,
     BulkScenarioActionResponse,
-    GenerateDefaultPromptRequest,
-    GenerateDefaultPromptResponse,
     ScenarioAdminCreate,
     ScenarioAdminRead,
     ScenarioAdminUpdate,
@@ -48,7 +46,6 @@ def _scenario_body_from_form(
     ai_role: str,
     user_role: str,
     tasks: str | None,
-    ai_system_prompt: str,
     tags: str | None,
     time_limit_minutes: int,
     character_id: int | None,
@@ -66,7 +63,6 @@ def _scenario_body_from_form(
         ai_role=ai_role,
         user_role=user_role,
         tasks=_parse_json_list(tasks),
-        ai_system_prompt=ai_system_prompt,
         tags=_parse_json_list(tags),
         time_limit_minutes=time_limit_minutes,
         character_id=character_id,
@@ -95,21 +91,6 @@ async def _delete_scenario_image_by_url(url: str | None) -> None:
         await supabase_storage.delete_object(bucket=settings.supabase_images_bucket, path=path)
     except Exception:
         logger.warning("Failed to delete scenario image", exc_info=True)
-
-
-@router.post("/scenarios/generate-default-prompt", response_model=GenerateDefaultPromptResponse)
-async def generate_default_prompt(
-    body: GenerateDefaultPromptRequest,
-    _: User = Depends(require_admin_user),
-):
-    prompt = AdminScenarioService.generate_default_prompt(
-        title=body.title,
-        description=body.description,
-        ai_role=body.ai_role,
-        user_role=body.user_role,
-        tasks=body.tasks,
-    )
-    return GenerateDefaultPromptResponse(prompt=prompt)
 
 
 # NOTE: This MUST be declared before /scenarios/{scenario_id} routes so FastAPI
@@ -158,20 +139,6 @@ async def list_admin_scenarios(
 
 @router.post("/scenarios", response_model=ScenarioAdminRead, status_code=status.HTTP_201_CREATED)
 async def create_admin_scenario(
-    body: ScenarioAdminCreate,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(require_admin_user),
-):
-    scenario = await AdminScenarioService.create_scenario(db, user_id=user.id, body=body)
-    usage_count = await AdminScenarioService.get_scenario_usage_count(db, scenario.id)
-    return serialize_admin_scenario(
-        scenario,
-        usage_count=usage_count,
-    )
-
-
-@router.post("/scenarios/with-image", response_model=ScenarioAdminRead, status_code=status.HTTP_201_CREATED)
-async def create_admin_scenario_with_image(
     title: str = Form(...),
     description: str = Form(...),
     category: str = Form(...),
@@ -179,14 +146,13 @@ async def create_admin_scenario_with_image(
     ai_role: str = Form(default=""),
     user_role: str = Form(default=""),
     tasks: str | None = Form(default=None),
-    ai_system_prompt: str = Form(...),
     tags: str | None = Form(default=None),
     time_limit_minutes: int = Form(default=10),
     character_id: int | None = Form(default=None),
     is_active: bool = Form(default=True),
     is_pro: bool = Form(default=False),
     image_url: str | None = Form(default=None),
-    image: UploadFile | None = File(default=None),
+    image: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_admin_user),
 ):
@@ -198,7 +164,6 @@ async def create_admin_scenario_with_image(
         ai_role=ai_role,
         user_role=user_role,
         tasks=tasks,
-        ai_system_prompt=ai_system_prompt,
         tags=tags,
         time_limit_minutes=time_limit_minutes,
         character_id=character_id,
@@ -206,14 +171,12 @@ async def create_admin_scenario_with_image(
         is_pro=is_pro,
         image_url=image_url,
     )
-    if image is not None:
-        uploaded = await upload_scenario_image(image, user)
-        body.image_url = uploaded["url"]
+    uploaded = await upload_scenario_image(image, user)
+    body.image_url = uploaded["url"]
     try:
         scenario = await AdminScenarioService.create_scenario(db, user_id=user.id, body=body)
     except Exception:
-        if image is not None:
-            await _delete_scenario_image_by_url(body.image_url)
+        await _delete_scenario_image_by_url(body.image_url)
         raise
     usage_count = await AdminScenarioService.get_scenario_usage_count(db, scenario.id)
     return serialize_admin_scenario(scenario, usage_count=usage_count)
@@ -244,7 +207,6 @@ async def update_admin_scenario_with_image(
     ai_role: str = Form(default=""),
     user_role: str = Form(default=""),
     tasks: str | None = Form(default=None),
-    ai_system_prompt: str = Form(...),
     tags: str | None = Form(default=None),
     time_limit_minutes: int = Form(default=10),
     character_id: int | None = Form(default=None),
@@ -263,7 +225,6 @@ async def update_admin_scenario_with_image(
         ai_role=ai_role,
         user_role=user_role,
         tasks=tasks,
-        ai_system_prompt=ai_system_prompt,
         tags=tags,
         time_limit_minutes=time_limit_minutes,
         character_id=character_id,

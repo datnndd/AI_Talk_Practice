@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.modules.scenarios.models.scenario import Scenario
-from app.modules.sessions.models.correction import Correction
 from app.modules.sessions.models.message import Message
+from app.modules.sessions.models.message_realtime_feedback import MessageRealtimeFeedback
 from app.modules.sessions.models.session import Session
 from app.modules.sessions.models.session_score import SessionScore
 
@@ -15,7 +15,7 @@ FULL_SESSION_LOAD = (
     joinedload(Session.scenario).joinedload(Scenario.character),
     joinedload(Session.character),
     joinedload(Session.score),
-    selectinload(Session.messages).selectinload(Message.corrections),
+    selectinload(Session.messages).selectinload(Message.realtime_feedback),
 )
 
 
@@ -96,7 +96,7 @@ class SessionRepository:
     ) -> Message | None:
         stmt = (
             select(Message)
-            .options(selectinload(Message.corrections))
+            .options(selectinload(Message.realtime_feedback))
             .where(Message.id == message_id, Message.session_id == session_id)
         )
         result = await db.execute(stmt)
@@ -117,9 +117,6 @@ class SessionRepository:
         role: str,
         content: str,
         audio_url: str | None = None,
-        audio_duration_ms: int | None = None,
-        asr_metadata: dict | list | str | None = None,
-        corrections: list[dict] | None = None,
     ) -> Message:
         message = Message(
             session_id=session_id,
@@ -127,39 +124,42 @@ class SessionRepository:
             content=content,
             order_index=await cls.next_order_index(db, session_id),
             audio_url=audio_url,
-            audio_duration_ms=audio_duration_ms,
-            asr_metadata=asr_metadata,
         )
         db.add(message)
         await db.flush()
 
-        for correction_data in corrections or []:
-            db.add(Correction(message_id=message.id, **correction_data))
-
-        await db.flush()
-
         stmt = (
             select(Message)
-            .options(selectinload(Message.corrections))
+            .options(selectinload(Message.realtime_feedback))
             .where(Message.id == message.id)
         )
         result = await db.execute(stmt)
         return result.unique().scalar_one()
 
     @staticmethod
-    async def add_corrections(
+    async def upsert_message_realtime_feedback(
         db: AsyncSession,
         *,
         message_id: int,
-        corrections: list[dict[str, object]],
-    ) -> list[Correction]:
-        created: list[Correction] = []
-        for correction_data in corrections:
-            correction = Correction(message_id=message_id, **correction_data)
-            db.add(correction)
-            created.append(correction)
+        is_good: bool,
+        better_answer: str | None,
+        raw_response: dict[str, object] | None = None,
+    ) -> MessageRealtimeFeedback:
+        stmt = select(MessageRealtimeFeedback).where(MessageRealtimeFeedback.message_id == message_id)
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        values = {
+            "is_good": is_good,
+            "better_answer": better_answer,
+            "raw_response": raw_response,
+        }
+        if existing is None:
+            existing = MessageRealtimeFeedback(message_id=message_id, **values)
+            db.add(existing)
+        else:
+            for key, value in values.items():
+                setattr(existing, key, value)
         await db.flush()
-        return created
+        return existing
 
     @staticmethod
     async def upsert_session_score(

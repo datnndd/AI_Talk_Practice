@@ -77,35 +77,35 @@ const SkillCard = ({ skillKey, value }) => {
   );
 };
 
-const CorrectionCard = ({ correction, index }) => (
+const RealtimeFeedbackCard = ({ message, index }) => {
+  const feedback = message.realtime_feedback;
+  const isGood = Boolean(feedback?.is_good);
+  const betterAnswer = feedback?.better_answer || "";
+  const Icon = isGood ? CheckCircle : WarningCircle;
+  const tone = isGood
+    ? "border-emerald-100 bg-emerald-50 text-emerald-950"
+    : "border-amber-100 bg-amber-50 text-amber-950";
+
+  return (
   <motion.div
     initial={{ opacity: 0, y: 8 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.05 }}
-    className="rounded-xl border border-rose-100 bg-rose-50 p-4"
+    className={`rounded-xl border p-4 ${tone}`}
   >
     <div className="flex items-start gap-3">
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-rose-600 mb-2">Original</p>
-        <p className="text-sm text-rose-900 line-through opacity-70">
-          {correction.original || correction.original_text}
-        </p>
-      </div>
-      <ArrowRight size={16} className="mt-5 shrink-0 text-rose-400" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-600 mb-2">Correction</p>
-        <p className="text-sm font-semibold text-emerald-900">
-          {correction.suggestion || correction.corrected_text}
+      <Icon size={20} weight="fill" className={isGood ? "text-emerald-600" : "text-amber-600"} />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">Turn {index + 1}</p>
+        <p className="mt-1 text-sm leading-relaxed text-zinc-700">{message.content}</p>
+        <p className="mt-3 text-sm font-bold">
+          {isGood ? "Câu này ổn rồi" : `Nên nói: ${betterAnswer || "Try a shorter, clearer answer."}`}
         </p>
       </div>
     </div>
-    {correction.explanation && (
-      <p className="mt-3 border-t border-rose-200 pt-3 text-xs leading-relaxed text-zinc-600">
-        {correction.explanation}
-      </p>
-    )}
   </motion.div>
-);
+  );
+};
 
 const SessionResultPage = () => {
   const navigate = useNavigate();
@@ -220,11 +220,10 @@ const SessionResultPage = () => {
   );
   const strengths = scoreMeta.strengths || [];
   const improvements = scoreMeta.improvements || [];
-  const corrections = scoreMeta.corrections || [];
+  const realtimeFeedbackMessages = userMessages.filter((message) => message.realtime_feedback);
   const nextSteps = scoreMeta.next_steps || [];
   const objectiveCompletion = scoreMeta.objective_completion;
   const detailedMetrics = [
-    { label: "Pronunciation", value: scoreMeta.pronunciation_score || score?.pronunciation_score || "Preview" },
     { label: "Vocabulary", value: skillBreakdown.vocabulary ?? "Preview" },
     { label: "Fluency", value: skillBreakdown.fluency ?? "Preview" },
   ];
@@ -427,13 +426,13 @@ const SessionResultPage = () => {
         </section>
       )}
 
-      {corrections.length > 0 && (
+      {realtimeFeedbackMessages.length > 0 && (
         <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Language Corrections</p>
-          <h2 className="mt-1 font-display text-xl font-black text-zinc-950">{corrections.length} correction{corrections.length !== 1 ? "s" : ""}</h2>
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Realtime Feedback</p>
+          <h2 className="mt-1 font-display text-xl font-black text-zinc-950">{realtimeFeedbackMessages.length} speaking note{realtimeFeedbackMessages.length !== 1 ? "s" : ""}</h2>
           <div className="mt-4 space-y-3">
-            {corrections.map((c, i) => (
-              <CorrectionCard key={i} correction={c} index={i} />
+            {realtimeFeedbackMessages.map((message, i) => (
+              <RealtimeFeedbackCard key={message.id || i} message={message} index={i} />
             ))}
           </div>
         </section>

@@ -52,7 +52,6 @@ class SessionFinalEvaluationService:
             return None
 
         skill_breakdown = {
-            "pronunciation": {"avg": payload.pronunciation_score},
             "fluency": {"avg": payload.fluency_score},
             "grammar": {"avg": payload.grammar_score},
             "vocabulary": {"avg": payload.vocabulary_score},
@@ -73,7 +72,6 @@ class SessionFinalEvaluationService:
             db,
             session_id=session.id,
             values={
-                "avg_pronunciation": payload.pronunciation_score,
                 "avg_fluency": payload.fluency_score,
                 "avg_grammar": payload.grammar_score,
                 "avg_vocabulary": payload.vocabulary_score,

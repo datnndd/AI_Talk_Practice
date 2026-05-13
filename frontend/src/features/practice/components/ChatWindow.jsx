@@ -20,8 +20,8 @@ const isCompletionNotice = (role, content) => {
   );
 };
 
-const RealtimeCorrectionCard = ({ correctedText, corrections = [] }) => {
-  if (!correctedText && corrections.length === 0) {
+const RealtimeCorrectionCard = ({ isGood, betterAnswer = "" }) => {
+  if (isGood === null || isGood === undefined) {
     return null;
   }
 
@@ -33,25 +33,15 @@ const RealtimeCorrectionCard = ({ correctedText, corrections = [] }) => {
     >
       <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">
         <Check size={14} weight="bold" />
-        Correction
+        Feedback
       </div>
-      {correctedText ? (
-        <p className="mt-2 text-sm font-semibold leading-relaxed text-emerald-950">{correctedText}</p>
-      ) : null}
-      {corrections.length > 0 ? (
-        <div className="mt-3 space-y-2">
-          {corrections.map((item, index) => (
-            <div key={`${item.corrected_text || item.original_text}-${index}`} className="rounded-lg bg-card/85 px-3 py-2">
-              <p className="text-xs font-semibold text-zinc-700">
-                {(item.original_text || "").trim()} {"->"} {(item.corrected_text || "").trim()}
-              </p>
-              {item.explanation ? (
-                <p className="mt-1 text-xs leading-relaxed text-zinc-600">{item.explanation}</p>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {isGood ? (
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-emerald-950">Câu này ổn rồi.</p>
+      ) : (
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-emerald-950">
+          Nên nói: {betterAnswer || "Try a shorter, clearer answer."}
+        </p>
+      )}
     </motion.div>
   );
 };
@@ -62,8 +52,8 @@ const MessageBubble = ({
   isAI,
   isLive = false,
   targetLanguage = "vi",
-  correctedText = "",
-  corrections = [],
+  correctionIsGood = null,
+  betterAnswer = "",
 }) => {
   const isNotice = role === "notice" || role === "system";
   const isCompletion = isCompletionNotice(role, content);
@@ -141,7 +131,7 @@ const MessageBubble = ({
       )}
 
       {!isAI && !isLive ? (
-        <RealtimeCorrectionCard correctedText={correctedText} corrections={corrections} />
+        <RealtimeCorrectionCard isGood={correctionIsGood} betterAnswer={betterAnswer} />
       ) : null}
     </div>
   </motion.div>
@@ -265,8 +255,8 @@ const ChatWindow = ({
                   role={introMessage.role}
                   isAI
                   targetLanguage={userNativeLanguage}
-                  correctedText={introMessage.correctedText}
-                  corrections={introMessage.corrections || []}
+                  correctionIsGood={introMessage.correctionIsGood ?? null}
+                  betterAnswer={introMessage.betterAnswer || ""}
                 />
               ) : null}
               {visibleMessages.map((message) => (
@@ -276,8 +266,8 @@ const ChatWindow = ({
                   role={message.role}
                   isAI={message.role === "assistant"}
                   targetLanguage={userNativeLanguage}
-                  correctedText={message.correctedText}
-                  corrections={message.corrections || []}
+                  correctionIsGood={message.correctionIsGood ?? null}
+                  betterAnswer={message.betterAnswer || ""}
                 />
               ))}
 

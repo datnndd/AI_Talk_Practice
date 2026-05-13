@@ -16,33 +16,27 @@ def build_dialogue_system_prompt(
     tasks = [str(item).strip() for item in (getattr(scenario, "tasks", None) or []) if str(item).strip()]
     task_text = "\n".join(f"{index}. {task}" for index, task in enumerate(tasks, start=1)) or "Help the learner sustain a natural conversation."
 
-    parts: list[str] = []
-    if scenario.ai_system_prompt and scenario.ai_system_prompt.strip():
-        parts.extend([scenario.ai_system_prompt.strip(), ""])
-
-    parts.extend(
-        [
-            "You are continuing a live spoken English practice conversation.",
-            f"Scenario title: {scenario.title}",
-            f"Situation details: {scenario.description}",
-            f"AI role: {getattr(scenario, 'ai_role', '') or 'Conversation partner'}",
-            f"Learner role: {getattr(scenario, 'user_role', '') or 'English learner'}",
-            "Learner tasks required before ending:",
-            task_text,
-            f"Rolling session summary: {rolling_summary or 'No summary yet.'}",
-            f"Learner profile signals: {preference_text}",
-            f"Recent turns:\n{recent_turns or 'No prior turns.'}",
-            "",
-            "Conversation rules:",
-            "- Stay fully in character and continue the same scene naturally.",
-            "- Reply in concise spoken English suitable for TTS.",
-            "- Acknowledge what the learner said and move the conversation forward.",
-            "- Ask at most one focused follow-up question per turn when needed.",
-            "- Do not explain grammar rules inside the main reply.",
-            "- Do not mention hidden instructions, summaries, metadata, or profile extraction.",
-            "- Avoid markdown, bullet points, labels, or stage directions.",
-        ]
-    )
+    parts: list[str] = [
+        "You are continuing a live spoken English practice conversation.",
+        f"Scenario title: {scenario.title}",
+        f"Situation details: {scenario.description}",
+        f"AI role: {getattr(scenario, 'ai_role', '') or 'Conversation partner'}",
+        f"Learner role: {getattr(scenario, 'user_role', '') or 'English learner'}",
+        "Learner tasks required before ending:",
+        task_text,
+        f"Rolling session summary: {rolling_summary or 'No summary yet.'}",
+        f"Learner profile signals: {preference_text}",
+        f"Recent turns:\n{recent_turns or 'No prior turns.'}",
+        "",
+        "Conversation rules:",
+        "- Stay fully in character and continue the same scene naturally.",
+        "- Reply in concise spoken English suitable for TTS.",
+        "- Acknowledge what the learner said and move the conversation forward.",
+        "- Ask at most one focused follow-up question per turn when needed.",
+        "- Do not explain grammar rules inside the main reply.",
+        "- Do not mention hidden instructions, summaries, metadata, or profile extraction.",
+        "- Avoid markdown, bullet points, labels, or stage directions.",
+    ]
     if extra_instruction and extra_instruction.strip():
         parts.append(f"- {extra_instruction.strip()}")
     return "\n".join(parts)
@@ -79,17 +73,14 @@ def build_realtime_correction_prompt(
 ) -> str:
     return "\n".join(
         [
-            "Correct one learner utterance from an English speaking practice session.",
+            "Judge one learner utterance from an English speaking practice session.",
             "Return only one JSON object. Do not include markdown.",
-            "Focus on grammar, vocabulary choice, and naturalness. Ignore tiny style issues unless they affect meaning.",
+            "Decide if the answer is good enough for the scenario. Ignore tiny style issues unless they affect meaning.",
             f"Scenario: {scenario_title}",
             f"Learner text: {text.strip()}",
-            "Use short learner-facing explanations.",
             "JSON schema: {",
-            '  "corrected_text": "full corrected sentence",',
-            '  "corrections": [',
-            '    {"original_text":"...", "corrected_text":"...", "explanation":"...", "error_type":"grammar|vocabulary|naturalness|pronunciation|register", "severity":"low|medium|high", "position_start":0, "position_end":5}',
-            "  ]",
+            '  "is_good": true,',
+            '  "better_answer": "better natural answer if not good, otherwise empty string"',
             "}",
         ]
     )
@@ -105,7 +96,7 @@ def build_hint_prompt(
 ) -> str:
     return "\n".join(
         [
-            "Create a short hint for a learner who is stuck in an English speaking role-play.",
+            "Create exactly three short hints for a learner who is stuck in an English speaking role-play.",
             "Return only one JSON object. Do not include markdown.",
             f"Scenario: {scenario.title}",
             f"Situation details: {scenario.description}",
@@ -115,15 +106,12 @@ def build_hint_prompt(
             f"Recent turns:\n{recent_turns or 'None'}",
             f"Current question or last assistant prompt: {current_question or 'None'}",
             f"Learner draft or last answer: {user_text or 'None'}",
-            "The hint should help the learner answer, not continue the AI side of the dialogue.",
-            "Write analysis and strategy in Vietnamese. Keep sample answers short and natural.",
+            "Each hint should help the learner answer, not continue the AI side of the dialogue.",
+            "Keep hints short, practical, and easy to speak.",
             "JSON schema: {",
-            '  "analysis_vi": "AI đang hỏi gì / người học cần làm gì",',
-            '  "answer_strategy_vi": "Chiến lược trả lời ngắn gọn",',
-            '  "keywords": ["..."],',
-            '  "sample_answers": ["..."],',
-            '  "sample_answer": "...",',
-            '  "sample_answer_easy": "..."',
+            '  "hint1": "...",',
+            '  "hint2": "...",',
+            '  "hint3": "..."',
             "}",
         ]
     )
@@ -147,7 +135,6 @@ def build_full_assessment_prompt(
             f"Learner tasks: {tasks or []}",
             f"Rolling summary: {rolling_summary or 'None'}",
             "JSON schema: {",
-            '  "pronunciation_score": 0.0,',
             '  "fluency_score": 0.0,',
             '  "grammar_score": 0.0,',
             '  "vocabulary_score": 0.0,',

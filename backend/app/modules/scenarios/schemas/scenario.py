@@ -17,7 +17,6 @@ class ScenarioRead(ORMModel):
     character_id: int | None = None
     title: str
     description: str
-    ai_system_prompt: str
     ai_role: str = ""
     user_role: str = ""
     image_url: str | None = None

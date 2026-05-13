@@ -48,7 +48,7 @@ export const practiceApi = {
   getScenario: async (scenarioId, { force = false } = {}) => {
     const key = getScenarioCacheKey(scenarioId);
     const cached = scenarioDetailCache.get(key);
-    if (!force && cached?.data?.ai_system_prompt) {
+    if (!force && cached?.data?.description) {
       return cached.data;
     }
     if (!force && cached?.promise) {

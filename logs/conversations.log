@@ -1,0 +1,80 @@
+2026-05-13 21:53:09,682 | INFO    | conn=18c190f1a7 event=websocket_accepted
+2026-05-13 21:53:09,683 | INFO    | event=client_event conn='18c190f1a7' msg_type='session_start'
+2026-05-13 21:53:09,729 | INFO    | event=app_error conn='18c190f1a7' msg_type='session_start' detail='Scenario not found' extra={}
+2026-05-13 21:53:09,729 | INFO    | event=cleanup_start conn='18c190f1a7' finalized_by_server=False resume_enabled=False
+2026-05-13 21:53:09,730 | INFO    | event=cleanup_done conn='18c190f1a7'
+2026-05-13 21:54:19,658 | INFO    | conn=1f2c3e6fac event=websocket_accepted
+2026-05-13 21:54:19,659 | INFO    | event=client_event conn='1f2c3e6fac' msg_type='session_start'
+2026-05-13 21:54:19,738 | INFO    | event=app_error conn='1f2c3e6fac' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:19,738 | INFO    | event=cleanup_start conn='1f2c3e6fac' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:19,739 | INFO    | event=cleanup_done conn='1f2c3e6fac'
+2026-05-13 21:54:23,138 | INFO    | conn=407c4fdbd1 event=websocket_accepted
+2026-05-13 21:54:23,139 | INFO    | event=client_event conn='407c4fdbd1' msg_type='session_start'
+2026-05-13 21:54:23,169 | INFO    | event=app_error conn='407c4fdbd1' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:23,170 | INFO    | event=cleanup_start conn='407c4fdbd1' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:23,171 | INFO    | event=cleanup_done conn='407c4fdbd1'
+2026-05-13 21:54:25,786 | INFO    | conn=a4c2510e35 event=websocket_accepted
+2026-05-13 21:54:25,786 | INFO    | event=client_event conn='a4c2510e35' msg_type='session_start'
+2026-05-13 21:54:25,817 | INFO    | event=app_error conn='a4c2510e35' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:25,818 | INFO    | event=cleanup_start conn='a4c2510e35' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:25,819 | INFO    | event=cleanup_done conn='a4c2510e35'
+2026-05-13 21:54:27,355 | INFO    | conn=b68bc4c77a event=websocket_accepted
+2026-05-13 21:54:27,355 | INFO    | event=client_event conn='b68bc4c77a' msg_type='session_start'
+2026-05-13 21:54:27,355 | INFO    | event=session_start_rejected conn='b68bc4c77a' reason='invalid_token'
+2026-05-13 21:54:27,356 | INFO    | event=cleanup_start conn='b68bc4c77a' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:27,356 | INFO    | event=cleanup_done conn='b68bc4c77a'
+2026-05-13 21:54:29,586 | INFO    | conn=934a20b235 event=websocket_accepted
+2026-05-13 21:54:29,586 | INFO    | event=client_event conn='934a20b235' msg_type='session_start'
+2026-05-13 21:54:29,608 | INFO    | event=app_error conn='934a20b235' msg_type='session_start' detail='Scenario not found' extra={}
+2026-05-13 21:54:29,608 | INFO    | event=cleanup_start conn='934a20b235' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:29,609 | INFO    | event=cleanup_done conn='934a20b235'
+2026-05-13 21:54:35,661 | INFO    | conn=b4521f8d24 event=websocket_accepted
+2026-05-13 21:54:35,661 | INFO    | event=client_event conn='b4521f8d24' msg_type='session_start'
+2026-05-13 21:54:35,677 | INFO    | event=app_error conn='b4521f8d24' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:35,677 | INFO    | event=cleanup_start conn='b4521f8d24' finalized_by_server=False resume_enabled=True
+2026-05-13 21:54:35,678 | INFO    | event=cleanup_done conn='b4521f8d24'
+2026-05-13 21:54:36,951 | INFO    | conn=7df414b8aa event=websocket_accepted
+2026-05-13 21:54:37,156 | INFO    | event=client_event conn='7df414b8aa' msg_type='session_start'
+2026-05-13 21:54:37,173 | INFO    | event=app_error conn='7df414b8aa' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:37,173 | INFO    | event=cleanup_start conn='7df414b8aa' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:37,174 | INFO    | event=cleanup_done conn='7df414b8aa'
+2026-05-13 21:54:38,617 | INFO    | conn=6ba4647c67 event=websocket_accepted
+2026-05-13 21:54:38,670 | INFO    | event=client_event conn='6ba4647c67' msg_type='session_start'
+2026-05-13 21:54:38,683 | INFO    | event=app_error conn='6ba4647c67' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:38,683 | INFO    | event=cleanup_start conn='6ba4647c67' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:38,683 | INFO    | event=cleanup_done conn='6ba4647c67'
+2026-05-13 21:54:41,163 | INFO    | conn=8f672785b0 event=websocket_accepted
+2026-05-13 21:54:41,164 | INFO    | event=client_event conn='8f672785b0' msg_type='session_start'
+2026-05-13 21:54:41,196 | INFO    | event=app_error conn='8f672785b0' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:41,197 | INFO    | event=cleanup_start conn='8f672785b0' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:41,197 | INFO    | event=cleanup_done conn='8f672785b0'
+2026-05-13 21:54:43,871 | INFO    | conn=e1d5527be9 event=websocket_accepted
+2026-05-13 21:54:43,930 | INFO    | event=client_event conn='e1d5527be9' msg_type='session_start'
+2026-05-13 21:54:43,965 | INFO    | event=app_error conn='e1d5527be9' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:43,965 | INFO    | event=cleanup_start conn='e1d5527be9' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:43,966 | INFO    | event=cleanup_done conn='e1d5527be9'
+2026-05-13 21:54:46,354 | INFO    | conn=4a249f0740 event=websocket_accepted
+2026-05-13 21:54:46,415 | INFO    | event=client_event conn='4a249f0740' msg_type='session_start'
+2026-05-13 21:54:46,448 | INFO    | event=app_error conn='4a249f0740' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:46,448 | INFO    | event=cleanup_start conn='4a249f0740' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:46,449 | INFO    | event=cleanup_done conn='4a249f0740'
+2026-05-13 21:54:49,111 | INFO    | conn=829a232b9a event=websocket_accepted
+2026-05-13 21:54:49,166 | INFO    | event=client_event conn='829a232b9a' msg_type='session_start'
+2026-05-13 21:54:49,196 | INFO    | event=app_error conn='829a232b9a' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:49,197 | INFO    | event=cleanup_start conn='829a232b9a' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:49,198 | INFO    | event=cleanup_done conn='829a232b9a'
+2026-05-13 21:54:51,869 | INFO    | conn=9b3aef19ca event=websocket_accepted
+2026-05-13 21:54:51,879 | INFO    | event=client_event conn='9b3aef19ca' msg_type='session_start'
+2026-05-13 21:54:51,912 | INFO    | event=app_error conn='9b3aef19ca' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:54:51,912 | INFO    | event=cleanup_start conn='9b3aef19ca' finalized_by_server=False resume_enabled=False
+2026-05-13 21:54:51,913 | INFO    | event=cleanup_done conn='9b3aef19ca'
+2026-05-13 21:55:25,301 | INFO    | conn=724cbd6d14 event=websocket_accepted
+2026-05-13 21:55:25,302 | INFO    | event=client_event conn='724cbd6d14' msg_type='session_start'
+2026-05-13 21:55:25,381 | INFO    | event=app_error conn='724cbd6d14' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:55:25,382 | INFO    | event=cleanup_start conn='724cbd6d14' finalized_by_server=False resume_enabled=False
+2026-05-13 21:55:25,383 | INFO    | event=cleanup_done conn='724cbd6d14'
+2026-05-13 21:58:12,270 | INFO    | conn=17f63da5d4 event=websocket_accepted
+2026-05-13 21:58:12,271 | INFO    | event=client_event conn='17f63da5d4' msg_type='session_start'
+2026-05-13 21:58:12,327 | INFO    | event=app_error conn='17f63da5d4' msg_type='session_start' detail='No active character is configured for practice sessions' extra={}
+2026-05-13 21:58:12,328 | INFO    | event=cleanup_start conn='17f63da5d4' finalized_by_server=False resume_enabled=False
+2026-05-13 21:58:12,329 | INFO    | event=cleanup_done conn='17f63da5d4'

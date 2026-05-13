@@ -7,8 +7,6 @@ from .admin_scenario import (
     ScenarioAdminRead,
     ScenarioAdminUpdate,
     ScenarioListResponse,
-    GenerateDefaultPromptRequest,
-    GenerateDefaultPromptResponse,
     BulkScenarioActionRequest,
     BulkScenarioActionResponse,
 )
@@ -20,8 +18,6 @@ __all__ = [
     "ScenarioAdminRead",
     "ScenarioAdminUpdate",
     "ScenarioListResponse",
-    "GenerateDefaultPromptRequest",
-    "GenerateDefaultPromptResponse",
     "BulkScenarioActionRequest",
     "BulkScenarioActionResponse",
 ]

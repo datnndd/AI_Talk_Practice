@@ -1,9 +1,7 @@
 from .session import (
-    CorrectionCreate,
-    CorrectionRead,
     MessageCreate,
+    MessageRealtimeFeedbackRead,
     MessageRead,
-    RealtimeCorrectionItem,
     RealtimeCorrectionRequest,
     RealtimeCorrectionResponse,
     SessionHintRequest,
@@ -14,19 +12,13 @@ from .session import (
     SessionRead,
 )
 from .lesson import (
-    LessonGenerateRequest,
     LessonHintRead,
-    LessonHintRequest,
-    LessonNextQuestionRequest,
-    LessonStateRead,
 )
 
 __all__ = [
-    "CorrectionCreate",
-    "CorrectionRead",
     "MessageCreate",
+    "MessageRealtimeFeedbackRead",
     "MessageRead",
-    "RealtimeCorrectionItem",
     "RealtimeCorrectionRequest",
     "RealtimeCorrectionResponse",
     "SessionHintRequest",
@@ -35,9 +27,5 @@ __all__ = [
     "SessionFinishRequest",
     "SessionListItem",
     "SessionRead",
-    "LessonGenerateRequest",
     "LessonHintRead",
-    "LessonHintRequest",
-    "LessonNextQuestionRequest",
-    "LessonStateRead",
 ]

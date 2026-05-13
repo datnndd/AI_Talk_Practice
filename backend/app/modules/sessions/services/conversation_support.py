@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.infra.contracts import LLMBase, Message
 from app.modules.sessions.schemas.lesson import LessonHintRead
-from app.modules.sessions.schemas.session import RealtimeCorrectionItem, RealtimeCorrectionResponse
+from app.modules.sessions.schemas.session import RealtimeCorrectionResponse
 from app.modules.sessions.services.conversation_prompts import (
     build_conversation_end_check_prompt,
     build_dialogue_system_prompt,
@@ -30,17 +30,14 @@ class ConversationSupportJSONError(ValueError):
 
 
 class HintPayload(BaseModel):
-    analysis_vi: str
-    answer_strategy_vi: str
-    keywords: list[str] = Field(default_factory=list)
-    sample_answers: list[str] = Field(default_factory=list)
-    sample_answer: str
-    sample_answer_easy: str
+    hint1: str = ""
+    hint2: str = ""
+    hint3: str = ""
 
 
 class CorrectionPayload(BaseModel):
-    corrected_text: str
-    corrections: list[RealtimeCorrectionItem] = Field(default_factory=list)
+    is_good: bool = True
+    better_answer: str | None = None
 
 
 class SummaryPayload(BaseModel):
@@ -48,7 +45,6 @@ class SummaryPayload(BaseModel):
 
 
 class FinalEvaluationPayload(BaseModel):
-    pronunciation_score: float = Field(ge=0.0, le=10.0)
     fluency_score: float = Field(ge=0.0, le=10.0)
     grammar_score: float = Field(ge=0.0, le=10.0)
     vocabulary_score: float = Field(ge=0.0, le=10.0)
@@ -137,18 +133,17 @@ class ConversationReplyService:
         session,
         user_preferences: dict[str, Any] | None = None,
     ) -> str:
-        system_prompt = self._system_prompt(session=session, user_preferences=user_preferences)
+        system_prompt = self._system_prompt(
+            session=session,
+            user_preferences=user_preferences,
+            extra_instruction=(
+                "Start the role-play with one short, natural first assistant turn. "
+                "Stay in character, use the scenario context, and ask one simple question."
+            ),
+        )
         chunks: list[str] = []
         async for chunk in self.llm.chat_stream(
-            [
-                Message(
-                    role="user",
-                    content=(
-                        "The narration has finished. Start the role-play now with the first natural assistant turn. "
-                        "Do not mention that the narration ended."
-                    ),
-                )
-            ],
+            [Message(role="user", content="Start the role-play with one natural first assistant turn.")],
             system_prompt=system_prompt,
         ):
             chunks.append(chunk)
@@ -261,17 +256,15 @@ class ConversationHintService:
             user_text=user_text or current_question or session.scenario.title,
             max_tokens=self.max_tokens,
         )
-        sample_answers = payload.sample_answers or [payload.sample_answer]
+        hints = [payload.hint1, payload.hint2, payload.hint3]
+        hints = [hint.strip() for hint in hints if hint and hint.strip()]
+        while len(hints) < 3:
+            hints.append("Answer with one short, clear sentence.")
         return LessonHintRead(
             lesson_id=f"session-{session.id}",
             objective_id="conversation_hint",
             question=current_question,
-            analysis_vi=payload.analysis_vi,
-            answer_strategy_vi=payload.answer_strategy_vi,
-            keywords=payload.keywords[:6],
-            sample_answers=sample_answers[:3],
-            sample_answer=payload.sample_answer or sample_answers[0],
-            sample_answer_easy=payload.sample_answer_easy or payload.sample_answer,
+            hints=hints[:3],
             cached=False,
             metadata={"source": "conversation_hint_prompt"},
         )
@@ -303,10 +296,9 @@ class RealtimeCorrectionService:
                 scenario_title,
             )
             payload = _fallback_correction_payload(raw=exc.raw, fallback_text=text)
-        corrections = [_normalize_correction(item, fallback_text=text) for item in payload.corrections]
         return RealtimeCorrectionResponse(
-            corrected_text=payload.corrected_text or text,
-            corrections=corrections,
+            is_good=payload.is_good,
+            better_answer=(payload.better_answer or None),
             persisted=False,
         )
 
@@ -434,23 +426,9 @@ def _sorted_messages(session) -> list[Any]:
     return sorted(session.messages or [], key=lambda item: item.order_index)
 
 
-def _normalize_correction(item: RealtimeCorrectionItem, *, fallback_text: str) -> RealtimeCorrectionItem:
-    error_type = item.error_type if item.error_type in {"grammar", "vocabulary", "naturalness", "pronunciation", "register"} else "grammar"
-    severity = item.severity if item.severity in {"low", "medium", "high"} else "medium"
-    return item.model_copy(
-        update={
-            "original_text": item.original_text or fallback_text,
-            "corrected_text": item.corrected_text or fallback_text,
-            "explanation": item.explanation or "Câu này có thể rõ và tự nhiên hơn.",
-            "error_type": error_type,
-            "severity": severity,
-        }
-    )
-
-
 def _fallback_correction_payload(*, raw: str, fallback_text: str) -> CorrectionPayload:
-    corrected_text = _extract_json_string_field(raw, "corrected_text") or fallback_text
-    return CorrectionPayload(corrected_text=corrected_text, corrections=[])
+    better_answer = _extract_json_string_field(raw, "better_answer")
+    return CorrectionPayload(is_good=True, better_answer=better_answer)
 
 
 def _extract_json_string_field(raw: str, field_name: str) -> str | None:

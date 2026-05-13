@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sparkle, X, Image as ImageIcon, UploadSimple } from "@phosphor-icons/react";
+import { X, Image as ImageIcon, UploadSimple } from "@phosphor-icons/react";
 import ListEditorField from "./ListEditorField";
 import { getApiErrorMessage } from "@/shared/api/httpClient";
 
@@ -18,7 +18,6 @@ const createInitialState = (scenario) => ({
   ai_role: scenario?.ai_role || "",
   user_role: scenario?.user_role || "",
   tasks: prettyList(scenario?.tasks),
-  ai_system_prompt: scenario?.ai_system_prompt || "",
   tags: prettyList(scenario?.tags),
   time_limit_minutes: scenario?.time_limit_minutes || 10,
   character_id: scenario?.character_id || scenario?.character?.id || "",
@@ -31,13 +30,11 @@ const ScenarioEditorModal = ({
   scenario,
   onClose,
   onSubmit,
-  onGeneratePrompt,
   characters = [],
   isSaving,
 }) => {
   const [form, setForm] = useState(() => createInitialState(scenario));
   const [formError, setFormError] = useState("");
-  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState("");
 
@@ -61,10 +58,6 @@ const ScenarioEditorModal = ({
     event.preventDefault();
 
     try {
-      if (!form.ai_system_prompt.trim()) {
-        setFormError("Generate or enter a system prompt before saving.");
-        return;
-      }
       if (form.is_active && !form.character_id) {
         setFormError("Select a character before activating this scenario.");
         return;
@@ -78,7 +71,6 @@ const ScenarioEditorModal = ({
         ai_role: form.ai_role.trim(),
         user_role: form.user_role.trim(),
         tasks: parseListInput(form.tasks),
-        ai_system_prompt: form.ai_system_prompt.trim(),
         tags: parseListInput(form.tags),
         time_limit_minutes: Number(form.time_limit_minutes),
         character_id: form.character_id ? Number(form.character_id) : null,
@@ -91,25 +83,6 @@ const ScenarioEditorModal = ({
       await onSubmit(payload, imageFile);
     } catch (error) {
       setFormError(getApiErrorMessage(error, "Please check the form before saving."));
-    }
-  };
-
-  const handleGeneratePrompt = async () => {
-    try {
-      setIsGeneratingPrompt(true);
-      const generated = await onGeneratePrompt({
-        title: form.title,
-        description: form.description,
-        ai_role: form.ai_role.trim(),
-        user_role: form.user_role.trim(),
-        tasks: parseListInput(form.tasks),
-      });
-      updateField("ai_system_prompt", generated.prompt || "");
-      setFormError("");
-    } catch (error) {
-      setFormError(getApiErrorMessage(error, "Failed to generate default prompt."));
-    } finally {
-      setIsGeneratingPrompt(false);
     }
   };
 
@@ -265,31 +238,6 @@ const ScenarioEditorModal = ({
                   helperText="Mỗi dòng là một nhiệm vụ. Hội thoại chỉ nên kết thúc khi người học đã hoàn thành các nhiệm vụ này."
                   placeholder={"Nói tên của bạn\nNói tuổi của bạn\nNói quê quán của bạn"}
                   rows={6}
-                />
-              </section>
-
-              <section className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">System prompt</p>
-                    <p className="mt-1 text-sm text-zinc-500">Prompt mà AI sẽ dùng trong kịch bản này.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleGeneratePrompt}
-                    disabled={isGeneratingPrompt}
-                    className="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                  >
-                    <Sparkle size={14} />
-                    {isGeneratingPrompt ? "Generating..." : "Generate"}
-                  </button>
-                </div>
-                <textarea
-                  value={form.ai_system_prompt}
-                  onChange={(event) => updateField("ai_system_prompt", event.target.value)}
-                  rows={9}
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-950 px-4 py-4 font-mono text-sm text-emerald-200 outline-none transition focus:border-primary dark:border-zinc-700"
-                  placeholder="Generate or write the system prompt before saving."
                 />
               </section>
 

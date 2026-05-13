@@ -2,21 +2,21 @@ from __future__ import annotations
 
 from app.modules.characters.serializers import serialize_character
 from app.modules.scenarios.serializers import serialize_scenario
-from app.modules.sessions.models.correction import Correction
 from app.modules.sessions.models.message import Message
+from app.modules.sessions.models.message_realtime_feedback import MessageRealtimeFeedback
 from app.modules.sessions.models.session import Session
 from app.modules.sessions.models.session_score import SessionScore
 from app.modules.sessions.schemas import (
-    CorrectionRead,
     MessageRead,
+    MessageRealtimeFeedbackRead,
     SessionListItem,
     SessionRead,
     SessionScoreRead,
 )
 
 
-def serialize_correction(correction: Correction) -> CorrectionRead:
-    return CorrectionRead.model_validate(correction)
+def serialize_realtime_feedback(feedback: MessageRealtimeFeedback) -> MessageRealtimeFeedbackRead:
+    return MessageRealtimeFeedbackRead.model_validate(feedback)
 
 
 def serialize_message(message: Message) -> MessageRead:
@@ -28,9 +28,7 @@ def serialize_message(message: Message) -> MessageRead:
             "content": message.content,
             "order_index": message.order_index,
             "audio_url": message.audio_url,
-            "audio_duration_ms": message.audio_duration_ms,
-            "asr_metadata": message.asr_metadata,
-            "corrections": [serialize_correction(item) for item in message.corrections],
+            "realtime_feedback": serialize_realtime_feedback(message.realtime_feedback) if message.realtime_feedback else None,
             "created_at": message.created_at,
             "updated_at": message.updated_at,
         }
@@ -41,7 +39,6 @@ def serialize_session_score(score: SessionScore) -> SessionScoreRead:
     return SessionScoreRead.model_validate(
         {
             "id": score.id,
-            "avg_pronunciation": score.avg_pronunciation,
             "avg_fluency": score.avg_fluency,
             "avg_grammar": score.avg_grammar,
             "avg_vocabulary": score.avg_vocabulary,

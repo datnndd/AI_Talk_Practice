@@ -1,8 +1,8 @@
-"""Message model — per-utterance with audio metadata and ASR details."""
+"""Message model — per-utterance transcript with optional stored audio."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
     CheckConstraint,
@@ -13,13 +13,12 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base, TimestampMixin
 
 if TYPE_CHECKING:
-    from app.modules.sessions.models.correction import Correction
+    from app.modules.sessions.models.message_realtime_feedback import MessageRealtimeFeedback
     from app.modules.sessions.models.session import Session
 
 
@@ -31,11 +30,9 @@ class Message(Base, TimestampMixin):
     - `role`: "user" (learner) or "assistant" (AI partner).
     - `content`: transcript text (ASR result for user, LLM output for assistant).
     - `audio_url`: path/URL to stored audio file (S3, GCS, etc.).
-    - `asr_metadata` JSONB: raw ASR provider response, word timings, confidence
-      values, etc.
     - `order_index` + UniqueConstraint(session_id, order_index): enforces message
       ordering and prevents duplicate positions.
-    - `corrections` loaded lazily — always use selectinload() in batch queries
+    - `realtime_feedback` loaded lazily — always use selectinload() in batch queries
       to prevent N+1.
     """
 
@@ -56,17 +53,13 @@ class Message(Base, TimestampMixin):
 
     # ── Audio ─────────────────────────────────────────────────────────────────
     audio_url: Mapped[Optional[str]] = mapped_column(String(1000))     # S3/GCS signed URL
-    audio_duration_ms: Mapped[Optional[int]] = mapped_column(Integer)  # clip length
-
-    # ── ASR raw data ──────────────────────────────────────────────────────────
-    # {"provider": "dashscope", "confidence": 0.97, "words": [{"w": "hello", "t": 0.1}]}
-    asr_metadata: Mapped[Optional[Any]] = mapped_column(JSONB)
 
     # ── Relationships ─────────────────────────────────────────────────────────
     session: Mapped["Session"] = relationship("Session", back_populates="messages")
-    corrections: Mapped[list["Correction"]] = relationship(
-        "Correction",
+    realtime_feedback: Mapped[Optional["MessageRealtimeFeedback"]] = relationship(
+        "MessageRealtimeFeedback",
         back_populates="message",
+        uselist=False,
         lazy="select",
         cascade="all, delete-orphan",
         passive_deletes=True,

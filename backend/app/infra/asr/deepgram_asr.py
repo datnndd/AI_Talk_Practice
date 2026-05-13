@@ -47,16 +47,16 @@ class DeepgramASR(ASRBase):
         self._sample_rate = sample_rate
         self._transcript_queue = asyncio.Queue()
 
-        query = urlencode(
-            {
-                "model": self._config.deepgram_asr_model,
-                "language": language,
-                "encoding": "linear16",
-                "sample_rate": sample_rate,
-                "eot_threshold": self._config.deepgram_eot_threshold,
-                "eot_timeout_ms": self._config.deepgram_eot_timeout_ms,
-            }
-        )
+        query_params: dict[str, str | int | float] = {
+            "model": self._config.deepgram_asr_model,
+            "encoding": "linear16",
+            "sample_rate": sample_rate,
+            "eot_threshold": self._config.deepgram_eot_threshold,
+            "eot_timeout_ms": self._config.deepgram_eot_timeout_ms,
+        }
+        if self._config.deepgram_asr_model == "flux-general-multi" and language:
+            query_params["language_hint"] = language
+        query = urlencode(query_params)
         url = f"{self._config.deepgram_ws_url}?{query}"
 
         self._websocket = await connect(
@@ -99,11 +99,9 @@ class DeepgramASR(ASRBase):
         self._connected = False
 
         try:
-            await websocket.send(json.dumps({"type": "Finalize"}))
-            await asyncio.sleep(0.35)
             await websocket.send(json.dumps({"type": "CloseStream"}))
         except Exception as exc:
-            logger.debug("Deepgram ASR finalize/close command failed: %s", exc)
+            logger.debug("Deepgram ASR close command failed: %s", exc)
 
         if self._receiver_task is not None:
             try:

@@ -31,9 +31,7 @@ class SessionScore(Base, TimestampMixin):
     - `scored_message_count` tracks how many messages contributed — needed to
       detect sessions with too few messages to be meaningful.
     - `skill_breakdown` JSONB allows storing per-skill details/trends without
-      extra columns:
-        {"pronunciation": {"avg": 7.2, "trend": "improving"},
-         "fluency": {"avg": 6.8, "trend": "stable"}}
+      extra columns, e.g. {"fluency": {"avg": 6.8, "trend": "stable"}}.
     - `relevance_score` is evaluated separately by LLM at session end
       (0.0–10.0: did the user stay on topic?).
     - `feedback_summary` is LLM-generated natural language summary.
@@ -52,7 +50,6 @@ class SessionScore(Base, TimestampMixin):
     )
 
     # ── Aggregated scores (0.0–10.0) ─────────────────────────────────────────
-    avg_pronunciation: Mapped[float] = mapped_column(Float, nullable=False)
     avg_fluency: Mapped[float] = mapped_column(Float, nullable=False)
     avg_grammar: Mapped[float] = mapped_column(Float, nullable=False)
     avg_vocabulary: Mapped[float] = mapped_column(Float, nullable=False)
@@ -64,7 +61,7 @@ class SessionScore(Base, TimestampMixin):
     scored_message_count: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
 
     # ── Per-skill details ─────────────────────────────────────────────────────
-    # {"pronunciation": {"avg": 7.2}, "grammar": {"avg": 8.1}}
+    # {"fluency": {"avg": 7.2}, "grammar": {"avg": 8.1}}
     skill_breakdown: Mapped[Optional[Any]] = mapped_column(JSONB)
 
     # ── Narrative feedback ────────────────────────────────────────────────────
@@ -84,7 +81,6 @@ class SessionScore(Base, TimestampMixin):
         # Leaderboard / analytics queries
         Index("ix_session_scores_overall", "overall_score"),
         # Range checks
-        CheckConstraint("avg_pronunciation BETWEEN 0 AND 10", name="ck_ss_pronunciation"),
         CheckConstraint("avg_fluency BETWEEN 0 AND 10", name="ck_ss_fluency"),
         CheckConstraint("avg_grammar BETWEEN 0 AND 10", name="ck_ss_grammar"),
         CheckConstraint("avg_vocabulary BETWEEN 0 AND 10", name="ck_ss_vocabulary"),

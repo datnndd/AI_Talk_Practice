@@ -59,10 +59,10 @@ def test_realtime_correction_prompt_focuses_on_grammar_and_clarity_json():
         text="I wait coffee long time.",
     )
 
-    assert "Focus on grammar, vocabulary choice, and naturalness" in prompt
+    assert "Decide if the answer is good enough" in prompt
     assert "I wait coffee long time." in prompt
-    assert '"corrected_text"' in prompt
-    assert '"corrections"' in prompt
+    assert '"is_good"' in prompt
+    assert '"better_answer"' in prompt
 
 
 def test_hint_prompt_returns_lesson_hint_shape():
@@ -74,9 +74,9 @@ def test_hint_prompt_returns_lesson_hint_shape():
         user_text=None,
     )
 
-    assert "analysis_vi" in prompt
-    assert "answer_strategy_vi" in prompt
-    assert "sample_answer_easy" in prompt
+    assert '"hint1"' in prompt
+    assert '"hint2"' in prompt
+    assert '"hint3"' in prompt
     assert "Current question or last assistant prompt: How can I help you with your order?" in prompt
 
 
@@ -89,7 +89,7 @@ def test_full_assessment_prompt_includes_score_contract():
     )
 
     assert "Use numeric scores from 0 to 10." in prompt
-    assert "pronunciation_score" in prompt
+    assert "pronunciation" not in prompt.lower()
     assert "objective_completion" in prompt
     assert "feedback_summary" in prompt
 

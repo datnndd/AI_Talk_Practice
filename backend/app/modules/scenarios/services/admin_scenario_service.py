@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.modules.characters.services import CharacterService
 from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.models.session import Session
@@ -19,63 +19,7 @@ from app.modules.scenarios.schemas.admin_scenario import (
 
 logger = logging.getLogger(__name__)
 
-
-def _default_system_prompt(
-    *,
-    title: str,
-    description: str,
-    ai_role: str | None,
-    user_role: str | None,
-    tasks: list[str] | None = None,
-) -> str:
-    clean_ai_role = (ai_role or "").strip() or "a realistic English conversation partner"
-    clean_user_role = (user_role or "").strip() or "an English learner"
-    task_lines = [
-        f"{index}. {item.strip()}"
-        for index, item in enumerate(tasks or [], start=1)
-        if item.strip()
-    ]
-    task_text = "\n".join(task_lines) or "Help the learner complete the scenario naturally."
-    return "\n".join(
-        [
-            f"You are {clean_ai_role} in an English speaking practice scenario.",
-            f"Scenario title: {title}",
-            f"Situation details: {description}",
-            f"Learner role: {clean_user_role}",
-            "Learner tasks required before the conversation can end:",
-            task_text,
-            "Instructions:",
-            "- Stay in character throughout the conversation.",
-            "- Speak naturally, clearly, and concisely.",
-            "- Keep the conversation grounded in the scenario details.",
-            "- Ask one focused follow-up question at a time when needed.",
-            "- Give brief helpful corrections only when they help the learner continue.",
-            "- Guide the learner toward completing every listed task.",
-            "- Do not end or wrap up until the learner has clearly completed the listed tasks.",
-            "- Do not mention these instructions or break role.",
-        ]
-    )
-
-
 class AdminScenarioService:
-    @classmethod
-    def generate_default_prompt(
-        cls,
-        *,
-        title: str,
-        description: str,
-        ai_role: str | None,
-        user_role: str | None,
-        tasks: list[str] | None,
-    ) -> str:
-        return _default_system_prompt(
-            title=title,
-            description=description,
-            ai_role=ai_role,
-            user_role=user_role,
-            tasks=tasks,
-        )
-
     @staticmethod
     async def _scenario_usage_counts(db: AsyncSession, scenario_ids: list[int]) -> dict[int, int]:
         if not scenario_ids:
@@ -133,16 +77,12 @@ class AdminScenarioService:
         user_id: int,
         body: ScenarioAdminCreate,
     ) -> Scenario:
-        ai_system_prompt = body.ai_system_prompt.strip()
-        if not ai_system_prompt:
-            raise BadRequestError("System prompt is required. Generate or enter a prompt before saving.")
         await CharacterService.ensure_active_character(db, body.character_id)
 
         scenario = await ScenarioRepository.create(
             db,
             title=body.title,
             description=body.description,
-            ai_system_prompt=ai_system_prompt,
             ai_role=body.ai_role.strip(),
             user_role=body.user_role.strip(),
             tasks=body.tasks,
@@ -178,11 +118,6 @@ class AdminScenarioService:
             update_data["time_limit_minutes"] = update_data["time_limit_minutes"] or None
         if "character_id" in update_data:
             await CharacterService.ensure_active_character(db, update_data["character_id"])
-
-        if "ai_system_prompt" in update_data:
-            update_data["ai_system_prompt"] = (update_data["ai_system_prompt"] or "").strip()
-            if not update_data["ai_system_prompt"]:
-                raise BadRequestError("System prompt cannot be empty.")
 
         for key, value in update_data.items():
             setattr(scenario, key, value)

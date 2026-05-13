@@ -22,8 +22,8 @@ from app.modules.characters.models.character import Character
 from app.modules.scenarios.models.scenario import Scenario
 
 # Sessions
-from app.modules.sessions.models.correction import Correction
 from app.modules.sessions.models.message import Message
+from app.modules.sessions.models.message_realtime_feedback import MessageRealtimeFeedback
 from app.modules.sessions.models.session import Session
 from app.modules.sessions.models.session_score import SessionScore
 
@@ -51,12 +51,12 @@ from app.modules.notifications.models.notification import Notification, Notifica
 __all__ = [
     "Character",
     "CoinTransaction",
-    "Correction",
     "DailyStat",
     "DailyCheckin",
     "EmailOTP",
     "GamificationSetting",
     "Message",
+    "MessageRealtimeFeedback",
     "LearningSection",
     "Lesson",
     "LessonAttempt",

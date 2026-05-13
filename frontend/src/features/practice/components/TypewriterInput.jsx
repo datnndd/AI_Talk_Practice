@@ -1,16 +1,12 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowsClockwise,
-  CircleNotch,
   Microphone,
   PauseCircle,
   SpeakerSlash,
   Sparkle,
-  Translate,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { practiceApi } from "@/features/practice/api/practiceApi";
 
 const STATUS_COPY = {
   closed: "Preparing the conversation session.",
@@ -36,14 +32,9 @@ const TypewriterInput = ({
   hint,
   isHintLoading = false,
   onRequestHint,
-  userNativeLanguage = "vi",
   analysisResultUrl = "",
   onViewAnalysis,
 }) => {
-  const [translatedHint, setTranslatedHint] = useState("");
-  const [isTranslatingHint, setIsTranslatingHint] = useState(false);
-  const [hintTranslationError, setHintTranslationError] = useState("");
-
   const isRecording = recordingState === "recording";
   const isAssistantSpeaking = recordingState === "assistant";
   const isInterrupting = recordingState === "interrupting";
@@ -82,38 +73,7 @@ const TypewriterInput = ({
     recordingState !== "recording" &&
     recordingState !== "processing" &&
     recordingState !== "assistant";
-  const sampleAnswers = hint?.sample_answers?.length
-    ? hint.sample_answers
-    : hint?.sample_answer
-      ? [hint.sample_answer]
-      : [];
-
-  const handleTranslateHint = async () => {
-    if (!hint || translatedHint || isTranslatingHint) {
-      return;
-    }
-
-    setIsTranslatingHint(true);
-    setHintTranslationError("");
-    try {
-      const segments = [
-        hint.question ? `Question: ${hint.question}` : "",
-        hint.analysis_vi ? `Analysis: ${hint.analysis_vi}` : "",
-        hint.answer_strategy_vi ? `Strategy: ${hint.answer_strategy_vi}` : "",
-        sampleAnswers.length > 0 ? `Sample answers: ${sampleAnswers.join(" | ")}` : "",
-        hint.sample_answer_easy ? `Easy version: ${hint.sample_answer_easy}` : "",
-      ].filter(Boolean);
-      const response = await practiceApi.translate({
-        text: segments.join("\n"),
-        targetLanguage: userNativeLanguage,
-      });
-      setTranslatedHint(response.translated_text || "");
-    } catch {
-      setHintTranslationError("Không thể dịch gợi ý lúc này.");
-    } finally {
-      setIsTranslatingHint(false);
-    }
-  };
+  const hints = Array.isArray(hint?.hints) ? hint.hints.filter(Boolean).slice(0, 3) : [];
 
   return (
     <footer className="rounded-lg border border-border bg-card shadow-[0_20px_54px_-42px_rgba(15,23,42,0.55)]">
@@ -123,76 +83,28 @@ const TypewriterInput = ({
           animate={{ opacity: 1, y: 0 }}
           className="border-b border-sky-100 bg-sky-50/80 p-3 text-sky-950"
         >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">
-              <Sparkle weight="fill" size={12} />
-              Guided Hint
-            </div>
-            <button
-              onClick={handleTranslateHint}
-              disabled={isTranslatingHint}
-              className="inline-flex items-center gap-2 rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-700 transition-colors hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isTranslatingHint ? <CircleNotch size={14} className="animate-spin" /> : <Translate size={14} />}
-              Translate
-            </button>
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">
+            <Sparkle weight="fill" size={12} />
+            Guided Hint
           </div>
-          <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <div className="space-y-3">
-              {hint.question ? (
-                <div className="rounded-lg border border-sky-200 bg-white/85 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Current Question</p>
-                  <p className="mt-2 text-sm font-semibold leading-relaxed text-zinc-800">{hint.question}</p>
-                </div>
-              ) : null}
+          <div className="mt-3 grid gap-3">
+            {hint.question ? (
               <div className="rounded-lg border border-sky-200 bg-white/85 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">AI đang hỏi gì?</p>
-                <p className="mt-2 text-sm font-semibold leading-relaxed">{hint.analysis_vi}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Current Question</p>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-zinc-800">{hint.question}</p>
               </div>
-              <div className="rounded-lg border border-sky-200 bg-white/85 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Nên trả lời thế nào?</p>
-                <p className="mt-2 text-sm leading-relaxed text-sky-800">{hint.answer_strategy_vi}</p>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {hint.keywords?.map((keyword) => (
-                  <span
-                    key={keyword}
-                    className="inline-flex rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold uppercase tracking-wide text-sky-700"
-                  >
-                    {keyword}
-                  </span>
+            ) : null}
+            <div className="rounded-lg border border-white/70 bg-white/85 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Hints</p>
+              <div className="mt-2 space-y-2">
+                {hints.map((item, index) => (
+                  <p key={`${item}-${index}`} className="rounded-lg bg-zinc-50 px-3 py-2 text-sm leading-relaxed text-zinc-700">
+                    {index + 1}. {item}
+                  </p>
                 ))}
               </div>
             </div>
-            <div className="grid gap-3">
-              <div className="rounded-lg border border-white/70 bg-white/85 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Sample Answers</p>
-                <div className="mt-2 space-y-2">
-                  {sampleAnswers.map((answer, index) => (
-                    <p key={`${answer}-${index}`} className="rounded-lg bg-zinc-50 px-3 py-2 text-sm leading-relaxed text-zinc-700">
-                      {answer}
-                    </p>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-lg border border-white/70 bg-white/85 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-700">Easy Version</p>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-700">{hint.sample_answer_easy}</p>
-              </div>
-            </div>
           </div>
-          {translatedHint ? (
-            <div className="mt-3 rounded-lg border border-sky-200 bg-white/90 px-4 py-3">
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-sky-700">
-                <Translate size={14} />
-                Translation
-              </div>
-              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-700">{translatedHint}</p>
-            </div>
-          ) : null}
-          {hintTranslationError ? (
-            <p className="mt-3 text-xs text-rose-600">{hintTranslationError}</p>
-          ) : null}
         </motion.div>
       ) : null}
 

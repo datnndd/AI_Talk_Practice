@@ -736,6 +736,43 @@ class ConversationSession:
         self._log_turn_timing(response_len=len(full_response), interrupted=interrupted)
         return interrupted, full_response
 
+    async def speak_assistant_text(self, text: str) -> None:
+        """Speak and persist an assistant turn generated outside the normal user-turn loop."""
+        text = text.strip()
+        if not text:
+            return
+
+        self._current_response_text = ""
+
+        async def _text_stream():
+            for chunk in chunk_text_for_stream(text):
+                self._current_response_text = f"{self._current_response_text}{chunk}"
+                if self._on_llm_chunk:
+                    await self._on_llm_chunk(chunk, False)
+                yield chunk
+
+        try:
+            tts_config = TTSConfig(voice=self._voice, language=self._language, instructions=self._tts_instructions)
+            async for audio_chunk in self._tts.synthesize_stream(_text_stream(), config=tts_config):
+                if self._on_audio_chunk:
+                    await self._on_audio_chunk(audio_chunk)
+        except Exception as e:
+            logger.error("TTS error during assistant opening turn: %s", e)
+            if self._on_error:
+                await self._on_error(f"TTS error: {e}")
+
+        self._current_response_text = text
+        if self._on_llm_chunk:
+            await self._on_llm_chunk(text, True)
+        if self._on_audio_chunk:
+            await self._on_audio_chunk(None)
+
+        self._messages.append(Message(role="assistant", content=text))
+        if self._on_assistant_message:
+            await self._on_assistant_message(text)
+
+        logger.info("Assistant opening turn spoken (len=%s)", len(text))
+
     def _select_llm_messages(self) -> list[Message]:
         """Return only the most recent conversation turns for the LLM context window."""
         message_limit = max(1, int(self._config.llm_history_message_limit))
@@ -768,47 +805,6 @@ class ConversationSession:
             interrupted,
             response_len,
         )
-
-    async def speak_opening(self, text: str) -> None:
-        """Speak the assistant's opening message through the TTS pipeline.
-
-        This allows the assistant to proactively start the conversation
-        without waiting for a user turn.
-        """
-        text = text.strip()
-        if not text:
-            return
-
-        self._messages.append(Message(role="assistant", content=text))
-        if self._on_assistant_message:
-            await self._on_assistant_message(text)
-
-        async def _text_stream():
-            for chunk in chunk_text_for_stream(text):
-                self._current_response_text = f"{self._current_response_text}{chunk}"
-                self._mark_turn_phase("llm_first_token")
-                if self._on_llm_chunk:
-                    await self._on_llm_chunk(chunk, False)
-                yield chunk
-
-        try:
-            tts_config = TTSConfig(voice=self._voice, language=self._language, instructions=self._tts_instructions)
-            async for audio_chunk in self._tts.synthesize_stream(_text_stream(), config=tts_config):
-                self._mark_turn_phase("tts_first_audio")
-                if self._on_audio_chunk:
-                    await self._on_audio_chunk(audio_chunk)
-        except Exception as e:
-            logger.error(f"TTS error during opening speech: {e}")
-            if self._on_error:
-                await self._on_error(f"TTS error: {e}")
-
-        self._current_response_text = text
-        if self._on_llm_chunk:
-            await self._on_llm_chunk(text, True)
-        if self._on_audio_chunk:
-            await self._on_audio_chunk(None)
-
-        logger.info("Opening message spoken (len=%s)", len(text))
 
     async def close(self) -> None:
         """Clean up all resources."""

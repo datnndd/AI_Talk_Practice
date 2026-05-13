@@ -41,7 +41,6 @@ async def test_final_evaluation_creates_session_score(db_session, test_user, tes
     )
 
     evaluation_payload = {
-        "pronunciation_score": 7.0,
         "fluency_score": 7.5,
         "grammar_score": 8.0,
         "vocabulary_score": 7.0,
@@ -92,7 +91,6 @@ async def test_final_evaluation_does_not_depend_on_message_scores(db_session, te
         [
             json.dumps(
                 {
-                    "pronunciation_score": 6.0,
                     "fluency_score": 6.5,
                     "grammar_score": 7.0,
                     "vocabulary_score": 7.5,
@@ -114,7 +112,6 @@ async def test_final_evaluation_does_not_depend_on_message_scores(db_session, te
 
     score = await service.evaluate_and_store(db_session, session_id=test_session.id)
 
-    assert score.avg_pronunciation == 6.0
     assert score.relevance_score == 8.5
     assert "Message score evidence" not in llm.calls[0]["system_prompt"]
 
@@ -132,7 +129,6 @@ async def test_final_evaluation_keeps_score_when_profile_extraction_fails(db_ses
         [
             json.dumps(
                 {
-                    "pronunciation_score": 7.0,
                     "fluency_score": 7.0,
                     "grammar_score": 7.0,
                     "vocabulary_score": 7.0,

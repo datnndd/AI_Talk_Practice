@@ -156,9 +156,6 @@ class SessionService:
             role=payload.role,
             content=payload.content.strip(),
             audio_url=payload.audio_url,
-            audio_duration_ms=payload.audio_duration_ms,
-            asr_metadata=payload.asr_metadata,
-            corrections=[item.model_dump(exclude_none=True) for item in payload.corrections],
         )
         await db.commit()
         logger.info("Added message id=%s to session id=%s", message.id, session.id)
@@ -224,25 +221,21 @@ class SessionService:
         finally:
             await llm.close()
 
-        if message is None or not response.corrections:
-            return response
+        if message is not None:
+            await SessionRepository.upsert_message_realtime_feedback(
+                db,
+                message_id=message.id,
+                is_good=response.is_good,
+                better_answer=response.better_answer,
+                raw_response={
+                    "is_good": response.is_good,
+                    "better_answer": response.better_answer,
+                },
+            )
+            await db.commit()
+            response.persisted = True
 
-        correction_dicts = [
-            item.model_dump(exclude_none=True, exclude={"id"})
-            for item in response.corrections
-        ]
-        created = await SessionRepository.add_corrections(
-            db,
-            message_id=message.id,
-            corrections=correction_dicts,
-        )
-        await db.commit()
-
-        by_index = list(response.corrections)
-        for index, correction in enumerate(created):
-            if index < len(by_index):
-                by_index[index] = by_index[index].model_copy(update={"id": correction.id})
-        return response.model_copy(update={"corrections": by_index, "persisted": True})
+        return response
 
     @staticmethod
     async def end_session(

@@ -15,7 +15,6 @@ from app.modules.users.routers import admin_router as admin_users
 from app.modules.users.routers import router as users
 from app.modules.scenarios.routers import user as scenarios
 from app.modules.scenarios.routers import admin as admin_scenarios
-from app.modules.sessions.routers import lessons
 from app.modules.sessions.routers import rest as sessions
 from app.modules.sessions.routers import ws
 from app.modules.translations.routers import translation
@@ -37,7 +36,6 @@ api_router.include_router(users)
 api_router.include_router(admin_users)
 api_router.include_router(scenarios.router)
 api_router.include_router(sessions.router)
-api_router.include_router(lessons.router)
 api_router.include_router(admin_scenarios.router)
 api_router.include_router(translation.router, prefix="/translations", tags=["translations"])
 

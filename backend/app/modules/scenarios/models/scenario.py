@@ -30,7 +30,6 @@ class Scenario(Base, TimestampMixin):
     A conversation scenario template.
 
     Design notes:
-    - `ai_system_prompt` is the scenario-specific instruction used at runtime.
     - `tasks` JSONB: learner tasks required to complete the conversation.
     - `tags` JSONB: ["airport", "formal", "A1-friendly"] — aids recommendation.
     - `time_limit_minutes` — used for scenario duration display and session countdown.
@@ -47,7 +46,6 @@ class Scenario(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
-    ai_system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     ai_role: Mapped[str] = mapped_column(String(500), nullable=False, server_default="")
     user_role: Mapped[str] = mapped_column(String(500), nullable=False, server_default="")
     # JSONB: ["say your name", "say your age", "say where you are from"]

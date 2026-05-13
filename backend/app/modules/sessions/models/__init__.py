@@ -1,11 +1,11 @@
 from .session import Session
 from .message import Message
-from .correction import Correction
+from .message_realtime_feedback import MessageRealtimeFeedback
 from .session_score import SessionScore
 
 __all__ = [
     "Session",
     "Message",
-    "Correction",
+    "MessageRealtimeFeedback",
     "SessionScore",
 ]

@@ -16,7 +16,7 @@ export const adminApi = {
       formData.append(key, Array.isArray(value) ? JSON.stringify(value) : value);
     });
     if (imageFile) formData.append("image", imageFile);
-    const { data } = await httpClient.post("/admin/scenarios/with-image", formData);
+    const { data } = await httpClient.post("/admin/scenarios", formData);
     return data;
   },
   updateScenario: async (scenarioId, payload) => {
@@ -43,10 +43,6 @@ export const adminApi = {
   },
   toggleScenario: async (scenarioId) => {
     const { data } = await httpClient.post(`/admin/scenarios/${scenarioId}/toggle-active`);
-    return data;
-  },
-  generateDefaultPrompt: async (payload) => {
-    const { data } = await httpClient.post("/admin/scenarios/generate-default-prompt", payload);
     return data;
   },
   bulkAction: async (payload) => {
