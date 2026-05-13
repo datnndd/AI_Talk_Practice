@@ -43,6 +43,16 @@ const ANALYSIS_MAX_POLLS = 20;
 
 const isTerminalAnalysisStatus = (status) => ["completed", "failed", "skipped"].includes(status);
 
+const formatMetricValue = (value) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value.toFixed(1);
+  }
+  if (value && typeof value === "object" && typeof value.avg === "number" && Number.isFinite(value.avg)) {
+    return value.avg.toFixed(1);
+  }
+  return "Preview";
+};
+
 const ScoreRing = ({ score, size = 80 }) => {
   const pct = Math.min(100, Math.max(0, (score / 10) * 100));
   const r = (size - 8) / 2;
@@ -224,49 +234,49 @@ const SessionResultPage = () => {
   const nextSteps = scoreMeta.next_steps || [];
   const objectiveCompletion = scoreMeta.objective_completion;
   const detailedMetrics = [
-    { label: "Vocabulary", value: skillBreakdown.vocabulary ?? "Preview" },
-    { label: "Fluency", value: skillBreakdown.fluency ?? "Preview" },
+    { label: "Vocabulary", value: formatMetricValue(skillBreakdown.vocabulary) },
+    { label: "Fluency", value: formatMetricValue(skillBreakdown.fluency) },
   ];
 
   const completionBadge = {
-    completed: { label: "Ho?n th?nh", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle },
-    partial: { label: "G?n ho?n th?nh", color: "bg-amber-100 text-amber-700 border-amber-200", icon: WarningCircle },
-    not_completed: { label: "C?n luy?n th?m", color: "bg-rose-100 text-rose-700 border-rose-200", icon: XCircle },
+    completed: { label: "Hoàn thành", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle },
+    partial: { label: "Gần hoàn thành", color: "bg-amber-100 text-amber-700 border-amber-200", icon: WarningCircle },
+    not_completed: { label: "Cần luyện thêm", color: "bg-rose-100 text-rose-700 border-rose-200", icon: XCircle },
   }[objectiveCompletion] || null;
   const scenarioId = session.scenario?.id;
   const scenarioTitle = session.scenario?.title || "Conversation session";
   const hasRetryTarget = Number.isFinite(Number(scenarioId));
-  const heroTitle = score ? "B?n ?? ho?n th?nh k?ch b?n" : "?? l?u b?i n?i c?a b?n";
+  const heroTitle = score ? "Bạn đã hoàn thành kịch bản" : "Đã lưu bài nói của bạn";
   const heroMessage = score
-    ? "T?t l?m. Xem nhanh ph?n h?i r?i ti?p t?c b?i h?c k? ti?p."
-    : "B?n c? th? ti?p t?c h?c ngay. AI feedback s? c?p nh?t khi ph?n t?ch xong.";
+    ? "Tốt lắm. Xem nhanh phản hồi rồi tiếp tục bài học kế tiếp."
+    : "Bạn có thể tiếp tục học ngay. AI feedback sẽ cập nhật khi phân tích xong.";
   const quickFeedbackSections = [
     {
-      title: "?i?m m?nh",
+      title: "Điểm mạnh",
       icon: Trophy,
       tone: "border-emerald-200 bg-emerald-50 text-emerald-950",
       titleClass: "text-emerald-700",
       iconClass: "text-emerald-600",
       items: strengths,
-      empty: score ? "Ch?a c? ?i?m m?nh n?i b?t trong l?n ph?n t?ch n?y." : "?ang ch? AI ph?n t?ch ?i?m m?nh.",
+      empty: score ? "Chưa có điểm mạnh nổi bật trong lần phân tích này." : "Đang chờ AI phân tích điểm mạnh.",
     },
     {
-      title: "C?n c?i thi?n",
+      title: "Cần cải thiện",
       icon: WarningCircle,
       tone: "border-amber-200 bg-amber-50 text-amber-950",
       titleClass: "text-amber-700",
       iconClass: "text-amber-600",
       items: improvements,
-      empty: score ? "Ch?a c? g?i ? c?i thi?n c? th?." : "?ang ch? AI t?m ?i?m c?n luy?n th?m.",
+      empty: score ? "Chưa có gợi ý cải thiện cụ thể." : "Đang chờ AI tìm điểm cần luyện thêm.",
     },
     {
-      title: "B??c ti?p theo",
+      title: "Bước tiếp theo",
       icon: ArrowRight,
       tone: "border-primary/20 bg-primary/5 text-zinc-800",
       titleClass: "text-primary",
       iconClass: "text-primary",
       items: nextSteps,
-      empty: score ? "Ti?p t?c h?c ?? gi? nh?p luy?n n?i h?m nay." : "Ti?p t?c h?c trong l?c feedback ???c t?o.",
+      empty: score ? "Tiếp tục học để giữ nhịp luyện nói hôm nay." : "Tiếp tục học trong lúc feedback được tạo.",
     },
   ];
 
@@ -277,9 +287,9 @@ const SessionResultPage = () => {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
               <CheckCircle size={14} weight="fill" />
-              {score ? "Ho?n th?nh" : "?? l?u b?i"}
+              {score ? "Hoàn thành" : "Đã lưu bài"}
             </div>
-            <p className="mt-4 text-[11px] font-black uppercase tracking-[0.24em] text-primary">K?t qu? luy?n n?i</p>
+            <p className="mt-4 text-[11px] font-black uppercase tracking-[0.24em] text-primary">Kết quả luyện nói</p>
             <h1 className="mt-2 font-display text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">
               {heroTitle}
             </h1>
@@ -293,7 +303,7 @@ const SessionResultPage = () => {
           <div className="rounded-2xl border border-white/80 bg-white/90 p-5 shadow-sm lg:min-w-[260px]">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">?i?m t?ng</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Điểm tổng</p>
                 <p className="mt-2 text-4xl font-black text-zinc-950">
                   {score ? Number(score.overall_score || 0).toFixed(1) : "--"}
                 </p>
@@ -309,15 +319,15 @@ const SessionResultPage = () => {
             </div>
             <div className="mt-5 grid gap-2 text-sm">
               <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2">
-                <span className="font-bold text-zinc-500">Th?i l??ng</span>
+                <span className="font-bold text-zinc-500">Thời lượng</span>
                 <span className="font-black text-zinc-950">{formatDuration(session.duration_seconds)}</span>
               </div>
               <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2">
-                <span className="font-bold text-zinc-500">Tr?ng th?i</span>
+                <span className="font-bold text-zinc-500">Trạng thái</span>
                 <span className="font-black capitalize text-zinc-950">{session.status}</span>
               </div>
               <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2">
-                <span className="font-bold text-zinc-500">L? do</span>
+                <span className="font-bold text-zinc-500">Lý do</span>
                 <span className="text-right font-black text-zinc-950">{endReason}</span>
               </div>
             </div>
@@ -330,7 +340,7 @@ const SessionResultPage = () => {
             onClick={() => navigate("/scenarios")}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-950 px-6 py-3 text-sm font-black text-white shadow-sm transition hover:bg-zinc-800"
           >
-            Ti?p t?c h?c
+            Tiếp tục học
             <ArrowRight size={18} weight="bold" />
           </button>
           {hasRetryTarget ? (
@@ -339,7 +349,7 @@ const SessionResultPage = () => {
               onClick={() => navigate(`/practice/${scenarioId}/preview`)}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3 text-sm font-black text-zinc-800 shadow-sm transition hover:bg-zinc-50"
             >
-              Luy?n l?i k?ch b?n
+              Luyện lại kịch bản
             </button>
           ) : null}
         </div>
@@ -351,9 +361,9 @@ const SessionResultPage = () => {
             <div className="mt-1 h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-sky-200 border-t-sky-600" />
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-sky-700">AI Feedback</p>
-              <h2 className="mt-1 font-display text-xl font-black text-sky-950">?ang t?o ph?n h?i chi ti?t</h2>
+              <h2 className="mt-1 font-display text-xl font-black text-sky-950">Đang tạo phản hồi chi tiết</h2>
               <p className="mt-2 text-sm leading-relaxed text-sky-800">
-                B?i n?i ?? ???c l?u. B?n c? th? ti?p t?c h?c, feedback s? t? c?p nh?t khi AI ph?n t?ch xong.
+                Bài nói đã được lưu. Bạn có thể tiếp tục học, feedback sẽ tự cập nhật khi AI phân tích xong.
               </p>
             </div>
           </div>
@@ -363,16 +373,16 @@ const SessionResultPage = () => {
       {!score && isTerminalAnalysisStatus(analysisStatus) && analysisStatus !== "completed" && (
         <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-amber-700">AI Feedback</p>
-          <h2 className="mt-1 font-display text-xl font-black text-amber-950">Ch?a c? ph?n t?ch chi ti?t</h2>
+          <h2 className="mt-1 font-display text-xl font-black text-amber-950">Chưa có phân tích chi tiết</h2>
           <p className="mt-2 text-sm leading-relaxed text-amber-900">
-            B?i n?i ?? ???c l?u, nh?ng AI ch?a ho?n t?t ph?n t?ch. L? do: {finalEvaluation.reason || analysisStatus}.
+            Bài nói đã được lưu, nhưng AI chưa hoàn tất phân tích. Lý do: {finalEvaluation.reason || analysisStatus}.
           </p>
         </section>
       )}
 
       {score?.feedback_summary ? (
         <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">T?m t?t feedback</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Tóm tắt feedback</p>
           <p className="mt-3 text-sm leading-relaxed text-zinc-700 italic">{score.feedback_summary}</p>
           {completionBadge && (() => {
             const BadgeIcon = completionBadge.icon;
@@ -412,7 +422,7 @@ const SessionResultPage = () => {
 
       {Object.keys(skillBreakdown).length > 0 && (
         <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">K? n?ng</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Kỹ năng</p>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {Object.entries(skillBreakdown).map(([key, val]) => (
               <SkillCard key={key} skillKey={key} value={val} />
@@ -454,8 +464,8 @@ const SessionResultPage = () => {
             </h2>
             <p className="mt-1 text-sm leading-relaxed text-zinc-600">
               {hasProAccess
-                ? "Theo d?i ph?t ?m, v?n t? v? ?? tr?i ch?y sau m?i bu?i luy?n n?i."
-                : "N?ng c?p Pro ?? m? kh?a ph?n t?ch s?u sau m?i bu?i luy?n n?i."}
+                ? "Theo dõi phát âm, vốn từ và độ trôi chảy sau mỗi buổi luyện nói."
+                : "Nâng cấp Pro để mở khóa phân tích sâu sau mỗi buổi luyện nói."}
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[360px]">
@@ -463,7 +473,7 @@ const SessionResultPage = () => {
               <div key={metric.label} className={`rounded-lg border px-3 py-2 ${hasProAccess ? "border-white/80 bg-white/80" : "border-zinc-200 bg-zinc-50"}`}>
                 <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">{metric.label}</p>
                 <p className="mt-1 text-sm font-black text-zinc-950">
-                  {typeof metric.value === "number" ? Number(metric.value).toFixed(1) : metric.value}
+                  {metric.value}
                 </p>
               </div>
             ))}
@@ -475,7 +485,7 @@ const SessionResultPage = () => {
               className="inline-flex w-fit items-center gap-2 rounded-lg bg-zinc-950 px-4 py-2.5 text-sm font-black text-white"
             >
               <Crown size={16} weight="fill" />
-              N?ng c?p Pro
+              Nâng cấp Pro
             </button>
           ) : null}
         </div>
@@ -486,7 +496,7 @@ const SessionResultPage = () => {
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Saved Conversation</p>
             <h2 className="mt-1 font-display text-xl font-black text-zinc-950">{userMessages.length} speaking turns</h2>
-            <p className="mt-1 text-sm text-zinc-500">Transcript l?u l?i ?? xem sau khi c?n ?n l?i c? th?.</p>
+            <p className="mt-1 text-sm text-zinc-500">Transcript lưu lại để xem sau khi cần ôn lại cụ thể.</p>
           </div>
           <ChatCenteredText size={26} weight="fill" className="text-primary" />
         </div>

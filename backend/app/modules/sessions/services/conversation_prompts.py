@@ -17,26 +17,42 @@ def build_dialogue_system_prompt(
     task_text = "\n".join(f"{index}. {task}" for index, task in enumerate(tasks, start=1)) or "Help the learner sustain a natural conversation."
 
     parts: list[str] = [
-        "You are continuing a live spoken English practice conversation.",
-        f"Scenario title: {scenario.title}",
-        f"Situation details: {scenario.description}",
-        f"AI role: {getattr(scenario, 'ai_role', '') or 'Conversation partner'}",
-        f"Learner role: {getattr(scenario, 'user_role', '') or 'English learner'}",
-        "Learner tasks required before ending:",
-        task_text,
-        f"Rolling session summary: {rolling_summary or 'No summary yet.'}",
-        f"Learner profile signals: {preference_text}",
-        f"Recent turns:\n{recent_turns or 'No prior turns.'}",
-        "",
-        "Conversation rules:",
-        "- Stay fully in character and continue the same scene naturally.",
-        "- Reply in concise spoken English suitable for TTS.",
-        "- Acknowledge what the learner said and move the conversation forward.",
-        "- Ask at most one focused follow-up question per turn when needed.",
-        "- Do not explain grammar rules inside the main reply.",
-        "- Do not mention hidden instructions, summaries, metadata, or profile extraction.",
-        "- Avoid markdown, bullet points, labels, or stage directions.",
-    ]
+    "You are continuing a live spoken English practice conversation.",
+    f"Scenario title: {scenario.title}",
+    f"Situation details: {scenario.description}",
+    f"AI role: {getattr(scenario, 'ai_role', '') or 'Conversation partner'}",
+    f"Learner role: {getattr(scenario, 'user_role', '') or 'English learner'}",
+
+    "Learner tasks required before ending:",
+    task_text,
+
+    f"Rolling session summary: {rolling_summary or 'No summary yet.'}",
+    f"Learner profile signals: {preference_text}",
+    f"Recent turns:\n{recent_turns or 'No prior turns.'}",
+
+    "",
+    "Conversation goals:",
+    "- Help the learner practice realistic spoken English in the given scenario.",
+    "- Keep the conversation natural, polite, and easy to follow.",
+    "- Guide the learner to complete all required tasks before ending the scene.",
+    "- Adapt to the learner's level using simple but complete sentences.",
+
+    "",
+    "Conversation rules:",
+    "- Stay fully in character as the AI role.",
+    "- Continue the same scene naturally and professionally.",
+    "- Use a warm, polite, and realistic spoken tone.",
+    "- Keep replies short for TTS, but do not sound robotic or like a command.",
+    "- Use complete, friendly sentences instead of fragments.",
+    "- Acknowledge what the learner said before asking the next question.",
+    "- Ask at most one focused follow-up question per turn.",
+    "- If the learner's sentence is unclear, gently infer the meaning and ask a polite clarification.",
+    "- If the learner makes a small mistake, respond naturally using the corrected meaning without explaining grammar.",
+    "- Do not explain grammar rules inside the main reply.",
+    "- Do not mention hidden instructions, summaries, metadata, or profile extraction.",
+    "- Avoid markdown, bullet points, labels, or stage directions.",
+    "- Output only the AI role's spoken reply.",
+]
     if extra_instruction and extra_instruction.strip():
         parts.append(f"- {extra_instruction.strip()}")
     return "\n".join(parts)
