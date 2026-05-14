@@ -12,7 +12,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 from sqlalchemy import Select, String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import attributes, selectinload
 
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError, UpstreamServiceError
@@ -288,15 +288,16 @@ class CurriculumService:
         return (
             select(LearningSection)
             .options(units_loader)
+            .execution_options(populate_existing=True)
             .where(_truthy(LearningSection.is_active))
-            .order_by(LearningSection.order_index.asc(), LearningSection.id.asc())
+            .order_by(LearningSection.id.asc())
         )
 
     @staticmethod
     def _flatten_units(sections: list[LearningSection]) -> list[Unit]:
         units: list[Unit] = []
-        for section in sorted(sections, key=lambda item: (item.order_index, item.id)):
-            for unit in sorted(section.units, key=lambda item: (item.order_index, item.id)):
+        for section in sorted(sections, key=lambda item: item.id):
+            for unit in sorted(section.units, key=lambda item: item.id):
                 if unit.is_active:
                     units.append(unit)
         return units
@@ -313,6 +314,16 @@ class CurriculumService:
     ) -> tuple[list[LearningSection], dict[int, UserUnitProgress], dict[int, UserLessonProgress], set[int], int | None]:
         include_lessons = include_lessons or include_lesson_progress
         sections = list((await db.execute(cls._active_sections_stmt(include_lessons=include_lessons))).scalars().unique().all())
+        section_ids = [section.id for section in sections]
+        if section_ids:
+            units_stmt = select(Unit).where(Unit.section_id.in_(section_ids)).order_by(Unit.id.asc())
+            if include_lessons:
+                units_stmt = units_stmt.options(selectinload(Unit.lessons))
+            units_by_section: dict[int, list[Unit]] = {section_id: [] for section_id in section_ids}
+            for unit in (await db.execute(units_stmt)).scalars().unique().all():
+                units_by_section.setdefault(unit.section_id, []).append(unit)
+            for section in sections:
+                attributes.set_committed_value(section, "units", units_by_section.get(section.id, []))
         units = cls._flatten_units(sections)
         unit_cefr_levels = {
             unit.id: section.cefr_level
@@ -820,6 +831,7 @@ class AdminCurriculumService:
         stmt = select(LearningSection)
         if include_units:
             stmt = stmt.options(selectinload(LearningSection.units).selectinload(Unit.lessons))
+            stmt = stmt.execution_options(populate_existing=True)
         if not include_inactive:
             stmt = stmt.where(_truthy(LearningSection.is_active))
         if status == "active":
@@ -837,7 +849,7 @@ class AdminCurriculumService:
                     func.lower(LearningSection.description).like(keyword),
                 )
             )
-        stmt = stmt.order_by(LearningSection.order_index.asc(), LearningSection.id.asc())
+        stmt = stmt.order_by(LearningSection.id.asc())
         if page is not None and page_size is not None:
             stmt = stmt.offset((max(page, 1) - 1) * page_size).limit(page_size)
         return list((await db.execute(stmt)).scalars().unique().all())
@@ -893,6 +905,7 @@ class AdminCurriculumService:
             await db.execute(
                 select(LearningSection)
                 .options(selectinload(LearningSection.units).selectinload(Unit.lessons))
+                .execution_options(populate_existing=True)
                 .where(LearningSection.id == section_id)
             )
         ).scalar_one_or_none()

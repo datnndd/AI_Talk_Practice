@@ -56,6 +56,16 @@ def _result_url(session_id: int) -> str:
     return f"/sessions/{session_id}/result"
 
 
+def _learner_onboarding_profile(user) -> dict:
+    return {
+        "current_cefr": user.current_cefr,
+        "age": user.age,
+        "favorite_topics": user.favorite_topics or [],
+        "learning_purpose": user.learning_purpose or [],
+        "main_challenge": user.main_challenge,
+    }
+
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -574,7 +584,7 @@ async def websocket_conversation(websocket: WebSocket):
                             )
                         async for chunk in reply_service.stream_reply(
                             session=session_for_reply,
-                            user_preferences=dict(user.preferences or {}),
+                            learner_profile=_learner_onboarding_profile(user),
                             extra_instruction=NATURAL_CLOSE_INSTRUCTION if pending_natural_close else None,
                         ):
                             yield chunk
@@ -617,7 +627,7 @@ async def websocket_conversation(websocket: WebSocket):
                     if conversation is not None and not is_resume and not (session.messages or []):
                         opening_reply = await reply_service.generate_opening_reply(
                             session=session,
-                            user_preferences=dict(user.preferences or {}),
+                            learner_profile=_learner_onboarding_profile(user),
                         )
                         if opening_reply:
                             trace("opening_reply_start", text_len=len(opening_reply), text=_clip_log_text(opening_reply))

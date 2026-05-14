@@ -219,20 +219,12 @@ class PaymentService:
         provider_payload: dict[str, Any],
         status: str = "failed",
     ) -> PaymentTransaction:
-        previous_status = payment.status
-        if previous_status == "paid":
+        if payment.status == "paid":
             return payment
 
         payment.status = status
         payment.failure_reason = reason
         payment.provider_payload = provider_payload
-        if previous_status != status and status in {"failed", "cancelled"}:
-            await NotificationService.create_system_notification(
-                db,
-                user_id=payment.user_id,
-                title="Payment failed",
-                body="Your payment could not be completed. Please try again.",
-            )
         await db.flush()
         return payment
 

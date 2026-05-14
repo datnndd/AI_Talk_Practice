@@ -9,10 +9,10 @@ def build_dialogue_system_prompt(
     scenario: Any,
     rolling_summary: str,
     recent_turns: str,
-    user_preferences: dict[str, Any] | None = None,
+    learner_profile: dict[str, Any] | None = None,
     extra_instruction: str | None = None,
 ) -> str:
-    preference_text = json.dumps(user_preferences or {}, ensure_ascii=False)[:1200] or "{}"
+    profile_text = json.dumps(learner_profile or {}, ensure_ascii=False)[:1200] or "{}"
     tasks = [str(item).strip() for item in (getattr(scenario, "tasks", None) or []) if str(item).strip()]
     task_text = "\n".join(f"{index}. {task}" for index, task in enumerate(tasks, start=1)) or "Help the learner sustain a natural conversation."
 
@@ -27,7 +27,7 @@ def build_dialogue_system_prompt(
     task_text,
 
     f"Rolling session summary: {rolling_summary or 'No summary yet.'}",
-    f"Learner profile signals: {preference_text}",
+    f"Learner onboarding profile: {profile_text}",
     f"Recent turns:\n{recent_turns or 'No prior turns.'}",
 
     "",
@@ -76,7 +76,8 @@ def build_summary_prompt(
             f"Previous summary: {previous_summary or 'None'}",
             f"Recent turns:\n{recent_turns or 'None'}",
             f"Keep the summary under {max_chars} characters.",
-            "Capture only durable context: user goals, personal facts, decisions, constraints, preferences, and unresolved items.",
+            "Capture only conversation context needed for future turns: completed tasks, user choices, scenario constraints, unresolved questions, and relevant situational details.",
+            "Do not extract or infer long-term personal profile information.",
             'JSON schema: {"summary": "compact summary for future turns"}',
         ]
     )

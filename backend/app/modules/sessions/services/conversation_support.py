@@ -124,19 +124,21 @@ class ConversationReplyService:
         self,
         *,
         session,
-        user_preferences: dict[str, Any] | None = None,
+        learner_profile: dict[str, Any] | None = None,
     ) -> str:
         system_prompt = self._system_prompt(
             session=session,
-            user_preferences=user_preferences,
+            learner_profile=learner_profile,
             extra_instruction=(
-                "Start the role-play with one short, natural first assistant turn. "
-                "Stay in character, use the scenario context, and ask one simple question."
+                "Start the role-play with a brief, natural first assistant turn. "
+                "Use correct, friendly, and simple English, not broken English. "
+                "Use the scenario context naturally without over-explaining it. "
+                "Open the conversation in character, then ask one easy question that helps the learner begin the task. "
             ),
         )
         chunks: list[str] = []
         async for chunk in self.llm.chat_stream(
-            [Message(role="user", content="Start the role-play with one natural first assistant turn.")],
+            [Message(role="user", content="Please start the role-play now.")],
             system_prompt=system_prompt,
         ):
             chunks.append(chunk)
@@ -146,12 +148,12 @@ class ConversationReplyService:
         self,
         *,
         session,
-        user_preferences: dict[str, Any] | None = None,
+        learner_profile: dict[str, Any] | None = None,
         extra_instruction: str | None = None,
     ) -> AsyncIterator[str]:
         system_prompt = self._system_prompt(
             session=session,
-            user_preferences=user_preferences,
+            learner_profile=learner_profile,
             extra_instruction=extra_instruction,
         )
         messages = session_recent_llm_messages(session, limit=self.message_limit)
@@ -162,14 +164,14 @@ class ConversationReplyService:
         self,
         *,
         session,
-        user_preferences: dict[str, Any] | None = None,
+        learner_profile: dict[str, Any] | None = None,
         extra_instruction: str | None = None,
     ) -> str:
         return build_dialogue_system_prompt(
             scenario=session.scenario,
             rolling_summary=session_rolling_summary(session),
             recent_turns=session_recent_turns_text(session, limit=self.message_limit * 2),
-            user_preferences=user_preferences,
+            learner_profile=learner_profile,
             extra_instruction=extra_instruction,
         )
 

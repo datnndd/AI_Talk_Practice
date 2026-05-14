@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowClockwise,
-  ArrowDown,
-  ArrowUp,
   FloppyDiskBack,
   PencilSimple,
   Plus,
@@ -63,6 +61,7 @@ const CEFR_FILTERS = ["", "A1", "A2", "B1", "B2", "C1", "C2"];
 
 const pretty = (value) => JSON.stringify(value || {}, null, 2);
 
+const sortedById = (items = []) => [...items].sort((a, b) => a.id - b.id);
 const sortedByOrder = (items = []) => [...items].sort((a, b) => (a.order_index - b.order_index) || (a.id - b.id));
 
 const parseNumber = (value, fallback = 0) => {
@@ -85,9 +84,9 @@ const normalizeExerciseNode = (lesson) => ({
 });
 
 const normalizeSectionTree = (sections = []) =>
-  sortedByOrder(sections).map((section) => ({
+  sortedById(sections).map((section) => ({
     ...section,
-    lessons: sortedByOrder(section.units || []).map((unit) => ({
+    lessons: sortedById(section.units || []).map((unit) => ({
       ...unit,
       level_id: unit.section_id,
       exercises: sortedByOrder(unit.lessons || []).map(normalizeExerciseNode),
@@ -117,7 +116,7 @@ const EmptyState = ({ children }) => (
   </div>
 );
 
-const RowActions = ({ item, kind, items, onEdit, onToggle, onMove, disabled }) => (
+const RowActions = ({ item, kind, items, onEdit, onToggle, onMove, disabled, canMove = false }) => (
   <div className="flex shrink-0 flex-wrap justify-end gap-1">
     <button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Edit">
       <PencilSimple size={13} />
@@ -125,12 +124,16 @@ const RowActions = ({ item, kind, items, onEdit, onToggle, onMove, disabled }) =
     <button type="button" onClick={(event) => { event.stopPropagation(); onToggle(); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-rose-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label={item.is_active ? "Deactivate" : "Restore"}>
       <ProhibitInset size={13} />
     </button>
-    <button type="button" disabled={disabled || items.findIndex((entry) => entry.id === item.id) <= 0} onClick={(event) => { event.stopPropagation(); onMove(kind, items, item.id, -1); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary disabled:opacity-30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Move up">
-      <ArrowUp size={13} />
-    </button>
-    <button type="button" disabled={disabled || items.findIndex((entry) => entry.id === item.id) >= items.length - 1} onClick={(event) => { event.stopPropagation(); onMove(kind, items, item.id, 1); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary disabled:opacity-30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Move down">
-      <ArrowDown size={13} />
-    </button>
+    {canMove && (
+      <button type="button" disabled={disabled || items.findIndex((entry) => entry.id === item.id) <= 0} onClick={(event) => { event.stopPropagation(); onMove(kind, items, item.id, -1); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary disabled:opacity-30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Move up">
+        ↑
+      </button>
+    )}
+    {canMove && (
+      <button type="button" disabled={disabled || items.findIndex((entry) => entry.id === item.id) >= items.length - 1} onClick={(event) => { event.stopPropagation(); onMove(kind, items, item.id, 1); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary disabled:opacity-30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Move down">
+        ↓
+      </button>
+    )}
   </div>
 );
 
@@ -145,12 +148,11 @@ const CurriculumTreeSkeleton = () => (
   </div>
 );
 
-const toLevelForm = (level, nextOrder) => ({
+const toLevelForm = (level) => ({
   code: level?.code || "",
   title: level?.title || "",
   cefr_level: level?.cefr_level || "",
   description: level?.description || "",
-  order_index: level?.order_index ?? nextOrder,
   is_active: level?.is_active ?? true,
 });
 
@@ -158,7 +160,6 @@ const toLessonForm = (lesson, selectedLevelId, nextOrder) => ({
   level_id: lesson?.level_id ?? selectedLevelId ?? "",
   title: lesson?.title || "",
   description: lesson?.description || "",
-  order_index: lesson?.order_index ?? nextOrder,
   xp_reward: lesson?.xp_reward ?? 50,
   coin_reward: lesson?.coin_reward ?? 0,
   is_active: lesson?.is_active ?? true,
@@ -184,7 +185,6 @@ const normalizeLevelPayload = (form) => ({
   title: form.title.trim(),
   cefr_level: form.cefr_level.trim() || null,
   description: form.description.trim() || null,
-  order_index: parseNumber(form.order_index),
   is_active: Boolean(form.is_active),
 });
 
@@ -192,7 +192,6 @@ const normalizeLessonPayload = (form) => ({
   section_id: parseNumber(form.level_id),
   title: form.title.trim(),
   description: form.description.trim() || null,
-  order_index: parseNumber(form.order_index),
   xp_reward: parseNumber(form.xp_reward),
   coin_reward: parseNumber(form.coin_reward),
   is_active: Boolean(form.is_active),
@@ -365,7 +364,7 @@ const EntityModal = ({
           className="min-h-[96px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
         />
       </div>
-      <BaseControls form={form} updateForm={updateForm} />
+      <ToggleField label="Active" checked={form.is_active} onChange={(value) => updateForm({ is_active: value })} />
     </>
   );
 
@@ -425,7 +424,7 @@ const EntityModal = ({
           />
         </div>
       </div>
-      <BaseControls form={form} updateForm={updateForm} />
+      <ToggleField label="Active" checked={form.is_active} onChange={(value) => updateForm({ is_active: value })} />
     </>
   );
 
@@ -707,22 +706,6 @@ const ToggleField = ({ label, checked, onChange }) => (
   </label>
 );
 
-const BaseControls = ({ form, updateForm }) => (
-  <div className="grid gap-4 sm:grid-cols-2">
-    <div>
-      <FieldLabel>Order</FieldLabel>
-      <input
-        type="number"
-        min="0"
-        value={form.order_index}
-        onChange={(event) => updateForm({ order_index: event.target.value })}
-        className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
-      />
-    </div>
-    <ToggleField label="Active" checked={form.is_active} onChange={(value) => updateForm({ is_active: value })} />
-  </div>
-);
-
 const AdminCurriculumPage = () => {
   const [levels, setLevels] = useState([]);
   const [scenarios, setScenarios] = useState([]);
@@ -890,15 +873,13 @@ const AdminCurriculumPage = () => {
   }, [selectedLesson, selectedExercises]);
 
   const openModal = async (kind, item = null) => {
-    const nextLevelOrder = levels.length;
-    const nextLessonOrder = selectedLessons.length;
     const nextExerciseOrder = selectedExercises.length;
     let modalItem = item;
 
     if (kind === "level") {
-      setForm(toLevelForm(modalItem, nextLevelOrder));
+      setForm(toLevelForm(modalItem));
     } else if (kind === "lesson") {
-      setForm(toLessonForm(modalItem, selectedLevelId, nextLessonOrder));
+      setForm(toLessonForm(modalItem, selectedLevelId));
     } else {
       modalItem = await loadExerciseDetail(modalItem);
       setForm(toExerciseForm(modalItem, selectedLessonId, nextExerciseOrder));
@@ -980,6 +961,7 @@ const AdminCurriculumPage = () => {
   };
 
   const moveItem = async (kind, items, itemId, direction) => {
+    if (kind !== "exercise") return;
     const currentIndex = items.findIndex((item) => item.id === itemId);
     const targetIndex = currentIndex + direction;
     if (currentIndex < 0 || targetIndex < 0 || targetIndex >= items.length) return;
@@ -992,13 +974,7 @@ const AdminCurriculumPage = () => {
     setIsReordering(true);
     setError("");
     try {
-      if (kind === "level") {
-        await adminCurriculumApi.reorderSections(payload);
-      } else if (kind === "lesson") {
-        await adminCurriculumApi.reorderUnits(payload);
-      } else {
-        await adminCurriculumApi.reorderLessons(payload);
-      }
+      await adminCurriculumApi.reorderLessons(payload);
       setNotice(`${curriculumKindLabel(kind)} order updated.`);
       await refreshCurrentData(kind);
     } catch (reorderError) {
@@ -1143,7 +1119,7 @@ const AdminCurriculumPage = () => {
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black">{levelIndex + 1}. {level.title}</p>
-                        <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{level.cefr_level || level.code} ? Order {level.order_index ?? 0}</p>
+                        <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{level.cefr_level || level.code}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
                         <StatusBadge isActive={level.is_active}>{level.is_active ? "Active" : "Inactive"}</StatusBadge>
@@ -1258,7 +1234,7 @@ const AdminCurriculumPage = () => {
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
                         <StatusBadge isActive={exercise.is_active}>{exercise.is_active ? "Active" : "Inactive"}</StatusBadge>
-                        <RowActions item={exercise} kind="exercise" items={selectedExercises} onEdit={() => openModal("exercise", exercise)} onToggle={() => toggleActive("exercise", exercise)} onMove={moveItem} disabled={isReordering} />
+                        <RowActions item={exercise} kind="exercise" items={selectedExercises} onEdit={() => openModal("exercise", exercise)} onToggle={() => toggleActive("exercise", exercise)} onMove={moveItem} disabled={isReordering} canMove />
                       </div>
                     </div>
                   ))}

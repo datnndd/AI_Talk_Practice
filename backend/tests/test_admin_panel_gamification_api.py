@@ -1,12 +1,15 @@
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy import select
 
 from app.modules.gamification.models.coin_transaction import CoinTransaction
 from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.gamification.models.shop_product import ShopProduct
 from app.modules.gamification.models.shop_redemption import ShopRedemption
+from app.modules.notifications.models.notification import Notification
 from app.modules.sessions.models.session import Session
+from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 
 
@@ -156,6 +159,15 @@ async def test_admin_shop_products_and_redemption_status_refund(admin_client, db
     )
     assert cancelled.status_code == 200
     assert cancelled.json()["refunded"] is True
+    notification = (
+        await db_session.execute(
+            select(Notification).where(
+                Notification.recipient_user_id == test_user.id,
+                Notification.title == "Order status updated",
+            )
+        )
+    ).scalar_one()
+    assert notification.title == "Order status updated"
     refreshed_user = await db_session.get(User, test_user.id)
     assert refreshed_user.coin_balance == 620
 
@@ -173,34 +185,18 @@ async def test_admin_shop_products_and_redemption_status_refund(admin_client, db
 
 
 @pytest.mark.asyncio
-async def test_admin_notifications_support_broadcast_direct_read_state(
-    admin_client,
-    test_client,
-    test_user,
-):
-    broadcast = await admin_client.post(
-        "/api/admin/notifications",
-        json={"audience": "all", "title": "System", "body": "New practice challenge"},
-    )
-    assert broadcast.status_code == 201
+async def test_notifications_only_create_vip_expired_not_expiring_soon(test_client, db_session, test_user):
+    subscription = (
+        await db_session.execute(select(Subscription).where(Subscription.user_id == test_user.id))
+    ).scalar_one()
+    subscription.tier = "PRO"
+    subscription.status = "active"
+    subscription.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    await db_session.commit()
 
-    direct = await admin_client.post(
-        "/api/admin/notifications",
-        json={
-            "audience": "users",
-            "recipient_user_ids": [test_user.id],
-            "title": "Support",
-            "body": "Your Coin balance was updated",
-        },
-    )
-    assert direct.status_code == 201
+    response = await test_client.get("/api/notifications")
 
-    inbox = await test_client.get("/api/notifications")
-    assert inbox.status_code == 200
-    items = inbox.json()["items"]
-    assert {item["title"] for item in items} == {"System", "Support"}
-    assert all(item["read_at"] is None for item in items)
-
-    read = await test_client.post(f"/api/notifications/{items[0]['id']}/read")
-    assert read.status_code == 200
-    assert read.json()["read_at"] is not None
+    assert response.status_code == 200
+    titles = [item["title"] for item in response.json()["items"]]
+    assert "VIP expired" in titles
+    assert "VIP expiring soon" not in titles

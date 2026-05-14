@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
+from app.modules.notifications.models.notification import Notification
 from app.modules.payments.models import PaymentTransaction
 from app.modules.users.models.subscription import Subscription
 
@@ -67,6 +68,15 @@ async def test_admin_can_approve_payment_and_activate_subscription(admin_client,
     ).scalar_one()
     assert subscription.tier == "PRO"
     assert subscription.status == "active"
+    notification = (
+        await db_session.execute(
+            select(Notification).where(
+                Notification.recipient_user_id == test_user.id,
+                Notification.title == "VIP activated",
+            )
+        )
+    ).scalar_one()
+    assert "active until" in notification.body
 
 
 @pytest.mark.asyncio
@@ -94,6 +104,15 @@ async def test_admin_can_cancel_pending_payment(admin_client, db_session, test_u
 
     assert response.status_code == 200
     assert response.json()["status"] == "cancelled"
+    notification = (
+        await db_session.execute(
+            select(Notification).where(
+                Notification.recipient_user_id == test_user.id,
+                Notification.title == "Payment failed",
+            )
+        )
+    ).scalar_one_or_none()
+    assert notification is None
 
 
 @pytest.mark.asyncio

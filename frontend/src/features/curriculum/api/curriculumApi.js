@@ -109,10 +109,6 @@ export const adminCurriculumApi = {
     const { data } = await httpClient.delete(`/admin/curriculum/sections/${sectionId}`);
     return data;
   },
-  reorderSections: async (items) => {
-    const { data } = await httpClient.post("/admin/curriculum/sections/reorder", { items });
-    return data;
-  },
   createUnit: async (payload) => {
     const { data } = await httpClient.post("/admin/curriculum/units", payload);
     return data;
@@ -123,10 +119,6 @@ export const adminCurriculumApi = {
   },
   deleteUnit: async (unitId) => {
     const { data } = await httpClient.delete(`/admin/curriculum/units/${unitId}`);
-    return data;
-  },
-  reorderUnits: async (items) => {
-    const { data } = await httpClient.post("/admin/curriculum/units/reorder", { items });
     return data;
   },
   createLesson: async (payload) => {

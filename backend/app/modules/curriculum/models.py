@@ -32,7 +32,6 @@ class LearningSection(Base, TimestampMixin):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     cefr_level: Mapped[Optional[str]] = mapped_column(String(10))
     description: Mapped[Optional[str]] = mapped_column(Text)
-    order_index: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
 
     units: Mapped[list["Unit"]] = relationship(
@@ -41,12 +40,11 @@ class LearningSection(Base, TimestampMixin):
         lazy="select",
         cascade="all, delete-orphan",
         passive_deletes=True,
-        order_by="Unit.order_index",
+        order_by="Unit.id",
     )
 
     __table_args__ = (
-        Index("ix_learning_sections_active_order", "is_active", "order_index"),
-        CheckConstraint("order_index >= 0", name="ck_learning_sections_order_nonnegative"),
+        Index("ix_learning_sections_active_id", "is_active", "id"),
     )
 
 
@@ -59,7 +57,6 @@ class Unit(Base, TimestampMixin):
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
-    order_index: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     estimated_minutes: Mapped[Optional[int]] = mapped_column(Integer)
     xp_reward: Mapped[int] = mapped_column(Integer, nullable=False, default=50, server_default="50")
     coin_reward: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
@@ -83,9 +80,7 @@ class Unit(Base, TimestampMixin):
     )
 
     __table_args__ = (
-        UniqueConstraint("section_id", "order_index", name="uq_units_section_order"),
-        Index("ix_units_section_active_order", "section_id", "is_active", "order_index"),
-        CheckConstraint("order_index >= 0", name="ck_units_order_nonnegative"),
+        Index("ix_units_section_active_id", "section_id", "is_active", "id"),
     )
 
 

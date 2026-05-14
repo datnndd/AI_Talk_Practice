@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, require_admin_user
-from app.modules.curriculum.models import LearningSection, Lesson, Unit
+from app.modules.curriculum.models import Lesson
 from app.modules.curriculum.serializers import serialize_lesson, serialize_section, serialize_unit
 from app.modules.curriculum.schemas import (
     LearningSectionCreate,
@@ -149,15 +149,6 @@ async def delete_section(
     )
 
 
-@router.post("/sections/reorder", status_code=status.HTTP_204_NO_CONTENT)
-async def reorder_sections(
-    body: ReorderRequest,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    await AdminCurriculumService.reorder(db, model=LearningSection, body=body)
-
-
 @router.post("/units", response_model=UnitRead, status_code=status.HTTP_201_CREATED)
 async def create_unit(
     body: UnitCreate,
@@ -187,15 +178,6 @@ async def delete_unit(
 ):
     unit = await AdminCurriculumService.delete_unit(db, unit_id)
     return serialize_unit(unit, is_locked=False)
-
-
-@router.post("/units/reorder", status_code=status.HTTP_204_NO_CONTENT)
-async def reorder_units(
-    body: ReorderRequest,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    await AdminCurriculumService.reorder(db, model=Unit, body=body)
 
 
 @router.post("/lessons", response_model=LessonRead, status_code=status.HTTP_201_CREATED)

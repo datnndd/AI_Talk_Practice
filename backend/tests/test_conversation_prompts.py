@@ -26,11 +26,13 @@ def test_dialogue_prompt_includes_roles_summary_and_recent_turns():
         scenario=_scenario(),
         rolling_summary="Learner already greeted the barista.",
         recent_turns="Learner: Hi, my drink is late.\nAssistant: Let me check your order.",
-        user_preferences={"favorite_topics": ["coffee"]},
+        learner_profile={"favorite_topics": ["coffee"], "level": "A1"},
         extra_instruction="Trả lời lịch sự, khép lại cuộc trò chuyện một cách tự nhiên",
     )
 
-    assert "Stay warm and concise." in prompt
+    assert "Learner onboarding profile:" in prompt
+    assert "coffee" in prompt
+    assert "A1" in prompt
     assert "AI role: Barista" in prompt
     assert "Learner role: Customer" in prompt
     assert "Ask for an update" in prompt

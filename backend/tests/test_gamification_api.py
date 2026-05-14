@@ -1,12 +1,14 @@
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy import select
 
 from app.modules.curriculum.models import LearningSection, Lesson, Unit
 from app.modules.gamification.models.daily_checkin import DailyCheckin
 from app.modules.gamification.models.daily_stat import DailyStat
 from app.modules.gamification.models.shop_product import ShopProduct
 from app.modules.gamification.models.shop_redemption import ShopRedemption
+from app.modules.notifications.models.notification import Notification
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 from app.core.security import hash_password
@@ -190,6 +192,15 @@ async def test_shop_redeem_physical_product_requires_and_spends_coin(test_client
     assert refreshed_product.stock_quantity == 1
     redemptions = (await db_session.execute(ShopRedemption.__table__.select())).all()
     assert len(redemptions) == 1
+    notification = (
+        await db_session.execute(
+            select(Notification).where(
+                Notification.recipient_user_id == test_user.id,
+                Notification.title == "Purchase successful",
+            )
+        )
+    ).scalar_one()
+    assert "redeemed" in notification.body
 
 
 @pytest.mark.asyncio

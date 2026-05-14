@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
   ChatCenteredText,
   CheckCircle,
-  Crown,
   Lightning,
   Textbox,
   Trophy,
@@ -13,8 +11,6 @@ import {
   XCircle,
 } from "@phosphor-icons/react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "@/features/auth/context/AuthContext";
-import { canAccessSubscriptionFeatures } from "@/features/auth/utils/subscription";
 import { practiceApi } from "@/features/practice/api/practiceApi";
 import { formatLessonEndReason } from "@/features/practice/utils/lessonState";
 
@@ -42,16 +38,6 @@ const ANALYSIS_POLL_INTERVAL_MS = 3000;
 const ANALYSIS_MAX_POLLS = 20;
 
 const isTerminalAnalysisStatus = (status) => ["completed", "failed", "skipped"].includes(status);
-
-const formatMetricValue = (value) => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value.toFixed(1);
-  }
-  if (value && typeof value === "object" && typeof value.avg === "number" && Number.isFinite(value.avg)) {
-    return value.avg.toFixed(1);
-  }
-  return "Preview";
-};
 
 const ScoreRing = ({ score, size = 80 }) => {
   const pct = Math.min(100, Math.max(0, (score / 10) * 100));
@@ -87,42 +73,10 @@ const SkillCard = ({ skillKey, value }) => {
   );
 };
 
-const RealtimeFeedbackCard = ({ message, index }) => {
-  const feedback = message.realtime_feedback;
-  const isGood = Boolean(feedback?.is_good);
-  const betterAnswer = feedback?.better_answer || "";
-  const Icon = isGood ? CheckCircle : WarningCircle;
-  const tone = isGood
-    ? "border-emerald-100 bg-emerald-50 text-emerald-950"
-    : "border-amber-100 bg-amber-50 text-amber-950";
-
-  return (
-  <motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.05 }}
-    className={`rounded-xl border p-4 ${tone}`}
-  >
-    <div className="flex items-start gap-3">
-      <Icon size={20} weight="fill" className={isGood ? "text-emerald-600" : "text-amber-600"} />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-black uppercase tracking-[0.18em] opacity-70">Turn {index + 1}</p>
-        <p className="mt-1 text-sm leading-relaxed text-zinc-700">{message.content}</p>
-        <p className="mt-3 text-sm font-bold">
-          {isGood ? "Câu này ổn rồi" : `Nên nói: ${betterAnswer || "Try a shorter, clearer answer."}`}
-        </p>
-      </div>
-    </div>
-  </motion.div>
-  );
-};
-
 const SessionResultPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useAuth();
   const sessionId = Number(id);
-  const hasProAccess = canAccessSubscriptionFeatures(user);
   const [session, setSession] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -217,8 +171,6 @@ const SessionResultPage = () => {
     );
   }
 
-  const messages = session.messages || [];
-  const userMessages = messages.filter((m) => m.role === "user");
   const score = session.score;
   const scoreMeta = score?.metadata || {};
   const finalEvaluation = session.metadata?.final_evaluation || {};
@@ -229,13 +181,8 @@ const SessionResultPage = () => {
   );
   const strengths = scoreMeta.strengths || [];
   const improvements = scoreMeta.improvements || [];
-  const realtimeFeedbackMessages = userMessages.filter((message) => message.realtime_feedback);
   const nextSteps = scoreMeta.next_steps || [];
   const objectiveCompletion = scoreMeta.objective_completion;
-  const detailedMetrics = [
-    { label: "Vocabulary", value: formatMetricValue(skillBreakdown.vocabulary) },
-    { label: "Fluency", value: formatMetricValue(skillBreakdown.fluency) },
-  ];
 
   const completionBadge = {
     completed: { label: "Hoàn thành", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle },
@@ -430,93 +377,6 @@ const SessionResultPage = () => {
         </section>
       )}
 
-      {realtimeFeedbackMessages.length > 0 && (
-        <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Realtime Feedback</p>
-          <h2 className="mt-1 font-display text-xl font-black text-zinc-950">{realtimeFeedbackMessages.length} speaking note{realtimeFeedbackMessages.length !== 1 ? "s" : ""}</h2>
-          <div className="mt-4 space-y-3">
-            {realtimeFeedbackMessages.map((message, i) => (
-              <RealtimeFeedbackCard key={message.id || i} message={message} index={i} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className={`rounded-xl border p-4 shadow-sm ${
-        hasProAccess
-          ? "border-amber-200 bg-gradient-to-br from-amber-50 to-purple-50"
-          : "border-zinc-200 bg-white"
-      }`}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Crown size={16} weight="fill" className="text-amber-600" />
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Detailed Feedback</p>
-            </div>
-            <h2 className="mt-1 font-display text-lg font-black text-zinc-950">
-              {hasProAccess ? "Pro insights unlocked" : "Pro insights preview"}
-            </h2>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-600">
-              {hasProAccess
-                ? "Theo dõi phát âm, vốn từ và độ trôi chảy sau mỗi buổi luyện nói."
-                : "Nâng cấp Pro để mở khóa phân tích sâu sau mỗi buổi luyện nói."}
-            </p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[360px]">
-            {detailedMetrics.map((metric) => (
-              <div key={metric.label} className={`rounded-lg border px-3 py-2 ${hasProAccess ? "border-white/80 bg-white/80" : "border-zinc-200 bg-zinc-50"}`}>
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">{metric.label}</p>
-                <p className="mt-1 text-sm font-black text-zinc-950">
-                  {metric.value}
-                </p>
-              </div>
-            ))}
-          </div>
-          {!hasProAccess ? (
-            <button
-              type="button"
-              onClick={() => navigate("/subscription")}
-              className="inline-flex w-fit items-center gap-2 rounded-lg bg-zinc-950 px-4 py-2.5 text-sm font-black text-white"
-            >
-              <Crown size={16} weight="fill" />
-              Nâng cấp Pro
-            </button>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Saved Conversation</p>
-            <h2 className="mt-1 font-display text-xl font-black text-zinc-950">{userMessages.length} speaking turns</h2>
-            <p className="mt-1 text-sm text-zinc-500">Transcript lưu lại để xem sau khi cần ôn lại cụ thể.</p>
-          </div>
-          <ChatCenteredText size={26} weight="fill" className="text-primary" />
-        </div>
-
-        <div className="mt-4 space-y-2">
-          {messages.length ? messages.map((message) => (
-            <div
-              key={message.id}
-              className={`rounded-lg border px-4 py-3 ${
-                message.role === "assistant"
-                  ? "border-zinc-200 bg-zinc-50 text-zinc-800"
-                  : "border-primary/20 bg-[#eef6ff] text-zinc-950"
-              }`}
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-                {message.role === "assistant" ? "Partner" : "You"}
-              </p>
-              <p className="mt-2 text-sm leading-relaxed">{message.content}</p>
-            </div>
-          )) : (
-            <p className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-5 text-sm text-zinc-500">
-              No clear speaking turns were saved for this session.
-            </p>
-          )}
-        </div>
-      </section>
     </div>
   );
 

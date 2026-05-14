@@ -7,11 +7,11 @@ from app.modules.curriculum.models import LearningSection, Lesson, LessonAudioAs
 
 
 async def seed_curriculum(db_session):
-    section = LearningSection(code="A1", title="A1 Starter", cefr_level="A1", order_index=0)
+    section = LearningSection(code="A1", title="A1 Starter", cefr_level="A1")
     db_session.add(section)
     await db_session.flush()
-    unit_1 = Unit(section_id=section.id, title="First unit", order_index=0, estimated_minutes=5)
-    unit_2 = Unit(section_id=section.id, title="Second unit", order_index=1, estimated_minutes=5)
+    unit_1 = Unit(section_id=section.id, title="First unit", estimated_minutes=5, is_active=True)
+    unit_2 = Unit(section_id=section.id, title="Second unit", estimated_minutes=5, is_active=True)
     db_session.add_all([unit_1, unit_2])
     await db_session.flush()
     lesson_1 = Lesson(
@@ -47,10 +47,10 @@ async def seed_curriculum(db_session):
 async def seed_cefr_curriculum(db_session):
     seeded = {}
     for index, cefr in enumerate(["A1", "A2", "B1", "B2"]):
-        section = LearningSection(code=f"{cefr}_PATH", title=f"{cefr} Path", cefr_level=cefr, order_index=index)
+        section = LearningSection(code=f"{cefr}_PATH", title=f"{cefr} Path", cefr_level=cefr)
         db_session.add(section)
         await db_session.flush()
-        unit = Unit(section_id=section.id, title=f"{cefr} Unit", order_index=0, estimated_minutes=5)
+        unit = Unit(section_id=section.id, title=f"{cefr} Unit", estimated_minutes=5, is_active=True)
         db_session.add(unit)
         await db_session.flush()
         lesson = Lesson(
@@ -77,13 +77,13 @@ async def seed_cefr_curriculum(db_session):
 
 @pytest.mark.asyncio
 async def test_curriculum_locks_next_unit_until_previous_completed(client, db_session, test_user):
-    _, unit_1, unit_2, lesson_1, _ = await seed_curriculum(db_session)
+    section, unit_1, unit_2, lesson_1, _ = await seed_curriculum(db_session)
     headers = {"Authorization": f"Bearer {create_access_token(test_user.id)}"}
 
     response = await client.get("/api/curriculum", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    units = data["sections"][0]["units"]
+    units = next(item for item in data["sections"] if item["id"] == section.id)["units"]
     assert units[0]["id"] == unit_1.id
     assert units[0]["is_locked"] is False
     assert units[0]["lessons"] == []
@@ -111,7 +111,7 @@ async def test_curriculum_locks_next_unit_until_previous_completed(client, db_se
     assert attempt_data["unit_completed"] is True
 
     response = await client.get("/api/curriculum", headers=headers)
-    units = response.json()["sections"][0]["units"]
+    units = next(item for item in response.json()["sections"] if item["id"] == section.id)["units"]
     assert units[0]["progress_status"] == "completed"
     assert units[1]["is_locked"] is False
 
@@ -127,7 +127,7 @@ async def test_curriculum_starts_at_user_current_cefr(client, db_session, test_u
 
     assert response.status_code == 200
     data = response.json()
-    units_by_cefr = {section["cefr_level"]: section["units"][0] for section in data["sections"]}
+    units_by_cefr = {section["cefr_level"]: section["units"][0] for section in data["sections"] if section["cefr_level"] in seeded}
     assert data["current_cefr"] == "B1"
     assert data["current_unit_id"] == seeded["B1"]["unit"].id
     assert units_by_cefr["A1"]["is_locked"] is False
@@ -178,10 +178,10 @@ async def test_pronunciation_attempt_rejects_non_wav_audio(client, db_session, t
     monkeypatch.setattr(curriculum_services.settings, "azure_speech_key", "test-key")
     monkeypatch.setattr(curriculum_services.settings, "azure_speech_region", "southeastasia")
 
-    section = LearningSection(code="AUDIO_FORMAT", title="Audio format", order_index=0)
+    section = LearningSection(code="AUDIO_FORMAT", title="Audio format")
     db_session.add(section)
     await db_session.flush()
-    unit = Unit(section_id=section.id, title="Pronunciation", order_index=0)
+    unit = Unit(section_id=section.id, title="Pronunciation", is_active=True)
     db_session.add(unit)
     await db_session.flush()
     lesson = Lesson(
@@ -209,10 +209,10 @@ async def test_pronunciation_attempt_rejects_non_wav_audio(client, db_session, t
 
 @pytest.mark.asyncio
 async def test_definition_choice_scores_selected_word(client, db_session, test_user):
-    section = LearningSection(code="AUDIO", title="Audio", order_index=0)
+    section = LearningSection(code="AUDIO", title="Audio")
     db_session.add(section)
     await db_session.flush()
-    unit = Unit(section_id=section.id, title="Audio words", order_index=0)
+    unit = Unit(section_id=section.id, title="Audio words", is_active=True)
     db_session.add(unit)
     await db_session.flush()
     lesson = Lesson(
@@ -259,14 +259,14 @@ async def test_definition_choice_scores_selected_word(client, db_session, test_u
 async def test_admin_can_create_curriculum_with_definition_choice_lesson(admin_client):
     section_response = await admin_client.post(
         "/api/admin/curriculum/sections",
-        json={"code": "B1", "title": "B1 Independent", "cefr_level": "B1", "order_index": 1},
+        json={"code": "B1", "title": "B1 Independent", "cefr_level": "B1"},
     )
     assert section_response.status_code == 201
     section_id = section_response.json()["id"]
 
     unit_response = await admin_client.post(
         "/api/admin/curriculum/units",
-        json={"section_id": section_id, "title": "Travel listening", "order_index": 0, "estimated_minutes": 8},
+        json={"section_id": section_id, "title": "Travel listening", "estimated_minutes": 8},
     )
     assert unit_response.status_code == 201
     unit_id = unit_response.json()["id"]
@@ -305,11 +305,11 @@ async def test_admin_can_create_curriculum_with_definition_choice_lesson(admin_c
 async def test_definition_choice_requires_one_correct_option(admin_client):
     section_response = await admin_client.post(
         "/api/admin/curriculum/sections",
-        json={"code": "BAD", "title": "Bad", "order_index": 0},
+        json={"code": "BAD", "title": "Bad"},
     )
     unit_response = await admin_client.post(
         "/api/admin/curriculum/units",
-        json={"section_id": section_response.json()["id"], "title": "Bad unit", "order_index": 0},
+        json={"section_id": section_response.json()["id"], "title": "Bad unit"},
     )
     response = await admin_client.post(
         "/api/admin/curriculum/lessons",
@@ -335,11 +335,11 @@ async def test_definition_choice_requires_one_correct_option(admin_client):
 async def test_admin_create_lesson_defaults_sequential_title(admin_client):
     section_response = await admin_client.post(
         "/api/admin/curriculum/sections",
-        json={"code": "SEQ", "title": "Sequential", "order_index": 0},
+        json={"code": "SEQ", "title": "Sequential"},
     )
     unit_response = await admin_client.post(
         "/api/admin/curriculum/units",
-        json={"section_id": section_response.json()["id"], "title": "Sequential unit", "order_index": 0},
+        json={"section_id": section_response.json()["id"], "title": "Sequential unit"},
     )
     unit_id = unit_response.json()["id"]
 
@@ -369,11 +369,11 @@ async def test_admin_create_lesson_defaults_sequential_title(admin_client):
 
 @pytest.mark.asyncio
 async def test_admin_reorder_swaps_without_unique_constraint_error(admin_client, db_session):
-    section = LearningSection(code="REORDER", title="Reorder", order_index=0)
+    section = LearningSection(code="REORDER", title="Reorder")
     db_session.add(section)
     await db_session.flush()
-    unit_1 = Unit(section_id=section.id, title="First", order_index=0)
-    unit_2 = Unit(section_id=section.id, title="Second", order_index=1)
+    unit_1 = Unit(section_id=section.id, title="First", is_active=True)
+    unit_2 = Unit(section_id=section.id, title="Second", is_active=True)
     db_session.add_all([unit_1, unit_2])
     await db_session.flush()
     lesson_1 = Lesson(
@@ -393,24 +393,14 @@ async def test_admin_reorder_swaps_without_unique_constraint_error(admin_client,
     db_session.add_all([lesson_1, lesson_2])
     await db_session.commit()
 
-    unit_response = await admin_client.post(
-        "/api/admin/curriculum/units/reorder",
-        json={"items": [{"id": unit_2.id, "order_index": 0}, {"id": unit_1.id, "order_index": 1}]},
-    )
-    assert unit_response.status_code == 204
-
     lesson_response = await admin_client.post(
         "/api/admin/curriculum/lessons/reorder",
         json={"items": [{"id": lesson_2.id, "order_index": 0}, {"id": lesson_1.id, "order_index": 1}]},
     )
     assert lesson_response.status_code == 204
 
-    await db_session.refresh(unit_1)
-    await db_session.refresh(unit_2)
     await db_session.refresh(lesson_1)
     await db_session.refresh(lesson_2)
-    assert unit_1.order_index == 1
-    assert unit_2.order_index == 0
     assert lesson_1.order_index == 1
     assert lesson_2.order_index == 0
 
@@ -474,10 +464,10 @@ async def test_admin_audio_upload_accepts_audio_and_rejects_non_audio(admin_clie
 
 @pytest.mark.asyncio
 async def test_definition_choice_serializer_keeps_saved_options(client, db_session, test_user):
-    section = LearningSection(code="NO_DICT", title="No dict", order_index=0)
+    section = LearningSection(code="NO_DICT", title="No dict")
     db_session.add(section)
     await db_session.flush()
-    unit = Unit(section_id=section.id, title="Audio", order_index=0)
+    unit = Unit(section_id=section.id, title="Audio", is_active=True)
     db_session.add(unit)
     await db_session.flush()
     lesson = Lesson(
@@ -507,3 +497,5 @@ async def test_definition_choice_serializer_keeps_saved_options(client, db_sessi
     options = response.json()["lessons"][0]["content"]["options"]
     assert options[0]["meaning_vi"] == "\u0111\u1eb7t ch\u1ed7"
     assert "source" not in options[0]
+
+

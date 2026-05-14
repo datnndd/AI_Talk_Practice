@@ -25,7 +25,6 @@ class LearningSectionBase(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     cefr_level: str | None = Field(default=None, max_length=10)
     description: str | None = None
-    order_index: int = Field(default=0, ge=0)
     is_active: bool = True
 
 
@@ -38,14 +37,12 @@ class LearningSectionUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     cefr_level: str | None = Field(default=None, max_length=10)
     description: str | None = None
-    order_index: int | None = Field(default=None, ge=0)
     is_active: bool | None = None
 
 
 class UnitBase(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     description: str | None = None
-    order_index: int = Field(default=0, ge=0)
     estimated_minutes: int | None = Field(default=None, ge=1, le=300)
     xp_reward: int = Field(default=50, ge=0)
     coin_reward: int = Field(default=0, ge=0)
@@ -60,7 +57,6 @@ class UnitUpdate(BaseModel):
     section_id: int | None = None
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
-    order_index: int | None = Field(default=None, ge=0)
     estimated_minutes: int | None = Field(default=None, ge=1, le=300)
     xp_reward: int | None = Field(default=None, ge=0)
     coin_reward: int | None = Field(default=None, ge=0)
@@ -192,7 +188,6 @@ class UnitRead(ORMModel):
     section_id: int
     title: str
     description: str | None = None
-    order_index: int
     estimated_minutes: int | None = None
     xp_reward: int
     coin_reward: int
@@ -211,7 +206,6 @@ class LearningSectionRead(ORMModel):
     title: str
     cefr_level: str | None = None
     description: str | None = None
-    order_index: int
     is_active: bool
     units: list[UnitRead] = Field(default_factory=list)
     created_at: datetime

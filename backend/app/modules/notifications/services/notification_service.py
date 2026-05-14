@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.modules.notifications.models.notification import Notification, NotificationReadState
-from app.modules.notifications.schemas.notification import AdminNotificationCreateRequest, NotificationRead
+from app.modules.notifications.schemas.notification import NotificationRead
 from app.modules.users.models.subscription import Subscription
 from app.modules.users.models.user import User
 
@@ -101,70 +101,6 @@ class NotificationService:
             )
             await db.commit()
             return
-
-        days_left = (expires_at - now).total_seconds() / 86400
-        if 0 < days_left <= 3:
-            await cls.create_system_notification(
-                db,
-                user_id=user.id,
-                title="VIP expiring soon",
-                body=f"Your Pro subscription will expire on {_format_date(expires_at)}.",
-            )
-            await db.commit()
-
-    @staticmethod
-    async def create_admin_notifications(
-        db: AsyncSession,
-        *,
-        actor: User,
-        body: AdminNotificationCreateRequest,
-    ) -> list[NotificationRead]:
-        notifications: list[Notification] = []
-        if body.audience == "all":
-            notifications.append(
-                Notification(
-                    sender_user_id=actor.id,
-                    recipient_user_id=None,
-                    audience="all",
-                    title=body.title,
-                    body=body.body,
-                )
-            )
-        else:
-            for user_id in sorted(set(body.recipient_user_ids or [])):
-                notifications.append(
-                    Notification(
-                        sender_user_id=actor.id,
-                        recipient_user_id=user_id,
-                        audience="users",
-                        title=body.title,
-                        body=body.body,
-                    )
-                )
-
-        db.add_all(notifications)
-        await db.flush()
-        await db.commit()
-        for notification in notifications:
-            await db.refresh(notification)
-        return [_serialize_notification(notification) for notification in notifications]
-
-    @staticmethod
-    async def list_admin_notifications(
-        db: AsyncSession,
-        *,
-        page: int,
-        page_size: int,
-    ) -> tuple[list[NotificationRead], int]:
-        stmt = (
-            select(Notification)
-            .order_by(Notification.created_at.desc(), Notification.id.desc())
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-        )
-        notifications = list((await db.execute(stmt)).scalars().all())
-        total = int((await db.execute(select(func.count(Notification.id)))).scalar_one() or 0)
-        return [_serialize_notification(notification) for notification in notifications], total
 
     @staticmethod
     async def list_for_user(

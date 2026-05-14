@@ -49,14 +49,13 @@ def serialize_unit(
     include_inactive: bool = False,
     include_lesson_content: bool = True,
 ) -> UnitRead:
-    lessons = unit.__dict__.get("lessons", [])
+    lessons = unit.lessons if "lessons" in unit.__dict__ else []
     return UnitRead.model_validate(
         {
             "id": unit.id,
             "section_id": unit.section_id,
             "title": unit.title,
             "description": unit.description,
-            "order_index": unit.order_index,
             "estimated_minutes": unit.estimated_minutes,
             "xp_reward": unit.xp_reward,
             "coin_reward": unit.coin_reward,
@@ -91,7 +90,7 @@ def serialize_section(
     include_lesson_content: bool = True,
 ) -> LearningSectionRead:
     unlocked_unit_ids = unlocked_unit_ids or set()
-    units = section.__dict__.get("units", [])
+    units = section.units if "units" in section.__dict__ else []
     return LearningSectionRead.model_validate(
         {
             "id": section.id,
@@ -99,7 +98,6 @@ def serialize_section(
             "title": section.title,
             "cefr_level": section.cefr_level,
             "description": section.description,
-            "order_index": section.order_index,
             "is_active": section.is_active,
             "units": [
                 serialize_unit(
@@ -111,7 +109,7 @@ def serialize_section(
                     include_inactive=include_inactive,
                     include_lesson_content=include_lesson_content,
                 )
-                for unit in sorted(units, key=lambda item: (item.order_index, item.id))
+                for unit in sorted(units, key=lambda item: item.id)
                 if include_units and (include_inactive or unit.is_active)
             ],
             "created_at": section.created_at,

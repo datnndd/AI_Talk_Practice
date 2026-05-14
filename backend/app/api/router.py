@@ -7,7 +7,6 @@ from app.modules.curriculum.routers import router as curriculum
 from app.modules.gamification.routers import admin_router as admin_gamification
 from app.modules.gamification.routers import router as gamification
 from app.modules.landing.routers import router as landing
-from app.modules.notifications.routers import admin_router as admin_notifications
 from app.modules.notifications.routers import router as notifications
 from app.modules.payments.routers import admin_router as admin_payments
 from app.modules.payments.routers import router as payments
@@ -29,7 +28,6 @@ api_router.include_router(admin_gamification)
 api_router.include_router(gamification)
 api_router.include_router(landing)
 api_router.include_router(notifications)
-api_router.include_router(admin_notifications)
 api_router.include_router(payments)
 api_router.include_router(admin_payments)
 api_router.include_router(users)
