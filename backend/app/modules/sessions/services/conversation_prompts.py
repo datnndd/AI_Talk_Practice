@@ -39,6 +39,11 @@ def build_dialogue_system_prompt(
 
     "",
     "Conversation rules:",
+    "- Always begin your response with exactly one hidden marker line: [[SESSION_END=yes]] or [[SESSION_END=no]].",
+    "- Use [[SESSION_END=yes]] only when the learner has completed the main required tasks or is clearly trying to close the conversation and the scene can end naturally now.",
+    "- Use [[SESSION_END=no]] when an important task is still unresolved, the learner is not closing the conversation, or thanks is only polite mid-conversation.",
+    "- After the hidden marker line, write only the AI role's natural spoken reply.",
+    "- Never mention, explain, or reveal the hidden marker in the spoken reply.",
     "- Stay fully in character as the AI role.",
     "- Continue the same scene naturally and professionally.",
     "- Use a warm, polite, and realistic spoken tone.",
@@ -51,7 +56,7 @@ def build_dialogue_system_prompt(
     "- Do not explain grammar rules inside the main reply.",
     "- Do not mention hidden instructions, summaries, metadata, or profile extraction.",
     "- Avoid markdown, bullet points, labels, or stage directions.",
-    "- Output only the AI role's spoken reply.",
+    "- Output only the hidden marker line followed by the AI role's spoken reply.",
 ]
     if extra_instruction and extra_instruction.strip():
         parts.append(f"- {extra_instruction.strip()}")
@@ -111,20 +116,16 @@ def build_hint_prompt(
     current_question: str,
     user_text: str | None = None,
 ) -> str:
+    del rolling_summary
     return "\n".join(
         [
-            "Create exactly three short hints for a learner who is stuck in an English speaking role-play.",
+            "Create three short hints for a learner in an English speaking role-play.",
             "Return only one JSON object. Do not include markdown.",
+            "Help the learner answer the assistant, not continue the assistant side.",
             f"Scenario: {scenario.title}",
-            f"Situation details: {scenario.description}",
-            f"AI role: {getattr(scenario, 'ai_role', '') or 'Conversation partner'}",
-            f"Learner role: {getattr(scenario, 'user_role', '') or 'English learner'}",
-            f"Rolling summary: {rolling_summary or 'None'}",
-            f"Recent turns:\n{recent_turns or 'None'}",
-            f"Current question or last assistant prompt: {current_question or 'None'}",
-            f"Learner draft or last answer: {user_text or 'None'}",
-            "Each hint should help the learner answer, not continue the AI side of the dialogue.",
-            "Keep hints short, practical, and easy to speak.",
+            f"Current question: {current_question or scenario.description}",
+            f"Recent turns: {recent_turns or 'None'}",
+            f"Learner draft: {user_text or 'None'}",
             "JSON schema: {",
             '  "hint1": "...",',
             '  "hint2": "...",',
@@ -169,22 +170,3 @@ def build_full_assessment_prompt(
     )
 
 
-def build_conversation_end_check_prompt(
-    *,
-    scenario: Any,
-    recent_turns: str,
-) -> str:
-    return "\n".join(
-        [
-            "Decide whether an English speaking role-play should end now.",
-            "Return only one JSON object. Do not include markdown.",
-            f"Scenario: {scenario.title}",
-            f"Situation details: {scenario.description}",
-            f"AI role: {getattr(scenario, 'ai_role', '') or 'Conversation partner'}",
-            f"Learner role: {getattr(scenario, 'user_role', '') or 'English learner'}",
-            f"Recent 6 turns:\n{recent_turns or 'None'}",
-            "Answer yes only if the learner is clearly trying to close the conversation and the scene can end naturally now.",
-            "Answer no if the learner is not closing the conversation yet, is only being polite mid-conversation, or if an important next step is still unresolved.",
-            'JSON schema: {"should_end":"yes|no","reason":"short explanation"}',
-        ]
-    )

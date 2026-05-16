@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, AsyncIterator, Literal
+from collections.abc import AsyncIterator
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -11,7 +12,6 @@ from app.infra.contracts import LLMBase, Message
 from app.modules.sessions.schemas.lesson import LessonHintRead
 from app.modules.sessions.schemas.session import RealtimeCorrectionResponse
 from app.modules.sessions.services.conversation_prompts import (
-    build_conversation_end_check_prompt,
     build_dialogue_system_prompt,
     build_full_assessment_prompt,
     build_hint_prompt,
@@ -20,6 +20,10 @@ from app.modules.sessions.services.conversation_prompts import (
 )
 
 logger = logging.getLogger(__name__)
+
+SESSION_END_MARKER_RE = re.compile(r"^\s*\[\[SESSION_END=(yes|no)\]\][ \t]*(?:\r?\n)?", re.IGNORECASE)
+SESSION_END_MARKER_PREFIX = "[[SESSION_END="
+SESSION_END_MARKER_MAX_CHARS = 80
 
 
 class ConversationSupportJSONError(ValueError):
@@ -58,9 +62,49 @@ class FinalEvaluationPayload(BaseModel):
     feedback_summary: str = ""
 
 
-class ConversationEndDecisionPayload(BaseModel):
-    should_end: Literal["yes", "no"] = "no"
-    reason: str = ""
+class EndAwareReplyStream:
+    def __init__(self, chunks: AsyncIterator[str]):
+        self._chunks = chunks
+        self.should_end = False
+
+    def __aiter__(self) -> AsyncIterator[str]:
+        return self._iter_clean_chunks()
+
+    async def _iter_clean_chunks(self) -> AsyncIterator[str]:
+        buffer = ""
+        marker_checked = False
+
+        async for chunk in self._chunks:
+            if marker_checked:
+                yield chunk
+                continue
+
+            buffer += chunk
+            match = SESSION_END_MARKER_RE.match(buffer)
+            if match:
+                self.should_end = match.group(1).lower() == "yes"
+                marker_checked = True
+                remainder = buffer[match.end():]
+                if remainder:
+                    yield remainder
+                continue
+
+            normalized_buffer = buffer.lstrip()
+            marker_prefix = SESSION_END_MARKER_PREFIX[: len(normalized_buffer)]
+            may_still_be_marker = bool(normalized_buffer) and marker_prefix.lower() == normalized_buffer.lower()
+            should_wait = (
+                not normalized_buffer
+                or (may_still_be_marker and len(buffer) < SESSION_END_MARKER_MAX_CHARS)
+                or (normalized_buffer.upper().startswith(SESSION_END_MARKER_PREFIX) and "]]" not in normalized_buffer)
+            )
+            if should_wait and "\n" not in buffer and "\r" not in buffer:
+                continue
+
+            marker_checked = True
+            yield buffer
+
+        if buffer and not marker_checked:
+            yield buffer
 
 
 def session_rolling_summary(session) -> str:
@@ -142,7 +186,7 @@ class ConversationReplyService:
             system_prompt=system_prompt,
         ):
             chunks.append(chunk)
-        return "".join(chunks).strip()
+        return SESSION_END_MARKER_RE.sub("", "".join(chunks), count=1).strip()
 
     async def stream_reply(
         self,
@@ -160,6 +204,21 @@ class ConversationReplyService:
         async for chunk in self.llm.chat_stream(messages, system_prompt=system_prompt):
             yield chunk
 
+    def stream_reply_with_end_decision(
+        self,
+        *,
+        session,
+        learner_profile: dict[str, Any] | None = None,
+        extra_instruction: str | None = None,
+    ) -> EndAwareReplyStream:
+        return EndAwareReplyStream(
+            self.stream_reply(
+                session=session,
+                learner_profile=learner_profile,
+                extra_instruction=extra_instruction,
+            )
+        )
+
     def _system_prompt(
         self,
         *,
@@ -174,53 +233,6 @@ class ConversationReplyService:
             learner_profile=learner_profile,
             extra_instruction=extra_instruction,
         )
-
-
-class ConversationEndingService:
-    def __init__(self, *, llm: LLMBase, max_tokens: int = 250, min_turns: int = 6):
-        self.llm = llm
-        self.max_tokens = max_tokens
-        self.min_turns = max(1, int(min_turns))
-        self._signal_patterns = [
-            re.compile(pattern, flags=re.IGNORECASE)
-            for pattern in (
-                r"\bgoodbye\b",
-                r"\bbye(?:\s+bye)?\b",
-                r"\bsee you (?:later|soon|next time)\b",
-                r"\btalk to you later\b",
-                r"\bcatch you later\b",
-                r"\bsee ya\b",
-                r"\bfarewell\b",
-                r"\bhave a (?:nice|good) day\b",
-                r"\bthat's all\b",
-                r"\bnothing else\b",
-                r"\bno,? thank you\b",
-                r"\bthanks?,?\s+bye\b",
-                r"\bthank you,?\s+bye\b",
-            )
-        ]
-
-    def should_consider(self, *, session, user_text: str) -> bool:
-        if session_total_turn_count(session) < self.min_turns:
-            return False
-        normalized_text = (user_text or "").strip()
-        if not normalized_text:
-            return False
-        return any(pattern.search(normalized_text) for pattern in self._signal_patterns)
-
-    async def should_end(self, *, session) -> bool:
-        recent_turns = session_recent_turns_text(session, limit=6)
-        payload = await _collect_json(
-            self.llm,
-            model=ConversationEndDecisionPayload,
-            system_prompt=build_conversation_end_check_prompt(
-                scenario=session.scenario,
-                recent_turns=recent_turns,
-            ),
-            user_text=recent_turns or session.scenario.title,
-            max_tokens=self.max_tokens,
-        )
-        return payload.should_end == "yes"
 
 
 class ConversationHintService:

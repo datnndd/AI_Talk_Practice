@@ -1,7 +1,6 @@
 from types import SimpleNamespace
 
 from app.modules.sessions.services.conversation_prompts import (
-    build_conversation_end_check_prompt,
     build_dialogue_system_prompt,
     build_full_assessment_prompt,
     build_hint_prompt,
@@ -39,6 +38,9 @@ def test_dialogue_prompt_includes_roles_summary_and_recent_turns():
     assert "Rolling session summary: Learner already greeted the barista." in prompt
     assert "Recent turns:" in prompt
     assert "Trả lời lịch sự, khép lại cuộc trò chuyện một cách tự nhiên" in prompt
+    assert "[[SESSION_END=yes]]" in prompt
+    assert "[[SESSION_END=no]]" in prompt
+    assert "Never mention, explain, or reveal the hidden marker" in prompt
 
 
 def test_summary_prompt_has_json_contract_and_length_limit():
@@ -78,7 +80,8 @@ def test_hint_prompt_returns_lesson_hint_shape():
     assert '"hint1"' in prompt
     assert '"hint2"' in prompt
     assert '"hint3"' in prompt
-    assert "Current question or last assistant prompt: How can I help you with your order?" in prompt
+    assert "Current question: How can I help you with your order?" in prompt
+    assert "Rolling summary:" not in prompt
 
 
 def test_full_assessment_prompt_includes_score_contract():
@@ -95,12 +98,3 @@ def test_full_assessment_prompt_includes_score_contract():
     assert "feedback_summary" in prompt
 
 
-def test_conversation_end_check_prompt_requires_yes_no_json_decision():
-    prompt = build_conversation_end_check_prompt(
-        scenario=_scenario(),
-        recent_turns="Learner: Thanks for your help.\nAssistant: You're welcome.\nLearner: Goodbye.",
-    )
-
-    assert "Return only one JSON object" in prompt
-    assert "Answer yes only if the learner is clearly trying to close the conversation" in prompt
-    assert '"should_end":"yes|no"' in prompt

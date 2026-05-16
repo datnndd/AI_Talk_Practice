@@ -25,7 +25,6 @@ from app.modules.sessions.serializers import get_session_character_payload
 from app.modules.auth.services.auth_service import AuthService
 from app.modules.sessions.services.conversation import ConversationSession
 from app.modules.sessions.services.conversation_support import (
-    ConversationEndingService,
     ConversationReplyService,
     ConversationSummaryService,
 )
@@ -42,7 +41,6 @@ _DEFAULT_CREATE_LLM = create_llm
 NO_INPUT_MESSAGE = "Mải mê nghe giọng bạn làm mình đãng trí. Bạn có thể nói lại một lần nữa được không?"
 TIME_LIMIT_MESSAGE = "Đã hết thời gian luyện tập. Mình sẽ chuyển bạn sang phần đánh giá."
 NATURAL_CLOSE_MESSAGE = "Cuộc hội thoại đã khép lại. Bạn có thể xem phần phân tích khi sẵn sàng."
-NATURAL_CLOSE_INSTRUCTION = "Trả lời lịch sự, khép lại cuộc trò chuyện một cách tự nhiên"
 
 
 def _clip_log_text(value: str | None, *, limit: int = 500) -> str:
@@ -113,7 +111,6 @@ async def websocket_conversation(websocket: WebSocket):
     runtime_llm_clients: ConversationLLMClients | None = None
     reply_service: ConversationReplyService | None = None
     summary_service: ConversationSummaryService | None = None
-    ending_service: ConversationEndingService | None = None
     pending_natural_close = False
     assistant_stream_chunk_count = 0
     assistant_stream_chars = 0
@@ -268,13 +265,6 @@ async def websocket_conversation(websocket: WebSocket):
                             metadata["conversation_engine"] = "realtime_v1"
                             session_for_summary.session_metadata = metadata
                             await db_write.commit()
-                        if (
-                            ending_service
-                            and not pending_natural_close
-                            and ending_service.should_consider(session=session_for_summary, user_text=message.content)
-                        ):
-                            pending_natural_close = await ending_service.should_end(session=session_for_summary)
-                            trace("natural_close_decision", should_close=pending_natural_close)
                         asyncio.create_task(_emit_realtime_correction(message.id, message.content))
                     trace(
                         "persist_message_done",
@@ -569,25 +559,22 @@ async def websocket_conversation(websocket: WebSocket):
                         turn_interval=settings.conversation_summary_turn_interval,
                         summary_max_chars=settings.conversation_summary_max_chars,
                     )
-                    ending_service = ConversationEndingService(
-                        llm=runtime_llm_clients.analysis,
-                        max_tokens=settings.analysis_llm_max_tokens or 250,
-                        min_turns=6,
-                    )
-
                     async def generate_reply_stream(_: str):
+                        nonlocal pending_natural_close
                         async with AsyncSessionLocal() as db_reply:
                             session_for_reply = await SessionService.get_by_id(
                                 db_reply,
                                 session.id,
                                 user.id,
                             )
-                        async for chunk in reply_service.stream_reply(
+                        reply_stream = reply_service.stream_reply_with_end_decision(
                             session=session_for_reply,
                             learner_profile=_learner_onboarding_profile(user),
-                            extra_instruction=NATURAL_CLOSE_INSTRUCTION if pending_natural_close else None,
-                        ):
+                        )
+                        async for chunk in reply_stream:
                             yield chunk
+                        pending_natural_close = reply_stream.should_end
+                        trace("natural_close_decision", should_close=pending_natural_close)
 
                     conversation = ConversationSession(settings)
                     await conversation.initialize(
