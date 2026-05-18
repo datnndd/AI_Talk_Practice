@@ -12,6 +12,13 @@ export const appendUniqueMessage = (messages, nextMessage) => {
     }
   }
 
+  if (nextMessage.turnId) {
+    const existingIndex = messages.findIndex((message) => message.turnId === nextMessage.turnId);
+    if (existingIndex >= 0) {
+      return messages.map((message, index) => (index === existingIndex ? { ...message, ...nextMessage } : message));
+    }
+  }
+
   const nextRole = normalizeText(nextMessage.role);
   const nextContent = normalizeText(nextMessage.content);
   const lastMessage = messages[messages.length - 1];

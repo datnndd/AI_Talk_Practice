@@ -1,134 +1,126 @@
 """
-DashScope Realtime TTS provider.
+DashScope HTTP streaming TTS provider.
 
-Uses Alibaba Cloud's DashScope QwenTtsRealtime for real-time
-text-to-speech via WebSocket (model: qwen3-tts-flash-realtime).
+Uses Alibaba Cloud Model Studio Qwen TTS through the non-realtime
+MultiModalConversation API while preserving the app's streaming contract.
 """
 
 import asyncio
 import base64
 import logging
-import threading
-from typing import AsyncGenerator, Optional
+from collections.abc import AsyncGenerator, Generator
+from http import HTTPStatus
+from typing import Any
 
 import dashscope
-from dashscope.audio.qwen_tts_realtime import (
-    AudioFormat,
-    QwenTtsRealtime,
-    QwenTtsRealtimeCallback,
-)
+from dashscope import MultiModalConversation
 
 from app.core.config import Settings
 from app.infra.contracts import TTSBase, TTSConfig
 
 logger = logging.getLogger(__name__)
 
-
-class _TTSCallback(QwenTtsRealtimeCallback):
-    """Callback handler for DashScope realtime TTS events."""
-
-    def __init__(self, audio_queue: asyncio.Queue, loop: asyncio.AbstractEventLoop):
-        self._queue = audio_queue
-        self._loop = loop
-        self._done_event = threading.Event()
-        self._sentinel_emitted = False
-
-    def on_open(self) -> None:
-        logger.info("DashScope TTS: connection opened")
-
-    def on_close(self, close_status_code, close_msg) -> None:
-        if self._done_event.is_set():
-            logger.debug("DashScope TTS: duplicate close ignored (code=%s)", close_status_code)
-            return
-
-        logger.info(f"DashScope TTS: connection closed (code={close_status_code})")
-        if not self._sentinel_emitted:
-            self._sentinel_emitted = True
-            self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
-        self._done_event.set()
-
-    def on_event(self, response: dict) -> None:
-        event_type = response.get("type", "")
-        logger.debug("DashScope TTS event: %s", event_type)
-
-        if event_type == "response.audio.delta":
-            audio_b64 = response.get("delta", "")
-            if audio_b64:
-                try:
-                    audio_bytes = base64.b64decode(audio_b64)
-                except Exception:
-                    logger.exception("DashScope TTS: failed to decode audio delta")
-                else:
-                    self._loop.call_soon_threadsafe(self._queue.put_nowait, audio_bytes)
-
-        elif event_type == "response.done":
-            logger.info("DashScope TTS: response done")
-            if not self._sentinel_emitted:
-                self._sentinel_emitted = True
-                self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
-            self._done_event.set()
-
-        elif event_type == "session.finished":
-            logger.info("DashScope TTS: session finished")
-            # Signal end of audio with None sentinel
-            if not self._sentinel_emitted:
-                self._sentinel_emitted = True
-                self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
-            self._done_event.set()
-
-        elif event_type == "error":
-            error_msg = response.get("error", {}).get("message", "Unknown error")
-            logger.error(f"DashScope TTS error: {error_msg}")
-            if not self._sentinel_emitted:
-                self._sentinel_emitted = True
-                self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
-            self._done_event.set()
-
-    def wait_for_done(self, timeout: float = 30.0):
-        self._done_event.wait(timeout=timeout)
+_LANGUAGE_TYPE_BY_CODE = {
+    "en": "English",
+    "en-us": "English",
+    "en-gb": "English",
+    "zh": "Chinese",
+    "zh-cn": "Chinese",
+    "zh-tw": "Chinese",
+    "ja": "Japanese",
+    "jp": "Japanese",
+    "ko": "Korean",
+}
 
 
-class _SafeQwenTtsRealtime(QwenTtsRealtime):
-    """DashScope SDK wrapper that does not re-raise websocket-client close noise."""
+def _language_type(language: str | None) -> str | None:
+    if not language:
+        return None
+    normalized = language.strip().lower().replace("_", "-")
+    return _LANGUAGE_TYPE_BY_CODE.get(normalized, language)
 
-    def on_error(self, ws, error):  # pylint: disable=unused-argument
-        error_message = str(error)
-        if "Invalid close frame" in error_message:
-            logger.debug("DashScope TTS websocket closed with invalid close frame")
-            if self.callback:
-                self.callback.on_close(None, error_message)
-            return
 
-        logger.error("DashScope TTS websocket error: %s", error_message)
-        if self.callback:
-            self.callback.on_event(
-                {
-                    "type": "error",
-                    "error": {"message": error_message},
-                }
-            )
+def _response_attr(response: Any, name: str) -> Any:
+    if isinstance(response, dict):
+        return response.get(name)
+    return getattr(response, name, None)
+
+
+def _extract_audio_bytes(response: Any) -> bytes:
+    output = _response_attr(response, "output")
+    if not isinstance(output, dict):
+        return b""
+
+    audio = output.get("audio")
+    if isinstance(audio, dict):
+        data = audio.get("data") or audio.get("audio")
+        if isinstance(data, str):
+            try:
+                return base64.b64decode(data)
+            except Exception:
+                logger.exception("DashScope TTS: failed to decode audio data")
+                return b""
+        if isinstance(data, bytes):
+            return data
+
+    for key in ("audio", "data"):
+        data = output.get(key)
+        if isinstance(data, bytes):
+            return data
+        if isinstance(data, str):
+            try:
+                return base64.b64decode(data)
+            except Exception:
+                logger.exception("DashScope TTS: failed to decode %s", key)
+                return b""
+
+    return b""
 
 
 class DashScopeTTS(TTSBase):
-    """DashScope Qwen CustomVoice realtime TTS."""
+    """DashScope Qwen TTS over HTTP streaming."""
 
     def __init__(self, config: Settings):
         self._config = config
 
-        # Set API key
         if config.dashscope_api_key:
             dashscope.api_key = config.dashscope_api_key
 
+        if config.dashscope_region == "cn":
+            dashscope.base_http_api_url = "https://dashscope.aliyuncs.com/api/v1"
+        else:
+            dashscope.base_http_api_url = "https://dashscope-intl.aliyuncs.com/api/v1"
+
+        logger.info(
+            "DashScopeTTS initialized for HTTP streaming (model=%s, region=%s)",
+            config.tts_model,
+            config.dashscope_region,
+        )
+
     async def _run_blocking(self, function, *args):
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, function, *args)
+        return await asyncio.to_thread(function, *args)
+
+    def _call_tts(self, text: str, cfg: TTSConfig) -> Generator[Any, None, None] | Any:
+        kwargs: dict[str, Any] = {
+            "model": self._config.tts_model,
+            "text": text,
+            "voice": cfg.voice,
+            "stream": True,
+            "result_format": "pcm",
+            "sample_rate": cfg.sample_rate,
+        }
+        language_type = _language_type(cfg.language)
+        if language_type:
+            kwargs["language_type"] = language_type
+
+        return MultiModalConversation.call(**kwargs)
 
     async def synthesize_stream(
         self,
         text_iterator: AsyncGenerator[str, None],
-        config: Optional[TTSConfig] = None,
+        config: TTSConfig | None = None,
     ) -> AsyncGenerator[bytes, None]:
-        """Convert streamed text into streamed audio."""
+        """Convert streamed text into streamed audio chunks."""
         cfg = config or TTSConfig(
             voice=self._config.tts_voice,
             language=self._config.tts_language,
@@ -143,79 +135,42 @@ class DashScopeTTS(TTSBase):
         if not full_text:
             return
 
-        loop = asyncio.get_running_loop()
-        audio_queue: asyncio.Queue[Optional[bytes]] = asyncio.Queue()
-        callback = _TTSCallback(audio_queue, loop)
-
-        tts_client = _SafeQwenTtsRealtime(
-            model=self._config.tts_model,
-            callback=callback,
-            url=self._config.dashscope_ws_url,
-        )
-
-        await self._run_blocking(tts_client.connect)
-
-        session_payload = {
-            "voice": cfg.voice,
-            "response_format": AudioFormat.PCM_24000HZ_MONO_16BIT,
-            "mode": "commit",
-            "language_type": cfg.language,
-        }
-        if "instruct" in self._config.tts_model.lower() and cfg.instructions:
-            session_payload["instructions"] = cfg.instructions
-            session_payload["enable_instructions_optimization"] = self._config.tts_optimize_instructions
-
-        await self._run_blocking(
-            lambda: tts_client.update_session(**session_payload),
-        )
-        logger.info(
-            "DashScope Qwen instruct TTS: session configured (model=%s, mode=commit, voice=%s, language=%s, instructions=%s, text_len=%s)",
-            self._config.tts_model,
-            cfg.voice,
-            cfg.language,
-            bool(session_payload.get("instructions")),
-            len(full_text),
-        )
-
         try:
-            await self._run_blocking(tts_client.append_text, full_text)
-            logger.info("DashScope TTS: committing text buffer (text_len=%s)", len(full_text))
-            await self._run_blocking(tts_client.commit)
-        except Exception as e:
-            logger.error(f"Error sending text to TTS: {e}")
-            await self._run_blocking(tts_client.close)
+            response_stream = await self._run_blocking(self._call_tts, full_text, cfg)
+        except Exception as exc:
+            logger.error("DashScope TTS request failed: %s", exc)
             return
 
-        # Yield audio chunks as they arrive
         received_audio = False
-        try:
-            while True:
-                try:
-                    chunk = await asyncio.wait_for(audio_queue.get(), timeout=30.0)
-                    if chunk is None:  # Sentinel: end of audio
-                        break
-                    received_audio = True
-                    yield chunk
-                except asyncio.TimeoutError:
-                    logger.warning("TTS audio queue timeout")
-                    break
-        finally:
-            await self._run_blocking(callback.wait_for_done, 5.0)
-            try:
-                await self._run_blocking(tts_client.close)
-            except Exception as e:
-                logger.debug(f"DashScope TTS close ignored: {e}")
-            if not received_audio:
-                logger.warning(
-                    "DashScope TTS finished without audio; last_message=%s response_id=%s",
-                    tts_client.get_last_message(),
-                    tts_client.get_last_response_id(),
+        for response in response_stream:
+            status_code = _response_attr(response, "status_code")
+            if status_code not in (None, HTTPStatus.OK, 200):
+                logger.error(
+                    "DashScope TTS error: status=%s code=%s message=%s request_id=%s",
+                    status_code,
+                    _response_attr(response, "code"),
+                    _response_attr(response, "message"),
+                    _response_attr(response, "request_id"),
                 )
+                continue
+
+            audio_bytes = _extract_audio_bytes(response)
+            if audio_bytes:
+                received_audio = True
+                yield audio_bytes
+
+        if not received_audio:
+            logger.warning(
+                "DashScope TTS finished without audio (model=%s, voice=%s, text_len=%s)",
+                self._config.tts_model,
+                cfg.voice,
+                len(full_text),
+            )
 
     async def synthesize(
         self,
         text: str,
-        config: Optional[TTSConfig] = None,
+        config: TTSConfig | None = None,
     ) -> AsyncGenerator[bytes, None]:
         """Synthesize complete text to streamed audio."""
 

@@ -11,8 +11,10 @@ import app.modules.sessions.services.conversation as conversation_module
 import app.main as main_module
 import app.modules.sessions.routers.ws as ws_module
 from app.core.security import create_access_token, hash_password
+from app.core.config import Settings
 from app.infra.contracts import TranscriptEvent, TranscriptType
 from app.modules.sessions.models.message import Message
+from app.modules.characters.models.character import Character
 from app.modules.scenarios.models.scenario import Scenario
 from app.modules.sessions.models.session import Session
 from app.modules.sessions.schemas.session import RealtimeCorrectionResponse
@@ -291,6 +293,7 @@ async def clean_realtime_tables():
         await session.execute(delete(Message))
         await session.execute(delete(Session))
         await session.execute(delete(Scenario))
+        await session.execute(delete(Character))
         await session.execute(delete(User))
         await session.commit()
     yield
@@ -314,6 +317,17 @@ async def test_user(clean_realtime_tables):
 @pytest_asyncio.fixture
 async def test_scenario(clean_realtime_tables):
     async with TestingSessionLocal() as session:
+        character = Character(
+            name="Realtime Tutor",
+            description="Helpful realtime tutor",
+            model_url="/models/realtime.model3.json",
+            core_url="/models/realtime.core",
+            tts_voice="Cherry",
+            tts_language="en",
+            is_active=True,
+        )
+        session.add(character)
+        await session.flush()
         scenario = Scenario(
             title="Realtime Scenario",
             description="Scenario used for websocket tests",
@@ -321,6 +335,7 @@ async def test_scenario(clean_realtime_tables):
             category="business",
             difficulty="medium",
             is_active=True,
+            character_id=character.id,
         )
         session.add(scenario)
         await session.commit()
@@ -371,7 +386,16 @@ async def test_session_start_and_turn_persist_messages(test_user, test_scenario,
     assert websocket.sent[0]["type"] == "session_started"
     assert websocket.sent[0]["scenario_id"] == test_scenario.id
     assert any(message["type"] == "recording_started" for message in websocket.sent)
-    assert any(message["type"] == "transcript_final" and message["text"] == "Hello from the user" for message in websocket.sent)
+    transcript_message = next(
+        message
+        for message in websocket.sent
+        if message["type"] == "transcript_final" and message["text"] == "Hello from the user"
+    )
+    saved_message = next(message for message in websocket.sent if message["type"] == "user_message_saved")
+    sent_types = [message["type"] for message in websocket.sent]
+    assert transcript_message["turn_id"]
+    assert saved_message["turn_id"] == transcript_message["turn_id"]
+    assert sent_types.index("transcript_final") < sent_types.index("user_message_saved")
     assert any(message["type"] == "llm_done" and message["text"] == "Hello from the assistant" for message in websocket.sent)
     assert any(message["type"] == "audio_chunk" for message in websocket.sent)
     assert any(message["type"] == "audio_done" for message in websocket.sent)
@@ -579,8 +603,20 @@ async def test_time_limit_emits_conversation_end_and_session_finalized(
     monkeypatch.setattr(conversation_module, "create_asr", lambda config: StubASR(config))
     monkeypatch.setattr(conversation_module, "create_llm", lambda config: StubLLM(config))
     monkeypatch.setattr(conversation_module, "create_tts", lambda config: StubTTS(config))
+    monkeypatch.setattr(ws_module, "_remaining_session_seconds", lambda *_: 0)
 
     async with TestingSessionLocal() as session:
+        character = Character(
+            name="Timeout Tutor",
+            description="Helpful timeout tutor",
+            model_url="/models/timeout.model3.json",
+            core_url="/models/timeout.core",
+            tts_voice="Cherry",
+            tts_language="en",
+            is_active=True,
+        )
+        session.add(character)
+        await session.flush()
         scenario = Scenario(
             title="Timeout Scenario",
             description="Scenario used for timeout tests",
@@ -589,6 +625,7 @@ async def test_time_limit_emits_conversation_end_and_session_finalized(
             difficulty="medium",
             is_active=True,
             time_limit_minutes=1,
+            character_id=character.id,
         )
         session.add(scenario)
         await session.commit()
@@ -633,7 +670,7 @@ async def test_time_limit_emits_conversation_end_and_session_finalized(
 
 
 @pytest.mark.asyncio
-async def test_final_asr_event_auto_triggers_llm_without_stop_recording(test_user, test_scenario, monkeypatch):
+async def test_final_asr_event_without_speech_end_does_not_auto_finalize(test_user, test_scenario, monkeypatch):
     llm_instances = []
 
     def create_llm(config):
@@ -642,7 +679,6 @@ async def test_final_asr_event_auto_triggers_llm_without_stop_recording(test_use
         return instance
 
     monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
-    monkeypatch.setattr(ws_module.settings, "asr_finalization_grace_ms", 10)
     monkeypatch.setattr(ws_module, "create_llm", create_llm)
     monkeypatch.setattr(conversation_module, "create_asr", lambda config: AutoFinalASR(config))
     monkeypatch.setattr(conversation_module, "create_llm", create_llm)
@@ -661,20 +697,20 @@ async def test_final_asr_event_auto_triggers_llm_without_stop_recording(test_use
             },
             {"type": "start_recording", "language": "en", "voice": "Cherry"},
             {"type": "audio_chunk", "data": audio_payload},
-            {"type": "config", "language": "en", "voice": "Cherry"},
-            {"type": "config", "language": "en", "voice": "Cherry"},
+            *[
+                {"type": "config", "language": "en", "voice": "Cherry"}
+                for _ in range(20)
+            ],
         ],
         message_delay=0.05,
     )
 
     await ws_module.websocket_conversation(websocket)
 
-    assert any(
+    sent_types = [message["type"] for message in websocket.sent]
+    assert "recording_finalizing" not in sent_types
+    assert not any(
         message["type"] == "transcript_final" and message["text"] == "Hello from auto-final ASR"
-        for message in websocket.sent
-    )
-    assert any(
-        message["type"] == "llm_done" and message["text"] == "Hello from the assistant"
         for message in websocket.sent
     )
 
@@ -682,16 +718,14 @@ async def test_final_asr_event_auto_triggers_llm_without_stop_recording(test_use
         message_result = await session.execute(select(Message).order_by(Message.order_index))
         messages = message_result.scalars().all()
 
-    assert (messages[-2].role, messages[-2].content) == ("user", "Hello from auto-final ASR")
-    assert (messages[-1].role, messages[-1].content) == ("assistant", "Hello from the assistant")
-    assert llm_instances[0].calls
+    assert all(message.content != "Hello from auto-final ASR" for message in messages)
 
     async with TestingSessionLocal() as session:
         result = await session.execute(select(Session))
         sessions = result.scalars().all()
 
     assert len(sessions) == 1
-    assert sessions[0].status == "completed"
+    assert sessions[0].status == "abandoned"
 
 
 @pytest.mark.asyncio
@@ -729,7 +763,6 @@ async def test_speech_stopped_event_auto_finalizes_turn(test_user, test_scenario
         return instance
 
     monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
-    monkeypatch.setattr(ws_module.settings, "asr_finalization_grace_ms", 10)
     monkeypatch.setattr(ws_module, "create_llm", create_llm)
     monkeypatch.setattr(conversation_module, "create_asr", lambda config: SpeechStoppedASR(config))
     monkeypatch.setattr(conversation_module, "create_llm", create_llm)
@@ -748,14 +781,19 @@ async def test_speech_stopped_event_auto_finalizes_turn(test_user, test_scenario
             },
             {"type": "start_recording", "language": "en", "voice": "Cherry"},
             {"type": "audio_chunk", "data": audio_payload},
-            {"type": "config", "language": "en", "voice": "Cherry"},
-            {"type": "config", "language": "en", "voice": "Cherry"},
+            *[
+                {"type": "config", "language": "en", "voice": "Cherry"}
+                for _ in range(20)
+            ],
         ],
         message_delay=0.05,
     )
 
     await ws_module.websocket_conversation(websocket)
 
+    sent_types = [message["type"] for message in websocket.sent]
+    assert "recording_finalizing" in sent_types, websocket.sent
+    assert sent_types.index("recording_finalizing") < sent_types.index("transcript_final")
     assert any(
         message["type"] == "transcript_final" and message["text"] == "Hello from speech-stopped ASR"
         for message in websocket.sent
@@ -810,9 +848,8 @@ async def test_partial_transcripts_are_not_sent_to_client_while_recording(test_u
 
 
 @pytest.mark.asyncio
-async def test_speech_end_waits_for_trailing_audio_before_finalizing(test_user, test_scenario, monkeypatch):
+async def test_speech_end_finalizes_immediately_and_ignores_trailing_audio(test_user, test_scenario, monkeypatch):
     monkeypatch.setattr(ws_module, "AsyncSessionLocal", TestingSessionLocal)
-    monkeypatch.setattr(ws_module.settings, "asr_finalization_grace_ms", 90)
     monkeypatch.setattr(ws_module, "create_llm", lambda config: StubLLM(config))
     monkeypatch.setattr(conversation_module, "create_asr", lambda config: GracefulSpeechStoppedASR(config))
     monkeypatch.setattr(conversation_module, "create_llm", lambda config: StubLLM(config))
@@ -833,18 +870,27 @@ async def test_speech_end_waits_for_trailing_audio_before_finalizing(test_user, 
             {"type": "start_recording", "language": "en", "voice": "Cherry"},
             {"type": "audio_chunk", "data": first_audio},
             {"type": "audio_chunk", "data": trailing_audio},
-            {"type": "config", "language": "en", "voice": "Cherry"},
-            {"type": "config", "language": "en", "voice": "Cherry"},
+            *[
+                {"type": "config", "language": "en", "voice": "Cherry"}
+                for _ in range(20)
+            ],
         ],
         message_delay=0.05,
     )
 
     await ws_module.websocket_conversation(websocket)
 
+    sent_types = [message["type"] for message in websocket.sent]
+    assert "recording_finalizing" in sent_types, websocket.sent
+    assert sent_types.index("recording_finalizing") < sent_types.index("transcript_final")
     assert any(
-        message["type"] == "transcript_final" and message["text"] == "Captured 2 chunks"
+        message["type"] == "transcript_final" and message["text"] == "Captured 1 chunks"
         for message in websocket.sent
     )
+
+
+def test_settings_no_longer_exposes_asr_finalization_grace_ms():
+    assert not hasattr(Settings(_env_file=None), "asr_finalization_grace_ms")
 
 
 @pytest.mark.asyncio

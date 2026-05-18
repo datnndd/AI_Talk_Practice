@@ -1,7 +1,7 @@
 """
 Deepgram realtime ASR provider.
 
-Streams PCM audio to Deepgram's Flux WebSocket API and converts websocket
+Streams PCM audio to Deepgram's Nova WebSocket API and converts websocket
 messages into the app's TranscriptEvent contract.
 """
 
@@ -10,6 +10,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
+import re
 from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlencode
@@ -21,10 +23,11 @@ from app.core.config import Settings
 from app.infra.contracts import ASRBase, TranscriptEvent, TranscriptType
 
 logger = logging.getLogger(__name__)
+payload_logger = logging.getLogger("deepgram_asr")
 
 
 class DeepgramASR(ASRBase):
-    """Deepgram realtime ASR using the Flux streaming model."""
+    """Deepgram realtime ASR using the Nova streaming model."""
 
     def __init__(self, config: Settings):
         self._config = config
@@ -35,6 +38,8 @@ class DeepgramASR(ASRBase):
         self._receiver_task: asyncio.Task | None = None
         self._keepalive_task: asyncio.Task | None = None
         self._connected = False
+        self._final_segments: list[str] = []
+        self._latest_partial = ""
 
     async def start_session(self, language: str = "en", sample_rate: int = 16000) -> None:
         if self._connected:
@@ -46,16 +51,22 @@ class DeepgramASR(ASRBase):
         self._language = language
         self._sample_rate = sample_rate
         self._transcript_queue = asyncio.Queue()
+        self._final_segments = []
+        self._latest_partial = ""
+        self._ensure_payload_logger()
 
         query_params: dict[str, str | int | float] = {
             "model": self._config.deepgram_asr_model,
+            "language": language,
             "encoding": "linear16",
             "sample_rate": sample_rate,
-            "eot_threshold": self._config.deepgram_eot_threshold,
-            "eot_timeout_ms": self._config.deepgram_eot_timeout_ms,
+            "channels": 1,
+            "smart_format": self._bool_query(self._config.deepgram_smart_format),
+            "interim_results": self._bool_query(self._config.deepgram_interim_results),
+            "endpointing": self._config.deepgram_endpointing_ms,
         }
-        if self._config.deepgram_asr_model == "flux-general-multi" and language:
-            query_params["language_hint"] = language
+        if self._config.deepgram_interim_results:
+            query_params["utterance_end_ms"] = self._config.deepgram_utterance_end_ms
         query = urlencode(query_params)
         url = f"{self._config.deepgram_ws_url}?{query}"
 
@@ -73,11 +84,18 @@ class DeepgramASR(ASRBase):
         self._receiver_task = asyncio.create_task(self._receive_messages())
         self._keepalive_task = asyncio.create_task(self._send_keepalive())
         logger.info(
-            "Deepgram Flux ASR session started (model=%s, language=%s, rate=%s)",
+            "Deepgram Nova ASR session started (model=%s, language=%s, rate=%s)",
             self._config.deepgram_asr_model,
             language,
             sample_rate,
         )
+        if self._config.deepgram_log_payloads:
+            payload_logger.info(
+                "Deepgram ASR session started model=%s language=%s sample_rate=%s",
+                self._config.deepgram_asr_model,
+                language,
+                sample_rate,
+            )
 
     async def feed_audio(self, audio_chunk: bytes) -> None:
         if not self._connected or self._websocket is None:
@@ -97,6 +115,11 @@ class DeepgramASR(ASRBase):
 
         websocket = self._websocket
         self._connected = False
+
+        try:
+            await websocket.send(json.dumps({"type": "Finalize"}))
+        except Exception as exc:
+            logger.debug("Deepgram ASR finalize command failed: %s", exc)
 
         try:
             await websocket.send(json.dumps({"type": "CloseStream"}))
@@ -144,7 +167,11 @@ class DeepgramASR(ASRBase):
         try:
             async for raw_message in websocket:
                 if isinstance(raw_message, bytes):
+                    if self._config.deepgram_log_payloads:
+                        payload_logger.info("Deepgram raw binary response bytes=%s", len(raw_message))
                     continue
+                if self._config.deepgram_log_payloads:
+                    payload_logger.info("Deepgram raw response: %s", raw_message)
                 payload = self._load_json(raw_message)
                 if payload is None:
                     continue
@@ -180,15 +207,25 @@ class DeepgramASR(ASRBase):
             if not transcript:
                 transcript = str(payload.get("transcript") or payload.get("text") or "").strip()
             language = self._extract_language(channel)
+            is_final = bool(payload.get("is_final") or payload.get("final"))
+            speech_final = bool(payload.get("speech_final") or payload.get("end_of_turn"))
+            confidence = self._extract_confidence(alternatives)
+            from_finalize = bool(payload.get("from_finalize"))
+            logger.info(
+                "Deepgram result flags is_final=%s speech_final=%s from_finalize=%s confidence=%s transcript_len=%s",
+                is_final,
+                speech_final,
+                from_finalize,
+                confidence,
+                len(transcript),
+            )
 
             if transcript:
-                is_final = bool(
-                    payload.get("is_final")
-                    or payload.get("speech_final")
-                    or payload.get("final")
-                    or payload.get("end_of_turn")
-                )
                 event_type = TranscriptType.FINAL if is_final else TranscriptType.PARTIAL
+                if is_final:
+                    self._remember_final_segment(transcript)
+                else:
+                    self._latest_partial = transcript
                 self._transcript_queue.put_nowait(
                     TranscriptEvent(
                         text=transcript,
@@ -197,7 +234,7 @@ class DeepgramASR(ASRBase):
                     )
                 )
 
-            if bool(payload.get("speech_final") or payload.get("end_of_turn")):
+            if speech_final:
                 self._transcript_queue.put_nowait(
                     TranscriptEvent(
                         text="",
@@ -212,6 +249,10 @@ class DeepgramASR(ASRBase):
             transcript = str(payload.get("transcript") or payload.get("text") or "").strip()
             is_final = event.lower() in {"endofturn", "end_of_turn", "end-of-turn"}
             if transcript:
+                if is_final:
+                    self._remember_final_segment(transcript)
+                else:
+                    self._latest_partial = transcript
                 self._transcript_queue.put_nowait(
                     TranscriptEvent(
                         text=transcript,
@@ -229,7 +270,22 @@ class DeepgramASR(ASRBase):
                 )
             return
 
-        if message_type in {"UtteranceEnd", "EndOfTurn", "TurnEnd"}:
+        if message_type == "UtteranceEnd":
+            if not self._config.deepgram_interim_results:
+                logger.debug("Deepgram ASR ignored UtteranceEnd because interim results are disabled")
+                return
+            if payload.get("last_word_end") == -1:
+                return
+            self._transcript_queue.put_nowait(
+                TranscriptEvent(
+                    text="",
+                    type=TranscriptType.SPEECH_END,
+                    language=self._language,
+                )
+            )
+            return
+
+        if message_type in {"EndOfTurn", "TurnEnd"}:
             self._transcript_queue.put_nowait(
                 TranscriptEvent(
                     text="",
@@ -253,32 +309,101 @@ class DeepgramASR(ASRBase):
 
         logger.debug("Deepgram ASR unhandled payload type=%s", message_type)
 
+    @staticmethod
+    def _bool_query(value: bool) -> str:
+        return "true" if value else "false"
+
+    @staticmethod
+    def _extract_confidence(alternatives: Any) -> float | None:
+        if alternatives and isinstance(alternatives[0], Mapping):
+            confidence = alternatives[0].get("confidence")
+            if isinstance(confidence, int | float):
+                return round(float(confidence), 6)
+        return None
+
+    def _ensure_payload_logger(self) -> None:
+        if not self._config.deepgram_log_payloads:
+            return
+
+        log_path = os.path.abspath(self._config.deepgram_log_file)
+        os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
+        if any(
+            isinstance(handler, logging.FileHandler)
+            and os.path.abspath(getattr(handler, "baseFilename", "")) == log_path
+            for handler in payload_logger.handlers
+        ):
+            return
+
+        handler = logging.FileHandler(log_path, encoding="utf-8")
+        handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)-7s | %(message)s"))
+        payload_logger.addHandler(handler)
+        payload_logger.setLevel(logging.INFO)
+        payload_logger.propagate = False
+
     def _drain_transcript_queue(self) -> TranscriptEvent | None:
         last_event: TranscriptEvent | None = None
-        final_text = ""
-        partial_text = ""
 
         while not self._transcript_queue.empty():
             event = self._transcript_queue.get_nowait()
             last_event = event
             text = event.text.strip()
             if event.type == TranscriptType.FINAL and text:
-                if not final_text:
-                    final_text = text
-                elif text == final_text or text in final_text:
-                    continue
-                elif final_text in text:
-                    final_text = text
-                else:
-                    final_text = f"{final_text} {text}".strip()
+                self._remember_final_segment(text)
             elif event.type == TranscriptType.PARTIAL and text:
-                partial_text = text
+                self._latest_partial = text
 
+        final_text = self._combined_final_text()
+        partial_text = self._latest_partial.strip()
         if final_text:
             return TranscriptEvent(text=final_text, type=TranscriptType.FINAL, language=self._language)
         if partial_text:
             return TranscriptEvent(text=partial_text, type=TranscriptType.PARTIAL, language=self._language)
         return last_event
+
+    def _remember_final_segment(self, text: str) -> None:
+        clean = text.strip()
+        if not clean:
+            return
+
+        if not self._final_segments:
+            self._final_segments.append(clean)
+            return
+
+        merged = self._merge_transcripts(self._combined_final_text(), clean)
+        self._final_segments = [merged] if merged else []
+
+    def _combined_final_text(self) -> str:
+        return " ".join(segment.strip() for segment in self._final_segments if segment.strip()).strip()
+
+    @classmethod
+    def _merge_transcripts(cls, current: str, incoming: str) -> str:
+        current = current.strip()
+        incoming = incoming.strip()
+        if not current:
+            return incoming
+        if not incoming:
+            return current
+
+        current_norm = cls._normalize_transcript(current)
+        incoming_norm = cls._normalize_transcript(incoming)
+        if current_norm == incoming_norm or incoming_norm in current_norm:
+            return current
+        if current_norm in incoming_norm:
+            return incoming
+
+        current_tokens = current_norm.split()
+        incoming_tokens = incoming_norm.split()
+        max_overlap = min(len(current_tokens), len(incoming_tokens))
+        for overlap in range(max_overlap, 0, -1):
+            if current_tokens[-overlap:] == incoming_tokens[:overlap]:
+                incoming_words = incoming.split()
+                return f"{current} {' '.join(incoming_words[overlap:])}".strip()
+
+        return f"{current} {incoming}".strip()
+
+    @staticmethod
+    def _normalize_transcript(text: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", text.lower())).strip()
 
     async def _shutdown_background_tasks(self) -> None:
         for task_name in ("_keepalive_task", "_receiver_task"):

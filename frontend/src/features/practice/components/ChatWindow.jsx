@@ -4,6 +4,7 @@ import {
   ChatCenteredDots,
   Check,
   Microphone,
+  SpeakerHigh,
   Translate,
   CircleNotch,
 } from "@phosphor-icons/react";
@@ -54,6 +55,8 @@ const MessageBubble = ({
   targetLanguage = "vi",
   correctionIsGood = null,
   betterAnswer = "",
+  audio = null,
+  onReplayAudio = null,
 }) => {
   const isNotice = role === "notice" || role === "system";
   const isCompletion = isCompletionNotice(role, content);
@@ -70,6 +73,7 @@ const MessageBubble = ({
   const [translation, setTranslation] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationError, setTranslationError] = useState("");
+  const hasReplayAudio = Boolean(audio?.chunks?.length && onReplayAudio && !isLive && !isNotice);
 
   const handleTranslate = async () => {
     if (translation || isTranslating || isLive) return;
@@ -101,12 +105,29 @@ const MessageBubble = ({
       >
         <p className={`text-sm font-medium leading-relaxed ${isLive ? "italic opacity-70" : ""}`}>{content}</p>
         
+        {hasReplayAudio && (
+          <button
+            type="button"
+            onClick={() => onReplayAudio(audio)}
+            title={isAI ? "Nghe lại giọng AI" : "Nghe lại giọng của bạn"}
+            className={`absolute top-2 rounded-full p-2 opacity-0 transition-opacity group-hover:opacity-100 ${
+              isAI
+                ? "-right-10 text-[var(--page-muted)] hover:bg-white/10 hover:text-primary"
+                : "-left-10 text-[var(--page-muted)] hover:bg-primary/10 hover:text-primary"
+            }`}
+          >
+            <SpeakerHigh size={18} weight="bold" />
+          </button>
+        )}
+
         {isAI && !isLive && !isNotice && !translation && (
           <button
             onClick={handleTranslate}
             disabled={isTranslating}
             title="Dịch câu này"
-            className="absolute -right-10 top-2 rounded-full p-2 text-[var(--page-muted)] opacity-0 transition-opacity hover:bg-white/10 hover:text-primary group-hover:opacity-100 disabled:opacity-50"
+            className={`absolute -right-10 rounded-full p-2 text-[var(--page-muted)] opacity-0 transition-opacity hover:bg-white/10 hover:text-primary group-hover:opacity-100 disabled:opacity-50 ${
+              hasReplayAudio ? "top-11" : "top-2"
+            }`}
           >
             {isTranslating ? <CircleNotch size={18} className="animate-spin" /> : <Translate size={18} />}
           </button>
@@ -193,6 +214,7 @@ const ChatWindow = ({
   durationSeconds = 0,
   timeLimitSeconds = null,
   userNativeLanguage = "vi",
+  onReplayAudio,
 }) => {
   const endRef = useRef(null);
   const scenarioTitle = scenario?.title || guidance?.topic || "Practice session";
@@ -257,6 +279,8 @@ const ChatWindow = ({
                   targetLanguage={userNativeLanguage}
                   correctionIsGood={introMessage.correctionIsGood ?? null}
                   betterAnswer={introMessage.betterAnswer || ""}
+                  audio={introMessage.audio || null}
+                  onReplayAudio={onReplayAudio}
                 />
               ) : null}
               {visibleMessages.map((message) => (
@@ -268,6 +292,8 @@ const ChatWindow = ({
                   targetLanguage={userNativeLanguage}
                   correctionIsGood={message.correctionIsGood ?? null}
                   betterAnswer={message.betterAnswer || ""}
+                  audio={message.audio || null}
+                  onReplayAudio={onReplayAudio}
                 />
               ))}
 

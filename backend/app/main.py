@@ -72,6 +72,24 @@ if not any(
     )
     conversation_trace_logger.addHandler(conversation_trace_handler)
 conversation_trace_logger.propagate = False
+
+deepgram_payload_logger = logging.getLogger("deepgram_asr")
+if settings.deepgram_log_payloads:
+    deepgram_payload_logger.setLevel(logging.INFO)
+    deepgram_log_path = os.path.abspath(settings.deepgram_log_file)
+    os.makedirs(os.path.dirname(deepgram_log_path) or ".", exist_ok=True)
+    if not any(
+        isinstance(handler, logging.FileHandler)
+        and os.path.abspath(getattr(handler, "baseFilename", "")) == deepgram_log_path
+        for handler in deepgram_payload_logger.handlers
+    ):
+        deepgram_payload_handler = logging.FileHandler(deepgram_log_path, encoding="utf-8")
+        deepgram_payload_handler.setFormatter(
+            logging.Formatter("%(asctime)s | %(levelname)-7s | %(message)s")
+        )
+        deepgram_payload_logger.addHandler(deepgram_payload_handler)
+    deepgram_payload_logger.propagate = False
+
 logger = logging.getLogger(__name__)
 
 # ─── Lifespan ──────────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import { getApiErrorMessage } from "@/shared/api/httpClient";
 
 const DEFAULT_MODEL_URL = "https://rgpmptospjqospitmcqw.supabase.co/storage/v1/object/public/live2d-models/ai-tutor/pachirisu%20anime%20girl%20-%20top%20half.model3.json";
 const DEFAULT_CORE_URL = "https://rgpmptospjqospitmcqw.supabase.co/storage/v1/object/public/live2d-models/live2dcubismcore.min.js";
+const DEFAULT_FILTERS = { search: "", include_deleted: false, page: 1, page_size: 50 };
 
 const createInitialForm = (character) => ({
   name: character?.name || "",
@@ -29,6 +30,37 @@ const StatusBadge = ({ children, tone = "zinc" }) => {
     <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${tones[tone]}`}>
       {children}
     </span>
+  );
+};
+
+const CharacterStatus = ({ character }) => (
+  <>
+    <StatusBadge tone={character.is_active ? "emerald" : "zinc"}>
+      {character.is_active ? "Active" : "Inactive"}
+    </StatusBadge>
+    {character.deleted_at ? <StatusBadge tone="rose">Deleted</StatusBadge> : null}
+  </>
+);
+
+const DetailField = ({ label, value }) => (
+  <div className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-950">
+    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{label}</p>
+    <p className="mt-1 break-all text-sm font-semibold">{value || "Not set"}</p>
+  </div>
+);
+
+const FeedbackMessage = ({ error, notice }) => {
+  if (!error && !notice) return null;
+
+  return (
+    <div className={`rounded-[26px] px-5 py-4 text-sm font-semibold ${
+      error
+        ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+        : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+    }`}
+    >
+      {error || notice}
+    </div>
   );
 };
 
@@ -189,7 +221,7 @@ const CharacterEditorModal = ({ character, onClose, onSubmit, isSaving }) => {
 
 const AdminCharactersPage = () => {
   const [characters, setCharacters] = useState([]);
-  const [filters, setFilters] = useState({ search: "", include_deleted: false, page: 1, page_size: 50 });
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [selectedCharacterId, setSelectedCharacterId] = useState(null);
   const [editingCharacter, setEditingCharacter] = useState(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -293,16 +325,7 @@ const AdminCharactersPage = () => {
       subtitle="Manage Live2D avatars and the TTS voice assigned to scenarios."
     >
       <div className="space-y-6">
-        {(notice || error) && (
-          <div className={`rounded-[26px] px-5 py-4 text-sm font-semibold ${
-            error
-              ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
-              : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-          }`}
-          >
-            {error || notice}
-          </div>
-        )}
+        <FeedbackMessage error={error} notice={notice} />
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
           <div className="min-w-0 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -369,10 +392,7 @@ const AdminCharactersPage = () => {
                       </span>
                       <span className="flex items-center text-zinc-600 dark:text-zinc-300">{character.tts_voice}</span>
                       <span className="flex flex-col justify-center gap-1">
-                        <StatusBadge tone={character.is_active ? "emerald" : "zinc"}>
-                          {character.is_active ? "Active" : "Inactive"}
-                        </StatusBadge>
-                        {character.deleted_at ? <StatusBadge tone="rose">Deleted</StatusBadge> : null}
+                        <CharacterStatus character={character} />
                       </span>
                     </button>
                   );
@@ -395,10 +415,7 @@ const AdminCharactersPage = () => {
                     {selectedCharacter.description || "No description configured."}
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <StatusBadge tone={selectedCharacter.is_active ? "emerald" : "zinc"}>
-                      {selectedCharacter.is_active ? "Active" : "Inactive"}
-                    </StatusBadge>
-                    {selectedCharacter.deleted_at ? <StatusBadge tone="rose">Deleted</StatusBadge> : null}
+                    <CharacterStatus character={selectedCharacter} />
                   </div>
                 </div>
 
@@ -408,12 +425,7 @@ const AdminCharactersPage = () => {
                     ["Language", selectedCharacter.tts_language],
                     ["Model URL", selectedCharacter.model_url],
                     ["Core URL", selectedCharacter.core_url],
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-950">
-                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{label}</p>
-                      <p className="mt-1 break-all text-sm font-semibold">{value || "Not set"}</p>
-                    </div>
-                  ))}
+                  ].map(([label, value]) => <DetailField key={label} label={label} value={value} />)}
                 </div>
 
                 <div className="grid gap-2">

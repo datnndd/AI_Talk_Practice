@@ -66,6 +66,21 @@ const upsertMessageRealtimeFeedback = (messages, payload) => messages.map((messa
   };
 });
 
+const appendMessageAudioChunk = (messages, messageId, chunk) => messages.map((message) => {
+  if (message.id !== messageId) {
+    return message;
+  }
+
+  const audio = message.audio || { chunks: [], sampleRate: 24000 };
+  return {
+    ...message,
+    audio: {
+      ...audio,
+      chunks: [...(audio.chunks || []), chunk],
+    },
+  };
+});
+
 const PracticeSession = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -118,24 +133,31 @@ const PracticeSession = () => {
   const reconnectTimerRef = useRef(null);
   const isAutoReconnectingRef = useRef(false);
   const isNavigatingToResultRef = useRef(false);
+  const currentUserAudioChunksRef = useRef([]);
+  const latestAssistantMessageIdRef = useRef(null);
+  const pendingCorrectionsRef = useRef(new Map());
   const initialSessionIdRef = useRef(Number.isFinite(initialSessionId) && initialSessionId > 0 ? initialSessionId : null);
 
   const buildMessage = (role, content, options = {}) => {
-    const {
-      serverMessageId = null,
-      orderIndex = null,
-      correctionIsGood = null,
-      betterAnswer = "",
-    } = options;
-    messageIdRef.current += 1;
-    return {
-      id: serverMessageId ? `${role}-${serverMessageId}` : `${role}-${messageIdRef.current}`,
+      const {
+        serverMessageId = null,
+        orderIndex = null,
+        turnId = null,
+        correctionIsGood = null,
+        betterAnswer = "",
+        audio = null,
+      } = options;
+      messageIdRef.current += 1;
+      return {
+      id: serverMessageId ? `${role}-${serverMessageId}` : turnId ? `${role}-turn-${turnId}` : `${role}-${messageIdRef.current}`,
       role,
       content,
       serverMessageId,
       orderIndex,
+      turnId,
       correctionIsGood,
       betterAnswer,
+      audio,
     };
   };
 
@@ -294,9 +316,10 @@ const PracticeSession = () => {
       }
 
       const pcmBuffer = event.data;
+      currentUserAudioChunksRef.current.push(arrayBufferToBase64(pcmBuffer));
       socketRef.current.send(JSON.stringify({
         type: "audio_chunk",
-        data: arrayBufferToBase64(pcmBuffer),
+        data: currentUserAudioChunksRef.current[currentUserAudioChunksRef.current.length - 1],
       }));
     };
 
@@ -396,6 +419,7 @@ const PracticeSession = () => {
         type: "start_recording",
         language: DEFAULT_LANGUAGE,
       }));
+      currentUserAudioChunksRef.current = [];
       recordingStateRef.current = "recording";
       setRecordingState("recording");
     } catch (error) {
@@ -420,6 +444,42 @@ const PracticeSession = () => {
     recordingStateRef.current = "interrupting";
     setRecordingState("interrupting");
   };
+
+  const playPcmChunks = useCallback(async (chunks, sampleRate = 24000, { withLipSync = false } = {}) => {
+    stopAssistantPlayback();
+
+    for (const chunk of chunks || []) {
+      const audioContext = await ensureAudioContext();
+      const float32 = pcm16ToFloat32(base64ToArrayBuffer(chunk));
+      const buffer = audioContext.createBuffer(1, float32.length, sampleRate);
+      buffer.copyToChannel(float32, 0);
+
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+
+      const currentTime = audioContext.currentTime;
+      const startAt = playbackCursorRef.current > currentTime
+        ? playbackCursorRef.current
+        : currentTime + PLAYBACK_JITTER_BUFFER_SECONDS;
+      source.start(startAt);
+      playbackCursorRef.current = startAt + buffer.duration;
+      if (withLipSync) {
+        scheduleLipSyncFrames(buildLipSyncFrames(float32, buffer.sampleRate), startAt, audioContext);
+      }
+      playbackSourcesRef.current.add(source);
+      source.onended = () => {
+        playbackSourcesRef.current.delete(source);
+        source.disconnect();
+      };
+    }
+  }, [ensureAudioContext, scheduleLipSyncFrames, stopAssistantPlayback]);
+
+  const handleReplayAudio = useCallback((audio) => {
+    void playPcmChunks(audio?.chunks || [], audio?.sampleRate || 24000, {
+      withLipSync: audio?.role === "assistant",
+    });
+  }, [playPcmChunks]);
 
   const handleSocketMessage = useCallback(async (event) => {
     let payload;
@@ -461,21 +521,54 @@ const PracticeSession = () => {
         setRecordingState("recording");
         setSessionError("");
         break;
+      case "recording_finalizing":
+        captureActiveRef.current = false;
+        isStoppingRecordingRef.current = true;
+        recordingStateRef.current = "processing";
+        setRecordingState("processing");
+        break;
       case "transcript_final":
         captureActiveRef.current = false;
         isStoppingRecordingRef.current = false;
         if (payload.text) {
+          const userAudioChunks = currentUserAudioChunksRef.current;
+          currentUserAudioChunksRef.current = [];
           setMessages((current) => appendUniqueMessage(
             current,
             buildMessage("user", payload.text, {
               serverMessageId: payload.message_id ?? null,
               orderIndex: payload.order_index ?? null,
+              turnId: payload.turn_id ?? null,
+              audio: userAudioChunks.length
+                ? { role: "user", chunks: userAudioChunks, sampleRate: 16000 }
+                : null,
             }),
           ));
         }
         setLessonHint(null);
         recordingStateRef.current = "processing";
         setRecordingState("processing");
+        break;
+      case "user_message_saved":
+        if (payload.turn_id) {
+          setMessages((current) => current.map((message) => {
+            if (message.turnId !== payload.turn_id) {
+              return message;
+            }
+            const pendingCorrection = payload.message_id ? pendingCorrectionsRef.current.get(payload.message_id) : null;
+            if (payload.message_id && pendingCorrection) {
+              pendingCorrectionsRef.current.delete(payload.message_id);
+            }
+            return {
+              ...message,
+              id: payload.message_id ? `user-${payload.message_id}` : message.id,
+              serverMessageId: payload.message_id ?? message.serverMessageId ?? null,
+              orderIndex: payload.order_index ?? message.orderIndex ?? null,
+              correctionIsGood: pendingCorrection ? Boolean(pendingCorrection.is_good) : message.correctionIsGood,
+              betterAnswer: pendingCorrection ? pendingCorrection.better_answer || "" : message.betterAnswer,
+            };
+          }));
+        }
         break;
       case "asr_no_input":
         captureActiveRef.current = false;
@@ -504,7 +597,11 @@ const PracticeSession = () => {
           const finalAssistantText = payload.text || assistantDraftRef.current;
 
           if (finalAssistantText) {
-            setMessages((current) => appendUniqueMessage(current, buildMessage("assistant", finalAssistantText)));
+            const assistantMessage = buildMessage("assistant", finalAssistantText, {
+              audio: { role: "assistant", chunks: [], sampleRate: 24000 },
+            });
+            latestAssistantMessageIdRef.current = assistantMessage.id;
+            setMessages((current) => appendUniqueMessage(current, assistantMessage));
           }
         }
         assistantDraftRef.current = "";
@@ -518,6 +615,9 @@ const PracticeSession = () => {
         }
         recordingStateRef.current = "assistant";
         setRecordingState("assistant");
+        if (latestAssistantMessageIdRef.current && payload.data) {
+          setMessages((current) => appendMessageAudioChunk(current, latestAssistantMessageIdRef.current, payload.data));
+        }
         await queuePlaybackChunk(payload.data);
         break;
       case "audio_done":
@@ -528,7 +628,14 @@ const PracticeSession = () => {
         setRecordingState("idle");
         break;
       case "message_correction":
-        setMessages((current) => upsertMessageRealtimeFeedback(current, payload));
+        setMessages((current) => {
+          const hasMessage = current.some((message) => message.serverMessageId === payload.message_id);
+          if (!hasMessage && payload.message_id) {
+            pendingCorrectionsRef.current.set(payload.message_id, payload);
+            return current;
+          }
+          return upsertMessageRealtimeFeedback(current, payload);
+        });
         break;
       case "conversation_end":
         recordingStateRef.current = "idle";
@@ -556,7 +663,11 @@ const PracticeSession = () => {
         assistantDraftRef.current = "";
         setAssistantDraft("");
         if (payload.text) {
-          setMessages((current) => appendUniqueMessage(current, buildMessage("assistant", payload.text)));
+          const assistantMessage = buildMessage("assistant", payload.text, {
+            audio: { role: "assistant", chunks: [], sampleRate: 24000 },
+          });
+          latestAssistantMessageIdRef.current = assistantMessage.id;
+          setMessages((current) => appendUniqueMessage(current, assistantMessage));
         }
         if (autoStartRecordingRef.current) {
           autoStartRecordingRef.current = false;
@@ -605,9 +716,12 @@ const PracticeSession = () => {
     }
 
     if (resetConversation) {
-      setMessages([]);
-      setAssistantDraft("");
-      setSessionId(resumeSessionId || null);
+        setMessages([]);
+        setAssistantDraft("");
+        currentUserAudioChunksRef.current = [];
+        latestAssistantMessageIdRef.current = null;
+        pendingCorrectionsRef.current.clear();
+        setSessionId(resumeSessionId || null);
       setSessionEnded(false);
       setAnalysisResultUrl("");
       sessionIdRef.current = resumeSessionId || null;
@@ -955,6 +1069,7 @@ const PracticeSession = () => {
               durationSeconds={durationSeconds}
               timeLimitSeconds={timeLimitSeconds}
               userNativeLanguage="vi"
+              onReplayAudio={handleReplayAudio}
             />
             <TypewriterInput
               recordingState={recordingState}

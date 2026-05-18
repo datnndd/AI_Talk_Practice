@@ -1,28 +1,16 @@
 import { httpClient } from "@/shared/api/httpClient";
 
+const characterPath = (characterId, suffix = "") => `/admin/characters/${characterId}${suffix}`;
+const requestData = async (request) => {
+  const { data } = await request;
+  return data;
+};
+
 export const adminCharactersApi = {
-  listCharacters: async (params = {}) => {
-    const { data } = await httpClient.get("/admin/characters", { params });
-    return data;
-  },
-  createCharacter: async (payload) => {
-    const { data } = await httpClient.post("/admin/characters", payload);
-    return data;
-  },
-  updateCharacter: async (characterId, payload) => {
-    const { data } = await httpClient.put(`/admin/characters/${characterId}`, payload);
-    return data;
-  },
-  deleteCharacter: async (characterId) => {
-    const { data } = await httpClient.delete(`/admin/characters/${characterId}`);
-    return data;
-  },
-  restoreCharacter: async (characterId) => {
-    const { data } = await httpClient.post(`/admin/characters/${characterId}/restore`);
-    return data;
-  },
-  toggleCharacter: async (characterId) => {
-    const { data } = await httpClient.post(`/admin/characters/${characterId}/toggle-active`);
-    return data;
-  },
+  listCharacters: (params = {}) => requestData(httpClient.get("/admin/characters", { params })),
+  createCharacter: (payload) => requestData(httpClient.post("/admin/characters", payload)),
+  updateCharacter: (characterId, payload) => requestData(httpClient.put(characterPath(characterId), payload)),
+  deleteCharacter: (characterId) => requestData(httpClient.delete(characterPath(characterId))),
+  restoreCharacter: (characterId) => requestData(httpClient.post(characterPath(characterId, "/restore"))),
+  toggleCharacter: (characterId) => requestData(httpClient.post(characterPath(characterId, "/toggle-active"))),
 };

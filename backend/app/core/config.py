@@ -9,7 +9,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
-DEFAULT_LLM_BASE_URL = "https://rfij5ml.9router.com/v1"
+DEFAULT_LLM_BASE_URL = "https://api.openai.com/v1"
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # --- Provider Selection ---
     asr_provider: str = Field(default="deepgram", description="ASR provider: deepgram")
-    llm_provider: str = Field(default="openai", description="LLM provider: openai-compatible")
+    llm_provider: str = Field(default="openai", description="LLM provider: OpenAI Responses API")
     tts_provider: str = Field(default="dashscope", description="TTS provider: dashscope")
 
     # --- Database ---
@@ -45,10 +45,9 @@ class Settings(BaseSettings):
     # --- API Keys ---
     dashscope_api_key: str | None = Field(default=None, description="DashScope API key")
     deepgram_api_key: str | None = Field(default=None, description="Deepgram API key")
-    openai_api_key: str | None = Field(default=None, description="OpenAI-compatible LLM API key")
+    openai_api_key: str | None = Field(default=None, description="OpenAI API key")
     stripe_secret_key: str | None = Field(default=None, description="Stripe secret key")
     stripe_webhook_secret: str | None = Field(default=None, description="Stripe webhook signing secret")
-    google_translate_api_key: str | None = Field(default=None, description="Google Cloud Translation API v2 Key")
     azure_speech_key: str | None = Field(default=None, description="Azure Speech Service key")
     azure_speech_region: str | None = Field(default=None, description="Azure Speech Service region")
     azure_speech_language: str = Field(default="en-US", description="Azure Speech assessment language")
@@ -68,7 +67,7 @@ class Settings(BaseSettings):
     llm_model: str = Field(default="ai-talk", description="LLM model name")
     llm_base_url: str = Field(
         default=DEFAULT_LLM_BASE_URL,
-        description="OpenAI-compatible LLM base URL",
+        description="OpenAI Responses API base URL",
     )
     llm_system_prompt: str = Field(
         default=(
@@ -81,10 +80,6 @@ class Settings(BaseSettings):
     )
     llm_temperature: float = Field(default=0.3, description="Sampling temperature for LLM generation")
     llm_max_tokens: int = Field(default=8000, description="Maximum tokens generated per assistant turn")
-    lesson_plan_llm_max_tokens: int = Field(
-        default=8000,
-        description="Maximum tokens generated when creating structured lesson plans",
-    )
     lesson_hint_llm_max_tokens: int = Field(
         default=8000,
         description="Maximum tokens generated when creating structured lesson hints",
@@ -117,14 +112,6 @@ class Settings(BaseSettings):
     evaluation_llm_max_tokens: int | None = Field(default=None, description="Maximum tokens for final session evaluation")
 
     # --- Hybrid Conversation Orchestration ---
-    conversation_memory_max_facts: int = Field(
-        default=12,
-        description="Maximum structured short-term facts retained per realtime conversation session",
-    )
-    conversation_recent_turn_limit: int = Field(
-        default=6,
-        description="Maximum compact recent turns retained in hybrid conversation memory",
-    )
     conversation_summary_max_chars: int = Field(
         default=900,
         description="Maximum characters retained in the hybrid conversation rolling summary",
@@ -133,26 +120,6 @@ class Settings(BaseSettings):
         default=8,
         description="Summarize hybrid conversation memory after this many learner turns",
     )
-    conversation_relevance_on_topic_threshold: float = Field(
-        default=0.28,
-        description="Rule-based relevance score required to treat a user turn as on-topic",
-    )
-    conversation_relevance_partial_threshold: float = Field(
-        default=0.12,
-        description="Rule-based relevance score required to treat a user turn as partially on-topic",
-    )
-    conversation_enable_llm_fact_extraction: bool = Field(
-        default=True,
-        description="Run LLM-based analysis and learner info collection before dialogue replies",
-    )
-    conversation_enable_llm_relevance_analysis: bool = Field(
-        default=True,
-        description="Use LLM-based relevance analysis before dialogue replies",
-    )
-    conversation_repair_max_repeats: int = Field(
-        default=2,
-        description="Maximum repeated repair attempts before narrowing the prompt more aggressively",
-    )
     conversation_final_evaluation_timeout_seconds: float = Field(
         default=60.0,
         description="Best-effort timeout for final session evaluation LLM calls",
@@ -160,34 +127,38 @@ class Settings(BaseSettings):
 
     # --- ASR Configuration ---
     asr_language: str = Field(default="en", description="ASR language code")
-    deepgram_asr_model: str = Field(default="flux-general-en", description="Deepgram Flux ASR model")
+    deepgram_asr_model: str = Field(default="nova-3", description="Deepgram Nova ASR model")
     deepgram_ws_url: str = Field(
-        default="wss://api.deepgram.com/v2/listen",
-        description="Deepgram Flux realtime speech-to-text WebSocket URL",
-    )
-    deepgram_eot_threshold: float = Field(
-        default=0.7,
-        description="Deepgram Flux end-of-turn confidence threshold",
-    )
-    deepgram_eot_timeout_ms: int = Field(
-        default=1200,
-        description="Deepgram Flux silence timeout before end-of-turn",
+        default="wss://api.deepgram.com/v1/listen",
+        description="Deepgram realtime speech-to-text WebSocket URL",
     )
     deepgram_endpointing_ms: int = Field(
-        default=700,
-        description="Deepgram endpointing pause threshold in milliseconds",
+        default=400,
+        description="Deepgram silence duration before endpointing",
     )
     deepgram_utterance_end_ms: int = Field(
-        default=1600,
-        description="Deepgram utterance end threshold in milliseconds",
+        default=1000,
+        description="Deepgram gap duration before UtteranceEnd when interim results are enabled",
+    )
+    deepgram_interim_results: bool = Field(
+        default=False,
+        description="Enable Deepgram interim transcript events",
+    )
+    deepgram_smart_format: bool = Field(
+        default=True,
+        description="Enable Deepgram smart formatting",
     )
     deepgram_keepalive_seconds: float = Field(
         default=3.0,
         description="Deepgram websocket keepalive interval while streaming",
     )
-    asr_finalization_grace_ms: int = Field(
-        default=1200,
-        description="Delay after ASR speech-end/final events before closing the turn, so trailing audio can arrive",
+    deepgram_log_payloads: bool = Field(
+        default=False,
+        description="Write Deepgram response payloads to a dedicated ASR log file",
+    )
+    deepgram_log_file: str = Field(
+        default="logs/deepgram_asr.log",
+        description="File path for Deepgram response payload logs",
     )
     asr_min_audio_ms: int = Field(
         default=200,
@@ -204,8 +175,8 @@ class Settings(BaseSettings):
 
     # --- TTS Configuration ---
     tts_model: str = Field(
-        default="qwen3-tts-instruct-flash-realtime-2026-01-22",
-        description="DashScope Qwen instruct TTS model",
+        default="qwen3-tts-flash",
+        description="DashScope Qwen TTS model",
     )
     tts_voice: str = Field(default="myvoice", description="DashScope Qwen TTS voice ID")
     tts_language: str = Field(default="en", description="TTS language")
@@ -223,15 +194,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(description="Allowed browser origins")
 
     @property
-    def dashscope_ws_url(self) -> str:
-        """WebSocket URL for DashScope realtime services."""
-        if self.dashscope_region == "cn":
-            return "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
-        return "wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime"
-
-    @property
     def llm_api_key(self) -> str | None:
-        """Get the API key for the OpenAI-compatible LLM gateway."""
+        """Get the API key for OpenAI Responses API."""
         return self.openai_api_key
 
     model_config = {

@@ -11,6 +11,7 @@ import asyncio
 import logging
 import math
 import time
+import uuid
 from collections.abc import Mapping
 from typing import Any, AsyncIterator, Awaitable, Callable, Optional
 
@@ -62,9 +63,11 @@ class ConversationSession:
         self._on_error: Optional[Callable] = None
         self._on_no_input: Optional[Callable[[str, dict], Awaitable[None]]] = None
         self._on_user_message: Optional[Callable[[str], Awaitable[dict[str, Any] | None]]] = None
+        self._on_user_message_saved: Optional[Callable[[dict[str, Any]], Awaitable[None]]] = None
         self._on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None
         self._on_generate_reply: Optional[Callable[[str], Awaitable[str]]] = None
         self._on_generate_reply_stream: Optional[Callable[[str], AsyncIterator[str]]] = None
+        self._on_recording_finalizing: Optional[Callable[[str], Awaitable[None]]] = None
         self._system_prompt: Optional[str] = None
         self._language = config.asr_language
         self._voice = config.tts_voice
@@ -73,8 +76,8 @@ class ConversationSession:
         self._current_response_text = ""
         self._latest_partial_transcript = ""
         self._final_transcript_text = ""
-        self._asr_finalize_task: Optional[asyncio.Task] = None
         self._turn_finalized = False
+        self._is_finalizing_recording = False
         self._turn_timing: dict[str, float] = {}
         self._audio_chunk_count = 0
         self._audio_sample_count = 0
@@ -93,9 +96,11 @@ class ConversationSession:
         tts_instructions: Optional[str] = None,
         on_no_input: Optional[Callable[[str, dict], Awaitable[None]]] = None,
         on_user_message: Optional[Callable[[str], Awaitable[dict[str, Any] | None]]] = None,
+        on_user_message_saved: Optional[Callable[[dict[str, Any]], Awaitable[None]]] = None,
         on_assistant_message: Optional[Callable[[str], Awaitable[None]]] = None,
         on_generate_reply: Optional[Callable[[str], Awaitable[str]]] = None,
         on_generate_reply_stream: Optional[Callable[[str], AsyncIterator[str]]] = None,
+        on_recording_finalizing: Optional[Callable[[str], Awaitable[None]]] = None,
         llm_provider: Optional[LLMBase] = None,
     ):
         """Initialize services and set up callbacks."""
@@ -106,9 +111,11 @@ class ConversationSession:
         self._on_no_input = on_no_input
         self._system_prompt = system_prompt
         self._on_user_message = on_user_message
+        self._on_user_message_saved = on_user_message_saved
         self._on_assistant_message = on_assistant_message
         self._on_generate_reply = on_generate_reply
         self._on_generate_reply_stream = on_generate_reply_stream
+        self._on_recording_finalizing = on_recording_finalizing
         if language:
             self._language = language
         if voice:
@@ -152,9 +159,9 @@ class ConversationSession:
             self._latest_partial_transcript = ""
             self._final_transcript_text = ""
             self._turn_finalized = False
+            self._is_finalizing_recording = False
             self._turn_timing = {}
             self._reset_audio_metrics()
-            await self._cancel_asr_finalize_task()
             await self._asr.start_session(language=self._language)
             self._is_recording = True
 
@@ -169,7 +176,7 @@ class ConversationSession:
 
     async def feed_audio(self, audio_chunk: bytes) -> None:
         """Feed audio data to ASR."""
-        if not self._is_recording or not self._asr:
+        if not self._is_recording or self._is_finalizing_recording or not self._asr:
             return
 
         try:
@@ -183,7 +190,7 @@ class ConversationSession:
         if not self._is_recording:
             return
 
-        await self._finalize_recording_turn()
+        await self._finalize_recording_turn("client_stop")
 
     async def cancel_recording(self) -> None:
         """Stop active recording without emitting a transcript or assistant reply."""
@@ -191,8 +198,8 @@ class ConversationSession:
             return
 
         self._turn_finalized = True
+        self._is_finalizing_recording = False
         self._is_recording = False
-        await self._cancel_asr_finalize_task()
         await self._cancel_asr_poll_task()
         await self._stop_asr_session()
 
@@ -258,11 +265,11 @@ class ConversationSession:
                             self._latest_partial_transcript = event.text.strip()
 
                         if event.type == TranscriptType.SPEECH_END:
-                            self._schedule_asr_finalization("speech_end")
+                            await self._finalize_recording_turn("speech_end")
+                            return
 
                         if event.type == TranscriptType.FINAL and event.text.strip():
                             self._remember_final_transcript(event.text)
-                            self._schedule_asr_finalization("final_transcript")
 
                 await asyncio.sleep(0.03)
         except asyncio.CancelledError:
@@ -303,30 +310,6 @@ class ConversationSession:
             return partial_text
         return final_text or partial_text
 
-    def _schedule_asr_finalization(self, reason: str) -> None:
-        """Finalize shortly after ASR says the utterance is done.
-
-        The delay is intentional: browser audio callbacks and provider events can
-        arrive slightly out of order, and closing immediately can drop the last
-        syllables of the user's turn.
-        """
-        if self._turn_finalized:
-            return
-
-        if self._asr_finalize_task and not self._asr_finalize_task.done():
-            self._asr_finalize_task.cancel()
-
-        self._asr_finalize_task = asyncio.create_task(self._finalize_after_grace(reason))
-
-    async def _finalize_after_grace(self, reason: str) -> None:
-        delay = max(0, self._config.asr_finalization_grace_ms) / 1000
-        try:
-            await asyncio.sleep(delay)
-            logger.info("Finalizing ASR turn after %sms grace period (%s)", int(delay * 1000), reason)
-            await self._finalize_recording_turn()
-        except asyncio.CancelledError:
-            pass
-
     async def _cancel_asr_poll_task(self) -> None:
         if not self._asr_poll_task:
             return
@@ -344,37 +327,25 @@ class ConversationSession:
             if task is self._asr_poll_task:
                 self._asr_poll_task = None
 
-    async def _cancel_asr_finalize_task(self) -> None:
-        if not self._asr_finalize_task:
-            return
-
-        task = self._asr_finalize_task
-        if task is asyncio.current_task():
-            return
-
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
-        finally:
-            if task is self._asr_finalize_task:
-                self._asr_finalize_task = None
-
-    async def _finalize_recording_turn(self) -> None:
+    async def _finalize_recording_turn(self, reason: str = "client_stop") -> None:
         """Stop ASR once, choose the best transcript, and complete the turn."""
-        if self._turn_finalized:
+        if self._turn_finalized or self._is_finalizing_recording:
             return
 
         self._turn_finalized = True
+        self._is_finalizing_recording = True
         self._is_recording = False
         self._mark_turn_phase("user_stop")
+        if reason != "client_stop" and self._on_recording_finalizing:
+            await self._on_recording_finalizing(reason)
 
-        await self._cancel_asr_finalize_task()
         await self._cancel_asr_poll_task()
 
-        final_event = await self._stop_asr_session()
-        await self._handle_completed_turn(self._select_turn_transcript(final_event))
+        try:
+            final_event = await self._stop_asr_session()
+            await self._handle_completed_turn(self._select_turn_transcript(final_event))
+        finally:
+            self._is_finalizing_recording = False
 
     async def _stop_asr_session(self) -> Optional[TranscriptEvent]:
         """Stop the active ASR session and return the last queued transcript event."""
@@ -401,14 +372,14 @@ class ConversationSession:
         self._mark_turn_phase("asr_final_ready")
 
         self._messages.append(Message(role="user", content=text))
-        transcript_metadata: dict[str, Any] = {}
+        turn_id = uuid.uuid4().hex
+        if self._on_transcript:
+            await self._on_transcript(text, TranscriptType.FINAL.value, {"turn_id": turn_id})
+
         if self._on_user_message:
             persisted_payload = await self._on_user_message(text)
-            if isinstance(persisted_payload, Mapping):
-                transcript_metadata = dict(persisted_payload)
-
-        if self._on_transcript:
-            await self._on_transcript(text, TranscriptType.FINAL.value, transcript_metadata or None)
+            if isinstance(persisted_payload, Mapping) and self._on_user_message_saved:
+                await self._on_user_message_saved({"turn_id": turn_id, **dict(persisted_payload)})
 
         # Run LLM → TTS pipeline in the background so the websocket
         # can still accept interrupt messages while the assistant speaks.
@@ -802,8 +773,6 @@ class ConversationSession:
     async def close(self) -> None:
         """Clean up all resources."""
         self._is_recording = False
-
-        await self._cancel_asr_finalize_task()
 
         if self._asr_poll_task:
             self._asr_poll_task.cancel()

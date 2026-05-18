@@ -1,169 +1,125 @@
 import base64
+from http import HTTPStatus
+from types import SimpleNamespace
 
 import pytest
 
 from app.core.config import Settings
 from app.infra.contracts import TTSConfig
 from app.infra.tts import dashscope_tts as dashscope_tts_module
-from app.infra.tts.dashscope_tts import _SafeQwenTtsRealtime
-
-
-class CapturingCallback:
-    def __init__(self):
-        self.closed = []
-        self.events = []
-
-    def on_open(self):
-        return None
-
-    def on_close(self, close_status_code, close_msg):
-        self.closed.append((close_status_code, close_msg))
-
-    def on_event(self, message):
-        self.events.append(message)
-
-
-class FakeRealtimeClient:
-    instances = []
-
-    def __init__(self, model, callback, url, **kwargs):
-        self.model = model
-        self.callback = callback
-        self.url = url
-        self.kwargs = kwargs
-        self.calls = []
-        self.last_message = {"type": "session.created"}
-        self.last_response_id = "resp_test"
-        FakeRealtimeClient.instances.append(self)
-
-    def connect(self):
-        self.calls.append(("connect",))
-
-    def update_session(self, **kwargs):
-        self.calls.append(("update_session", kwargs))
-
-    def append_text(self, text):
-        self.calls.append(("append_text", text))
-
-    def commit(self):
-        self.calls.append(("commit",))
-        payload = base64.b64encode(b"pcm-bytes").decode("ascii")
-        self.callback.on_event({"type": "response.audio.delta", "delta": payload})
-        self.callback.on_event({"type": "response.done"})
-
-    def finish(self):
-        self.calls.append(("finish",))
-        self.callback.on_event({"type": "session.finished"})
-
-    def close(self):
-        self.calls.append(("close",))
-
-    def get_last_message(self):
-        return self.last_message
-
-    def get_last_response_id(self):
-        return self.last_response_id
 
 
 @pytest.mark.asyncio
-async def test_dashscope_tts_commits_and_yields_audio(monkeypatch):
-    FakeRealtimeClient.instances.clear()
-    monkeypatch.setattr(dashscope_tts_module, "_SafeQwenTtsRealtime", FakeRealtimeClient)
+async def test_dashscope_tts_streams_decoded_audio(monkeypatch):
+    calls = []
+
+    def fake_call(**kwargs):
+        calls.append(kwargs)
+        audio = base64.b64encode(b"pcm-bytes").decode("ascii")
+        return iter(
+            [
+                SimpleNamespace(
+                    status_code=HTTPStatus.OK,
+                    output={"audio": {"data": audio}},
+                    code=None,
+                    message=None,
+                    request_id="req_test",
+                )
+            ]
+        )
 
     async def run_inline(_self, function, *args):
         return function(*args)
 
+    monkeypatch.setattr(dashscope_tts_module.MultiModalConversation, "call", fake_call)
     monkeypatch.setattr(dashscope_tts_module.DashScopeTTS, "_run_blocking", run_inline)
 
-    tts = dashscope_tts_module.DashScopeTTS(Settings())
+    tts = dashscope_tts_module.DashScopeTTS(Settings(tts_model="qwen3-tts-flash"))
 
     async def text_stream():
-        yield "Hello there."
+        yield "Hello "
+        yield "there."
 
     chunks = []
     async for chunk in tts.synthesize_stream(
         text_stream(),
         config=TTSConfig(
-            voice="myvoice",
+            voice="Cherry",
             language="en",
-            instructions="Speak in a natural, friendly English tutor voice with clear pronunciation.",
+            instructions="Ignored for non-realtime TTS.",
         ),
     ):
         chunks.append(chunk)
 
     assert chunks == [b"pcm-bytes"]
-    client = FakeRealtimeClient.instances[0]
-    assert client.model == "qwen3-tts-instruct-flash-realtime-2026-01-22"
-    assert (
-        "update_session",
+    assert calls == [
         {
-            "voice": "myvoice",
-            "response_format": dashscope_tts_module.AudioFormat.PCM_24000HZ_MONO_16BIT,
-            "mode": "commit",
-            "language_type": "en",
-            "instructions": "Speak in a natural, friendly English tutor voice with clear pronunciation.",
-            "enable_instructions_optimization": True,
-        },
-    ) in client.calls
-    assert ("connect",) in client.calls
-    assert ("commit",) in client.calls
-    assert ("finish",) not in client.calls
-    assert ("close",) in client.calls
+            "model": "qwen3-tts-flash",
+            "text": "Hello there.",
+            "voice": "Cherry",
+            "stream": True,
+            "result_format": "pcm",
+            "sample_rate": 24000,
+            "language_type": "English",
+        }
+    ]
 
 
 @pytest.mark.asyncio
-async def test_dashscope_tts_uses_configured_model(monkeypatch):
-    FakeRealtimeClient.instances.clear()
-    monkeypatch.setattr(dashscope_tts_module, "_SafeQwenTtsRealtime", FakeRealtimeClient)
+async def test_dashscope_tts_logs_api_errors_without_audio(monkeypatch, caplog):
+    def fake_call(**kwargs):
+        return iter(
+            [
+                SimpleNamespace(
+                    status_code=400,
+                    output=None,
+                    code="InvalidParameter",
+                    message="bad voice",
+                    request_id="req_bad",
+                )
+            ]
+        )
 
     async def run_inline(_self, function, *args):
         return function(*args)
 
+    monkeypatch.setattr(dashscope_tts_module.MultiModalConversation, "call", fake_call)
     monkeypatch.setattr(dashscope_tts_module.DashScopeTTS, "_run_blocking", run_inline)
 
-    tts = dashscope_tts_module.DashScopeTTS(
-        Settings(tts_model="qwen3-tts-vc-realtime-2025-12-01")
-    )
+    tts = dashscope_tts_module.DashScopeTTS(Settings(tts_model="qwen3-tts-flash"))
 
     async def text_stream():
         yield "Hello there."
 
     chunks = []
-    async for chunk in tts.synthesize_stream(text_stream(), config=TTSConfig(voice="myvoice", language="en")):
+    with caplog.at_level("ERROR"):
+        async for chunk in tts.synthesize_stream(text_stream(), config=TTSConfig(voice="Cherry", language="en")):
+            chunks.append(chunk)
+
+    assert chunks == []
+    assert "DashScope TTS error" in caplog.text
+    assert "InvalidParameter" in caplog.text
+    assert "req_bad" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_dashscope_tts_empty_text_skips_api_call(monkeypatch):
+    called = False
+
+    def fake_call(**kwargs):
+        nonlocal called
+        called = True
+        return iter([])
+
+    monkeypatch.setattr(dashscope_tts_module.MultiModalConversation, "call", fake_call)
+    tts = dashscope_tts_module.DashScopeTTS(Settings(tts_model="qwen3-tts-flash"))
+
+    async def text_stream():
+        yield "   "
+
+    chunks = []
+    async for chunk in tts.synthesize_stream(text_stream(), config=TTSConfig()):
         chunks.append(chunk)
 
-    assert chunks == [b"pcm-bytes"]
-    assert FakeRealtimeClient.instances[0].model == "qwen3-tts-vc-realtime-2025-12-01"
-
-
-def test_dashscope_tts_invalid_close_frame_is_treated_as_close():
-    callback = CapturingCallback()
-    client = _SafeQwenTtsRealtime(
-        model="qwen3-tts-flash-realtime",
-        callback=callback,
-        url="wss://example.invalid/realtime",
-    )
-
-    client.on_error(None, Exception("Invalid close frame."))
-
-    assert callback.closed == [(None, "Invalid close frame.")]
-    assert callback.events == []
-
-
-def test_dashscope_tts_websocket_error_is_reported_as_error_event():
-    callback = CapturingCallback()
-    client = _SafeQwenTtsRealtime(
-        model="qwen3-tts-flash-realtime",
-        callback=callback,
-        url="wss://example.invalid/realtime",
-    )
-
-    client.on_error(None, Exception("network down"))
-
-    assert callback.closed == []
-    assert callback.events == [
-        {
-            "type": "error",
-            "error": {"message": "network down"},
-        }
-    ]
+    assert chunks == []
+    assert called is False

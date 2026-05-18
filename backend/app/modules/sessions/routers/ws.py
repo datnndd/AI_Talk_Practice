@@ -209,6 +209,19 @@ async def websocket_conversation(websocket: WebSocket):
             }
         )
 
+    async def on_user_message_saved(metadata: dict):
+        trace(
+            "user_message_saved",
+            turn_id=metadata.get("turn_id"),
+            message_id=metadata.get("message_id"),
+            order_index=metadata.get("order_index"),
+        )
+        await send_json_safe({"type": "user_message_saved", **metadata})
+
+    async def on_recording_finalizing(reason: str):
+        trace("recording_finalizing", reason=reason)
+        await send_json_safe({"type": "recording_finalizing", "reason": reason})
+
     async def upload_audio_chunks(chunks: list[bytes], *, folder: str, sample_rate: int) -> str | None:
         if not chunks or not supabase_storage.is_configured or session_id is None:
             return None
@@ -587,8 +600,10 @@ async def websocket_conversation(websocket: WebSocket):
                         tts_instructions=tts_instructions,
                         on_no_input=on_no_input,
                         on_user_message=on_user_message_persist,
+                        on_user_message_saved=on_user_message_saved,
                         on_assistant_message=on_assistant_message_persist,
                         on_generate_reply_stream=generate_reply_stream,
+                        on_recording_finalizing=on_recording_finalizing,
                     )
                     max_duration_seconds = (session.scenario.time_limit_minutes or 0) * 60
                     remaining_seconds = _remaining_session_seconds(session.started_at, max_duration_seconds)
