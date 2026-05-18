@@ -1,33 +1,19 @@
 import { httpClient } from "@/shared/api/httpClient";
 
+const paymentPath = (path) => `/admin/payments${path}`;
+const transactionPath = (paymentId, suffix = "") => paymentPath(`/transactions/${paymentId}${suffix}`);
+const requestData = async (request) => {
+  const { data } = await request;
+  return data;
+};
+
 export const adminPaymentsApi = {
-  getOverview: async () => {
-    const { data } = await httpClient.get("/admin/payments/overview");
-    return data;
-  },
-  listPlans: async () => {
-    const { data } = await httpClient.get("/admin/payments/plans");
-    return data;
-  },
-  updatePlan: async (code, payload) => {
-    const { data } = await httpClient.put(`/admin/payments/plans/${code}`, payload);
-    return data;
-  },
-  listTransactions: async (params = {}) => {
-    const { data } = await httpClient.get("/admin/payments/transactions", { params });
-    return data;
-  },
-  getTransaction: async (paymentId) => {
-    const { data } = await httpClient.get(`/admin/payments/transactions/${paymentId}`);
-    return data;
-  },
-  approveTransaction: async (paymentId, payload = {}) => {
-    const { data } = await httpClient.post(`/admin/payments/transactions/${paymentId}/approve`, payload);
-    return data;
-  },
-  cancelTransaction: async (paymentId, payload = {}) => {
-    const { data } = await httpClient.post(`/admin/payments/transactions/${paymentId}/cancel`, payload);
-    return data;
-  },
+  getOverview: () => requestData(httpClient.get(paymentPath("/overview"))),
+  listPlans: () => requestData(httpClient.get(paymentPath("/plans"))),
+  updatePlan: (code, payload) => requestData(httpClient.put(paymentPath(`/plans/${code}`), payload)),
+  listTransactions: (params = {}) => requestData(httpClient.get(paymentPath("/transactions"), { params })),
+  getTransaction: (paymentId) => requestData(httpClient.get(transactionPath(paymentId))),
+  approveTransaction: (paymentId, payload = {}) => requestData(httpClient.post(transactionPath(paymentId, "/approve"), payload)),
+  cancelTransaction: (paymentId, payload = {}) => requestData(httpClient.post(transactionPath(paymentId, "/cancel"), payload)),
 };
 

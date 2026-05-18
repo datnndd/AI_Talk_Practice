@@ -16,7 +16,7 @@ import {
 
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { adminUsersApi } from "@/features/admin-users/api/adminUsersApi";
-import AdminShell from "@/features/admin-scenarios/components/AdminShell";
+import AdminShell from "@/shared/components/admin/AdminShell";
 
 const DEFAULT_FILTERS = {
   search: "",

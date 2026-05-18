@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowClockwise, CheckCircle, CreditCard, Gift, GraduationCap, MagnifyingGlass, ProhibitInset, Robot, SquaresFour, UserList } from "@phosphor-icons/react";
+import { ArrowClockwise, CheckCircle, MagnifyingGlass, ProhibitInset } from "@phosphor-icons/react";
 
-import AdminShell from "@/features/admin-scenarios/components/AdminShell";
+import AdminShell from "@/shared/components/admin/AdminShell";
 import { adminPaymentsApi } from "@/features/admin-payments/api/adminPaymentsApi";
 
 const DEFAULT_FILTERS = {
@@ -28,6 +28,53 @@ const formatDateTime = (value) => {
     minute: "2-digit",
   });
 };
+
+const getApiErrorMessage = (error, fallback) => error?.response?.data?.detail || fallback;
+
+const StatusPill = ({ status }) => {
+  const tone =
+    status === "paid"
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+      : status === "pending"
+        ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+        : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
+
+  return (
+    <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${tone}`}>
+      {status}
+    </span>
+  );
+};
+
+const FeedbackMessage = ({ error, notice }) => {
+  if (!error && !notice) return null;
+
+  return (
+    <div
+      className={`rounded-[26px] px-5 py-4 text-sm font-semibold ${
+        error
+          ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+          : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+      }`}
+    >
+      {error || notice}
+    </div>
+  );
+};
+
+const SummaryCard = ({ label, value }) => (
+  <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">{label}</p>
+    <p className="mt-3 font-display text-4xl font-black tracking-tight">{value}</p>
+  </div>
+);
+
+const DetailCard = ({ label, children }) => (
+  <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
+    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">{label}</p>
+    {children}
+  </div>
+);
 
 const AdminPaymentsPage = () => {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -71,7 +118,7 @@ const AdminPaymentsPage = () => {
         return data.items[0]?.id || null;
       });
     } catch (listError) {
-      setError(listError?.response?.data?.detail || "Failed to load transactions.");
+      setError(getApiErrorMessage(listError, "Failed to load transactions."));
     } finally {
       setIsLoadingList(false);
     }
@@ -92,7 +139,7 @@ const AdminPaymentsPage = () => {
       const data = await adminPaymentsApi.getTransaction(paymentId);
       setSelectedTransaction(data);
     } catch (detailError) {
-      setError(detailError?.response?.data?.detail || "Failed to load transaction detail.");
+      setError(getApiErrorMessage(detailError, "Failed to load transaction detail."));
     } finally {
       setIsLoadingDetail(false);
     }
@@ -127,7 +174,7 @@ const AdminPaymentsPage = () => {
       await loadTransactions();
       await loadTransactionDetail(selectedTransactionId);
     } catch (actionError) {
-      setError(actionError?.response?.data?.detail || "Failed to approve transaction.");
+      setError(getApiErrorMessage(actionError, "Failed to approve transaction."));
     } finally {
       setIsProcessingAction(false);
     }
@@ -145,7 +192,7 @@ const AdminPaymentsPage = () => {
       await loadTransactions();
       await loadTransactionDetail(selectedTransactionId);
     } catch (actionError) {
-      setError(actionError?.response?.data?.detail || "Failed to cancel transaction.");
+      setError(getApiErrorMessage(actionError, "Failed to cancel transaction."));
     } finally {
       setIsProcessingAction(false);
     }
@@ -167,7 +214,7 @@ const AdminPaymentsPage = () => {
       setNotice("Subscription plan saved.");
       await loadBillingSettings();
     } catch (saveError) {
-      setError(saveError?.response?.data?.detail || "Failed to save plan.");
+      setError(getApiErrorMessage(saveError, "Failed to save plan."));
     }
   };
   const totalPages = Math.max(1, Math.ceil(total / filters.page_size));
@@ -178,27 +225,10 @@ const AdminPaymentsPage = () => {
       subtitle="Monitor Stripe transactions, inspect payment state, and handle manual admin approval or cancellation when support workflows require intervention."
     >
       <div className="space-y-6">
-        {(notice || error) && (
-          <div
-            className={`rounded-[26px] px-5 py-4 text-sm font-semibold ${
-              error
-                ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
-                : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-            }`}
-          >
-            {error || notice}
-          </div>
-        )}
+        <FeedbackMessage error={error} notice={notice} />
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {summaryCards.map((card) => (
-            <div key={card.label} className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
-                {card.label}
-              </p>
-              <p className="mt-3 font-display text-4xl font-black tracking-tight">{card.value}</p>
-            </div>
-          ))}
+          {summaryCards.map((card) => <SummaryCard key={card.label} label={card.label} value={card.value} />)}
         </div>
 
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -296,17 +326,7 @@ const AdminPaymentsPage = () => {
                     }`}
                   >
                     <div className="flex items-center">
-                      <span
-                        className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
-                          transaction.status === "paid"
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-                            : transaction.status === "pending"
-                              ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
-                              : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                        }`}
-                      >
-                        {transaction.status}
-                      </span>
+                      <StatusPill status={transaction.status} />
                     </div>
                     <div className="flex items-center uppercase text-zinc-600 dark:text-zinc-300">{transaction.provider}</div>
                     <div className="flex items-center text-zinc-600 dark:text-zinc-300">
@@ -361,42 +381,36 @@ const AdminPaymentsPage = () => {
               )}
               {!isLoadingDetail && selectedTransaction && (
                 <div className="mt-4 space-y-4">
-                  <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Order</p>
+                  <DetailCard label="Order">
                     <p className="mt-2 font-mono text-sm font-semibold">{selectedTransaction.order_code}</p>
-                  </div>
+                  </DetailCard>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Customer</p>
+                    <DetailCard label="Customer">
                       <p className="mt-2 text-sm font-semibold">{selectedTransaction.user_display_name || "No display name"}</p>
                       <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{selectedTransaction.user_email}</p>
-                    </div>
-                    <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Payment</p>
+                    </DetailCard>
+                    <DetailCard label="Payment">
                       <p className="mt-2 text-sm font-semibold">{formatCurrency(selectedTransaction.amount, selectedTransaction.currency)}</p>
                       <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{selectedTransaction.provider.toUpperCase()}</p>
-                    </div>
+                    </DetailCard>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Status</p>
+                    <DetailCard label="Status">
                       <p className="mt-2 text-sm font-semibold">{selectedTransaction.status}</p>
                       <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{formatDateTime(selectedTransaction.paid_at)}</p>
-                    </div>
-                    <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Subscription expiry</p>
+                    </DetailCard>
+                    <DetailCard label="Subscription expiry">
                       <p className="mt-2 text-sm font-semibold">{formatDateTime(selectedTransaction.expires_at)}</p>
-                    </div>
+                    </DetailCard>
                   </div>
-                  <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Gateway references</p>
+                  <DetailCard label="Gateway references">
                     <p className="mt-2 break-all text-xs text-zinc-600 dark:text-zinc-300">
                       Checkout: {selectedTransaction.external_checkout_id || "N/A"}
                     </p>
                     <p className="mt-1 break-all text-xs text-zinc-600 dark:text-zinc-300">
                       Transaction: {selectedTransaction.external_transaction_id || "N/A"}
                     </p>
-                  </div>
+                  </DetailCard>
                   {selectedTransaction.failure_reason && (
                     <div className="rounded-[24px] border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
                       {selectedTransaction.failure_reason}

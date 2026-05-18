@@ -102,32 +102,30 @@ async def test_admin_gamification_overview_counts_daily_metrics(
 @pytest.mark.asyncio
 async def test_admin_shop_products_and_redemption_status_refund(admin_client, db_session, test_user):
     created = await admin_client.post(
-        "/api/admin/gamification/shop/products",
-        json={
+        "/api/admin/gamification/shop/products/with-image",
+        data={
             "code": "shirt",
             "name": "Áo AI Talk",
             "description": "Áo thun",
-            "price_coin": 100,
-            "image_url": None,
-            "stock_quantity": 5,
-            "is_active": True,
-            "sort_order": 2,
+            "price_coin": "100",
+            "stock_quantity": "5",
+            "is_active": "true",
+            "sort_order": "2",
         },
     )
     assert created.status_code == 201
     product_id = created.json()["id"]
 
     updated = await admin_client.put(
-        f"/api/admin/gamification/shop/products/{product_id}",
-        json={
+        f"/api/admin/gamification/shop/products/{product_id}/with-image",
+        data={
             "code": "shirt",
             "name": "Áo AI Talk Pro",
             "description": "Áo thun",
-            "price_coin": 120,
-            "image_url": None,
-            "stock_quantity": 4,
-            "is_active": True,
-            "sort_order": 1,
+            "price_coin": "120",
+            "stock_quantity": "4",
+            "is_active": "true",
+            "sort_order": "1",
         },
     )
     assert updated.status_code == 200

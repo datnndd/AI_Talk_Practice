@@ -8,7 +8,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 
-import AdminShell from "@/features/admin-scenarios/components/AdminShell";
+import AdminShell from "@/shared/components/admin/AdminShell";
 import ScenarioEditorModal from "@/features/admin-scenarios/components/ScenarioEditorModal";
 import { adminCharactersApi } from "@/features/admin-characters/api/adminCharactersApi";
 import { adminApi } from "@/features/admin-scenarios/api/adminScenariosApi";
@@ -43,6 +43,49 @@ const StatusBadge = ({ children, tone = "zinc" }) => {
     </span>
   );
 };
+
+const ScenarioStatus = ({ scenario }) => (
+  <>
+    <StatusBadge tone={scenario.is_active ? "emerald" : "zinc"}>
+      {scenario.is_active ? "Active" : "Inactive"}
+    </StatusBadge>
+    {scenario.deleted_at && <StatusBadge tone="rose">Deleted</StatusBadge>}
+  </>
+);
+
+const FeedbackMessage = ({ error, notice }) => {
+  if (!error && !notice) return null;
+
+  return (
+    <div
+      className={`rounded-[26px] px-5 py-4 text-sm font-semibold ${
+        error
+          ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+          : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+      }`}
+    >
+      {error || notice}
+    </div>
+  );
+};
+
+const DetailField = ({ label, value }) => (
+  <div className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-950">
+    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{label}</p>
+    <p className="mt-1 truncate text-sm font-semibold">{value || "Not set"}</p>
+  </div>
+);
+
+const PaginationButton = ({ children, disabled, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+  >
+    {children}
+  </button>
+);
 
 const AdminScenarios = () => {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -193,17 +236,7 @@ const AdminScenarios = () => {
       subtitle="Manage reusable speaking scenarios with a master-detail workflow and contextual actions."
     >
       <div className="space-y-6">
-        {(notice || error) && (
-          <div
-            className={`rounded-[26px] px-5 py-4 text-sm font-semibold ${
-              error
-                ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
-                : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-            }`}
-          >
-            {error || notice}
-          </div>
-        )}
+        <FeedbackMessage error={error} notice={notice} />
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]" id="scenario-library">
           <div className="min-w-0 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -352,10 +385,7 @@ const AdminScenarios = () => {
                         </button>
                         <div className="flex items-center text-zinc-600 dark:text-zinc-300">{scenario.usage_count}</div>
                         <div className="flex flex-col justify-center gap-1">
-                          <StatusBadge tone={scenario.is_active ? "emerald" : "zinc"}>
-                            {scenario.is_active ? "Active" : "Inactive"}
-                          </StatusBadge>
-                          {scenario.deleted_at && <StatusBadge tone="rose">Deleted</StatusBadge>}
+                          <ScenarioStatus scenario={scenario} />
                         </div>
                       </div>
                     );
@@ -368,22 +398,18 @@ const AdminScenarios = () => {
                 Page {filters.page} of {totalPages}
               </p>
               <div className="flex gap-2">
-                <button
-                  type="button"
+                <PaginationButton
                   onClick={() => updateFilter("page", Math.max(1, filters.page - 1))}
                   disabled={filters.page === 1}
-                  className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
                   Previous
-                </button>
-                <button
-                  type="button"
+                </PaginationButton>
+                <PaginationButton
                   onClick={() => updateFilter("page", Math.min(totalPages, filters.page + 1))}
                   disabled={filters.page >= totalPages}
-                  className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
                   Next
-                </button>
+                </PaginationButton>
               </div>
             </div>
           </div>
@@ -403,10 +429,7 @@ const AdminScenarios = () => {
                     {selectedScenario.description}
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <StatusBadge tone={selectedScenario.is_active ? "emerald" : "zinc"}>
-                      {selectedScenario.is_active ? "Active" : "Inactive"}
-                    </StatusBadge>
-                    {selectedScenario.deleted_at && <StatusBadge tone="rose">Deleted</StatusBadge>}
+                    <ScenarioStatus scenario={selectedScenario} />
                     {selectedScenario.is_pro ? <StatusBadge tone="amber">VIP only</StatusBadge> : <StatusBadge>Free</StatusBadge>}
                   </div>
                 </div>
@@ -418,14 +441,7 @@ const AdminScenarios = () => {
                     ["Character", selectedScenario.character?.name || "Not set"],
                     ["Usage", selectedScenario.usage_count],
                     ["Duration", formatMinutes(selectedScenario.time_limit_minutes)],
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-950">
-                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                        {label}
-                      </p>
-                      <p className="mt-1 truncate text-sm font-semibold">{value || "Not set"}</p>
-                    </div>
-                  ))}
+                  ].map(([label, value]) => <DetailField key={label} label={label} value={value} />)}
                 </div>
 
                 <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">

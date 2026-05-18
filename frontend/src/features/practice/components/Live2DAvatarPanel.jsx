@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { CircleNotch, Robot, WarningCircle } from "@phosphor-icons/react";
-import * as PIXI from "pixi.js";
 
 const STATUS_COPY = {
   idle: "Ready",
@@ -354,7 +353,8 @@ const Live2DAvatarPanel = ({
           throw new Error("Live2D model or Cubism core URL is missing.");
         }
 
-        window.PIXI = PIXI;
+        const pixi = await import("pixi.js");
+        window.PIXI = pixi;
         await loadScriptOnce(effectiveCoreUrl);
         if (!isCurrentSetup()) {
           return;
@@ -368,7 +368,7 @@ const Live2DAvatarPanel = ({
 
         runtimeRef.current = runtime;
 
-        app = new PIXI.Application({
+        app = new pixi.Application({
           antialias: true,
           autoDensity: true,
           backgroundAlpha: 0,

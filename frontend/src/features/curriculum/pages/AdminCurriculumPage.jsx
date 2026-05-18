@@ -10,7 +10,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { adminApi } from "@/features/admin-scenarios/api/adminScenariosApi";
-import AdminShell from "@/features/admin-scenarios/components/AdminShell";
+import AdminShell from "@/shared/components/admin/AdminShell";
 import { adminCurriculumApi } from "@/features/curriculum/api/curriculumApi";
 import { getApiBaseUrl } from "@/shared/api/httpClient";
 

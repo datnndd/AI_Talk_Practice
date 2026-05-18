@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowCounterClockwise, PencilSimple, Plus, Trash, X } from "@phosphor-icons/react";
 
-import AdminShell from "@/features/admin-scenarios/components/AdminShell";
+import AdminShell from "@/shared/components/admin/AdminShell";
 import { adminCharactersApi } from "@/features/admin-characters/api/adminCharactersApi";
 import { getApiErrorMessage } from "@/shared/api/httpClient";
 

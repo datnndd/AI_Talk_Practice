@@ -15,6 +15,15 @@ export const defaultSiteSettings = {
   },
 };
 
+export const normalizeSiteSettings = (settings = {}) => ({
+  ...defaultSiteSettings,
+  ...settings,
+  socialLinks: {
+    ...defaultSiteSettings.socialLinks,
+    ...(settings.socialLinks || {}),
+  },
+});
+
 export const getSiteSettings = () => {
   if (typeof window === "undefined") {
     return defaultSiteSettings;
@@ -27,28 +36,14 @@ export const getSiteSettings = () => {
     }
 
     const parsed = JSON.parse(raw);
-    return {
-      ...defaultSiteSettings,
-      ...parsed,
-      socialLinks: {
-        ...defaultSiteSettings.socialLinks,
-        ...(parsed.socialLinks || {}),
-      },
-    };
+    return normalizeSiteSettings(parsed);
   } catch {
     return defaultSiteSettings;
   }
 };
 
 export const saveSiteSettings = (settings) => {
-  const nextSettings = {
-    ...defaultSiteSettings,
-    ...settings,
-    socialLinks: {
-      ...defaultSiteSettings.socialLinks,
-      ...(settings.socialLinks || {}),
-    },
-  };
+  const nextSettings = normalizeSiteSettings(settings);
 
   window.localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(nextSettings));
   window.dispatchEvent(new CustomEvent("buddy-talk-site-settings", { detail: nextSettings }));

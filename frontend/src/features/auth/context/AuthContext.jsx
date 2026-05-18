@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await httpClient.get("/auth/me");
       setUser(response.data);
-      await refreshGamification().catch(() => null);
+      void refreshGamification().catch(() => null);
       return response.data;
     } catch (error) {
       console.error("Failed to fetch user", error);

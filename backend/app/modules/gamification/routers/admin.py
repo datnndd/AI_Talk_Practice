@@ -110,15 +110,6 @@ async def list_admin_shop_products(
     return await AdminGamificationService.list_shop_products(db)
 
 
-@router.post("/shop/products", response_model=AdminShopProductRead, status_code=201)
-async def create_admin_shop_product(
-    body: AdminShopProductWrite,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    return await AdminGamificationService.create_shop_product(db, body)
-
-
 @router.post("/shop/products/with-image", response_model=AdminShopProductRead, status_code=201)
 async def create_admin_shop_product_with_image(
     code: str = Form(...),
@@ -152,16 +143,6 @@ async def create_admin_shop_product_with_image(
         if image is not None:
             await _delete_shop_product_image_by_url(body.image_url)
         raise
-
-
-@router.put("/shop/products/{product_id}", response_model=AdminShopProductRead)
-async def update_admin_shop_product(
-    product_id: int,
-    body: AdminShopProductWrite,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin_user),
-):
-    return await AdminGamificationService.update_shop_product(db, product_id, body)
 
 
 @router.put("/shop/products/{product_id}/with-image", response_model=AdminShopProductRead)

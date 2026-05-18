@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { ArrowCounterClockwise, FloppyDisk, GlobeHemisphereWest, ImageSquare, LinkSimple } from "@phosphor-icons/react";
 
-import AdminShell from "@/features/admin-scenarios/components/AdminShell";
+import AdminShell from "@/shared/components/admin/AdminShell";
 import SiteFooter from "@/shared/components/SiteFooter";
-import { defaultSiteSettings, getSiteSettings, saveSiteSettings } from "@/shared/config/siteSettings";
+import { defaultSiteSettings, getSiteSettings, normalizeSiteSettings, saveSiteSettings } from "@/shared/config/siteSettings";
 
 const fieldClass = "w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
 
@@ -18,17 +18,7 @@ const AdminSiteSettingsPage = () => {
   const [settings, setSettings] = useState(getSiteSettings);
   const [savedMessage, setSavedMessage] = useState("");
 
-  const previewSettings = useMemo(
-    () => ({
-      ...defaultSiteSettings,
-      ...settings,
-      socialLinks: {
-        ...defaultSiteSettings.socialLinks,
-        ...(settings.socialLinks || {}),
-      },
-    }),
-    [settings],
-  );
+  const previewSettings = useMemo(() => normalizeSiteSettings(settings), [settings]);
 
   const updateField = (key, value) => {
     setSavedMessage("");
@@ -147,9 +137,9 @@ const AdminSiteSettingsPage = () => {
         <section className="rounded-[28px] border border-border bg-card p-4 shadow-sm">
           <div className="px-2 pb-3">
             <h2 className="text-xl font-black">Preview footer</h2>
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Bấm lưu để preview dùng cấu hình mới.</p>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Preview cập nhật theo form hiện tại.</p>
           </div>
-          <SiteFooter className="bg-transparent p-0 md:p-0" />
+          <SiteFooter className="bg-transparent p-0 md:p-0" settings={previewSettings} />
         </section>
       </form>
     </AdminShell>

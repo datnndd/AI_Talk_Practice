@@ -23,14 +23,6 @@ export const adminShopApi = {
     const { data } = await httpClient.get("/admin/gamification/shop/products");
     return data;
   },
-  createProduct: async (payload) => {
-    const { data } = await httpClient.post("/admin/gamification/shop/products", payload);
-    return data;
-  },
-  updateProduct: async (productId, payload) => {
-    const { data } = await httpClient.put(`/admin/gamification/shop/products/${productId}`, payload);
-    return data;
-  },
   hideProduct: async (productId) => {
     const { data } = await httpClient.delete(`/admin/gamification/shop/products/${productId}`);
     return data;

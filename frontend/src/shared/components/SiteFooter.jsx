@@ -39,8 +39,9 @@ const legalLinks = [
   { label: "Terms of Service", href: "/terms" },
 ];
 
-const SiteFooter = ({ className = "" }) => {
-  const settings = useSiteSettings();
+const SiteFooter = ({ className = "", settings: settingsOverride }) => {
+  const savedSettings = useSiteSettings();
+  const settings = settingsOverride || savedSettings;
 
   return (
     <div className={`w-full ${className}`}>

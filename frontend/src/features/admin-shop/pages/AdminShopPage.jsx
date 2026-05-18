@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle, CreditCard, Gift, GraduationCap, PencilSimple, Plus, ProhibitInset, Robot, SquaresFour, Trash, UserList } from "@phosphor-icons/react";
+import { CheckCircle, PencilSimple, Plus, ProhibitInset, Trash } from "@phosphor-icons/react";
 
 import { adminShopApi } from "@/features/admin-shop/api/adminShopApi";
-import AdminShell from "@/features/admin-scenarios/components/AdminShell";
+import AdminShell from "@/shared/components/admin/AdminShell";
 
 const EMPTY_PRODUCT = {
   code: "",
@@ -61,9 +61,11 @@ const AdminShopPage = () => {
 
   useEffect(() => {
     if (!selectedProduct) return;
-    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImagePreviewUrl((currentPreviewUrl) => {
+      if (currentPreviewUrl) URL.revokeObjectURL(currentPreviewUrl);
+      return "";
+    });
     setImageFile(null);
-    setImagePreviewUrl("");
     setForm({
       code: selectedProduct.code || "",
       name: selectedProduct.name || "",
