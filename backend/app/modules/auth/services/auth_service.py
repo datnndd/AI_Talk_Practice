@@ -252,5 +252,5 @@ class AuthService:
         user_id = decode_token(token)
         if not user_id or not (user := await UserRepository.get_active_by_id(db, user_id)):
             raise BadRequestError("Invalid or expired verification token")
-        user.is_active = True
+        user.is_email_verified = True
         await db.commit()

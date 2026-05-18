@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 
-import PlaylistSection from "@/features/dashboard/components/PlaylistSection";
+import ScenarioPlaylistSection from "@/features/scenarios/components/ScenarioPlaylistSection";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { canAccessSubscriptionFeatures } from "@/features/auth/utils/subscription";
 import { practiceApi } from "@/features/practice/api/practiceApi";
 
-const Dashboard = () => {
+const ScenariosPage = () => {
   const { user } = useAuth();
   const [scenarios, setScenarios] = useState([]);
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(true);
@@ -57,12 +57,12 @@ const Dashboard = () => {
   return (
     <div className="app-page-wide space-y-10">
       <div id="playlists">
-        <PlaylistSection scenarios={scenarios} isLoading={isLoadingScenarios} error={scenarioError} hasProAccess={hasProAccess} />
+        <ScenarioPlaylistSection scenarios={scenarios} isLoading={isLoadingScenarios} error={scenarioError} hasProAccess={hasProAccess} />
       </div>
     </div>
   );
 };
 
-export default Dashboard;
+export default ScenariosPage;
 
 

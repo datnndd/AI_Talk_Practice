@@ -46,6 +46,66 @@ async def test_admin_can_list_and_filter_users(admin_client, db_session, test_us
 
 
 @pytest.mark.asyncio
+async def test_admin_users_list_paginates_in_database(admin_client, db_session):
+    db_session.add_all(
+        [
+            User(
+                email=f"page-user-{index:02d}@example.com",
+                display_name=f"Page User {index:02d}",
+                preferences={"is_admin": False},
+            )
+            for index in range(15)
+        ]
+    )
+    await db_session.commit()
+
+    response = await admin_client.get(
+        "/api/admin/users",
+        params={"search": "page-user-", "status": "active", "page": 2, "page_size": 5},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 15
+    assert data["page"] == 2
+    assert data["page_size"] == 5
+    assert len(data["items"]) == 5
+
+@pytest.mark.asyncio
+async def test_admin_users_list_filters_admin_role_from_preferences(admin_client, db_session):
+    db_session.add_all(
+        [
+            User(
+                email="role-admin-pref@example.com",
+                display_name="Role Admin Pref",
+                role="user",
+                preferences={"is_admin": True},
+            ),
+            User(
+                email="role-learner-pref@example.com",
+                display_name="Role Learner Pref",
+                role="user",
+                preferences={"is_admin": False},
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    admin_response = await admin_client.get(
+        "/api/admin/users",
+        params={"search": "role-", "role": "admin", "status": "active"},
+    )
+    learner_response = await admin_client.get(
+        "/api/admin/users",
+        params={"search": "role-", "role": "learner", "status": "active"},
+    )
+
+    assert admin_response.status_code == 200
+    assert learner_response.status_code == 200
+    assert [item["email"] for item in admin_response.json()["items"]] == ["role-admin-pref@example.com"]
+    assert [item["email"] for item in learner_response.json()["items"]] == ["role-learner-pref@example.com"]
+
+@pytest.mark.asyncio
 async def test_admin_can_get_and_update_user(admin_client, test_user):
     response = await admin_client.put(
         f"/api/admin/users/{test_user.id}",

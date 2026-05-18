@@ -45,12 +45,12 @@ class AdminUserService:
             db,
             search=search,
             status=status,
+            role=role,
             subscription_tier=subscription_tier,
+            page=page,
+            page_size=page_size,
         )
-        filtered_users = AdminUserService._apply_role_filter(users, role)
-        total = len(filtered_users)
-        offset = (page - 1) * page_size
-        return filtered_users[offset : offset + page_size], total
+        return users
 
     @staticmethod
     async def get_user(db: AsyncSession, user_id: int) -> User:
@@ -201,15 +201,6 @@ class AdminUserService:
         await db.commit()
         logger.info("Restored user id=%s", user.id)
         return await AdminUserService.get_user(db, user.id)
-
-    @staticmethod
-    def _apply_role_filter(users: list[User], role: str | None) -> list[User]:
-        normalized_role = (role or "").strip().lower()
-        if normalized_role == "admin":
-            return [user for user in users if user_is_admin(user)]
-        if normalized_role in {"learner", "member", "user"}:
-            return [user for user in users if not user_is_admin(user)]
-        return users
 
     @staticmethod
     def _set_admin_access(user: User, is_admin: bool) -> None:

@@ -61,7 +61,7 @@ const LessonPlayerPage = () => {
         setLessonQueue(buildLessonQueue(data.lessons));
       }).catch(() => null);
     }
-  }, [loadUnit]);
+  }, [loadUnit, unitId]);
 
   const activeLessonId = lessonQueue[0] || unit?.lessons?.find((item) => item.progress?.status !== "completed")?.id || unit?.lessons?.[0]?.id;
   const activeExercise = useMemo(

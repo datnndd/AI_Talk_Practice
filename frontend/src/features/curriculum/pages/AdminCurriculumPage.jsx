@@ -9,7 +9,6 @@ import {
   X,
 } from "@phosphor-icons/react";
 
-import { adminApi } from "@/features/admin-scenarios/api/adminScenariosApi";
 import AdminShell from "@/shared/components/admin/AdminShell";
 import { adminCurriculumApi } from "@/features/curriculum/api/curriculumApi";
 import { getApiBaseUrl } from "@/shared/api/httpClient";
@@ -156,7 +155,7 @@ const toLevelForm = (level) => ({
   is_active: level?.is_active ?? true,
 });
 
-const toLessonForm = (lesson, selectedLevelId, nextOrder) => ({
+const toLessonForm = (lesson, selectedLevelId) => ({
   level_id: lesson?.level_id ?? selectedLevelId ?? "",
   title: lesson?.title || "",
   description: lesson?.description || "",
@@ -310,8 +309,6 @@ const EntityModal = ({
   isSaving,
   levels,
   lessons,
-  scenarios,
-  onNeedScenarios,
   editingItem,
 }) => {
   const [activeTab, setActiveTab] = useState("builder");
@@ -708,8 +705,6 @@ const ToggleField = ({ label, checked, onChange }) => (
 
 const AdminCurriculumPage = () => {
   const [levels, setLevels] = useState([]);
-  const [scenarios, setScenarios] = useState([]);
-  const [hasLoadedScenarios, setHasLoadedScenarios] = useState(false);
   const [selectedLevelId, setSelectedLevelId] = useState(null);
   const [selectedLessonId, setSelectedLessonId] = useState(null);
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
@@ -787,20 +782,6 @@ const AdminCurriculumPage = () => {
     },
     [replaceExercise],
   );
-
-  const loadScenarios = useCallback(async () => {
-    if (hasLoadedScenarios) {
-      return;
-    }
-    try {
-      const response = await adminApi.listScenarios({ page: 1, page_size: 100 });
-      setScenarios(response.items || []);
-    } catch {
-      setScenarios([]);
-    } finally {
-      setHasLoadedScenarios(true);
-    }
-  }, [hasLoadedScenarios]);
 
   const loadLevels = useCallback(async () => {
     setIsLoading(true);
@@ -1259,8 +1240,6 @@ const AdminCurriculumPage = () => {
           isSaving={isSaving}
           levels={levels}
           lessons={allLessons}
-          scenarios={scenarios}
-          onNeedScenarios={loadScenarios}
           editingItem={modal.item}
         />
       )}

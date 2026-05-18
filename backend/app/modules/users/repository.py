@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Select, or_, select
+from sqlalchemy import Select, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -25,6 +25,14 @@ class UserRepository:
             selectinload(User.daily_stats),
         )
 
+    @staticmethod
+    def _admin_role_clause():
+        return or_(
+            User.role == "admin",
+            User.preferences["is_admin"].as_boolean().is_(True),
+            User.preferences["role"].as_string() == "admin",
+        )
+
     @classmethod
     async def get_by_id(cls, db: AsyncSession, user_id: int) -> User | None:
         result = await db.execute(cls._admin_query().where(User.id == user_id))
@@ -47,9 +55,12 @@ class UserRepository:
         *,
         search: str | None = None,
         status: str | None = None,
+        role: str | None = None,
         subscription_tier: str | None = None,
-    ) -> list[User]:
-        stmt = cls._admin_query()
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[User], int]:
+        stmt = select(User)
 
         if search:
             raw_search = search.strip()
@@ -74,8 +85,21 @@ class UserRepository:
                 .where(Subscription.tier == subscription_tier.strip().upper())
             )
 
-        result = await db.execute(stmt.order_by(User.created_at.desc()))
-        return list(result.scalars().unique().all())
+        normalized_role = (role or "").strip().lower()
+        if normalized_role in {"admin", "learner"}:
+            admin_clause = cls._admin_role_clause()
+            stmt = stmt.where(admin_clause if normalized_role == "admin" else not_(admin_clause))
+
+        count_stmt = select(func.count()).select_from(stmt.order_by(None).options().subquery())
+        total = int((await db.execute(count_stmt)).scalar_one() or 0)
+        offset = (page - 1) * page_size
+        result = await db.execute(
+            stmt.options(selectinload(User.subscription))
+            .order_by(User.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        return list(result.scalars().unique().all()), total
 
     @staticmethod
     async def create(db: AsyncSession, **values: object) -> User:

@@ -44,7 +44,7 @@ const normalizeDifficulty = (difficulty) =>
 const getDifficultyMeta = (difficulty) =>
   DIFFICULTY_GROUPS.find((group) => group.key === normalizeDifficulty(difficulty)) || DIFFICULTY_GROUPS[1];
 
-const ScenarioCard = ({ scenario, hasProAccess, featured = false }) => {
+const ScenarioCard = ({ scenario, hasProAccess }) => {
   const difficulty = getDifficultyMeta(scenario.difficulty);
   const isProScenario = Boolean(scenario.is_pro);
   const isLocked = isProScenario && !hasProAccess;
@@ -103,7 +103,7 @@ const ScenarioCard = ({ scenario, hasProAccess, featured = false }) => {
   );
 };
 
-const PlaylistSection = ({ scenarios = [], isLoading = false, error = "", hasProAccess = false }) => {
+const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = "", hasProAccess = false }) => {
   const [query, setQuery] = useState("");
   const [difficulty, setDifficulty] = useState("all");
   const [category, setCategory] = useState("all");
@@ -185,4 +185,4 @@ const PlaylistSection = ({ scenarios = [], isLoading = false, error = "", hasPro
   );
 };
 
-export default PlaylistSection;
+export default ScenarioPlaylistSection;

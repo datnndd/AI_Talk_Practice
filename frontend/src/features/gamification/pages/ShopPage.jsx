@@ -12,24 +12,18 @@ const EMPTY_FORM = {
 
 const STATUS_LABELS = {
   pending: "Chờ xử lý",
-  approved: "Đã duyệt",
   processing: "Đang xử lý",
-  shipping: "Đang giao",
   shipped: "Đang giao",
   completed: "Hoàn tất",
   cancelled: "Đã hủy",
-  refunded: "Đã hoàn coin",
 };
 
 const STATUS_CLASSES = {
   pending: "bg-amber-50 text-amber-700 ring-amber-100 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20",
-  approved: "bg-sky-50 text-sky-700 ring-sky-100 dark:bg-sky-400/10 dark:text-sky-200 dark:ring-sky-400/20",
   processing: "bg-indigo-50 text-indigo-700 ring-indigo-100 dark:bg-indigo-400/10 dark:text-indigo-200 dark:ring-indigo-400/20",
-  shipping: "bg-blue-50 text-blue-700 ring-blue-100 dark:bg-blue-400/10 dark:text-blue-200 dark:ring-blue-400/20",
   shipped: "bg-blue-50 text-blue-700 ring-blue-100 dark:bg-blue-400/10 dark:text-blue-200 dark:ring-blue-400/20",
   completed: "bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-400/20",
   cancelled: "bg-rose-50 text-rose-700 ring-rose-100 dark:bg-rose-400/10 dark:text-rose-200 dark:ring-rose-400/20",
-  refunded: "bg-purple-50 text-purple-700 ring-purple-100 dark:bg-purple-400/10 dark:text-purple-200 dark:ring-purple-400/20",
 };
 
 const formatDate = (value) => {
@@ -111,12 +105,17 @@ const ShopPage = () => {
         note: form.note.trim() || null,
       });
       setDashboard(response.dashboard);
-      await refreshGamification().catch(() => {});
+      void refreshGamification().catch(() => {});
       setNotice(`Đã gửi yêu cầu đổi quà: ${response.item.name}.`);
       setSelectedItem(null);
       setForm(EMPTY_FORM);
       setActiveTab("orders");
-      await load();
+      const [shopData, redemptionData] = await Promise.all([
+        gamificationApi.getShop(),
+        gamificationApi.getShopRedemptions(),
+      ]);
+      setItems(shopData.items || []);
+      setRedemptions(redemptionData || []);
     } catch (err) {
       setError(err?.response?.data?.detail || "Không thể đổi sản phẩm.");
     } finally {

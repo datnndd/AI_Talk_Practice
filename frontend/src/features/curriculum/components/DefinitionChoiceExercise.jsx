@@ -4,6 +4,7 @@ import { curriculumApi } from "@/features/curriculum/api/curriculumApi";
 import { absoluteAudioUrl } from "@/features/curriculum/components/lessonAudio";
 
 const shuffle = (items) => [...items].map((item) => ({ item, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map(({ item }) => item);
+const EMPTY_OPTIONS = [];
 
 const DefinitionChoiceExercise = ({ exercise, onAttempt }) => {
   const [selectedWord, setSelectedWord] = useState("");
@@ -11,7 +12,8 @@ const DefinitionChoiceExercise = ({ exercise, onAttempt }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const content = exercise.content || {};
-  const options = useMemo(() => shuffle(content.options || []), [exercise.id]);
+  const contentOptions = content.options || EMPTY_OPTIONS;
+  const options = useMemo(() => shuffle(contentOptions), [contentOptions]);
 
   const submit = async () => {
     if (!selectedWord) return;

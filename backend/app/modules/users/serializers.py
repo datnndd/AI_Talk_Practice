@@ -76,3 +76,41 @@ def serialize_admin_user(user: User, rules: GamificationRules | None = None) -> 
             "gamification": _admin_gamification_payload(user, rules or default_rules()),
         }
     )
+
+def serialize_admin_user_list_item(user: User, rules: GamificationRules | None = None) -> AdminUserRead:
+    progress = level_progress_from_total_xp(user.total_xp or 0)
+    return AdminUserRead.model_validate(
+        {
+            "id": user.id,
+            "email": user.email,
+            "auth_provider": user.auth_provider,
+            "role": user_role(user),
+            "has_password": bool(user.password_hash),
+            "is_admin": user_is_admin(user),
+            "display_name": user.display_name,
+            "avatar": user.avatar,
+            "age": user.age,
+            "level": user.level,
+            "current_cefr": user.current_cefr,
+            "favorite_topics": user.favorite_topics,
+            "learning_purpose": user.learning_purpose,
+            "main_challenge": user.main_challenge,
+            "is_onboarding_completed": user.is_onboarding_completed,
+            "preferences": {},
+            "subscription": user.subscription,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+            "deleted_at": user.deleted_at,
+            "gamification": {
+                "xp": {
+                    "total": user.total_xp or 0,
+                    "today": 0,
+                    "level": progress.level,
+                    "level_progress": progress.level_progress,
+                    "level_size": progress.level_size,
+                    "xp_to_next_level": progress.xp_to_next_level,
+                },
+                "coin": {"balance": user.coin_balance or 0},
+            },
+        }
+    )

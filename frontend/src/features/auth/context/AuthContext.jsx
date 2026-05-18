@@ -11,13 +11,16 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [gamification, setGamification] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("access_token"));
   const [isLoading, setIsLoading] = useState(true);
+
+  const persistTokens = useCallback(({ access_token, refresh_token }) => {
+    if (access_token) localStorage.setItem("access_token", access_token);
+    if (refresh_token) localStorage.setItem("refresh_token", refresh_token);
+  }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
-    setToken(null);
     setUser(null);
     setGamification(null);
   }, []);
@@ -40,8 +43,7 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data);
       void refreshGamification().catch(() => null);
       return response.data;
-    } catch (error) {
-      console.error("Failed to fetch user", error);
+    } catch {
       logout();
       return null;
     } finally {
@@ -50,19 +52,16 @@ export const AuthProvider = ({ children }) => {
   }, [logout, refreshGamification]);
 
   useEffect(() => {
-    if (token) {
-      fetchUser();
+    if (localStorage.getItem("access_token")) {
+      void fetchUser();
     } else {
       setIsLoading(false);
     }
-  }, [token, fetchUser]);
+  }, [fetchUser]);
 
   const login = async (email, password) => {
     const response = await httpClient.post("/auth/login", { email, password });
-    const { access_token, refresh_token } = response.data;
-    localStorage.setItem("access_token", access_token);
-    localStorage.setItem("refresh_token", refresh_token);
-    setToken(access_token);
+    persistTokens(response.data);
     return response.data;
   };
 
@@ -83,30 +82,18 @@ export const AuthProvider = ({ children }) => {
 
   const googleLogin = async (idToken) => {
     const response = await httpClient.post("/auth/google", { id_token: idToken });
-    const { access_token, refresh_token } = response.data;
-    localStorage.setItem("access_token", access_token);
-    localStorage.setItem("refresh_token", refresh_token);
-    setToken(access_token);
+    persistTokens(response.data);
     return response.data;
   };
 
   const register = async (userData) => {
     const response = await httpClient.post("/auth/register/verify", userData);
-    const { access_token, refresh_token } = response.data;
-    localStorage.setItem("access_token", access_token);
-    localStorage.setItem("refresh_token", refresh_token);
-    setToken(access_token);
+    persistTokens(response.data);
     return response.data;
   };
 
   const onboard = async (onboardingData) => {
     const response = await httpClient.put("/auth/me/onboard", onboardingData);
-    setUser(response.data);
-    return response.data;
-  };
-
-  const updateProfile = async (profileData) => {
-    const response = await httpClient.patch("/users/me", profileData);
     setUser(response.data);
     return response.data;
   };
@@ -118,14 +105,6 @@ export const AuthProvider = ({ children }) => {
     });
     if (avatarFile) formData.append("file", avatarFile);
     const response = await httpClient.patch("/users/me/with-avatar", formData);
-    setUser(response.data);
-    return response.data;
-  };
-
-  const uploadAvatar = async (file) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const response = await httpClient.post("/users/me/avatar", formData);
     setUser(response.data);
     return response.data;
   };
@@ -164,9 +143,7 @@ export const AuthProvider = ({ children }) => {
         forgotPassword,
         resetPassword,
         onboard,
-        updateProfile,
         updateProfileWithAvatar,
-        uploadAvatar,
         changePassword,
         logout,
         refreshUser: fetchUser,

@@ -19,7 +19,7 @@ const SessionResultPage = lazy(() => import("@/features/practice/pages/SessionRe
 const ProfileSettingsPage = lazy(() => import("@/features/profile/pages/ProfileSettingsPage"));
 const UserSettingsPage = lazy(() => import("@/features/profile/pages/UserSettingsPage"));
 const LeaderboardPage = lazy(() => import("@/features/leaderboard/pages/LeaderboardPage"));
-const DashboardPage = lazy(() => import("@/features/dashboard/pages/DashboardPage"));
+const ScenariosPage = lazy(() => import("@/features/scenarios/pages/ScenariosPage"));
 const LearnPage = lazy(() => import("@/features/curriculum/pages/LearnPage"));
 const LessonPlayerPage = lazy(() => import("@/features/curriculum/pages/LessonPlayerPage"));
 const AdminUsersPage = lazy(() => import("@/features/admin-users/pages/AdminUsersPage"));
@@ -67,7 +67,7 @@ function App() {
         <Route path="/profile" element={<PrivateRoute>{withAppLayout(<ProfileSettingsPage />)}</PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute>{withAppLayout(<UserSettingsPage />)}</PrivateRoute>} />
         <Route path="/leaderboard" element={<PrivateRoute>{withAppLayout(<LeaderboardPage />)}</PrivateRoute>} />
-        <Route path="/scenarios" element={<PrivateRoute>{withAppLayout(<DashboardPage />)}</PrivateRoute>} />
+        <Route path="/scenarios" element={<PrivateRoute>{withAppLayout(<ScenariosPage />)}</PrivateRoute>} />
         <Route path="/learn" element={<PrivateRoute>{withAppLayout(<LearnPage />)}</PrivateRoute>} />
         <Route path="/learn/units/:unitId" element={<PrivateRoute>{withAppLayout(<LessonPlayerPage />)}</PrivateRoute>} />
         <Route path="/shop" element={<PrivateRoute>{withAppLayout(<ShopPage />)}</PrivateRoute>} />

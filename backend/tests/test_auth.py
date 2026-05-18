@@ -172,6 +172,20 @@ async def test_reset_password_with_otp(client, db_session, test_user):
 
 
 @pytest.mark.asyncio
+async def test_verify_email_marks_user_email_verified(client, db_session, test_user):
+    test_user.is_email_verified = False
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/auth/verify-email",
+        json={"token": create_access_token(user_id=test_user.id)},
+    )
+
+    await db_session.refresh(test_user)
+    assert response.status_code == 200
+    assert test_user.is_email_verified is True
+
+@pytest.mark.asyncio
 async def test_password_policy_rejects_missing_uppercase(client, db_session):
     email = "weak@example.com"
     db_session.add(EmailOTP(email=email, purpose="register", code_hash=hash_password("123456"), expires_at=datetime.now(timezone.utc) + timedelta(minutes=10)))

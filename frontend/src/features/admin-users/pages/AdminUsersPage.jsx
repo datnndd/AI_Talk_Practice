@@ -4,13 +4,9 @@ import {
   CrownSimple,
   FloppyDiskBack,
   Gift,
-  GraduationCap,
   MagnifyingGlass,
   ProhibitInset,
-  Robot,
   Sparkle,
-  SquaresFour,
-  UserList,
   X,
 } from "@phosphor-icons/react";
 
@@ -105,6 +101,7 @@ const FieldLabel = ({ children }) => (
 const AdminUsersPage = () => {
   const { user: currentUser } = useAuth();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [searchInput, setSearchInput] = useState(DEFAULT_FILTERS.search);
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -141,7 +138,7 @@ const AdminUsersPage = () => {
         if (current && data.items.some((item) => item.id === current)) {
           return current;
         }
-        return data.items[0]?.id || null;
+        return null;
       });
     } catch (loadError) {
       setError(loadError?.response?.data?.detail || "Failed to load users.");
@@ -170,6 +167,21 @@ const AdminUsersPage = () => {
   useEffect(() => {
     void loadUsers();
   }, [loadUsers]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setFilters((current) => {
+        if (current.search === searchInput) return current;
+        return {
+          ...current,
+          search: searchInput,
+          page: 1,
+        };
+      });
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput]);
 
   useEffect(() => {
     void loadUserDetail(selectedUserId);
@@ -296,8 +308,8 @@ const AdminUsersPage = () => {
               <label className="relative block">
                 <MagnifyingGlass size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
                 <input
-                  value={filters.search}
-                  onChange={(event) => updateFilter("search", event.target.value)}
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
                   placeholder="Search email or display name..."
                   className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-11 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
                 />
