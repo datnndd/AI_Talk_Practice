@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   ChartLineUp,
@@ -18,6 +19,7 @@ import {
 } from "@phosphor-icons/react";
 
 import AuthCard from "@/features/auth/components/AuthCard";
+import { useAuth } from "@/features/auth/context/AuthContext";
 import PronunciationAssessmentWidget from "@/features/landing/components/PronunciationAssessmentWidget";
 import SiteFooter from "@/shared/components/SiteFooter";
 import { useSiteSettings } from "@/shared/hooks/useSiteSettings";
@@ -107,12 +109,33 @@ const SectionHeading = ({ eyebrow, title, description }) => (
   </div>
 );
 
+const resolveAuthenticatedPath = (user) => {
+  if (user?.is_admin) {
+    return "/admin/scenarios";
+  }
+
+  return user?.is_onboarding_completed ? "/scenarios" : "/onboarding";
+};
+
 const LandingPage = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("features");
   const siteSettings = useSiteSettings();
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
-  const openAuth = () => setIsAuthOpen(true);
+  const openAuth = () => {
+    if (isLoading) {
+      return;
+    }
+
+    if (isAuthenticated) {
+      navigate(resolveAuthenticatedPath(user));
+      return;
+    }
+
+    setIsAuthOpen(true);
+  };
   const closeAuth = () => setIsAuthOpen(false);
 
   useEffect(() => {
