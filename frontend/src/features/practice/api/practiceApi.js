@@ -38,11 +38,6 @@ export const practiceApi = {
 
     return scenarioListCache.promise;
   },
-  refreshScenarios: async () => {
-    const { data } = await httpClient.get("/scenarios");
-    scenarioListCache.data = data;
-    return data;
-  },
   getCachedScenarios: () => scenarioListCache.data,
   getCachedScenario: (scenarioId) => scenarioDetailCache.get(getScenarioCacheKey(scenarioId))?.data || null,
   getScenario: async (scenarioId, { force = false } = {}) => {

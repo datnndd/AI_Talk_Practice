@@ -45,7 +45,16 @@ export const getSiteSettings = () => {
 export const saveSiteSettings = (settings) => {
   const nextSettings = normalizeSiteSettings(settings);
 
-  window.localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(nextSettings));
+  if (typeof window === "undefined") {
+    return nextSettings;
+  }
+
+  try {
+    window.localStorage.setItem(SITE_SETTINGS_KEY, JSON.stringify(nextSettings));
+  } catch (error) {
+    void error;
+  }
+
   window.dispatchEvent(new CustomEvent("buddy-talk-site-settings", { detail: nextSettings }));
   return nextSettings;
 };

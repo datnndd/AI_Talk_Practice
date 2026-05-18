@@ -10,7 +10,9 @@ export {
   adminWorkspaceNavItems,
   formatPlanLabel,
   isRouteActive,
+  learnerMobileItems,
   learnerNavItems,
+  learnerSidebarItems,
   learnerTabItems,
   publicNavItems,
 } from "./navigationData";

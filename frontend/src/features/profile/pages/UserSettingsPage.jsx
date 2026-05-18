@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CaretLeft, Camera, SignOut } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -8,48 +8,62 @@ const toNullableString = (value) => {
   return trimmed || null;
 };
 
+const createProfileForm = (user) => ({
+  display_name: user?.display_name || "",
+  avatar: user?.avatar || "",
+  age: user?.age || "",
+  level: user?.level || "A1",
+});
+
+const createPasswordForm = () => ({
+  current_password: "",
+  new_password: "",
+  confirm_password: "",
+});
+
 const UserSettingsPage = () => {
   const { user, updateProfileWithAvatar, changePassword, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    display_name: user?.display_name || "",
-    avatar: user?.avatar || "",
-    age: user?.age || "",
-    level: user?.level || "A1",
-  });
-
-  const [passwordData, setPasswordData] = useState({
-    current_password: "",
-    new_password: "",
-    confirm_password: "",
-  });
+  const [formData, setFormData] = useState(() => createProfileForm(user));
+  const [passwordData, setPasswordData] = useState(createPasswordForm);
 
   const [isSaving, setIsSaving] = useState(false);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [message, setMessage] = useState({ type: "", text: "" });
+  const avatarPreviewUrlRef = useRef("");
+
+  const clearAvatarPreview = useCallback(() => {
+    if (avatarPreviewUrlRef.current) {
+      URL.revokeObjectURL(avatarPreviewUrlRef.current);
+      avatarPreviewUrlRef.current = "";
+    }
+    setAvatarPreviewUrl("");
+  }, []);
 
   useEffect(() => {
     if (user) {
-      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
       setAvatarFile(null);
-      setAvatarPreviewUrl("");
-      setFormData({
-        display_name: user.display_name || "",
-        avatar: user.avatar || "",
-        age: user.age || "",
-        level: user.level || "A1",
-      });
+      clearAvatarPreview();
+      setFormData(createProfileForm(user));
     }
-  }, [user]);
+  }, [clearAvatarPreview, user]);
 
-  useEffect(() => () => {
-    if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
-  }, [avatarPreviewUrl]);
+  useEffect(() => clearAvatarPreview, [clearAvatarPreview]);
 
   const handleProfileUpdate = async (event) => {
     event.preventDefault();
+    if (isSaving) {
+      return;
+    }
+
+    const age = formData.age === "" ? null : Number(formData.age);
+    if (age !== null && (!Number.isInteger(age) || age < 1 || age > 120)) {
+      setMessage({ type: "error", text: "Tuổi phải là số từ 1 đến 120." });
+      return;
+    }
+
     setIsSaving(true);
     setMessage({ type: "", text: "" });
 
@@ -57,12 +71,11 @@ const UserSettingsPage = () => {
       await updateProfileWithAvatar({
         display_name: toNullableString(formData.display_name),
         avatar: toNullableString(formData.avatar),
-        age: formData.age === "" ? null : Number(formData.age),
+        age,
         level: toNullableString(formData.level),
       }, avatarFile);
-      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
       setAvatarFile(null);
-      setAvatarPreviewUrl("");
+      clearAvatarPreview();
       setMessage({ type: "success", text: "Đã cập nhật hồ sơ." });
     } catch {
       setMessage({ type: "error", text: "Không thể cập nhật hồ sơ. Vui lòng thử lại." });
@@ -75,17 +88,21 @@ const UserSettingsPage = () => {
     const file = event.target.files?.[0];
     if (!file) return;
     setMessage({ type: "", text: "" });
-    if (avatarPreviewUrl) {
-      URL.revokeObjectURL(avatarPreviewUrl);
-    }
+    clearAvatarPreview();
+    const nextPreviewUrl = URL.createObjectURL(file);
+    avatarPreviewUrlRef.current = nextPreviewUrl;
     setAvatarFile(file);
-    setAvatarPreviewUrl(URL.createObjectURL(file));
+    setAvatarPreviewUrl(nextPreviewUrl);
     setMessage({ type: "success", text: "Đã chọn avatar. Ảnh sẽ upload khi lưu hồ sơ." });
     event.target.value = "";
   };
 
   const handlePasswordChange = async (event) => {
     event.preventDefault();
+    if (isSaving) {
+      return;
+    }
+
     if (!user?.has_password) {
       navigate(`/reset-password?email=${encodeURIComponent(user?.email || "")}`);
       return;
@@ -104,7 +121,7 @@ const UserSettingsPage = () => {
         new_password: passwordData.new_password,
       });
       setMessage({ type: "success", text: "Đã đổi mật khẩu." });
-      setPasswordData({ current_password: "", new_password: "", confirm_password: "" });
+      setPasswordData(createPasswordForm());
     } catch {
       setMessage({ type: "error", text: "Không thể đổi mật khẩu. Kiểm tra lại mật khẩu hiện tại." });
     } finally {

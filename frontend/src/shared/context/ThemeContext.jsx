@@ -9,12 +9,16 @@ const getPreferredTheme = () => {
     return "light";
   }
 
-  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-  if (savedTheme === "light" || savedTheme === "dark") {
-    return savedTheme;
-  }
+  try {
+    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (savedTheme === "light" || savedTheme === "dark") {
+      return savedTheme;
+    }
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  } catch {
+    return "light";
+  }
 };
 
 const applyThemeToDocument = (theme) => {
@@ -32,7 +36,12 @@ const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     applyThemeToDocument(theme);
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch (error) {
+      void error;
+    }
   }, [theme]);
 
   const value = useMemo(

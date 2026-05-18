@@ -1,7 +1,8 @@
+import { useMemo } from "react";
 import { Coins, Lightning, Star } from "@phosphor-icons/react";
 
 const ProfileStats = ({ stats }) => {
-  const statItems = [
+  const statItems = useMemo(() => [
     {
       label: "Level",
       value: stats.level || 1,
@@ -15,12 +16,12 @@ const ProfileStats = ({ stats }) => {
       color: "#1cb0f6",
     },
     {
-      label: "Coin",
+      label: "Coins",
       value: stats.coin || 0,
       Icon: Coins,
       color: "#ff4b4b",
     },
-  ];
+  ], [stats.coin, stats.level, stats.totalXp]);
 
   return (
     <div className="grid grid-cols-2 gap-4">

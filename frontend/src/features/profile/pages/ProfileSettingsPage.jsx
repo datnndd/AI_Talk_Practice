@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Crown, Gear, PencilSimple } from "@phosphor-icons/react";
 
@@ -36,30 +36,53 @@ const ProfileSettingsPage = () => {
   const [gamification, setGamification] = useState(null);
 
   useEffect(() => {
-    gamificationApi.getDashboard().then(setGamification).catch(() => {});
+    let mounted = true;
+
+    gamificationApi.getDashboard().then((data) => {
+      if (mounted) {
+        setGamification(data);
+      }
+    }).catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const displayName = user?.display_name || user?.email?.split("@")[0] || "Learner";
-  const username = user?.preferences?.handle || user?.email?.split("@")[0]?.toLowerCase() || "learner";
-  const topics = asList(user?.favorite_topics);
-  const hasProAccess = canAccessSubscriptionFeatures(user);
-  const planLabel = user?.is_admin ? "Admin" : getSubscriptionLabel(user?.subscription);
-  const subscriptionExpiry = user?.subscription?.expires_at ? formatDate(user.subscription.expires_at) : null;
+  const userEmail = user?.email;
+  const subscription = user?.subscription;
+  const subscriptionExpiresAt = subscription?.expires_at;
 
-  const stats = {
+  const displayName = useMemo(
+    () => user?.display_name || userEmail?.split("@")[0] || "Learner",
+    [user?.display_name, userEmail],
+  );
+  const username = useMemo(
+    () => user?.preferences?.handle || userEmail?.split("@")[0]?.toLowerCase() || "learner",
+    [user?.preferences?.handle, userEmail],
+  );
+  const topics = useMemo(() => asList(user?.favorite_topics), [user?.favorite_topics]);
+  const hasProAccess = useMemo(() => canAccessSubscriptionFeatures(user), [user]);
+  const planLabel = useMemo(
+    () => (user?.is_admin ? "Admin" : getSubscriptionLabel(subscription)),
+    [subscription, user?.is_admin],
+  );
+  const subscriptionExpiry = useMemo(
+    () => (subscriptionExpiresAt ? formatDate(subscriptionExpiresAt) : null),
+    [subscriptionExpiresAt],
+  );
+
+  const stats = useMemo(() => ({
     level: gamification?.xp?.level || 1,
     totalXp: gamification?.xp?.total || 0,
     coin: gamification?.coin?.balance || 0,
-  };
+  }), [gamification?.coin?.balance, gamification?.xp?.level, gamification?.xp?.total]);
 
   return (
     <div className="flex flex-col gap-8 lg:flex-row">
-      {/* Main Content Area */}
       <div className="flex-1 space-y-8">
-        {/* Profile Header */}
         <section className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between pb-8 border-b-2 border-[#e5e5e5]">
           <div className="flex flex-col items-center gap-6 md:flex-row md:items-center">
-            {/* Avatar */}
             <div className="relative group">
               <div className={`h-40 w-40 rounded-full p-1 ${
                 hasProAccess
@@ -89,7 +112,6 @@ const ProfileSettingsPage = () => {
               </Link>
             </div>
 
-          {/* Name/Username */}
             <div className="text-center md:text-left">
               <h1 className="text-3xl font-black text-[#4b4b4b]">{displayName}</h1>
               <p className="text-lg font-bold text-[#afafaf]">@{username}</p>
@@ -110,10 +132,9 @@ const ProfileSettingsPage = () => {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex justify-center gap-3">
             <Link 
-              to="/settings" // This would be the old form-based settings page
+              to="/settings"
               className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-b-4 border-[#e5e5e5] text-[#1cb0f6] transition-all hover:bg-[#f7f7f7] active:border-b-2 active:translate-y-[2px]"
             >
               <Gear size={24} weight="bold" />
@@ -121,7 +142,6 @@ const ProfileSettingsPage = () => {
           </div>
         </section>
 
-        {/* Statistics Section */}
         <section>
           <h2 className="mb-4 text-2xl font-black text-[#4b4b4b]">Statistics</h2>
           <ProfileStats stats={stats} />

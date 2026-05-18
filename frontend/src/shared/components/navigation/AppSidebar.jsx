@@ -1,17 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { ChatCircleText, Crown, GraduationCap, Storefront, Trophy, UserCircle } from "@phosphor-icons/react";
+import { Crown } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { canAccessSubscriptionFeatures } from "@/features/auth/utils/subscription";
-import { isRouteActive } from "./navigationData";
+import { isRouteActive, learnerSidebarItems } from "./navigationData";
 import BrandMark from "./BrandMark";
 
-const NAV_ITEMS = [
-  { label: "Luyện nói", path: "/scenarios", Icon: ChatCircleText },
-  { label: "Lộ trình học", path: "/learn", Icon: GraduationCap },
-  { label: "Bảng xếp hạng", path: "/leaderboard", Icon: Trophy },
-  { label: "Cửa hàng", path: "/shop", Icon: Storefront },
-  { label: "Hồ sơ", path: "/profile", Icon: UserCircle },
-];
 const AppSidebar = () => {
   const location = useLocation();
   const { user } = useAuth();
@@ -24,9 +17,9 @@ const AppSidebar = () => {
       </div>
       
       <nav className="flex-1 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {learnerSidebarItems.map((item) => {
           const isActive = isRouteActive(location.pathname, item.path);
-          const Icon = item.Icon;
+          const Icon = item.icon;
           return (
             <Link
               key={item.label}

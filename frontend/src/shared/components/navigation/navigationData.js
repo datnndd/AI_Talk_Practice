@@ -2,9 +2,12 @@ import {
   BookOpenText,
   Crown,
   CreditCard,
-  HouseLine,
-  Sparkle,
+  ChatCircleText,
+  House,
+  Medal,
+  Notebook,
   Robot,
+  Sparkle,
   Trophy,
   SquaresFour,
   UserList,
@@ -19,21 +22,38 @@ export const publicNavItems = [
   { label: "Pricing", href: "#pricing" },
 ];
 
-export const learnerNavItems = [
-  { label: "Luy?n n?i", path: "/scenarios", icon: BookOpenText },
-  { label: "L? tr?nh h?c", path: "/learn", icon: GraduationCap },
-  { label: "B?ng x?p h?ng", path: "/leaderboard", icon: Trophy },
-  { label: "C?a h?ng", path: "/shop", icon: Storefront },
-  { label: "G?i h?c", path: "/subscription", icon: Crown },
-  { label: "H? s?", path: "/profile", icon: UserCircle },
+export const learnerSidebarItems = [
+  { label: "Luyện nói", path: "/scenarios", icon: ChatCircleText },
+  { label: "Lộ trình học", path: "/learn", icon: GraduationCap },
+  { label: "Bảng xếp hạng", path: "/leaderboard", icon: Trophy },
+  { label: "Cửa hàng", path: "/shop", icon: Storefront },
+  { label: "Hồ sơ", path: "/profile", icon: UserCircle },
 ];
+
+export const learnerMobileItems = [
+  { label: "Học", path: "/learn", icon: House },
+  { label: "Luyện", path: "/scenarios", icon: Notebook },
+  { label: "BXH", path: "/leaderboard", icon: Medal },
+  { label: "Shop", path: "/shop", icon: Storefront },
+  { label: "Hồ sơ", path: "/profile", icon: UserCircle, usesAvatar: true },
+];
+
+export const learnerNavItems = [
+  { label: "Luyện nói", path: "/scenarios", icon: BookOpenText },
+  { label: "Lộ trình học", path: "/learn", icon: GraduationCap },
+  { label: "Bảng xếp hạng", path: "/leaderboard", icon: Trophy },
+  { label: "Cửa hàng", path: "/shop", icon: Storefront },
+  { label: "Gói học", path: "/subscription", icon: Crown },
+  { label: "Hồ sơ", path: "/profile", icon: UserCircle },
+];
+
 export const learnerTabItems = [
-  { label: "Luy?n", path: "/scenarios", icon: BookOpenText },
-  { label: "H?c", path: "/learn", icon: GraduationCap },
+  { label: "Luyện", path: "/scenarios", icon: BookOpenText },
+  { label: "Học", path: "/learn", icon: GraduationCap },
   { label: "BXH", path: "/leaderboard", icon: Trophy },
   { label: "Shop", path: "/shop", icon: Storefront },
   { label: "Pro", path: "/subscription", icon: Crown },
-  { label: "H? s?", path: "/profile", icon: UserCircle },
+  { label: "Hồ sơ", path: "/profile", icon: UserCircle },
 ];
 export const adminNavItems = [
   { label: "Scenarios", anchor: "#scenario-library", icon: SquaresFour },

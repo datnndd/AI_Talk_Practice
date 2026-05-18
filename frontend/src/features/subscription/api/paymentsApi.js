@@ -1,16 +1,18 @@
 import { httpClient } from "@/shared/api/httpClient";
 
+const requestData = async (request) => {
+  const { data } = await request;
+  return data;
+};
+
 export const createCheckoutSession = async (payload) => {
-  const response = await httpClient.post("/payments/checkout", payload);
-  return response.data;
+  return requestData(httpClient.post("/payments/checkout", payload));
 };
 
 export const listSubscriptionPlans = async () => {
-  const response = await httpClient.get("/payments/plans");
-  return response.data;
+  return requestData(httpClient.get("/payments/plans"));
 };
 
 export const getCheckoutStatus = async (orderCode) => {
-  const response = await httpClient.get(`/payments/transactions/${orderCode}`);
-  return response.data;
+  return requestData(httpClient.get(`/payments/transactions/${orderCode}`));
 };

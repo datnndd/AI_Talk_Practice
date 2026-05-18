@@ -40,8 +40,6 @@ const LeaderboardPage = () => {
   const period = "weekly";
   const resetLabel = getWeeklyResetLabel();
   const [data, setData] = useState({
-    filters: [],
-    activeFilter: "weekly",
     entries: [],
     currentUser: null,
   });

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { X, Image as ImageIcon, UploadSimple } from "@phosphor-icons/react";
 import ListEditorField from "./ListEditorField";
-import { getApiErrorMessage } from "@/shared/api/httpClient";
+import { getApiBaseUrl, getApiErrorMessage } from "@/shared/api/httpClient";
 
 const prettyList = (value) => (Array.isArray(value) ? value.join("\n") : "");
 const parseListInput = (value = "") =>
@@ -9,6 +9,13 @@ const parseListInput = (value = "") =>
     .split(/\n|,/)
     .map((item) => item.trim())
     .filter(Boolean);
+
+const getFullImageUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  const host = getApiBaseUrl().replace(/\/api\/?$/, "");
+  return `${host}${url}`;
+};
 
 const createInitialState = (scenario) => ({
   title: scenario?.title || "",
@@ -37,22 +44,33 @@ const ScenarioEditorModal = ({
   const [formError, setFormError] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState("");
+  const imagePreviewUrlRef = useRef("");
 
-  useEffect(() => () => {
-    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
-  }, [imagePreviewUrl]);
+  const clearImagePreview = useCallback(() => {
+    if (imagePreviewUrlRef.current) {
+      URL.revokeObjectURL(imagePreviewUrlRef.current);
+      imagePreviewUrlRef.current = "";
+    }
+    setImagePreviewUrl("");
+  }, []);
+
+  useEffect(() => clearImagePreview, [clearImagePreview]);
 
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const handleImageSelect = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    clearImagePreview();
+    const nextPreviewUrl = URL.createObjectURL(file);
+    imagePreviewUrlRef.current = nextPreviewUrl;
     setImageFile(file);
-    setImagePreviewUrl(URL.createObjectURL(file));
+    setImagePreviewUrl(nextPreviewUrl);
     setFormError("");
     event.target.value = "";
   };
+
+  const coverImageUrl = imagePreviewUrl || getFullImageUrl(form.image_url);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -146,9 +164,9 @@ const ScenarioEditorModal = ({
                       <ImageIcon size={16} /> Cover Image
                     </span>
                     <div className="flex items-center gap-4">
-                      {(imagePreviewUrl || form.image_url) && (
+                      {coverImageUrl && (
                         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-200">
-                          <img src={imagePreviewUrl || (form.image_url.startsWith('http') ? form.image_url : `http://localhost:8000${form.image_url}`)} alt="Scenario Cover" className="h-full w-full object-cover" />
+                          <img src={coverImageUrl} alt="Scenario Cover" className="h-full w-full object-cover" />
                         </div>
                       )}
                       <div className="relative flex-1">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowClockwise, CheckCircle, MagnifyingGlass, ProhibitInset } from "@phosphor-icons/react";
 
 import AdminShell from "@/shared/components/admin/AdminShell";
@@ -90,6 +90,14 @@ const AdminPaymentsPage = () => {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [plans, setPlans] = useState([]);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const updateFilter = (field, value) => {
     setFilters((current) => ({
@@ -101,7 +109,9 @@ const AdminPaymentsPage = () => {
 
   const loadOverview = useCallback(async () => {
     const data = await adminPaymentsApi.getOverview();
-    setOverview(data);
+    if (mountedRef.current) {
+      setOverview(data);
+    }
   }, []);
 
   const loadTransactions = useCallback(async () => {
@@ -109,6 +119,9 @@ const AdminPaymentsPage = () => {
     setError("");
     try {
       const data = await adminPaymentsApi.listTransactions(filters);
+      if (!mountedRef.current) {
+        return;
+      }
       setTransactions(data.items);
       setTotal(data.total);
       setSelectedTransactionId((current) => {
@@ -118,15 +131,21 @@ const AdminPaymentsPage = () => {
         return data.items[0]?.id || null;
       });
     } catch (listError) {
-      setError(getApiErrorMessage(listError, "Failed to load transactions."));
+      if (mountedRef.current) {
+        setError(getApiErrorMessage(listError, "Failed to load transactions."));
+      }
     } finally {
-      setIsLoadingList(false);
+      if (mountedRef.current) {
+        setIsLoadingList(false);
+      }
     }
   }, [filters]);
 
   const loadBillingSettings = useCallback(async () => {
     const planData = await adminPaymentsApi.listPlans();
-    setPlans(planData);
+    if (mountedRef.current) {
+      setPlans(planData);
+    }
   }, []);
 
   const loadTransactionDetail = useCallback(async (paymentId) => {
@@ -137,13 +156,25 @@ const AdminPaymentsPage = () => {
     setIsLoadingDetail(true);
     try {
       const data = await adminPaymentsApi.getTransaction(paymentId);
-      setSelectedTransaction(data);
+      if (mountedRef.current) {
+        setSelectedTransaction(data);
+      }
     } catch (detailError) {
-      setError(getApiErrorMessage(detailError, "Failed to load transaction detail."));
+      if (mountedRef.current) {
+        setError(getApiErrorMessage(detailError, "Failed to load transaction detail."));
+      }
     } finally {
-      setIsLoadingDetail(false);
+      if (mountedRef.current) {
+        setIsLoadingDetail(false);
+      }
     }
   }, []);
+
+  const refreshPaymentData = useCallback(async (paymentId) => {
+    await loadOverview();
+    await loadTransactions();
+    await loadTransactionDetail(paymentId);
+  }, [loadOverview, loadTransactionDetail, loadTransactions]);
 
   useEffect(() => {
     void loadOverview();
@@ -170,9 +201,7 @@ const AdminPaymentsPage = () => {
       await adminPaymentsApi.approveTransaction(selectedTransactionId, { reason });
       setNotice("Transaction approved and subscription activated.");
       setReason("");
-      await loadOverview();
-      await loadTransactions();
-      await loadTransactionDetail(selectedTransactionId);
+      await refreshPaymentData(selectedTransactionId);
     } catch (actionError) {
       setError(getApiErrorMessage(actionError, "Failed to approve transaction."));
     } finally {
@@ -188,9 +217,7 @@ const AdminPaymentsPage = () => {
       await adminPaymentsApi.cancelTransaction(selectedTransactionId, { reason });
       setNotice("Transaction cancelled.");
       setReason("");
-      await loadOverview();
-      await loadTransactions();
-      await loadTransactionDetail(selectedTransactionId);
+      await refreshPaymentData(selectedTransactionId);
     } catch (actionError) {
       setError(getApiErrorMessage(actionError, "Failed to cancel transaction."));
     } finally {
@@ -217,7 +244,10 @@ const AdminPaymentsPage = () => {
       setError(getApiErrorMessage(saveError, "Failed to save plan."));
     }
   };
-  const totalPages = Math.max(1, Math.ceil(total / filters.page_size));
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(total / filters.page_size)),
+    [filters.page_size, total],
+  );
 
   return (
     <AdminShell

@@ -30,7 +30,7 @@ const appLinks = [
   { label: "Đăng ký", href: "/register", icon: Sparkle },
   { label: "Đăng nhập", href: "/login", icon: CheckCircle },
   { label: "Learn", href: "/learn", icon: GraduationCap },
-  { label: "Dashboard", href: "/scenarios", icon: ChartLineUp },
+  { label: "Scenarios", href: "/scenarios", icon: ChartLineUp },
   { label: "Subscription", href: "/subscription", icon: ShieldCheck },
 ];
 

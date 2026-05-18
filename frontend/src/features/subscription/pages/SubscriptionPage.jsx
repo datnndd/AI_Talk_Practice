@@ -25,6 +25,35 @@ const planAccent = {
   PRO_1Y: "from-yellow-300 via-amber-400 to-purple-500",
 };
 
+const PAYMENT_SYNC_ATTEMPTS = 6;
+const PAYMENT_SYNC_DELAY_MS = 1500;
+const PLAN_FEATURES = ["Kịch bản VIP", "AI tutor không giới hạn", "Detailed feedback"];
+
+const getPlanMonthlyPrice = (plan) =>
+  Number(plan.price_amount || 0) / Math.max(Number(plan.duration_days || 0) / 30, 1);
+
+const getSavingPercent = (plan, bestMonthly) => {
+  const monthly = getPlanMonthlyPrice(plan);
+  return bestMonthly && monthly > bestMonthly ? Math.round((1 - bestMonthly / monthly) * 100) : 0;
+};
+
+const getPaymentMessage = ({ paymentStatus, paymentProvider, paymentCode, isSyncingPayment }) => {
+  if (!paymentStatus) return null;
+  if (paymentStatus === "success") {
+    const provider = paymentProvider?.toUpperCase() || "Stripe";
+    return {
+      tone: "success",
+      text: isSyncingPayment
+        ? `Thanh toán qua ${provider} xong. Đang đồng bộ Pro...`
+        : `Thanh toán qua ${provider} xong. Gói Pro đã được cập nhật.`,
+    };
+  }
+  if (paymentStatus === "cancelled") {
+    return { tone: "neutral", text: "Bạn đã hủy thanh toán. Có thể chọn lại gói bất cứ lúc nào." };
+  }
+  return { tone: "error", text: `Thanh toán lỗi${paymentCode ? `: ${paymentCode}` : ""}. Vui lòng thử lại.` };
+};
+
 const SubscriptionPage = () => {
   const { user, isSubscribed, refreshUser } = useAuth();
   const [searchParams] = useSearchParams();
@@ -34,10 +63,12 @@ const SubscriptionPage = () => {
   const [actionError, setActionError] = useState("");
   const [isSyncingPayment, setIsSyncingPayment] = useState(false);
 
-  const paymentStatus = searchParams.get("payment");
-  const paymentProvider = searchParams.get("provider");
-  const paymentCode = searchParams.get("code");
-  const paymentOrderCode = searchParams.get("order_code");
+  const paymentParams = useMemo(() => ({
+    status: searchParams.get("payment"),
+    provider: searchParams.get("provider"),
+    code: searchParams.get("code"),
+    orderCode: searchParams.get("order_code"),
+  }), [searchParams]);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,15 +91,15 @@ const SubscriptionPage = () => {
   }, []);
 
   useEffect(() => {
-    if (paymentStatus !== "success" || !paymentOrderCode) return undefined;
+    if (paymentParams.status !== "success" || !paymentParams.orderCode) return undefined;
     let isCancelled = false;
     let timeoutId;
 
     const syncPaymentStatus = async () => {
       setIsSyncingPayment(true);
       try {
-        for (let attempt = 0; attempt < 6; attempt += 1) {
-          const payment = await getCheckoutStatus(paymentOrderCode);
+        for (let attempt = 0; attempt < PAYMENT_SYNC_ATTEMPTS; attempt += 1) {
+          const payment = await getCheckoutStatus(paymentParams.orderCode);
           if (isCancelled) return;
           if (payment.status === "paid") {
             await refreshUser();
@@ -79,7 +110,7 @@ const SubscriptionPage = () => {
             return;
           }
           await new Promise((resolve) => {
-            timeoutId = window.setTimeout(resolve, 1500);
+            timeoutId = window.setTimeout(resolve, PAYMENT_SYNC_DELAY_MS);
           });
         }
         await refreshUser();
@@ -95,25 +126,23 @@ const SubscriptionPage = () => {
       isCancelled = true;
       if (timeoutId) window.clearTimeout(timeoutId);
     };
-  }, [paymentOrderCode, paymentStatus, refreshUser]);
+  }, [paymentParams.orderCode, paymentParams.status, refreshUser]);
 
-  const paymentMessage = useMemo(() => {
-    if (!paymentStatus) return null;
-    if (paymentStatus === "success") {
-      return {
-        tone: "success",
-        text: isSyncingPayment
-          ? `Thanh toán qua ${paymentProvider?.toUpperCase() || "Stripe"} xong. Đang đồng bộ Pro...`
-          : `Thanh toán qua ${paymentProvider?.toUpperCase() || "Stripe"} xong. Gói Pro đã được cập nhật.`,
-      };
-    }
-    if (paymentStatus === "cancelled") {
-      return { tone: "neutral", text: "Bạn đã hủy thanh toán. Có thể chọn lại gói bất cứ lúc nào." };
-    }
-    return { tone: "error", text: `Thanh toán lỗi${paymentCode ? `: ${paymentCode}` : ""}. Vui lòng thử lại.` };
-  }, [isSyncingPayment, paymentCode, paymentProvider, paymentStatus]);
+  const paymentMessage = useMemo(
+    () => getPaymentMessage({
+      paymentStatus: paymentParams.status,
+      paymentProvider: paymentParams.provider,
+      paymentCode: paymentParams.code,
+      isSyncingPayment,
+    }),
+    [isSyncingPayment, paymentParams.code, paymentParams.provider, paymentParams.status],
+  );
 
   const handleCheckout = async (plan) => {
+    if (submittingPlan) {
+      return;
+    }
+
     try {
       setActionError("");
       setSubmittingPlan(plan.code);
@@ -129,9 +158,14 @@ const SubscriptionPage = () => {
     }
   };
 
-  const bestMonthly = plans.length
-    ? Math.min(...plans.map((plan) => plan.price_amount / Math.max(plan.duration_days / 30, 1)))
-    : 0;
+  const bestMonthly = useMemo(
+    () => (plans.length ? Math.min(...plans.map(getPlanMonthlyPrice)) : 0),
+    [plans],
+  );
+  const subscriptionExpiresAt = useMemo(
+    () => (user?.subscription?.expires_at ? new Date(user.subscription.expires_at).toLocaleDateString("vi-VN") : ""),
+    [user?.subscription?.expires_at],
+  );
 
   return (
     <div className="app-page-wide space-y-8">
@@ -163,7 +197,7 @@ const SubscriptionPage = () => {
           <div className="rounded-3xl bg-white/10 p-5 backdrop-blur">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/55">Trạng thái</p>
             <p className="mt-2 text-2xl font-black">{isSubscribed ? "Pro active" : "Free account"}</p>
-            {user?.subscription?.expires_at ? <p className="mt-1 text-xs font-bold text-amber-100">Hết hạn: {new Date(user.subscription.expires_at).toLocaleDateString("vi-VN")}</p> : null}
+            {subscriptionExpiresAt ? <p className="mt-1 text-xs font-bold text-amber-100">Hết hạn: {subscriptionExpiresAt}</p> : null}
           </div>
         </div>
       </section>
@@ -174,8 +208,7 @@ const SubscriptionPage = () => {
         <section className="grid gap-5 lg:grid-cols-3">
           {plans.map((plan) => {
             const amount = plan.price_amount;
-            const monthly = plan.price_amount / Math.max(plan.duration_days / 30, 1);
-            const savingPercent = bestMonthly && monthly > bestMonthly ? Math.round((1 - bestMonthly / monthly) * 100) : 0;
+            const savingPercent = getSavingPercent(plan, bestMonthly);
             return (
               <motion.article key={plan.code} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-[2rem] border border-zinc-200 bg-white p-7 shadow-sm">
                 <div className={`absolute inset-x-0 top-0 h-2 bg-gradient-to-r ${planAccent[plan.code] || "from-amber-300 to-yellow-500"}`} />
@@ -191,7 +224,7 @@ const SubscriptionPage = () => {
                   {savingPercent > 0 ? <p className="mt-2 inline-flex rounded-full bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">Tiết kiệm khoảng {savingPercent}%/tháng</p> : null}
                 </div>
                 <ul className="mt-7 space-y-3 text-sm font-semibold text-zinc-600">
-                  {["Kịch bản VIP", "AI tutor không giới hạn", "Detailed feedback"].map((item) => (
+                  {PLAN_FEATURES.map((item) => (
                     <li key={item} className="flex items-center gap-2"><CheckCircle size={17} weight="fill" className="text-emerald-500" />{item}</li>
                   ))}
                 </ul>

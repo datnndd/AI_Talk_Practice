@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import ScenarioPlaylistSection from "@/features/scenarios/components/ScenarioPlaylistSection";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -10,21 +10,23 @@ const ScenariosPage = () => {
   const [scenarios, setScenarios] = useState([]);
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(true);
   const [scenarioError, setScenarioError] = useState("");
-  const hasProAccess = canAccessSubscriptionFeatures(user);
+  const hasProAccess = useMemo(() => canAccessSubscriptionFeatures(user), [user]);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadScenarios = async () => {
       const cachedScenarios = practiceApi.getCachedScenarios?.();
+      const hasCachedScenarios = Boolean(cachedScenarios);
+
       if (cachedScenarios) {
         setScenarios(Array.isArray(cachedScenarios) ? cachedScenarios : []);
       }
-      setIsLoadingScenarios(!cachedScenarios);
+      setIsLoadingScenarios(!hasCachedScenarios);
       setScenarioError("");
 
       try {
-        const data = await practiceApi.listScenarios();
+        const data = await practiceApi.listScenarios({ force: hasCachedScenarios });
         if (isMounted) {
           setScenarios(Array.isArray(data) ? data : []);
         }
@@ -39,15 +41,7 @@ const ScenariosPage = () => {
       }
     };
 
-    const hadCachedScenarios = Boolean(practiceApi.getCachedScenarios?.());
     void loadScenarios();
-    if (hadCachedScenarios) {
-      void practiceApi.listScenarios({ force: true }).then((data) => {
-        if (isMounted) {
-          setScenarios(Array.isArray(data) ? data : []);
-        }
-      }).catch(() => null);
-    }
 
     return () => {
       isMounted = false;

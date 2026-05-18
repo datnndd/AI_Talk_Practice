@@ -153,4 +153,3 @@ export const buildConversationGuidance = ({ scenario, messages, durationSeconds,
   };
 };
 
-export const formatScenarioList = (value) => normalizeList(value);

@@ -108,14 +108,19 @@ const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = ""
   const [difficulty, setDifficulty] = useState("all");
   const [category, setCategory] = useState("all");
 
+  const normalizedScenarios = useMemo(
+    () => (Array.isArray(scenarios) ? scenarios : []),
+    [scenarios],
+  );
+
   const categories = useMemo(() => {
-    const values = new Set(scenarios.map((scenario) => scenario.category).filter(Boolean));
+    const values = new Set(normalizedScenarios.map((scenario) => scenario.category).filter(Boolean));
     return Array.from(values).sort();
-  }, [scenarios]);
+  }, [normalizedScenarios]);
 
   const filteredScenarios = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return scenarios.filter((scenario) => {
+    return normalizedScenarios.filter((scenario) => {
       const matchesQuery = !normalizedQuery
         || scenario.title?.toLowerCase().includes(normalizedQuery)
         || scenario.description?.toLowerCase().includes(normalizedQuery)
@@ -124,7 +129,7 @@ const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = ""
       const matchesCategory = category === "all" || scenario.category === category;
       return matchesQuery && matchesDifficulty && matchesCategory;
     });
-  }, [category, difficulty, query, scenarios]);
+  }, [category, difficulty, normalizedScenarios, query]);
 
   return (
     <section className="relative mb-8 mt-12 space-y-6">

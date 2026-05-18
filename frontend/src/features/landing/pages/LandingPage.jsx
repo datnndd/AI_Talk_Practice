@@ -84,7 +84,7 @@ const steps = [
   },
   {
     title: "Theo dõi tiến bộ",
-    description: "Dashboard, leaderboard và hồ sơ giúp bạn thấy nỗ lực tích lũy từng ngày.",
+    description: "Hồ sơ tiến bộ, leaderboard và shop giúp bạn thấy nỗ lực tích lũy từng ngày.",
   },
 ];
 
@@ -175,12 +175,12 @@ const LandingPage = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button type="button" onClick={() => openAuth("login")} className="hidden rounded-full px-5 py-3 text-sm font-black text-[#667394] hover:bg-white/70 hover:text-[#34DBC5] sm:inline-flex">
+            <button type="button" onClick={openAuth} className="hidden rounded-full px-5 py-3 text-sm font-black text-[#667394] hover:bg-white/70 hover:text-[#34DBC5] sm:inline-flex">
               Đăng nhập
             </button>
             <button
               type="button"
-              onClick={() => openAuth("register")}
+              onClick={openAuth}
               className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-5 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(52,219,197,0.24)] hover:shadow-[0_14px_30px_rgba(52,219,197,0.32)]"
             >
               Bắt đầu <ArrowRight weight="bold" />
@@ -204,7 +204,7 @@ const LandingPage = () => {
           <div className="mt-9 flex flex-col gap-4 sm:flex-row">
             <button
               type="button"
-              onClick={() => openAuth("register")}
+              onClick={openAuth}
               className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-7 py-4 text-base font-black text-white shadow-2xl shadow-cyan-200/50 hover:-translate-y-0.5"
             >
               Tạo tài khoản miễn phí <ArrowRight weight="bold" />
@@ -369,7 +369,7 @@ const LandingPage = () => {
               <p className="mt-5 text-lg font-medium leading-8 text-[#667394]">
                 Leaderboard và shop tạo động lực nhẹ nhàng để bạn quay lại luyện mỗi ngày, không biến học nói thành áp lực.
               </p>
-              <button type="button" onClick={() => openAuth("register")} className="mt-8 inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-7 py-4 font-black text-white shadow-lg shadow-cyan-100 hover:shadow-xl hover:shadow-cyan-100">
+              <button type="button" onClick={openAuth} className="mt-8 inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-7 py-4 font-black text-white shadow-lg shadow-cyan-100 hover:shadow-xl hover:shadow-cyan-100">
                 Bắt đầu tích XP <ArrowRight weight="bold" />
               </button>
             </div>
@@ -403,10 +403,10 @@ const LandingPage = () => {
             Tạo tài khoản, chọn mục tiêu và bắt đầu phiên luyện nói đầu tiên với Buddy Talk.
           </p>
           <div className="mt-9 flex flex-col justify-center gap-4 sm:flex-row">
-            <button type="button" onClick={() => openAuth("register")} className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-8 py-4 font-black text-white shadow-xl shadow-cyan-100 hover:shadow-2xl hover:shadow-cyan-100">
+            <button type="button" onClick={openAuth} className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#88DF46] to-[#34DBC5] px-8 py-4 font-black text-white shadow-xl shadow-cyan-100 hover:shadow-2xl hover:shadow-cyan-100">
               Đăng ký ngay <ArrowRight weight="bold" />
             </button>
-            <button type="button" onClick={() => openAuth("login")} className="inline-flex items-center justify-center rounded-2xl border border-white/80 bg-white/58 px-8 py-4 font-black text-[#2f496b] shadow-sm backdrop-blur hover:border-[#34DBC5]/50">
+            <button type="button" onClick={openAuth} className="inline-flex items-center justify-center rounded-2xl border border-white/80 bg-white/58 px-8 py-4 font-black text-[#2f496b] shadow-sm backdrop-blur hover:border-[#34DBC5]/50">
               Tôi đã có tài khoản
             </button>
           </div>

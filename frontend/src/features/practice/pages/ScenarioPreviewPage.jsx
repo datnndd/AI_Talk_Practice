@@ -65,8 +65,16 @@ const ScenarioPreviewPage = () => {
 
   useEffect(() => {
     let mounted = true;
-    setError("");
-    setIsLoading(!practiceApi.getCachedScenario(id));
+    const cachedScenario = practiceApi.getCachedScenario(id);
+
+    queueMicrotask(() => {
+      if (!mounted) {
+        return;
+      }
+      setError("");
+      setScenario(cachedScenario);
+      setIsLoading(!cachedScenario);
+    });
 
     void practiceApi.getScenario(id).then((data) => {
       if (mounted) setScenario(data);

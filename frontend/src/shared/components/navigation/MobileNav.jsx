@@ -1,38 +1,9 @@
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
-import { Crown, House, Medal, Notebook, Storefront, UserCircle } from "@phosphor-icons/react";
+import { Crown } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { canAccessSubscriptionFeatures } from "@/features/auth/utils/subscription";
-import { isRouteActive } from "./navigationData";
-
-const MOBILE_NAV_ITEMS = [
-  {
-    label: "Học",
-    path: "/learn",
-    Icon: House,
-  },
-  {
-    label: "Luyện",
-    path: "/scenarios",
-    Icon: Notebook,
-  },
-  {
-    label: "BXH",
-    path: "/leaderboard",
-    Icon: Medal,
-  },
-  {
-    label: "Shop",
-    path: "/shop",
-    Icon: Storefront,
-  },
-  {
-    label: "Hồ sơ",
-    path: "/profile",
-    Icon: UserCircle,
-    usesAvatar: true,
-  },
-];
+import { isRouteActive, learnerMobileItems } from "./navigationData";
 
 const MobileNav = () => {
   const location = useLocation();
@@ -53,9 +24,9 @@ const MobileNav = () => {
         {hasProAccess ? "Pro Unlocked" : "Nâng cấp Pro"}
       </Link>
       <div className="flex items-center justify-around px-2 py-3">
-        {MOBILE_NAV_ITEMS.map((item) => {
+        {learnerMobileItems.map((item) => {
           const isActive = isRouteActive(location.pathname, item.path);
-          const Icon = item.Icon;
+          const Icon = item.icon;
           return (
             <Link key={item.label} to={item.path} className="flex-1">
               <motion.div

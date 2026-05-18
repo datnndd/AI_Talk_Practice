@@ -34,66 +34,6 @@ export const appendUniqueMessage = (messages, nextMessage) => {
   return [...messages, nextMessage];
 };
 
-export const getLessonStatusCopy = ({ lessonState, recordingState, connectionState }) => {
-  if (!lessonState) {
-    return "";
-  }
-
-  if (connectionState === "closed") {
-    return "Reconnect to continue this conversation.";
-  }
-
-  if (connectionState === "reconnecting") {
-    return "Reconnecting to continue this conversation.";
-  }
-
-  if (lessonState.should_end) {
-    return lessonState.completion_message || "The conversation goals are complete. You can close the session now.";
-  }
-
-  if (recordingState === "recording") {
-    return "Answer the current question naturally in your own words.";
-  }
-
-  if (recordingState === "processing") {
-    return "Reviewing your answer and choosing the next question.";
-  }
-
-  if (recordingState === "assistant") {
-    return "Your conversation partner is moving to the next step.";
-  }
-
-  return lessonState.current_question || "";
-};
-
-export const getLessonCompletionTone = (lessonState) => {
-  if (!lessonState) {
-    return "active";
-  }
-
-  if (lessonState.should_end || lessonState.status === "completed") {
-    return "ready";
-  }
-
-  if ((lessonState.current_objective?.remaining_follow_ups || 0) <= 1) {
-    return "soon";
-  }
-
-  return "active";
-};
-
-export const getLessonStatusLabel = (lessonState) => {
-  if (!lessonState) {
-    return "Waiting";
-  }
-
-  if (lessonState.should_end || lessonState.status === "completed") {
-    return "Completed";
-  }
-
-  return lessonState.current_objective?.goal || "In progress";
-};
-
 export const formatLessonEndReason = (value) => {
   if (!value) {
     return "";
