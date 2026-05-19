@@ -22,7 +22,7 @@ const createPasswordForm = () => ({
 });
 
 const UserSettingsPage = () => {
-  const { user, updateProfileWithAvatar, changePassword, logout } = useAuth();
+  const { user, updateProfileWithAvatar, changePassword, forgotPassword, logout } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState(() => createProfileForm(user));
@@ -97,6 +97,30 @@ const UserSettingsPage = () => {
     event.target.value = "";
   };
 
+  const handlePasswordOtpSetup = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    const normalizedEmail = user?.email?.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setMessage({ type: "error", text: "Không tìm thấy email tài khoản để gửi OTP." });
+      return;
+    }
+
+    setIsSaving(true);
+    setMessage({ type: "", text: "" });
+
+    try {
+      await forgotPassword(normalizedEmail);
+      navigate(`/reset-password?email=${encodeURIComponent(normalizedEmail)}&returnTo=${encodeURIComponent("/settings")}`);
+    } catch (error) {
+      setMessage({ type: "error", text: error.response?.data?.detail || "Không thể gửi OTP. Vui lòng thử lại." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handlePasswordChange = async (event) => {
     event.preventDefault();
     if (isSaving) {
@@ -104,7 +128,7 @@ const UserSettingsPage = () => {
     }
 
     if (!user?.has_password) {
-      navigate(`/reset-password?email=${encodeURIComponent(user?.email || "")}`);
+      await handlePasswordOtpSetup();
       return;
     }
     if (passwordData.new_password !== passwordData.confirm_password) {
@@ -246,10 +270,11 @@ const UserSettingsPage = () => {
               Tài khoản này chưa có mật khẩu. Dùng OTP qua email để đặt mật khẩu an toàn.
               <button
                 type="button"
-                onClick={() => navigate(`/reset-password?email=${encodeURIComponent(user?.email || "")}`)}
-                className="mt-4 block rounded-xl bg-[#1cb0f6] px-5 py-3 font-black text-white"
+                onClick={handlePasswordOtpSetup}
+                disabled={isSaving}
+                className="mt-4 block rounded-xl bg-[#1cb0f6] px-5 py-3 font-black text-white disabled:opacity-70"
               >
-                Đặt mật khẩu bằng OTP
+                {isSaving ? "Đang gửi OTP..." : "Đặt mật khẩu bằng OTP"}
               </button>
             </div>
           ) : (

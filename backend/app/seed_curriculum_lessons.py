@@ -222,7 +222,7 @@ async def _tts_url(db, text: str) -> str:
 
 
 async def _lesson_payload(db, item: VocabularyItem, index: int) -> dict[str, Any]:
-    lesson_type = ("definition_choice", "shadowing", "read_aloud", "quick_qa")[index % 4]
+    lesson_type = ("definition_choice", "shadowing", "quick_qa")[index % 3]
     if lesson_type == "definition_choice":
         options = [{"word": item.word, "meaning_vi": item.meaning_vi, "is_correct": True}]
         options.extend({"word": word, "meaning_vi": meaning, "is_correct": False} for word, meaning in item.distractors)
@@ -244,16 +244,6 @@ async def _lesson_payload(db, item: VocabularyItem, index: int) -> dict[str, Any
                 "meaning_vi": item.meaning_vi,
                 "sample_audio_url": await _tts_url(db, item.sentence),
                 "slow_audio_url": "",
-            },
-        }
-    if lesson_type == "read_aloud":
-        return {
-            "type": lesson_type,
-            "title": f"Read aloud: {item.word}",
-            "content": {
-                "text": item.sentence,
-                "meaning_vi": item.meaning_vi,
-                "sample_audio_url": await _tts_url(db, item.sentence),
             },
         }
     return {

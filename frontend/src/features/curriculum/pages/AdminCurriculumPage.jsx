@@ -20,11 +20,6 @@ const EMPTY_CONTENT = {
     sample_audio_url:"",
     slow_audio_url:"",
   },
-  read_aloud: {
-    text:"I would like to order breakfast, please.",
-    meaning_vi:"T\u00f4i mu\u1ed1n g\u1ecdi b\u1eefa s\u00e1ng.",
-    sample_audio_url:"",
-  },
   definition_choice: {
     definition_text:"A booking made before you arrive.",
     definition_audio_url:"",
@@ -44,8 +39,7 @@ const EMPTY_CONTENT = {
 };
 
 const EXERCISE_TYPES = [
-  { value:"shadowing", label:"Shadowing / Repeat" },
-  { value:"read_aloud", label:"Read aloud" },
+  { value:"shadowing", label:"Repeat" },
   { value:"definition_choice", label:"Definition choice" },
   { value:"quick_qa", label:"Quick Q&A" },
 ];
@@ -481,30 +475,11 @@ const EntityModal = ({
           </div>
           <div>
             <FieldLabel>Sample Audio</FieldLabel>
-            <AudioAssetControl value={content.sample_audio_url ||""} text={content.reference_text ||""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })} />
+            <AudioAssetControl value={content.sample_audio_url ||""} text={content.reference_text ||""} language="en" lessonId={editingItem?.id ||""} onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })} />
           </div>
           <div>
             <FieldLabel>Slow Audio (optional)</FieldLabel>
-            <AudioAssetControl value={content.slow_audio_url ||""} text={content.reference_text ||""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, slow_audio_url: audioUrl })} />
-          </div>
-        </div>
-      );
-    }
-
-    if (form.type ==="read_aloud") {
-      return (
-        <div className="space-y-4">
-          <div>
-            <FieldLabel>Text</FieldLabel>
-            <textarea value={content.text ||""} onChange={(event) => updateExerciseContent({ ...content, text: event.target.value })} className="min-h-[150px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]" />
-          </div>
-          <div>
-            <FieldLabel>Meaning VI</FieldLabel>
-            <textarea value={content.meaning_vi ||""} onChange={(event) => updateExerciseContent({ ...content, meaning_vi: event.target.value })} className="min-h-[90px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]" />
-          </div>
-          <div>
-            <FieldLabel>Sample Audio (optional)</FieldLabel>
-            <AudioAssetControl value={content.sample_audio_url ||""} text={content.text ||""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })} />
+            <AudioAssetControl value={content.slow_audio_url ||""} text={content.reference_text ||""} language="en" lessonId={editingItem?.id ||""} onChange={(audioUrl) => updateExerciseContent({ ...content, slow_audio_url: audioUrl })} />
           </div>
         </div>
       );
@@ -519,7 +494,7 @@ const EntityModal = ({
           </div>
           <div>
             <FieldLabel>Definition Audio</FieldLabel>
-            <AudioAssetControl value={content.definition_audio_url ||""} text={content.definition_text ||""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, definition_audio_url: audioUrl })} />
+            <AudioAssetControl value={content.definition_audio_url ||""} text={content.definition_text ||""} language="en" lessonId={editingItem?.id ||""} onChange={(audioUrl) => updateExerciseContent({ ...content, definition_audio_url: audioUrl })} />
           </div>
           {renderOptionsEditor(content)}
         </div>
@@ -534,7 +509,7 @@ const EntityModal = ({
         </div>
         <div>
           <FieldLabel>Question Audio (optional)</FieldLabel>
-          <AudioAssetControl value={content.question_audio_url ||""} text={content.question_text ||""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, question_audio_url: audioUrl })} />
+          <AudioAssetControl value={content.question_audio_url ||""} text={content.question_text ||""} language="en" lessonId={editingItem?.id ||""} onChange={(audioUrl) => updateExerciseContent({ ...content, question_audio_url: audioUrl })} />
         </div>
         {renderHintsEditor(content)}
         <div>

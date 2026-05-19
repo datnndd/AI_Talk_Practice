@@ -6,11 +6,10 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-VALID_LESSON_TYPES = {"shadowing", "read_aloud", "definition_choice", "quick_qa"}
+VALID_LESSON_TYPES = {"shadowing", "definition_choice", "quick_qa"}
 
 LessonType = Literal[
     "shadowing",
-    "read_aloud",
     "definition_choice",
     "quick_qa",
 ]
@@ -71,9 +70,6 @@ def _validate_lesson_content(exercise_type: str | None, value: dict[str, Any]) -
             raise ValueError("shadowing requires content.reference_text")
         if not value.get("sample_audio_url"):
             raise ValueError("shadowing requires content.sample_audio_url")
-    elif exercise_type == "read_aloud":
-        if not value.get("text"):
-            raise ValueError("read_aloud requires content.text")
     elif exercise_type == "definition_choice":
         options = value.get("options")
         if not value.get("definition_audio_url"):

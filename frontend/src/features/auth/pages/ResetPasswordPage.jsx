@@ -6,13 +6,15 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState(searchParams.get("email") || "");
+  const returnToParam = searchParams.get("returnTo") || "";
+  const returnTo = returnToParam.startsWith("/") && !returnToParam.startsWith("//") ? returnToParam : "/settings";
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { forgotPassword, resetPassword } = useAuth();
+  const { forgotPassword, isAuthenticated, refreshUser, resetPassword } = useAuth();
   const navigate = useNavigate();
 
   const resendOtp = async () => {
@@ -41,8 +43,14 @@ const ResetPasswordPage = () => {
     setIsLoading(true);
     try {
       await resetPassword({ email: email.trim().toLowerCase(), otp, new_password: newPassword });
-      setMessage("Đã cập nhật mật khẩu. Đang chuyển về đăng nhập...");
-      window.setTimeout(() => navigate("/login", { replace: true }), 900);
+      if (isAuthenticated) {
+        await refreshUser();
+        setMessage("Đã cập nhật mật khẩu. Đang quay lại cài đặt...");
+        window.setTimeout(() => navigate(returnTo, { replace: true }), 900);
+      } else {
+        setMessage("Đã cập nhật mật khẩu. Đang chuyển về đăng nhập...");
+        window.setTimeout(() => navigate("/login", { replace: true }), 900);
+      }
     } catch (err) {
       setError(err.response?.data?.detail || "Không thể đặt lại mật khẩu.");
     } finally {
@@ -69,7 +77,9 @@ const ResetPasswordPage = () => {
         <button disabled={isLoading || !email} onClick={resendOtp} className="mt-3 h-11 w-full rounded-xl border border-border font-bold text-[var(--page-fg)] disabled:opacity-70" type="button">
           Gửi lại OTP
         </button>
-        <Link className="mt-5 block text-center text-sm font-black text-indigo-600 hover:underline" to="/login">Quay lại đăng nhập</Link>
+        <Link className="mt-5 block text-center text-sm font-black text-indigo-600 hover:underline" to={isAuthenticated ? returnTo : "/login"}>
+          {isAuthenticated ? "Quay lại cài đặt" : "Quay lại đăng nhập"}
+        </Link>
       </form>
     </div>
   );

@@ -123,7 +123,7 @@ class Lesson(Base, TimestampMixin):
         UniqueConstraint("unit_id", "order_index", name="uq_lessons_unit_order"),
         Index("ix_lessons_unit_active_order", "unit_id", "is_active", "order_index"),
         CheckConstraint(
-            "type IN ('shadowing','read_aloud','definition_choice','quick_qa')",
+            "type IN ('shadowing','definition_choice','quick_qa')",
             name="ck_lessons_type",
         ),
         CheckConstraint("order_index >= 0", name="ck_lessons_order_nonnegative"),

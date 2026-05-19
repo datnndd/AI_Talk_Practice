@@ -4,16 +4,12 @@ import { ArrowLeft, CheckCircle, Circle } from "@phosphor-icons/react";
 import { curriculumApi } from "@/features/curriculum/api/curriculumApi";
 
 const ShadowingExercise = lazy(() => import("@/features/curriculum/components/ShadowingExercise"));
-const ReadAloudExercise = lazy(() => import("@/features/curriculum/components/ReadAloudExercise"));
 const DefinitionChoiceExercise = lazy(() => import("@/features/curriculum/components/DefinitionChoiceExercise"));
 const QuickQaExercise = lazy(() => import("@/features/curriculum/components/QuickQaExercise"));
 
 const renderExercise = (exercise, onAttempt) => {
   if (exercise.type === "shadowing") {
     return <ShadowingExercise exercise={exercise} onAttempt={onAttempt} />;
-  }
-  if (exercise.type === "read_aloud") {
-    return <ReadAloudExercise exercise={exercise} onAttempt={onAttempt} />;
   }
   if (exercise.type === "definition_choice") {
     return <DefinitionChoiceExercise exercise={exercise} onAttempt={onAttempt} />;
@@ -24,12 +20,17 @@ const renderExercise = (exercise, onAttempt) => {
   return <p className="text-sm text-muted-foreground">Unsupported exercise type.</p>;
 };
 
-const buildLessonQueue = (lessons = []) => lessons.filter((item) => item.progress?.status !== "completed").map((item) => item.id);
+const getFirstOpenExerciseId = (lessons = []) => lessons.find((item) => item.progress?.status !== "completed")?.id || lessons[0]?.id || null;
+
+const getFirstOpenExerciseIndex = (lessons = []) => {
+  const index = lessons.findIndex((item) => item.progress?.status !== "completed");
+  return index >= 0 ? index : Math.max(lessons.length - 1, 0);
+};
 
 const LessonPlayerPage = () => {
   const { unitId } = useParams();
   const [unit, setUnit] = useState(null);
-  const [lessonQueue, setLessonQueue] = useState([]);
+  const [selectedExerciseId, setSelectedExerciseId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [rewardNotice, setRewardNotice] = useState("");
@@ -38,14 +39,14 @@ const LessonPlayerPage = () => {
     const cachedUnit = curriculumApi.getCachedUnit(unitId);
     if (cachedUnit) {
       setUnit(cachedUnit);
-      setLessonQueue(buildLessonQueue(cachedUnit.lessons));
+      setSelectedExerciseId(getFirstOpenExerciseId(cachedUnit.lessons));
     }
     setIsLoading(!cachedUnit);
     setError("");
     try {
       const data = await curriculumApi.getUnit(unitId);
       setUnit(data);
-      setLessonQueue(buildLessonQueue(data.lessons));
+      setSelectedExerciseId(getFirstOpenExerciseId(data.lessons));
     } catch (err) {
       setError(err?.response?.data?.detail || "Không thể tải unit.");
     } finally {
@@ -58,21 +59,29 @@ const LessonPlayerPage = () => {
     if (curriculumApi.getCachedUnit(unitId)) {
       void curriculumApi.getUnit(unitId, { force: true }).then((data) => {
         setUnit(data);
-        setLessonQueue(buildLessonQueue(data.lessons));
+        setSelectedExerciseId(getFirstOpenExerciseId(data.lessons));
       }).catch(() => null);
     }
   }, [loadUnit, unitId]);
 
-  const activeLessonId = lessonQueue[0] || unit?.lessons?.find((item) => item.progress?.status !== "completed")?.id || unit?.lessons?.[0]?.id;
-  const activeExercise = useMemo(
-    () => unit?.lessons?.find((item) => item.id === activeLessonId) || null,
-    [unit, activeLessonId],
+  const firstOpenIndex = useMemo(() => getFirstOpenExerciseIndex(unit?.lessons || []), [unit]);
+  const selectedExerciseIndex = useMemo(
+    () => unit?.lessons?.findIndex((item) => item.id === selectedExerciseId) ?? -1,
+    [unit, selectedExerciseId],
   );
+  const activeExercise = useMemo(() => {
+    const lessons = unit?.lessons || [];
+    if (!lessons.length) return null;
+    if (selectedExerciseIndex >= 0 && selectedExerciseIndex <= firstOpenIndex) {
+      return lessons[selectedExerciseIndex];
+    }
+    return lessons[firstOpenIndex] || lessons[0] || null;
+  }, [firstOpenIndex, selectedExerciseIndex, unit]);
 
   const refreshUnit = useCallback(async () => {
     const data = await curriculumApi.getUnit(unitId, { force: true });
     setUnit(data);
-    setLessonQueue(buildLessonQueue(data.lessons));
+    setSelectedExerciseId(getFirstOpenExerciseId(data.lessons));
   }, [unitId]);
 
   const handleAttempt = (result) => {
@@ -81,30 +90,24 @@ const LessonPlayerPage = () => {
     }
     setUnit((current) => {
       if (!current) return current;
+      const nextLessons = current.lessons.map((exercise) =>
+        exercise.id === result.lesson_id
+          ? { ...exercise, progress: result.progress }
+          : exercise
+      );
+      if (result.progress?.status === "completed") {
+        setSelectedExerciseId(getFirstOpenExerciseId(nextLessons));
+      }
       return {
         ...current,
         progress_status: result.unit_completed ? "completed" : current.progress_status,
-        lessons: current.lessons.map((exercise) =>
-          exercise.id === result.lesson_id
-            ? { ...exercise, progress: result.progress }
-            : exercise
-        ),
+        lessons: nextLessons,
       };
     });
-    setLessonQueue((currentQueue) => {
-      const remaining = currentQueue.filter((lessonId) => lessonId !== result.lesson_id);
-      if (result.progress?.status === "completed") {
-        if (remaining.length === 0 && !result.unit_completed) {
-          void refreshUnit().catch(() => null);
-        }
-        return remaining;
-      }
-      return [...remaining, result.lesson_id];
-    });
+    if (result.progress?.status === "completed" && !result.unit_completed) {
+      void refreshUnit().catch(() => null);
+    }
   };
-
-  const activeQueuePosition = activeExercise ? Math.max(lessonQueue.indexOf(activeExercise.id), 0) : 0;
-  const queueTotal = lessonQueue.length;
 
   if (isLoading) {
     return <div className="py-8 text-sm font-semibold text-muted-foreground">Đang tải bài học...</div>;
@@ -134,15 +137,21 @@ const LessonPlayerPage = () => {
           {unit.description && <p className="mt-2 text-sm leading-6 text-muted-foreground">{unit.description}</p>}
         </div>
         <div className="space-y-2">
-          {unit.lessons.map((exercise) => {
+          {unit.lessons.map((exercise, index) => {
             const completed = exercise.progress?.status === "completed";
+            const unlocked = index <= firstOpenIndex;
             return (
               <button
                 key={exercise.id}
                 type="button"
-                onClick={() => setLessonQueue((currentQueue) => [exercise.id, ...currentQueue.filter((lessonId) => lessonId !== exercise.id)])}
+                disabled={!unlocked}
+                onClick={() => setSelectedExerciseId(exercise.id)}
                 className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm font-bold ${
-                  activeExercise?.id === exercise.id ? "border-primary bg-primary/5" : "border-border bg-card"
+                  activeExercise?.id === exercise.id
+                    ? "border-primary bg-primary/5"
+                    : unlocked
+                      ? "border-border bg-card"
+                      : "cursor-not-allowed border-border bg-muted opacity-60"
                 }`}
               >
                 {completed ? <CheckCircle size={18} weight="fill" className="text-emerald-600" /> : <Circle size={18} />}
@@ -176,9 +185,9 @@ const LessonPlayerPage = () => {
               {renderExercise(activeExercise, handleAttempt)}
             </Suspense>
             <div className="mt-8 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-muted-foreground ">
-              {queueTotal > 0
-                ? `Hàng đợi luyện tập: ${activeQueuePosition + 1}/${queueTotal}. Sai thì bài sẽ quay lại cuối hàng.`
-                : "Bạn đã hoàn thành tất cả bài trong hàng đợi."}
+              {unit.progress_status === "completed"
+                ? "Bạn đã hoàn thành tất cả bài trong unit."
+                : "Hoàn thành bài hiện tại để mở bài tiếp theo."}
             </div>
           </>
         )}

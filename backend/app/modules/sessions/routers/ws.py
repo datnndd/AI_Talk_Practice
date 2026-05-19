@@ -13,6 +13,7 @@ from contextlib import suppress
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
 
 from app.core.config import settings
 from app.core.exceptions import AppError
@@ -131,9 +132,23 @@ async def websocket_conversation(websocket: WebSocket):
 
     async def send_json_safe(data: dict):
         try:
-            state = getattr(websocket, "client_state", None)
-            if state is None or getattr(state, "name", "CONNECTED") == "CONNECTED":
-                await websocket.send_json(data)
+            client_state = getattr(websocket, "client_state", None)
+            application_state = getattr(websocket, "application_state", None)
+            if client_state is not None and client_state != WebSocketState.CONNECTED:
+                trace("websocket_send_skipped", payload_type=data.get("type"), client_state=getattr(client_state, "name", client_state))
+                return
+            if application_state is not None and application_state != WebSocketState.CONNECTED:
+                trace("websocket_send_skipped", payload_type=data.get("type"), application_state=getattr(application_state, "name", application_state))
+                return
+            await websocket.send_json(data)
+        except RuntimeError as exc:
+            message = str(exc)
+            if "Cannot call \"send\" once a close message has been sent" in message:
+                trace("websocket_send_after_close", payload_type=data.get("type"))
+                logger.debug("Skipping websocket send after close: payload_type=%s", data.get("type"))
+                return
+            logger.exception("Error sending WebSocket message")
+            trace("websocket_send_error", payload_type=data.get("type"))
         except Exception:
             logger.exception("Error sending WebSocket message")
             trace("websocket_send_error", payload_type=data.get("type"))
@@ -698,6 +713,12 @@ async def websocket_conversation(websocket: WebSocket):
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")
         trace("websocket_disconnected")
+    except RuntimeError as exc:
+        if "WebSocket is not connected" in str(exc):
+            logger.info("WebSocket disconnected before receive")
+            trace("websocket_receive_after_close")
+        else:
+            raise
     finally:
         trace("cleanup_start", finalized_by_server=finalized_by_server, resume_enabled=resume_enabled)
         if timeout_task is not None and not timeout_task.done():

@@ -46,26 +46,94 @@ const ChartCard = ({ eyebrow, title, children, action }) => (
   </section>
 );
 
-const BarChart = ({ items = [], valueKey, currency, emptyText, titleFormatter }) => {
+const getXAxisTickIndexes = (itemsLength) => {
+  if (itemsLength <= 6) return Array.from({ length: itemsLength }, (_, index) => index);
+  const lastIndex = itemsLength - 1;
+  return Array.from(new Set([0, Math.round(lastIndex * 0.2), Math.round(lastIndex * 0.4), Math.round(lastIndex * 0.6), Math.round(lastIndex * 0.8), lastIndex]));
+};
+
+const buildSmoothPath = (points) => {
+  if (!points.length) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  return points.reduce((path, point, index) => {
+    if (index === 0) return `M ${point.x} ${point.y}`;
+
+    const previous = points[index - 1];
+    const controlDistance = (point.x - previous.x) / 2;
+    return `${path} C ${previous.x + controlDistance} ${previous.y}, ${point.x - controlDistance} ${point.y}, ${point.x} ${point.y}`;
+  }, "");
+};
+
+const AreaTrendChart = ({ items = [], valueKey, currency, emptyText, titleFormatter, valueFormatter }) => {
   const maxValue = Math.max(...items.map((item) => item[valueKey] || 0), 0);
   if (maxValue <= 0) {
     return <div className="flex h-72 items-center justify-center rounded-[24px] bg-muted text-sm font-bold text-[var(--page-muted)]">{emptyText}</div>;
   }
+
+  const width = Math.max(items.length * 42, 720);
+  const height = 260;
+  const padding = { top: 34, right: 34, bottom: 50, left: 44 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = 166;
+  const baselineY = padding.top + chartHeight;
+  const safeItemsLength = Math.max(items.length - 1, 1);
+  const points = items.map((item, index) => {
+    const value = item[valueKey] || 0;
+    const x = padding.left + (index / safeItemsLength) * chartWidth;
+    const y = baselineY - (value / maxValue) * chartHeight;
+    return { item, value, x, y };
+  });
+  const linePath = buildSmoothPath(points);
+  const areaPath = points.length === 1
+    ? `M ${points[0].x - 18} ${baselineY} L ${points[0].x} ${points[0].y} L ${points[0].x + 18} ${baselineY} Z`
+    : `${linePath} L ${points[points.length - 1].x} ${baselineY} L ${points[0].x} ${baselineY} Z`;
+  const activePoints = points.filter((point) => point.value > 0);
+  const tickIndexes = getXAxisTickIndexes(items.length);
+  const chartId = `area-trend-${valueKey}`;
+
   return (
     <div className="overflow-x-auto rounded-[24px] bg-muted p-4">
-      <svg viewBox={`0 0 ${Math.max(items.length * 48, 720)} 260`} className="h-72 min-w-[720px] w-full" role="img" aria-label="Dashboard chart">
-        <line x1="30" y1="210" x2={Math.max(items.length * 48, 720) - 20} y2="210" stroke="currentColor" className="text-border" strokeWidth="2" />
-        {items.map((item, index) => {
-          const chartX = 44 + index * 48;
-          const value = item[valueKey] || 0;
-          const barHeight = Math.max(8, (value / maxValue) * 170);
-          const chartY = 210 - barHeight;
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-72 min-w-[720px] w-full" role="img" aria-label="Dashboard chart">
+        <defs>
+          <linearGradient id={`${chartId}-fill`} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" className="text-primary" stopColor="currentColor" stopOpacity="0.24" />
+            <stop offset="100%" className="text-primary" stopColor="currentColor" stopOpacity="0" />
+          </linearGradient>
+          <filter id={`${chartId}-glow`} x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="8" stdDeviation="8" floodColor="currentColor" floodOpacity="0.16" />
+          </filter>
+        </defs>
+
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+          const y = padding.top + chartHeight * ratio;
           return (
-            <g key={`${item.label}-${item.period_start}`}>
-              <rect x={chartX} y={chartY} width="26" height={barHeight} rx="8" className="fill-primary/80 transition hover:fill-primary" />
-              <title>{titleFormatter ? titleFormatter(item, currency) : `${item.label}: ${value}`}</title>
-              <text x={chartX + 13} y="235" textAnchor="middle" className="fill-[var(--page-muted)] text-[10px] font-bold">{item.label}</text>
-            </g>
+            <line key={ratio} x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="currentColor" className="text-border/70" strokeDasharray={ratio === 1 ? "0" : "8 8"} strokeWidth={ratio === 1 ? "2" : "1"} />
+          );
+        })}
+
+        <path d={areaPath} fill={`url(#${chartId}-fill)`} />
+        <path d={linePath} fill="none" stroke="currentColor" className="text-primary" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" filter={`url(#${chartId}-glow)`} />
+
+        {activePoints.map((point) => (
+          <g key={`${point.item.label}-${point.item.period_start}`}>
+            <circle cx={point.x} cy={point.y} r={activePoints.length === 1 ? 8 : 5} className="fill-card stroke-primary transition hover:fill-primary hover:stroke-primary" strokeWidth="4">
+              <title>{titleFormatter ? titleFormatter(point.item, currency) : `${point.item.label}: ${point.value}`}</title>
+            </circle>
+            {activePoints.length === 1 && (
+              <text x={point.x} y={Math.max(18, point.y - 16)} textAnchor="middle" className="fill-primary text-[12px] font-black">
+                {valueFormatter ? valueFormatter(point.value, point.item) : point.value}
+              </text>
+            )}
+          </g>
+        ))}
+
+        {tickIndexes.map((index) => {
+          const point = points[index];
+          return (
+            <text key={`${point.item.label}-${index}`} x={point.x} y="238" textAnchor="middle" className="fill-[var(--page-muted)] text-[10px] font-bold">
+              {point.item.label}
+            </text>
           );
         })}
       </svg>
@@ -196,16 +264,17 @@ const AdminDashboardPage = () => {
           <>
             <div className="grid gap-6 xl:grid-cols-2">
               <ChartCard eyebrow="Revenue Trend" title="Doanh thu đã thanh toán">
-                <BarChart
+                <AreaTrendChart
                   items={dashboard.revenue_trend}
                   valueKey="paid_revenue_amount"
                   currency={currency}
                   emptyText="Chưa có doanh thu đã thanh toán."
+                  valueFormatter={(value, item) => formatCurrency(value, item.currency || currency)}
                   titleFormatter={(item) => `${item.label}: ${formatCurrency(item.paid_revenue_amount, item.currency || currency)} · ${item.paid_transactions} giao dịch`}
                 />
               </ChartCard>
               <ChartCard eyebrow="Transaction Volume" title="Số giao dịch theo thời gian">
-                <BarChart items={dashboard.transaction_volume} valueKey="transactions" emptyText="Chưa có giao dịch." titleFormatter={(item) => `${item.label}: ${item.transactions} giao dịch`} />
+                <AreaTrendChart items={dashboard.transaction_volume} valueKey="transactions" emptyText="Chưa có giao dịch." titleFormatter={(item) => `${item.label}: ${item.transactions} giao dịch`} />
               </ChartCard>
             </div>
 

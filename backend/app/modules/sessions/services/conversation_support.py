@@ -25,6 +25,9 @@ SESSION_END_MARKER_RE = re.compile(r"^\s*\[\[SESSION_END=(yes|no)\]\][ \t]*(?:\r
 SESSION_END_MARKER_PREFIX = "[[SESSION_END="
 SESSION_END_MARKER_MAX_CHARS = 80
 
+def strip_session_end_marker(text: str) -> str:
+    return SESSION_END_MARKER_RE.sub("", text or "", count=1).strip()
+
 
 class ConversationSupportJSONError(ValueError):
     def __init__(self, message: str, *, raw: str):
@@ -186,7 +189,7 @@ class ConversationReplyService:
             system_prompt=system_prompt,
         ):
             chunks.append(chunk)
-        return SESSION_END_MARKER_RE.sub("", "".join(chunks), count=1).strip()
+        return strip_session_end_marker("".join(chunks))
 
     async def stream_reply(
         self,

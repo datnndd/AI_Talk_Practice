@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useExerciseRecorder } from "@/features/curriculum/components/useExerciseRecorder";
 import { absoluteAudioUrl } from "@/features/curriculum/components/lessonAudio";
+import PronunciationWordFeedback from "@/features/curriculum/components/PronunciationWordFeedback";
 
 const ShadowingExercise = ({ exercise, onAttempt }) => {
   const audioRef = useRef(null);
@@ -38,7 +39,7 @@ const ShadowingExercise = ({ exercise, onAttempt }) => {
         </div>
       )}
       <RecordButton />
-      {feedback?.assessment && <div className="rounded-xl border border-border bg-card p-4 text-sm font-semibold">Score: {Math.round(feedback.assessment.score || 0)} ({feedback.assessment.source})</div>}
+      {feedback?.assessment && <PronunciationWordFeedback assessment={feedback.assessment} referenceText={feedback.reference_text || content.reference_text} />}
       {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
     </div>
   );

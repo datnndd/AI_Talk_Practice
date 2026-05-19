@@ -32,3 +32,4 @@
 2026-05-13 21:55:25,382 | INFO    | app.modules.sessions.routers.ws | Session cleaned up
 2026-05-13 21:58:12,269 | INFO    | app.modules.sessions.routers.ws | WebSocket connection accepted
 2026-05-13 21:58:12,328 | INFO    | app.modules.sessions.routers.ws | Session cleaned up
+2026-05-19 21:20:24,556 | INFO    | httpx | HTTP Request: POST http://testserver/api/admin/curriculum/audio/tts "HTTP/1.1 401 Unauthorized"

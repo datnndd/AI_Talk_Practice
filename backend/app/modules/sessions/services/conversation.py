@@ -18,6 +18,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Optional
 from app.core.config import Settings
 from app.infra.contracts import ASRBase, LLMBase, Message, TTSBase, TTSConfig, TranscriptEvent, TranscriptType
 from app.infra.factory import create_asr, create_llm, create_tts
+from app.modules.sessions.services.conversation_support import EndAwareReplyStream, strip_session_end_marker
 
 logger = logging.getLogger(__name__)
 
@@ -566,7 +567,8 @@ class ConversationSession:
         async def _external_producer():
             nonlocal full_response
             try:
-                async for chunk in self._on_generate_reply_stream(user_text):
+                reply_stream = EndAwareReplyStream(self._on_generate_reply_stream(user_text))
+                async for chunk in reply_stream:
                     full_response += chunk
                     self._current_response_text = full_response
                     if "llm_first_token" not in self._turn_timing:
@@ -614,6 +616,7 @@ class ConversationSession:
             if producer_task:
                 await producer_task
 
+        full_response = strip_session_end_marker(full_response)
         self._current_response_text = full_response
 
         if not interrupted and self._on_llm_chunk:

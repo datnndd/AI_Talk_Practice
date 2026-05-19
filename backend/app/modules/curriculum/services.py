@@ -3,6 +3,8 @@ from __future__ import annotations
 import base64
 import difflib
 import io
+import json
+import logging
 import os
 import re
 import tempfile
@@ -45,6 +47,7 @@ from app.modules.curriculum.schemas import (
 )
 from app.modules.users.models.user import User
 
+logger = logging.getLogger(__name__)
 
 WORD_RE = re.compile(r"[a-z0-9']+")
 MAX_PRONUNCIATION_AUDIO_BYTES = 10 * 1024 * 1024
@@ -52,6 +55,14 @@ LESSON_AUDIO_UPLOAD_DIR = os.path.join("static", "uploads", "lesson-audio")
 LESSON_AUDIO_URL_PREFIX = "/static/uploads/lesson-audio"
 MIN_PRONUNCIATION_SAMPLE_RATE = 16000
 CEFR_ORDER = {"A1": 0, "A2": 1, "B1": 2, "B2": 3, "C1": 4, "C2": 5}
+
+def _json_words(json_result: str) -> list[dict[str, Any]]:
+    try:
+        payload = json.loads(json_result)
+    except json.JSONDecodeError:
+        return []
+    words = payload.get("NBest", [{}])[0].get("Words", [])
+    return words if isinstance(words, list) else []
 
 
 def _utcnow() -> datetime:
@@ -213,6 +224,7 @@ class PronunciationAssessmentService:
                 "fluency_score": float(assessment.fluency_score or 0),
                 "completeness_score": float(assessment.completeness_score or 0),
                 "pronunciation_score": float(assessment.pronunciation_score or 0),
+                "words": _json_words(json_result),
                 "raw": json_result,
             }
         except (BadRequestError, UpstreamServiceError):
@@ -489,8 +501,6 @@ class CurriculumService:
         content = lesson.content or {}
         if lesson.type == "shadowing":
             return cls._score_shadowing(content, payload)
-        if lesson.type == "read_aloud":
-            return cls._score_read_aloud(content, payload)
         if lesson.type == "definition_choice":
             return cls._score_definition_choice(content, payload.answer)
         if lesson.type == "quick_qa":
@@ -523,14 +533,6 @@ class CurriculumService:
             reference_text=str(content.get("reference_text") or ""),
             payload=payload,
             missing_message="shadowing lesson has no reference_text",
-        )
-
-    @classmethod
-    def _score_read_aloud(cls, content: dict[str, Any], payload: LessonAttemptRequest) -> tuple[float, dict[str, Any], Any]:
-        return cls._score_pronunciation_lesson(
-            reference_text=str(content.get("text") or ""),
-            payload=payload,
-            missing_message="read_aloud lesson has no text",
         )
 
     @staticmethod
@@ -771,6 +773,15 @@ class AdminCurriculumService:
             raise BadRequestError("TTS text is required")
         voice = (body.voice or settings.tts_voice or "Cherry").strip()
         language = (body.language or "en").strip()
+        if body.lesson_id is not None:
+            await AdminCurriculumService.get_lesson(db, body.lesson_id)
+        logger.info(
+            "Creating lesson TTS audio: lesson_id=%s text_len=%s voice=%s language=%s",
+            body.lesson_id,
+            len(text),
+            voice,
+            language,
+        )
         tts = create_tts(settings)
         chunks: list[bytes] = []
         try:

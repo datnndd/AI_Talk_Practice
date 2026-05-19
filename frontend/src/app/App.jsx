@@ -56,7 +56,7 @@ function App() {
         <Route path="/login" element={<PublicRoute>{withSuspense(<LoginPage />)}</PublicRoute>} />
         <Route path="/register" element={<PublicRoute>{withSuspense(<RegisterPage />)}</PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute>{withSuspense(<ForgotPasswordPage />)}</PublicRoute>} />
-        <Route path="/reset-password" element={<PublicRoute>{withSuspense(<ResetPasswordPage />)}</PublicRoute>} />
+        <Route path="/reset-password" element={withSuspense(<ResetPasswordPage />)} />
         <Route path="/account-locked" element={withSuspense(<AccountLockedPage />)} />
         <Route path="/terms" element={withSuspense(<LegalPage type="terms" />)} />
         <Route path="/privacy" element={withSuspense(<LegalPage type="privacy" />)} />
