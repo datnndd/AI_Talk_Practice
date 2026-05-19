@@ -59,6 +59,69 @@
   width: 100%;
   display: flex;
   flex-direction: column;
+  gap: 28px;
+}
+
+.leaderboard-card {
+  width: 100%;
+  overflow: hidden;
+  border: 2px solid #e5e5e5;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(88, 96, 112, 0.12);
+}
+
+.leaderboard-current-card {
+  border-color: #b9e7ff;
+  box-shadow: 0 14px 36px rgba(28, 176, 246, 0.16);
+}
+
+.leaderboard-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 2px solid #f0f0f0;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%);
+}
+
+.leaderboard-card-title {
+  color: #4b4b4b;
+  font-size: 17px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.leaderboard-card-badge {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: #fff4d8;
+  color: #ff9600;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  padding: 6px 10px;
+  text-transform: uppercase;
+}
+
+.leaderboard-card-badge-current {
+  background: #ddf4ff;
+  color: #1cb0f6;
+}
+
+.leaderboard-card-body {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+}
+
+.leaderboard-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: #afafaf;
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .leaderboard-row {
@@ -69,6 +132,12 @@
   text-decoration: none;
   transition: background-color 0.2s;
   border-radius: 12px;
+}
+
+.leaderboard-row + .leaderboard-row {
+  border-top: 1px solid #eeeeee;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .leaderboard-row:hover {
@@ -127,27 +196,26 @@
   color: #1cb0f6;
 }
 
-.zone-separator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 16px;
-  font-weight: 900;
-  font-size: 15px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-}
+@media (max-width: 480px) {
+  .leaderboard-card-header {
+    padding: 16px;
+  }
 
-.promotion-zone {
-  color: #58cc02;
-}
+  .leaderboard-row {
+    gap: 12px;
+    padding: 12px;
+  }
 
-.demotion-zone {
-  color: #ff4b4b;
-}
+  .user-avatar-container {
+    width: 42px;
+    height: 42px;
+  }
 
-.zone-icon {
-  width: 16px;
-  height: 16px;
+  .user-name {
+    font-size: 15px;
+  }
+
+  .user-xp {
+    font-size: 13px;
+  }
 }

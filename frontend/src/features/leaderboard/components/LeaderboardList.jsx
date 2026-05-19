@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowDown, Medal, Star } from "@phosphor-icons/react";
+import { Medal } from "@phosphor-icons/react";
 import "./Leaderboard.css";
 
 const MEDAL_COLORS = {
@@ -7,22 +7,6 @@ const MEDAL_COLORS = {
   2: "#b8c2cc",
   3: "#d97706",
 };
-
-const PromotionZone = () => (
-  <div className="zone-separator promotion-zone border-y-2 border-[#e5e5e5] my-2">
-    <Star size={18} weight="fill" className="zone-icon" />
-    Promotion Zone
-    <Star size={18} weight="fill" className="zone-icon" />
-  </div>
-);
-
-const DemotionZone = () => (
-  <div className="zone-separator demotion-zone border-y-2 border-[#e5e5e5] my-2">
-    <ArrowDown size={18} weight="bold" className="zone-icon" />
-    Demotion Zone
-    <ArrowDown size={18} weight="bold" className="zone-icon" />
-  </div>
-);
 
 const LeaderboardRow = ({ entry, isCurrentUser }) => {
   const isMedalRank = entry.rank >= 1 && entry.rank <= 3;
@@ -58,33 +42,45 @@ const LeaderboardRow = ({ entry, isCurrentUser }) => {
 };
 
 const LeaderboardList = ({ entries = [], currentUser }) => {
-  const PROMOTION_THRESHOLD = 5;
-  const DEMOTION_START = 16; 
+  const topEntries = entries.slice(0, 5);
 
   return (
     <div className="leaderboard-list">
-      {entries.map((entry, index) => {
-        const isCurrentUser = currentUser?.id === entry.id;
-        const elements = [];
+      <section className="leaderboard-card" aria-labelledby="leaderboard-top-title">
+        <div className="leaderboard-card-header">
+          <p id="leaderboard-top-title" className="leaderboard-card-title">Top 5 Learners</p>
+          <span className="leaderboard-card-badge">Weekly XP</span>
+        </div>
 
-        if (index === PROMOTION_THRESHOLD) {
-          elements.push(<PromotionZone key="promotion-zone" />);
-        }
+        <div className="leaderboard-card-body">
+          {topEntries.length > 0 ? (
+            topEntries.map((entry, index) => (
+              <LeaderboardRow
+                key={entry.id || index}
+                entry={entry}
+                isCurrentUser={currentUser?.id === entry.id}
+              />
+            ))
+          ) : (
+            <div className="leaderboard-empty">No leaderboard data yet.</div>
+          )}
+        </div>
+      </section>
 
-        if (index === DEMOTION_START - 1) {
-          elements.push(<DemotionZone key="demotion-zone" />);
-        }
+      <section className="leaderboard-card leaderboard-current-card" aria-labelledby="leaderboard-current-title">
+        <div className="leaderboard-card-header">
+          <p id="leaderboard-current-title" className="leaderboard-card-title">Your Rank</p>
+          <span className="leaderboard-card-badge leaderboard-card-badge-current">Current</span>
+        </div>
 
-        elements.push(
-          <LeaderboardRow 
-            key={entry.id || index} 
-            entry={entry} 
-            isCurrentUser={isCurrentUser} 
-          />
-        );
-
-        return elements;
-      })}
+        <div className="leaderboard-card-body">
+          {currentUser ? (
+            <LeaderboardRow entry={currentUser} isCurrentUser />
+          ) : (
+            <div className="leaderboard-empty">Your rank is not available yet.</div>
+          )}
+        </div>
+      </section>
     </div>
   );
 };
