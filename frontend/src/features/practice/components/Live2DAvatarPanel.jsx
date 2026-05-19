@@ -360,7 +360,7 @@ const Live2DAvatarPanel = ({
           return;
         }
 
-        const runtime = await import("pixi-live2d-display/cubism4");
+        const runtime = await import("pixi-live2d-display/lib/cubism4");
 
         if (!isCurrentSetup()) {
           return;

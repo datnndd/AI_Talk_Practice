@@ -5,7 +5,7 @@ const ReadAloudExercise = ({ exercise, onAttempt }) => {
   const { feedback, error, RecordButton } = useExerciseRecorder({
     exercise,
     onAttempt,
-    defaultError: "Kh?ng th? ch?m b?i ??c. Vui l?ng th? l?i.",
+    defaultError: "Không thể chấm bài đọc. Vui lòng thử lại.",
   });
   const content = exercise.content || {};
 
@@ -13,7 +13,7 @@ const ReadAloudExercise = ({ exercise, onAttempt }) => {
     <div className="space-y-5">
       {content.sample_audio_url && <audio controls src={absoluteAudioUrl(content.sample_audio_url)} className="w-full" />}
       <div className="rounded-xl bg-muted p-5 text-[var(--page-fg)]">
-        <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">??c to v?n b?n</p>
+        <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Đọc to văn bản</p>
         <p className="mt-2 whitespace-pre-line text-xl font-black leading-8 text-[var(--page-fg)]">{content.text}</p>
         {content.meaning_vi && <p className="mt-3 whitespace-pre-line text-sm font-semibold text-[var(--page-muted)]">{content.meaning_vi}</p>}
       </div>

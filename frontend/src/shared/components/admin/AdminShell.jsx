@@ -1,4 +1,4 @@
-import { CreditCard, Gift, GlobeHemisphereWest, GraduationCap, Moon, Robot, Sun, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
+import { ChartBar, CreditCard, Gift, GlobeHemisphereWest, GraduationCap, Moon, Robot, Sun, SquaresFour, SignOut, UserList } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
@@ -6,6 +6,7 @@ import { useTheme } from "@/shared/context/ThemeContext";
 import { BrandMark } from "@/shared/components/navigation";
 
 const defaultNavItems = [
+  { label: "Dashboard", icon: ChartBar, to: "/admin/dashboard" },
   { label: "Users", icon: UserList, to: "/admin/users" },
   { label: "Scenario Library", icon: SquaresFour, to: "/admin/scenarios" },
   { label: "Characters", icon: Robot, to: "/admin/characters" },

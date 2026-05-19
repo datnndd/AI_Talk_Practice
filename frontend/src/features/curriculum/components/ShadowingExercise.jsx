@@ -8,7 +8,7 @@ const ShadowingExercise = ({ exercise, onAttempt }) => {
   const { feedback, error, RecordButton } = useExerciseRecorder({
     exercise,
     onAttempt,
-    defaultError: "Kh?ng th? ch?m ph?t ?m. Vui l?ng th? l?i.",
+    defaultError: "Không thể chấm phát âm. Vui lòng thử lại.",
   });
   const content = exercise.content || {};
   const audioUrl = speed === 0.75 && content.slow_audio_url ? content.slow_audio_url : content.sample_audio_url;
@@ -21,7 +21,7 @@ const ShadowingExercise = ({ exercise, onAttempt }) => {
   return (
     <div className="space-y-5">
       <div className="rounded-xl bg-muted p-5 text-[var(--page-fg)]">
-        <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Nghe v? l?p l?i</p>
+        <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Nghe và lặp lại</p>
         <p className="mt-2 text-2xl font-black leading-9 text-[var(--page-fg)]">{content.reference_text}</p>
         {content.meaning_vi && <p className="mt-2 text-sm font-semibold text-[var(--page-muted)]">{content.meaning_vi}</p>}
       </div>

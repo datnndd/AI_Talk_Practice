@@ -31,7 +31,7 @@ export const useExerciseRecorder = ({ exercise, onAttempt, defaultError }) => {
       recorderRef.current.start();
       setRecording(true);
     } catch (err) {
-      setError(err?.message || "Kh?ng th? m? microphone.");
+      setError(err?.message || "Không thể mở microphone.");
     }
   };
 
@@ -42,7 +42,7 @@ export const useExerciseRecorder = ({ exercise, onAttempt, defaultError }) => {
       className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white"
     >
       {recording ? <Stop size={18} weight="fill" /> : <Microphone size={18} weight="fill" />}
-      {recording ? "D?ng ghi ?m" : "Ghi ?m"}
+      {recording ? "Dừng ghi âm" : "Ghi âm"}
     </button>
   );
 

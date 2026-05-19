@@ -62,13 +62,6 @@ const FeedbackMessage = ({ error, notice }) => {
   );
 };
 
-const SummaryCard = ({ label, value }) => (
-  <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm  ">
-    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--page-muted)] ">{label}</p>
-    <p className="mt-3 font-display text-4xl font-black tracking-tight">{value}</p>
-  </div>
-);
-
 const DetailCard = ({ label, children }) => (
   <div className="rounded-[24px] bg-muted p-4 ">
     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)] ">{label}</p>
@@ -78,7 +71,6 @@ const DetailCard = ({ label, children }) => (
 
 const AdminPaymentsPage = () => {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const [overview, setOverview] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [total, setTotal] = useState(0);
   const [selectedTransactionId, setSelectedTransactionId] = useState(null);
@@ -106,13 +98,6 @@ const AdminPaymentsPage = () => {
       page: field === "page" ? value : 1,
     }));
   };
-
-  const loadOverview = useCallback(async () => {
-    const data = await adminPaymentsApi.getOverview();
-    if (mountedRef.current) {
-      setOverview(data);
-    }
-  }, []);
 
   const loadTransactions = useCallback(async () => {
     setIsLoadingList(true);
@@ -171,27 +156,18 @@ const AdminPaymentsPage = () => {
   }, []);
 
   const refreshPaymentData = useCallback(async (paymentId) => {
-    await loadOverview();
     await loadTransactions();
     await loadTransactionDetail(paymentId);
-  }, [loadOverview, loadTransactionDetail, loadTransactions]);
+  }, [loadTransactionDetail, loadTransactions]);
 
   useEffect(() => {
-    void loadOverview();
     void loadTransactions();
     void loadBillingSettings();
-  }, [loadBillingSettings, loadOverview, loadTransactions]);
+  }, [loadBillingSettings, loadTransactions]);
 
   useEffect(() => {
     void loadTransactionDetail(selectedTransactionId);
   }, [loadTransactionDetail, selectedTransactionId]);
-
-  const summaryCards = useMemo(() => [
-    { label: "Total", value: overview?.total_transactions || 0 },
-    { label: "Pending", value: overview?.pending_transactions || 0 },
-    { label: "Paid", value: overview?.paid_transactions || 0 },
-    { label: "Revenue", value: formatCurrency(overview?.paid_revenue_amount || 0, overview?.paid_revenue_currency || "VND") },
-  ], [overview]);
 
   const handleApprove = async () => {
     if (!selectedTransactionId) return;
@@ -252,14 +228,10 @@ const AdminPaymentsPage = () => {
   return (
     <AdminShell
       title="Payment Operations"
-      subtitle="Monitor Stripe transactions, inspect payment state, and handle manual admin approval or cancellation when support workflows require intervention."
+      subtitle="Manage subscription plans, inspect transactions, and handle manual approval or cancellation."
     >
       <div className="space-y-6">
         <FeedbackMessage error={error} notice={notice} />
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {summaryCards.map((card) => <SummaryCard key={card.label} label={card.label} value={card.value} />)}
-        </div>
 
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-[30px] border border-border bg-card p-5 shadow-sm  ">
@@ -294,7 +266,6 @@ const AdminPaymentsPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  void loadOverview();
                   void loadTransactions();
                 }}
                 className="inline-flex items-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-semibold text-[var(--page-muted)] transition hover:bg-muted"

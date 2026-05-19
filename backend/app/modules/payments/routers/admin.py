@@ -10,7 +10,9 @@ from app.modules.payments.schemas.admin_payment import (
     AdminPaymentTransactionRead,
     AdminSubscriptionPlanRead,
     AdminSubscriptionPlanUpdateRequest,
+    PaymentDashboardRead,
     PaymentOverviewRead,
+    PaymentStatsRead,
 )
 from app.modules.payments.serializers import serialize_admin_payment_transaction
 from app.modules.payments.services.admin_payment_service import AdminPaymentService
@@ -44,6 +46,22 @@ async def get_payment_overview(
 ):
     return await AdminPaymentService.get_overview(db)
 
+
+@router.get("/dashboard", response_model=PaymentDashboardRead)
+async def get_payment_dashboard(
+    period: str = Query(default="day", pattern="^(day|month|year)$"),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin_user),
+):
+    return await AdminPaymentService.get_dashboard(db, period)
+
+@router.get("/stats", response_model=PaymentStatsRead)
+async def get_payment_stats(
+    period: str = Query(default="day", pattern="^(day|month|year)$"),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin_user),
+):
+    return await AdminPaymentService.get_revenue_stats(db, period)
 
 @router.get("/transactions", response_model=AdminPaymentListResponse)
 async def list_payment_transactions(

@@ -26,6 +26,7 @@ const AdminUsersPage = lazy(() => import("@/features/admin-users/pages/AdminUser
 const AdminCharactersPage = lazy(() => import("@/features/admin-characters/pages/AdminCharactersPage"));
 const AdminScenariosPage = lazy(() => import("@/features/admin-scenarios/pages/AdminScenariosPage"));
 const AdminPaymentsPage = lazy(() => import("@/features/admin-payments/pages/AdminPaymentsPage"));
+const AdminDashboardPage = lazy(() => import("@/features/admin-dashboard/pages/AdminDashboardPage"));
 const AdminShopPage = lazy(() => import("@/features/admin-shop/pages/AdminShopPage"));
 const AdminSiteSettingsPage = lazy(() => import("@/features/admin-site/pages/AdminSiteSettingsPage"));
 const AdminCurriculumPage = lazy(() => import("@/features/curriculum/pages/AdminCurriculumPage"));
@@ -74,6 +75,7 @@ function App() {
         <Route path="/subscription" element={<PrivateRoute>{withAppLayout(<SubscriptionPage />)}</PrivateRoute>} />
         
         {/* Admin Routes */}
+        <Route path="/admin/dashboard" element={<PrivateRoute requireAdmin>{withSuspense(<AdminDashboardPage />)}</PrivateRoute>} />
         <Route path="/admin/users" element={<PrivateRoute requireAdmin>{withSuspense(<AdminUsersPage />)}</PrivateRoute>} />
         <Route path="/admin/characters" element={<PrivateRoute requireAdmin>{withSuspense(<AdminCharactersPage />)}</PrivateRoute>} />
         <Route path="/admin/scenarios" element={<PrivateRoute requireAdmin>{withSuspense(<AdminScenariosPage />)}</PrivateRoute>} />

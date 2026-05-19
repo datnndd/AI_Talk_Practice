@@ -218,7 +218,7 @@ const LandingPage = () => {
             <Sparkle weight="fill" /> AI tutor luyện nói 24/7
           </div>
           <h1 className="text-5xl font-black leading-[1.02] tracking-[-0.055em] text-[#20314a] md:text-7xl">
-            Luyện nói tiếng Anh mỗi ngày với AI tutor.
+            Luyện nói tiếng Anh mỗi ngày với Buddy Talk.
           </h1>
           <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-[#667394] md:text-xl">
             Buddy Talk giúp bạn nói nhiều hơn, sửa phát âm rõ hơn và giữ động lực bằng lộ trình học, điểm thưởng, leaderboard và phản hồi sau mỗi buổi luyện.

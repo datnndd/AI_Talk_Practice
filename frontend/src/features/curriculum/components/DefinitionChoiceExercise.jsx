@@ -24,7 +24,7 @@ const DefinitionChoiceExercise = ({ exercise, onAttempt }) => {
       setResult(response.feedback);
       onAttempt(response);
     } catch (err) {
-      setError(err?.response?.data?.detail || "Kh?ng th? ch?m b?i.");
+      setError(err?.response?.data?.detail || "Không thể chấm bài.");
     } finally {
       setIsSubmitting(false);
     }
@@ -33,7 +33,7 @@ const DefinitionChoiceExercise = ({ exercise, onAttempt }) => {
   return (
     <div className="space-y-5">
     <div className="rounded-xl bg-muted p-5 text-[var(--page-fg)]">
-        <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wide text-muted-foreground"><SpeakerHigh size={18} weight="fill" /> Nghe ??nh ngh?a v? ch?n t?</p>
+        <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wide text-muted-foreground"><SpeakerHigh size={18} weight="fill" /> Nghe định nghĩa và chọn từ</p>
         {content.definition_audio_url && <audio controls src={absoluteAudioUrl(content.definition_audio_url)} className="mt-3 w-full" />}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -50,8 +50,8 @@ const DefinitionChoiceExercise = ({ exercise, onAttempt }) => {
           );
         })}
       </div>
-      <button type="button" disabled={!selectedWord || isSubmitting} onClick={submit} className="rounded-xl bg-primary px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">{isSubmitting ? "?ang ch?m..." : "Ch?n ??p ?n"}</button>
-      {result && <div className={`rounded-xl px-4 py-3 text-sm font-bold ${result.correct ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{result.correct ? "??ng." : `Ch?a ??ng. ??p ?n l? ${result.correct_word}.`}</div>}
+      <button type="button" disabled={!selectedWord || isSubmitting} onClick={submit} className="rounded-xl bg-primary px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">{isSubmitting ? "Đang chấm..." : "Chọn đáp án"}</button>
+      {result && <div className={`rounded-xl px-4 py-3 text-sm font-bold ${result.correct ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{result.correct ? "Đúng." : `Chưa đúng. Đáp án là ${result.correct_word}.`}</div>}
       {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
     </div>
   );

@@ -16,6 +16,18 @@ class PaymentOverviewRead(BaseModel):
     paid_revenue_currency: str = "VND"
 
 
+class PaymentStatsBucketRead(BaseModel):
+    label: str
+    period_start: datetime
+    paid_revenue_amount: int
+    paid_transactions: int
+    currency: str = "VND"
+
+class PaymentStatsRead(BaseModel):
+    period: str
+    currency: str = "VND"
+    items: list[PaymentStatsBucketRead]
+
 class AdminPaymentTransactionRead(BaseModel):
     id: int
     user_id: int
@@ -41,6 +53,31 @@ class AdminPaymentTransactionRead(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class PaymentVolumeBucketRead(BaseModel):
+    label: str
+    period_start: datetime
+    transactions: int
+
+class PaymentStatusBreakdownRead(BaseModel):
+    status: str
+    transactions: int
+
+class PaymentPlanRevenueRead(BaseModel):
+    plan_code: str
+    paid_revenue_amount: int
+    paid_transactions: int
+    currency: str = "VND"
+
+class PaymentDashboardRead(BaseModel):
+    period: str
+    currency: str = "VND"
+    overview: PaymentOverviewRead
+    revenue_trend: list[PaymentStatsBucketRead]
+    transaction_volume: list[PaymentVolumeBucketRead]
+    status_breakdown: list[PaymentStatusBreakdownRead]
+    plan_revenue_split: list[PaymentPlanRevenueRead]
+    recent_payments: list[AdminPaymentTransactionRead]
 
 class AdminPaymentListResponse(BaseModel):
     items: list[AdminPaymentTransactionRead]

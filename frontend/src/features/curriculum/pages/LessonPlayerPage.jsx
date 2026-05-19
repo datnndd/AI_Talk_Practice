@@ -177,8 +177,8 @@ const LessonPlayerPage = () => {
             </Suspense>
             <div className="mt-8 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-muted-foreground ">
               {queueTotal > 0
-                ? `H?ng ??i luy?n t?p: ${activeQueuePosition + 1}/${queueTotal}. Sai th? b?i s? quay l?i cu?i h?ng.`
-                : "B?n ?? ho?n th?nh t?t c? b?i trong h?ng ??i."}
+                ? `Hàng đợi luyện tập: ${activeQueuePosition + 1}/${queueTotal}. Sai thì bài sẽ quay lại cuối hàng.`
+                : "Bạn đã hoàn thành tất cả bài trong hàng đợi."}
             </div>
           </>
         )}

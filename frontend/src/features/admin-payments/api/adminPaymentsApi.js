@@ -9,6 +9,8 @@ const requestData = async (request) => {
 
 export const adminPaymentsApi = {
   getOverview: () => requestData(httpClient.get(paymentPath("/overview"))),
+  getDashboard: (period = "day") => requestData(httpClient.get(paymentPath("/dashboard"), { params: { period } })),
+  getStats: (period = "day") => requestData(httpClient.get(paymentPath("/stats"), { params: { period } })),
   listPlans: () => requestData(httpClient.get(paymentPath("/plans"))),
   updatePlan: (code, payload) => requestData(httpClient.put(paymentPath(`/plans/${code}`), payload)),
   listTransactions: (params = {}) => requestData(httpClient.get(paymentPath("/transactions"), { params })),
