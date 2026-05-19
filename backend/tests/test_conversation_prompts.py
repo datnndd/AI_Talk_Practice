@@ -40,7 +40,10 @@ def test_dialogue_prompt_includes_roles_summary_and_recent_turns():
     assert "Trả lời lịch sự, khép lại cuộc trò chuyện một cách tự nhiên" in prompt
     assert "[[SESSION_END=yes]]" in prompt
     assert "[[SESSION_END=no]]" in prompt
-    assert "Never mention, explain, or reveal the hidden marker" in prompt
+    assert "Never mention, explain, or reference the marker" in prompt
+    assert "Do not use clipped or telegraphic fragments" in prompt
+    assert "What coffee?" in prompt
+    assert "Sure, one coffee. What size would you like: small, medium, or large?" in prompt
 
 
 def test_summary_prompt_has_json_contract_and_context():

@@ -8,8 +8,10 @@ export const useExerciseRecorder = ({ exercise, onAttempt, defaultError }) => {
   const [feedback, setFeedback] = useState(exercise.progress?.state?.last_feedback || null);
   const [error, setError] = useState("");
   const recorderRef = useRef(null);
+  const isCompleted = exercise.progress?.status === "completed";
 
   const submitAudio = async (audioBase64) => {
+    if (isCompleted) return;
     try {
       const response = await curriculumApi.attemptLesson(exercise.id, { audio_base64: audioBase64 });
       setFeedback(response.feedback);
@@ -20,6 +22,7 @@ export const useExerciseRecorder = ({ exercise, onAttempt, defaultError }) => {
   };
 
   const toggleRecording = async () => {
+    if (isCompleted) return;
     setError("");
     if (recording) {
       recorderRef.current?.stop();
@@ -39,12 +42,13 @@ export const useExerciseRecorder = ({ exercise, onAttempt, defaultError }) => {
     <button
       type="button"
       onClick={toggleRecording}
-      className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white"
+      disabled={isCompleted}
+      className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
     >
       {recording ? <Stop size={18} weight="fill" /> : <Microphone size={18} weight="fill" />}
-      {recording ? "Dừng ghi âm" : "Ghi âm"}
+      {isCompleted ? "Đã hoàn thành" : recording ? "Dừng ghi âm" : "Ghi âm"}
     </button>
   );
 
-  return { recording, feedback, error, RecordButton };
+  return { recording, feedback, error, isCompleted, RecordButton };
 };

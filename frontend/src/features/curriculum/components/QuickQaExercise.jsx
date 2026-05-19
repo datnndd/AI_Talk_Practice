@@ -2,13 +2,16 @@ import { useExerciseRecorder } from "@/features/curriculum/components/useExercis
 import { absoluteAudioUrl } from "@/features/curriculum/components/lessonAudio";
 
 const QuickQaExercise = ({ exercise, onAttempt }) => {
-  const { feedback, error, RecordButton } = useExerciseRecorder({
+  const { feedback, error, isCompleted, RecordButton } = useExerciseRecorder({
     exercise,
     onAttempt,
     defaultError: "Không thể chấm câu trả lời. Vui lòng thử lại.",
   });
   const content = exercise.content || {};
   const hints = content.answer_hints || [];
+  const score = Number(feedback?.score ?? 0);
+  const passScore = Number(feedback?.pass_score ?? exercise.pass_score ?? 0);
+  const passed = Boolean(feedback?.passed ?? feedback?.correct);
 
   return (
     <div className="space-y-5">
@@ -26,7 +29,18 @@ const QuickQaExercise = ({ exercise, onAttempt }) => {
         </div>
       )}
       <RecordButton />
-      {feedback && <div className={`rounded-xl px-4 py-3 text-sm font-bold ${feedback.correct ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>Transcript: {feedback.transcript || "Không nhận diện được."}</div>}
+      {isCompleted && <div className="rounded-xl bg-muted px-4 py-3 text-sm font-bold text-muted-foreground">Bài đã hoàn thành. Bạn chỉ có thể xem lại câu trả lời, không thể ghi âm lại.</div>}
+      {feedback && (
+        <div className={`space-y-3 rounded-xl px-4 py-3 text-sm font-bold ${passed ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>{passed ? "Đạt yêu cầu" : "Chưa đạt"}</span>
+            <span>{Math.round(score)}/{Math.round(passScore)} điểm</span>
+          </div>
+          <p>Transcript: {feedback.transcript || "Không nhận diện được."}</p>
+          {feedback.reason && <p>Nhận xét: {feedback.reason}</p>}
+          {feedback.suggested_answer && <p>Gợi ý trả lời: {feedback.suggested_answer}</p>}
+        </div>
+      )}
       {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
     </div>
   );

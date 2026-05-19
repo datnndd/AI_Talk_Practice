@@ -91,3 +91,36 @@ class ScenarioService:
             "objective_completion": objective_completion,
         }
 
+    @staticmethod
+    async def get_objective_completion_progress_by_scenario(
+        db: AsyncSession,
+        *,
+        scenario_ids: list[int],
+        user_id: int,
+    ) -> dict[int, dict]:
+        sessions = await SessionRepository.get_latest_objective_completed_by_scenario_for_user(
+            db,
+            user_id=user_id,
+            scenario_ids=scenario_ids,
+        )
+        progress_by_scenario: dict[int, dict] = {}
+        for scenario_id in scenario_ids:
+            session = sessions.get(scenario_id)
+            if session is None:
+                progress_by_scenario[scenario_id] = {
+                    "has_completed_session": False,
+                    "latest_completed_session_id": None,
+                    "latest_completed_session_result_url": None,
+                    "objective_completion": None,
+                }
+                continue
+            metadata = dict(session.score.score_metadata or {}) if session.score else {}
+            objective_completion = metadata.get("objective_completion")
+            progress_by_scenario[scenario_id] = {
+                "has_completed_session": True,
+                "latest_completed_session_id": session.id,
+                "latest_completed_session_result_url": f"/sessions/{session.id}/result",
+                "objective_completion": objective_completion,
+            }
+        return progress_by_scenario
+

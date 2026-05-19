@@ -31,6 +31,29 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   }, []);
 
+  const applyGamificationReward = useCallback((reward) => {
+    if (!reward) return;
+    setGamification((current) => {
+      if (!current) return current;
+      const xpEarned = Number(reward.xp_earned || 0);
+      const coinEarned = Number(reward.coin_earned || 0);
+      const levelsGained = Number(reward.levels_gained || 0);
+      return {
+        ...current,
+        xp: {
+          ...current.xp,
+          total: Number(current.xp?.total || 0) + xpEarned,
+          today: Number(current.xp?.today || 0) + xpEarned,
+          level: Number(current.xp?.level || 1) + levelsGained,
+        },
+        coin: {
+          ...current.coin,
+          balance: Number(current.coin?.balance || 0) + coinEarned,
+        },
+      };
+    });
+  }, []);
+
   const checkInDaily = useCallback(async () => {
     const response = await httpClient.post("/gamification/check-in");
     setGamification(response.data.dashboard);
@@ -149,6 +172,7 @@ export const AuthProvider = ({ children }) => {
         refreshUser: fetchUser,
         gamification,
         refreshGamification,
+        applyGamificationReward,
         checkInDaily,
         isAuthenticated: !!user,
         isLoading,

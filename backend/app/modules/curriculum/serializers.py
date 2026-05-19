@@ -50,6 +50,18 @@ def serialize_unit(
     include_lesson_content: bool = True,
 ) -> UnitRead:
     lessons = unit.lessons if "lessons" in unit.__dict__ else []
+    tracked_lessons = [
+        item
+        for item in lessons
+        if item.type in VALID_LESSON_TYPES and (include_inactive or item.is_active)
+    ]
+    completed_lessons = sum(
+        1
+        for item in tracked_lessons
+        if (lesson_progress or {}).get(item.id) and (lesson_progress or {})[item.id].status == "completed"
+    )
+    total_lessons = len(tracked_lessons)
+    progress_percent = round((completed_lessons / total_lessons) * 100) if total_lessons else 0
     return UnitRead.model_validate(
         {
             "id": unit.id,
@@ -63,6 +75,9 @@ def serialize_unit(
             "is_locked": is_locked,
             "progress_status": unit_progress.status if unit_progress else "not_started",
             "best_score": unit_progress.best_score if unit_progress else None,
+            "completed_lessons": completed_lessons,
+            "total_lessons": total_lessons,
+            "progress_percent": progress_percent,
             "lessons": [
                 serialize_lesson(
                     item,

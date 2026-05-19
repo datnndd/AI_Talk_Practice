@@ -36,19 +36,15 @@ const getUnitLabel = (unit) => {
 };
 
 const getUnitRewards = (unit) => {
-  const lessons = unit.lessons || [];
-  return lessons.reduce(
-    (total, lesson) => ({
-      xp: total.xp + Number(lesson.xp_reward || 0),
-      coin: total.coin + Number(lesson.coin_reward || 0),
-    }),
-    { xp: Number(unit.xp_reward || 0), coin: Number(unit.coin_reward || 0) },
-  );
+  return { xp: Number(unit.xp_reward || 0), coin: Number(unit.coin_reward || 0) };
 };
 
 const LessonNode = ({ unit, index, status, accent, onSelect }) => {
   const Icon = status === "completed" ? CheckCircle : status === "locked" ? LockKey : status === "current" ? PlayCircle : Star;
   const rewards = getUnitRewards(unit);
+  const completedLessons = Number(unit.completed_lessons || 0);
+  const totalLessons = Number(unit.total_lessons || unit.lessons?.length || 0);
+  const progressPercent = Number(unit.progress_percent || 0);
 
   return (
     <motion.button
@@ -77,6 +73,15 @@ const LessonNode = ({ unit, index, status, accent, onSelect }) => {
       <span className="relative z-10 mt-2 rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--page-muted)]">
         {getUnitLabel(unit)}
       </span>
+      <div className="relative z-10 mt-3 w-full">
+        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.14em]">
+          <span>{completedLessons}/{totalLessons} bài</span>
+          <span>{progressPercent}%</span>
+        </div>
+        <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/60">
+          <div className="h-full rounded-full bg-emerald-400" style={{ width: `${progressPercent}%` }} />
+        </div>
+      </div>
       <div className="relative z-10 mt-3 flex flex-wrap justify-center gap-2 text-[10px] font-black uppercase tracking-[0.14em]">
         <span className="rounded-full bg-white/80 px-2.5 py-1 text-amber-600">+{rewards.coin} coin</span>
         <span className="rounded-full bg-white/80 px-2.5 py-1 text-sky-600">+{rewards.xp} XP</span>
@@ -89,6 +94,9 @@ const PreviewDrawer = ({ unit, onClose }) => {
   if (!unit) return null;
   const rewards = getUnitRewards(unit);
   const lessons = unit.lessons || [];
+  const completedLessons = Number(unit.completed_lessons || 0);
+  const totalLessons = Number(unit.total_lessons || lessons.length || 0);
+  const progressPercent = Number(unit.progress_percent || 0);
   const locked = unit.is_locked;
   const lockedCopy = getUnitLabel(unit);
 
@@ -112,7 +120,7 @@ const PreviewDrawer = ({ unit, onClose }) => {
           <div className="mt-4 grid grid-cols-3 gap-3">
             <div className="rounded-3xl bg-amber-50 p-4 text-amber-700"><p className="text-2xl font-black">+{rewards.coin}</p><p className="text-[10px] font-black uppercase">Coin</p></div>
             <div className="rounded-3xl bg-sky-50 p-4 text-sky-700"><p className="text-2xl font-black">+{rewards.xp}</p><p className="text-[10px] font-black uppercase">XP</p></div>
-            <div className="rounded-3xl bg-violet-50 p-4 text-violet-700"><p className="text-2xl font-black">{lessons.length}</p><p className="text-[10px] font-black uppercase">Tasks</p></div>
+            <div className="rounded-3xl bg-violet-50 p-4 text-violet-700"><p className="text-2xl font-black">{progressPercent}%</p><p className="text-[10px] font-black uppercase">{completedLessons}/{totalLessons} bài</p></div>
           </div>
 
           <div className="mt-5 rounded-[30px] border border-zinc-200 p-5 ">

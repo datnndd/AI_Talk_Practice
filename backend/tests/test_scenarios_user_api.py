@@ -19,6 +19,8 @@ async def test_user_scenarios_list_includes_active_sqlite_legacy_rows(client, te
     assert "category" in scenario_item
     assert "difficulty" in scenario_item
     assert "ai_system_prompt" not in scenario_item
+    assert "has_completed_session" in scenario_item
+    assert "latest_completed_session_result_url" in scenario_item
 
 
 @pytest.mark.asyncio
@@ -91,6 +93,42 @@ async def test_scenario_detail_marks_objective_completed_session(test_client, db
     assert payload["latest_completed_session_id"] == session.id
     assert payload["latest_completed_session_result_url"] == f"/sessions/{session.id}/result"
     assert payload["objective_completion"] == "completed"
+
+@pytest.mark.asyncio
+async def test_scenarios_list_marks_objective_completed_session(test_client, db_session, test_user, test_scenario):
+    session = await _create_scored_session(
+        db_session,
+        user_id=test_user.id,
+        scenario_id=test_scenario.id,
+        objective_completion="completed",
+    )
+
+    response = await test_client.get("/api/scenarios")
+
+    assert response.status_code == 200, response.text
+    payload = next(item for item in response.json() if item["id"] == test_scenario.id)
+    assert payload["has_completed_session"] is True
+    assert payload["latest_completed_session_id"] == session.id
+    assert payload["latest_completed_session_result_url"] == f"/sessions/{session.id}/result"
+    assert payload["objective_completion"] == "completed"
+
+@pytest.mark.asyncio
+async def test_scenarios_list_does_not_mark_not_completed_objective(test_client, db_session, test_user, test_scenario):
+    await _create_scored_session(
+        db_session,
+        user_id=test_user.id,
+        scenario_id=test_scenario.id,
+        objective_completion="not_completed",
+    )
+
+    response = await test_client.get("/api/scenarios")
+
+    assert response.status_code == 200, response.text
+    payload = next(item for item in response.json() if item["id"] == test_scenario.id)
+    assert payload["has_completed_session"] is False
+    assert payload["latest_completed_session_id"] is None
+    assert payload["latest_completed_session_result_url"] is None
+    assert payload["objective_completion"] is None
 
 @pytest.mark.asyncio
 async def test_scenario_detail_does_not_mark_not_completed_objective(test_client, db_session, test_user, test_scenario):

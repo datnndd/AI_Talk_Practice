@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle, Circle } from "@phosphor-icons/react";
+import { useAuth } from "@/features/auth/context/AuthContext";
 import { curriculumApi } from "@/features/curriculum/api/curriculumApi";
 
 const ShadowingExercise = lazy(() => import("@/features/curriculum/components/ShadowingExercise"));
@@ -29,6 +30,7 @@ const getFirstOpenExerciseIndex = (lessons = []) => {
 
 const LessonPlayerPage = () => {
   const { unitId } = useParams();
+  const { applyGamificationReward, refreshGamification } = useAuth();
   const [unit, setUnit] = useState(null);
   const [selectedExerciseId, setSelectedExerciseId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,12 +83,16 @@ const LessonPlayerPage = () => {
   const refreshUnit = useCallback(async () => {
     const data = await curriculumApi.getUnit(unitId, { force: true });
     setUnit(data);
-    setSelectedExerciseId(getFirstOpenExerciseId(data.lessons));
+    setSelectedExerciseId((currentId) => {
+      const hasCurrentLesson = data.lessons?.some((lesson) => lesson.id === currentId);
+      return hasCurrentLesson ? currentId : getFirstOpenExerciseId(data.lessons);
+    });
   }, [unitId]);
 
   const handleAttempt = (result) => {
     if (result.reward) {
       setRewardNotice(`+${result.reward.xp_earned || 0} XP · +${result.reward.coin_earned || 0} Coin`);
+      applyGamificationReward?.(result.reward);
     }
     setUnit((current) => {
       if (!current) return current;
@@ -95,16 +101,21 @@ const LessonPlayerPage = () => {
           ? { ...exercise, progress: result.progress }
           : exercise
       );
-      if (result.progress?.status === "completed") {
-        setSelectedExerciseId(getFirstOpenExerciseId(nextLessons));
-      }
+      const totalLessons = nextLessons.filter((exercise) => exercise.is_active !== false).length;
+      const completedLessons = nextLessons.filter((exercise) => exercise.progress?.status === "completed").length;
       return {
         ...current,
         progress_status: result.unit_completed ? "completed" : current.progress_status,
+        completed_lessons: completedLessons,
+        total_lessons: totalLessons,
+        progress_percent: totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0,
         lessons: nextLessons,
       };
     });
-    if (result.progress?.status === "completed" && !result.unit_completed) {
+    if (result.unit_completed) {
+      void refreshGamification?.().catch(() => null);
+    }
+    if (!result.progress) {
       void refreshUnit().catch(() => null);
     }
   };

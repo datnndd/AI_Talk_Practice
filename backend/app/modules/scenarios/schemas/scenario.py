@@ -51,5 +51,9 @@ class ScenarioListRead(ORMModel):
     time_limit_minutes: int | None = None
     is_active: bool
     is_pro: bool
+    has_completed_session: bool = False
+    latest_completed_session_id: int | None = None
+    latest_completed_session_result_url: str | None = None
+    objective_completion: str | None = None
     created_at: datetime
     updated_at: datetime

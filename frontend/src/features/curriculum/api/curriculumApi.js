@@ -10,6 +10,12 @@ const sectionCache = new Map();
 
 const getUnitCacheKey = (unitId) => String(unitId);
 
+const invalidateCurriculumCaches = () => {
+  curriculumCache.data = null;
+  curriculumCache.promise = null;
+  sectionCache.clear();
+};
+
 export const curriculumApi = {
   getCurriculum: async ({ force = false } = {}) => {
     if (!force && curriculumCache.data) {
@@ -55,6 +61,9 @@ export const curriculumApi = {
   },
   getUnit: async (unitId, { force = false } = {}) => {
     const key = getUnitCacheKey(unitId);
+    if (force) {
+      invalidateCurriculumCaches();
+    }
     const cached = unitCache.get(key);
     if (!force && cached?.data) {
       return cached.data;
@@ -83,6 +92,7 @@ export const curriculumApi = {
   },
   attemptLesson: async (lessonId, payload) => {
     const { data } = await httpClient.post(`/lessons/${lessonId}/attempt`, payload);
+    invalidateCurriculumCaches();
     return data;
   },
 

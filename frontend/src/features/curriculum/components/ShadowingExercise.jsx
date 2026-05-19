@@ -6,7 +6,7 @@ import PronunciationWordFeedback from "@/features/curriculum/components/Pronunci
 const ShadowingExercise = ({ exercise, onAttempt }) => {
   const audioRef = useRef(null);
   const [speed, setSpeed] = useState(1);
-  const { feedback, error, RecordButton } = useExerciseRecorder({
+  const { feedback, error, isCompleted, RecordButton } = useExerciseRecorder({
     exercise,
     onAttempt,
     defaultError: "Không thể chấm phát âm. Vui lòng thử lại.",
@@ -39,6 +39,7 @@ const ShadowingExercise = ({ exercise, onAttempt }) => {
         </div>
       )}
       <RecordButton />
+      {isCompleted && <div className="rounded-xl bg-muted px-4 py-3 text-sm font-bold text-muted-foreground">Bài đã hoàn thành. Bạn chỉ có thể xem lại kết quả, không thể ghi âm lại.</div>}
       {feedback?.assessment && <PronunciationWordFeedback assessment={feedback.assessment} referenceText={feedback.reference_text || content.reference_text} />}
       {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
     </div>

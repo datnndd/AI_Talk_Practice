@@ -641,6 +641,9 @@ const PracticeSession = () => {
         recordingStateRef.current = "idle";
         setRecordingState("idle");
         setSessionEnded(true);
+        if (payload.session_id) {
+          setAnalysisResultUrl(`/sessions/${payload.session_id}/result`);
+        }
         if (payload.message) {
           setMessages((current) => appendUniqueMessage(
             current,
@@ -648,15 +651,18 @@ const PracticeSession = () => {
           ));
         }
         break;
-      case "session_finalized":
+      case "session_finalized": {
+        const resultUrl = payload.result_url || `/sessions/${payload.session_id}/result`;
         setSessionEnded(true);
-        setAnalysisResultUrl(payload.result_url || `/sessions/${payload.session_id}/result`);
+        setAnalysisResultUrl(resultUrl);
         closeSocket(true);
         connectionStateRef.current = "closed";
         recordingStateRef.current = "idle";
         setConnectionState("closed");
         setRecordingState("idle");
+        navigate(resultUrl);
         break;
+      }
       case "assistant_interrupted":
         stopAssistantPlayback();
         suppressAssistantStreamRef.current = false;

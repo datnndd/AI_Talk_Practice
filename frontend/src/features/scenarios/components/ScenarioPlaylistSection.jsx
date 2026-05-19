@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Crown, Headphones, LockSimple, MagnifyingGlass, PlayCircle, Sparkle, Target } from "@phosphor-icons/react";
+import { CheckCircle, Crown, Headphones, LockSimple, MagnifyingGlass, PlayCircle, Sparkle, Target } from "@phosphor-icons/react";
 
 import fallbackScenarioImage from "@/assets/buddy_talk_logo.jpg";
 import { practiceApi } from "@/features/practice/api/practiceApi";
@@ -48,15 +48,21 @@ const ScenarioCard = ({ scenario, hasProAccess }) => {
   const difficulty = getDifficultyMeta(scenario.difficulty);
   const isProScenario = Boolean(scenario.is_pro);
   const isLocked = isProScenario && !hasProAccess;
+  const isCompleted = scenario.objective_completion === "completed";
+  const resultUrl = scenario.latest_completed_session_result_url;
+  const previewUrl = isLocked ? "/subscription" : `/practice/${scenario.id}/preview`;
 
   return (
-    <Link
-      to={isLocked ? "/subscription" : `/practice/${scenario.id}/preview`}
-      onMouseEnter={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
-      onFocus={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
+    <article
       className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
     >
-      <div className="relative m-3 mb-0 flex aspect-[16/10] items-center justify-center overflow-hidden rounded-2xl bg-zinc-100 p-3 dark:bg-zinc-800">
+      <Link
+        to={previewUrl}
+        onMouseEnter={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
+        onFocus={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
+        className="block"
+      >
+        <div className="relative m-3 mb-0 flex aspect-[16/10] items-center justify-center overflow-hidden rounded-2xl bg-zinc-100 p-3 dark:bg-zinc-800">
         <img
           alt={scenario.title}
           loading="lazy"
@@ -74,6 +80,11 @@ const ScenarioCard = ({ scenario, hasProAccess }) => {
               <Crown size={12} weight="fill" /> {isLocked ? "Pro" : "Unlocked"}
             </span>
           ) : null}
+          {isCompleted ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-800">
+              <CheckCircle size={12} weight="fill" /> Completed
+            </span>
+          ) : null}
         </div>
         <div className="absolute bottom-3 left-3 right-3 text-white">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/75">{formatCategory(scenario.category)}</p>
@@ -85,21 +96,43 @@ const ScenarioCard = ({ scenario, hasProAccess }) => {
             </div>
           </div>
         ) : null}
-      </div>
+        </div>
+      </Link>
 
       <div className="p-4">
-        <h3 className="line-clamp-2 min-h-[2.5rem] text-base font-black leading-tight text-foreground transition group-hover:text-primary">{scenario.title}</h3>
+        <Link
+          to={previewUrl}
+          onMouseEnter={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
+          onFocus={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
+        >
+          <h3 className="line-clamp-2 min-h-[2.5rem] text-base font-black leading-tight text-foreground transition hover:text-primary">{scenario.title}</h3>
+        </Link>
         <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-xs font-semibold leading-5 text-muted-foreground">{scenario.description}</p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px] font-black">
           <div className="rounded-2xl bg-muted px-2 py-3"><Headphones className="mx-auto mb-1" size={17} weight="fill" />{formatDuration((scenario.time_limit_minutes || 0) * 60)}</div>
           <div className="rounded-2xl bg-muted px-2 py-3"><Target className="mx-auto mb-1" size={17} weight="fill" />{scenario.tasks?.length || 0} tasks</div>
           <div className="rounded-2xl bg-muted px-2 py-3"><Sparkle className="mx-auto mb-1" size={17} weight="fill" />Live AI</div>
         </div>
-        <div className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-black text-white transition group-hover:bg-primary/90">
-          <PlayCircle size={18} weight="fill" /> {isLocked ? "Upgrade to play" : "Preview roleplay"}
+        <div className={`mt-4 grid gap-2 ${isCompleted && resultUrl && !isLocked ? "sm:grid-cols-2" : ""}`}>
+          <Link
+            to={previewUrl}
+            onMouseEnter={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
+            onFocus={() => !isLocked && practiceApi.prefetchScenario(scenario.id)}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-black text-white transition hover:bg-primary/90"
+          >
+            <PlayCircle size={18} weight="fill" /> {isLocked ? "Upgrade to play" : "Preview roleplay"}
+          </Link>
+          {isCompleted && resultUrl && !isLocked ? (
+            <Link
+              to={resultUrl}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-black text-emerald-700 transition hover:bg-emerald-100"
+            >
+              <CheckCircle size={18} weight="fill" /> View Analysis
+            </Link>
+          ) : null}
         </div>
       </div>
-    </Link>
+    </article>
   );
 };
 

@@ -151,14 +151,11 @@ def session_current_question(session) -> str:
     return (session.scenario.description or "").strip()
 
 
-def session_recent_llm_messages(session, *, limit: int = 10) -> list[Message]:
-    messages: list[Message] = []
-    for item in _sorted_messages(session)[-max(1, limit):]:
-        content = (item.content or "").strip()
-        if not content:
-            continue
-        messages.append(Message(role=item.role, content=content))
-    return messages
+def _latest_user_turn(session) -> str:
+    for message in reversed(_sorted_messages(session)):
+        if message.role == "user" and message.content.strip():
+            return message.content.strip()
+    return ""
 
 
 class ConversationReplyService:
@@ -202,7 +199,13 @@ class ConversationReplyService:
             learner_profile=learner_profile,
             extra_instruction=extra_instruction,
         )
-        messages = session_recent_llm_messages(session, limit=self.message_limit)
+        current_turn = _latest_user_turn(session)
+        prompt_text = (
+            f"Continue the role-play after the learner says: {current_turn}"
+            if current_turn
+            else "Continue the role-play from the recent turns."
+        )
+        messages = [Message(role="user", content=prompt_text)]
         async for chunk in self.llm.chat_stream(messages, system_prompt=system_prompt):
             yield chunk
 

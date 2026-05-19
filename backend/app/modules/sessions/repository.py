@@ -109,6 +109,51 @@ class SessionRepository:
         return result.unique().scalar_one_or_none()
 
     @staticmethod
+    async def get_latest_objective_completed_by_scenario_for_user(
+        db: AsyncSession,
+        *,
+        user_id: int,
+        scenario_ids: list[int],
+    ) -> dict[int, Session]:
+        if not scenario_ids:
+            return {}
+
+        objective_completion = SessionScore.score_metadata["objective_completion"].as_string()
+        row_number = (
+            func.row_number()
+            .over(
+                partition_by=Session.scenario_id,
+                order_by=(
+                    desc(Session.ended_at).nulls_last(),
+                    desc(Session.started_at),
+                    desc(Session.id),
+                ),
+            )
+            .label("row_number")
+        )
+        ranked = (
+            select(Session.id.label("session_id"), row_number)
+            .join(SessionScore, SessionScore.session_id == Session.id)
+            .where(
+                Session.user_id == user_id,
+                Session.scenario_id.in_(scenario_ids),
+                Session.status == "completed",
+                Session.deleted_at.is_(None),
+                objective_completion == "completed",
+            )
+            .subquery()
+        )
+        stmt = (
+            select(Session)
+            .join(ranked, ranked.c.session_id == Session.id)
+            .options(joinedload(Session.score))
+            .where(ranked.c.row_number == 1)
+        )
+        result = await db.execute(stmt)
+        sessions = result.unique().scalars().all()
+        return {session.scenario_id: session for session in sessions}
+
+    @staticmethod
     async def count_messages(db: AsyncSession, session_id: int, *, role: str | None = None) -> int:
         stmt = select(func.count(Message.id)).where(Message.session_id == session_id)
         if role is not None:

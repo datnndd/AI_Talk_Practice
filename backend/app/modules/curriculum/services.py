@@ -19,8 +19,8 @@ from sqlalchemy.orm import attributes, selectinload
 from app.core.config import settings
 from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError, UpstreamServiceError
 from app.infra.supabase_storage import supabase_storage
-from app.infra.contracts import TTSConfig
-from app.infra.factory import create_tts
+from app.infra.contracts import Message, TTSConfig
+from app.infra.factory import LLMRole, create_llm_for_role, create_tts
 from app.modules.curriculum.models import (
     LearningSection,
     Lesson,
@@ -289,6 +289,90 @@ class SpeechTranscriptionService:
                 except OSError:
                     pass
 
+class QuickQaEvaluationService:
+    SYSTEM_PROMPT = (
+        "You grade short spoken English answers for relevance to a question. "
+        "Return only valid JSON with keys: score, passed, reason, suggested_answer. "
+        "score must be an integer from 0 to 100."
+    )
+
+    @staticmethod
+    def _empty_feedback(reason: str = "Không nhận diện được câu trả lời.") -> dict[str, Any]:
+        return {
+            "score": 0,
+            "passed": False,
+            "reason": reason,
+            "suggested_answer": "",
+            "evaluator_source": "local_fallback",
+        }
+
+    @staticmethod
+    def _extract_json_object(text: str) -> dict[str, Any]:
+        value = (text or "").strip()
+        if value.startswith("```"):
+            value = re.sub(r"^```(?:json)?\s*", "", value, flags=re.IGNORECASE)
+            value = re.sub(r"\s*```$", "", value)
+        try:
+            payload = json.loads(value)
+        except json.JSONDecodeError:
+            start = value.find("{")
+            end = value.rfind("}")
+            if start < 0 or end <= start:
+                raise
+            payload = json.loads(value[start : end + 1])
+        if not isinstance(payload, dict):
+            raise ValueError("Quick Q/A evaluator returned non-object JSON")
+        return payload
+
+    @classmethod
+    async def evaluate(
+        cls,
+        *,
+        question_text: str,
+        transcript: str,
+        hints: list[Any],
+        pass_score: float,
+    ) -> dict[str, Any]:
+        if not transcript.strip():
+            return cls._empty_feedback()
+
+        prompt_payload = {
+            "question": question_text,
+            "answer_transcript": transcript,
+            "hints": hints,
+            "pass_score": pass_score,
+            "scoring_rules": {
+                "0": "empty or unrelated",
+                "50": "partially related",
+                "80": "relevant and acceptable",
+                "100": "clear and complete",
+            },
+        }
+        llm = None
+        try:
+            llm = create_llm_for_role(settings, LLMRole.EVALUATION)
+            chunks: list[str] = []
+            async for chunk in llm.chat_stream(
+                [Message(role="user", content=json.dumps(prompt_payload, ensure_ascii=False))],
+                system_prompt=cls.SYSTEM_PROMPT,
+                max_tokens=220,
+            ):
+                chunks.append(chunk)
+            payload = cls._extract_json_object("".join(chunks))
+            score = max(0, min(100, int(round(float(payload.get("score") or 0)))))
+            return {
+                "score": score,
+                "passed": bool(payload.get("passed")) if "passed" in payload else score >= pass_score,
+                "reason": str(payload.get("reason") or "").strip(),
+                "suggested_answer": str(payload.get("suggested_answer") or "").strip(),
+                "evaluator_source": "llm",
+            }
+        except Exception as exc:
+            logger.warning("Quick Q/A evaluator failed: %s", exc)
+            return cls._empty_feedback("Không thể chấm bằng AI lúc này. Vui lòng thử lại.")
+        finally:
+            if llm is not None:
+                await llm.close()
 
 
 class CurriculumService:
@@ -448,6 +532,9 @@ class CurriculumService:
     ) -> LessonAttemptRead:
         lesson = await cls._get_active_lesson(db, lesson_id, include_unit_lessons=False)
         await cls.get_user_unit(db, user=user, unit_id=lesson.unit_id)
+        progress = await cls._get_or_create_lesson_progress(db, user.id, lesson.id)
+        if progress.status == "completed":
+            raise BadRequestError("Lesson is already completed and can only be reviewed")
 
         score, feedback, answer_payload = await cls._score_lesson(db, user=user, lesson=lesson, payload=payload)
         target_passed = score >= lesson.pass_score
@@ -463,7 +550,6 @@ class CurriculumService:
         db.add(attempt)
         await db.flush()
 
-        progress = await cls._get_or_create_lesson_progress(db, user.id, lesson.id)
         progress.attempt_count = (progress.attempt_count or 0) + 1
         progress.best_score = max(progress.best_score or 0, score)
         progress.state = cls._merge_progress_state(
@@ -486,7 +572,7 @@ class CurriculumService:
             feedback=feedback,
             progress=cls._progress_summary(progress),
             unit_completed=unit_completed,
-            reward=reward.model_dump(mode="json") if reward else None,
+            reward=reward.reward.model_dump(mode="json") if reward else None,
         )
 
     @classmethod
@@ -504,7 +590,7 @@ class CurriculumService:
         if lesson.type == "definition_choice":
             return cls._score_definition_choice(content, payload.answer)
         if lesson.type == "quick_qa":
-            return cls._score_quick_qa(content, payload)
+            return await cls._score_quick_qa(content, payload, pass_score=lesson.pass_score)
         raise BadRequestError("Unsupported lesson type")
 
     @staticmethod
@@ -554,26 +640,40 @@ class CurriculumService:
         )
 
     @staticmethod
-    def _score_quick_qa(content: dict[str, Any], payload: LessonAttemptRequest) -> tuple[float, dict[str, Any], Any]:
+    async def _score_quick_qa(
+        content: dict[str, Any],
+        payload: LessonAttemptRequest,
+        *,
+        pass_score: float,
+    ) -> tuple[float, dict[str, Any], Any]:
         question_text = str(content.get("question_text") or "").strip()
         if not question_text:
             raise BadRequestError("quick_qa lesson has no question_text")
-        min_words = int(content.get("min_words") or 2)
         audio_bytes = _decode_audio_base64(payload.audio_base64)
         submitted = payload.answer if isinstance(payload.answer, dict) else {"transcript": payload.answer}
         transcription = SpeechTranscriptionService.transcribe(audio_bytes=audio_bytes, fallback_answer=submitted)
         transcript = str(transcription.get("transcript") or "").strip()
-        word_count = len(WORD_RE.findall(transcript.lower()))
-        passed = word_count >= min_words
+        evaluation = await QuickQaEvaluationService.evaluate(
+            question_text=question_text,
+            transcript=transcript,
+            hints=content.get("answer_hints") or [],
+            pass_score=pass_score,
+        )
+        score = float(evaluation.get("score") or 0)
+        passed = score >= pass_score
         return (
-            100.0 if passed else 0.0,
+            score,
             {
                 "question_text": question_text,
                 "transcript": transcript,
-                "word_count": word_count,
-                "min_words": min_words,
-                "source": transcription.get("source"),
+                "score": score,
+                "pass_score": pass_score,
+                "passed": passed,
                 "correct": passed,
+                "reason": evaluation.get("reason") or "",
+                "suggested_answer": evaluation.get("suggested_answer") or "",
+                "source": transcription.get("source"),
+                "evaluator_source": evaluation.get("evaluator_source"),
             },
             {**submitted, "transcript": transcript} if isinstance(submitted, dict) else {"transcript": transcript},
         )

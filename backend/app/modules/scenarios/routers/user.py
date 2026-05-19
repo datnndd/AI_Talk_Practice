@@ -19,9 +19,18 @@ async def list_scenarios(
     category: str | None = Query(default=None),
     difficulty: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     scenarios = await ScenarioService.list_active(db, category, difficulty)
-    return [serialize_scenario_list_item(item) for item in scenarios]
+    progress_by_scenario = await ScenarioService.get_objective_completion_progress_by_scenario(
+        db,
+        scenario_ids=[scenario.id for scenario in scenarios],
+        user_id=user.id,
+    )
+    return [
+        serialize_scenario_list_item(item, progress=progress_by_scenario.get(item.id))
+        for item in scenarios
+    ]
 
 
 @router.get("/{scenario_id}", response_model=ScenarioRead)

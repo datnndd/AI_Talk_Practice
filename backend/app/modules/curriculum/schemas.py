@@ -191,6 +191,9 @@ class UnitRead(ORMModel):
     is_locked: bool = False
     progress_status: str = "not_started"
     best_score: float | None = None
+    completed_lessons: int = 0
+    total_lessons: int = 0
+    progress_percent: int = 0
     lessons: list[LessonRead] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime

@@ -54,6 +54,7 @@ async def get_curriculum_section(
         db,
         user.id,
         user_cefr=user.current_cefr or user.level,
+        include_lesson_progress=True,
     )
     section = next((item for item in sections if item.id == section_id), None)
     if section is None:
