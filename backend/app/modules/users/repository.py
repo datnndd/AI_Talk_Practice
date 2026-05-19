@@ -44,8 +44,18 @@ class UserRepository:
         return result.scalar_one_or_none()
 
     @classmethod
+    async def get_by_email(cls, db: AsyncSession, email: str) -> User | None:
+        result = await db.execute(select(User).where(User.email == email))
+        return result.scalar_one_or_none()
+
+    @classmethod
     async def get_active_by_google_id(cls, db: AsyncSession, google_id: str) -> User | None:
         result = await db.execute(cls._active_query().where(User.google_id == google_id))
+        return result.scalar_one_or_none()
+
+    @classmethod
+    async def get_by_google_id(cls, db: AsyncSession, google_id: str) -> User | None:
+        result = await db.execute(select(User).where(User.google_id == google_id))
         return result.scalar_one_or_none()
 
     @classmethod

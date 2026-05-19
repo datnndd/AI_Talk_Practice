@@ -111,7 +111,7 @@ const SectionHeading = ({ eyebrow, title, description }) => (
 
 const resolveAuthenticatedPath = (user) => {
   if (user?.is_admin) {
-    return "/admin/scenarios";
+    return "/admin/dashboard";
   }
 
   return user?.is_onboarding_completed ? "/scenarios" : "/onboarding";

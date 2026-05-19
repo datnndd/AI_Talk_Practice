@@ -18,7 +18,7 @@ import loginRightSide from "@/assets/login_right_side.png";
 
 const resolvePostLoginPath = (user) => {
   if (user?.is_admin) {
-    return "/admin/scenarios";
+    return "/admin/dashboard";
   }
 
   return user?.is_onboarding_completed ? "/scenarios" : "/onboarding";
@@ -52,6 +52,10 @@ const AuthCard = ({ embedded = false }) => {
       await googleLogin(tokenResponse.access_token);
       await completeAuth();
     } catch (err) {
+      if (err.response?.status === 403 && err.response?.data?.extra?.reason === "account_deactivated") {
+        navigate("/account-locked", { replace: true });
+        return;
+      }
       setError(err.response?.data?.detail || "Không thể tiếp tục với Google.");
     } finally {
       setIsLoading(false);
@@ -177,6 +181,10 @@ const AuthCard = ({ embedded = false }) => {
       }
       await completeAuth();
     } catch (err) {
+      if (err.response?.status === 403 && err.response?.data?.extra?.reason === "account_deactivated") {
+        navigate("/account-locked", { replace: true });
+        return;
+      }
       setError(err.response?.data?.detail || (step === "password-login" ? "Email hoặc mật khẩu chưa đúng." : "Không thể tạo tài khoản."));
     } finally {
       setIsLoading(false);

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
-from app.core.exceptions import BadRequestError, UnauthorizedError
+from app.core.exceptions import BadRequestError, ForbiddenError, UnauthorizedError
 from app.core.password_policy import validate_password_policy
 from app.core.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
 from app.core.config import settings
@@ -104,7 +104,12 @@ class AuthService:
 
     @staticmethod
     async def login(db: AsyncSession, body: LoginRequest) -> TokenResponse:
-        user = await UserRepository.get_active_by_email(db, body.email)
+        user = await UserRepository.get_by_email(db, body.email)
+        if user and user.deleted_at is not None:
+            raise ForbiddenError(
+                "Tài khoản của bạn bị khóa, vui lòng liên hệ ddat260904@gmail.com để được hỗ trợ.",
+                extra={"reason": "account_deactivated"},
+            )
         if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
             raise UnauthorizedError("Invalid email or password")
         return AuthService._create_token_response(user.id)
@@ -147,9 +152,14 @@ class AuthService:
                 raise UnauthorizedError("Google account did not provide required profile information")
 
             email = email.strip().lower()
-            user = await UserRepository.get_active_by_google_id(db, google_uid)
+            user = await UserRepository.get_by_google_id(db, google_uid)
             if not user:
-                user = await UserRepository.get_active_by_email(db, email)
+                user = await UserRepository.get_by_email(db, email)
+            if user and user.deleted_at is not None:
+                raise ForbiddenError(
+                    "Tài khoản của bạn bị khóa, vui lòng liên hệ ddat260904@gmail.com để được hỗ trợ.",
+                    extra={"reason": "account_deactivated"},
+                )
             if not user:
                 user = await AuthService._create_user_with_free_tier(
                     db,
@@ -173,7 +183,7 @@ class AuthService:
                 await db.commit()
             
             return AuthService._create_token_response(user.id)
-        except UnauthorizedError:
+        except (ForbiddenError, UnauthorizedError):
             raise
         except SQLAlchemyError:
             await db.rollback()

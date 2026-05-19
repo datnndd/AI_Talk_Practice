@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import { AppLayout } from "@/app/layouts";
 import PrivateRoute from "@/features/auth/components/PrivateRoute";
@@ -10,6 +10,7 @@ const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const ForgotPasswordPage = lazy(() => import("@/features/auth/pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("@/features/auth/pages/ResetPasswordPage"));
+const AccountLockedPage = lazy(() => import("@/features/auth/pages/AccountLockedPage"));
 const LegalPage = lazy(() => import("@/features/legal/pages/LegalPage"));
 const OnboardingPage = lazy(() => import("@/features/onboarding/pages/OnboardingPage"));
 
@@ -56,6 +57,7 @@ function App() {
         <Route path="/register" element={<PublicRoute>{withSuspense(<RegisterPage />)}</PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute>{withSuspense(<ForgotPasswordPage />)}</PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute>{withSuspense(<ResetPasswordPage />)}</PublicRoute>} />
+        <Route path="/account-locked" element={withSuspense(<AccountLockedPage />)} />
         <Route path="/terms" element={withSuspense(<LegalPage type="terms" />)} />
         <Route path="/privacy" element={withSuspense(<LegalPage type="privacy" />)} />
         
@@ -75,6 +77,7 @@ function App() {
         <Route path="/subscription" element={<PrivateRoute>{withAppLayout(<SubscriptionPage />)}</PrivateRoute>} />
         
         {/* Admin Routes */}
+        <Route path="/admin" element={<PrivateRoute requireAdmin>{withSuspense(<Navigate to="/admin/dashboard" replace />)}</PrivateRoute>} />
         <Route path="/admin/dashboard" element={<PrivateRoute requireAdmin>{withSuspense(<AdminDashboardPage />)}</PrivateRoute>} />
         <Route path="/admin/users" element={<PrivateRoute requireAdmin>{withSuspense(<AdminUsersPage />)}</PrivateRoute>} />
         <Route path="/admin/characters" element={<PrivateRoute requireAdmin>{withSuspense(<AdminCharactersPage />)}</PrivateRoute>} />
