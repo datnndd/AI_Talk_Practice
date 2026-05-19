@@ -31,4 +31,9 @@ async def get_scenario(
     user: User = Depends(get_current_user),
 ):
     scenario = await ScenarioService.get_by_id(db, scenario_id, user=user, enforce_access=True)
-    return serialize_scenario(scenario)
+    progress = await ScenarioService.get_objective_completion_progress(
+        db,
+        scenario_id=scenario.id,
+        user_id=user.id,
+    )
+    return serialize_scenario(scenario, progress=progress)

@@ -50,7 +50,7 @@ def create_llm(config: Settings) -> LLMBase:
 
     if provider == "openai":
         from app.infra.llm.openai_llm import OpenAILLM
-        logger.info("Using OpenAI Responses API LLM")
+        logger.info("Using OpenAI Chat Completions API LLM")
         return OpenAILLM(config)
 
     else:

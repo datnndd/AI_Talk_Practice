@@ -95,6 +95,8 @@ def test_full_assessment_prompt_includes_score_contract():
     assert "Use numeric scores from 0 to 10." in prompt
     assert "pronunciation" not in prompt.lower()
     assert "objective_completion" in prompt
+    assert '"objective_completion": "completed|not_completed"' in prompt
+    assert "completed|partial|not_completed" not in prompt
     assert "feedback_summary" in prompt
 
 

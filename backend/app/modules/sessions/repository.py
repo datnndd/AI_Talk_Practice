@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -76,6 +76,35 @@ class SessionRepository:
         stmt = select(Session).where(Session.id == session_id, Session.deleted_at.is_(None))
         if full:
             stmt = stmt.options(*FULL_SESSION_LOAD)
+        result = await db.execute(stmt)
+        return result.unique().scalar_one_or_none()
+
+    @staticmethod
+    async def get_latest_objective_completed_for_user_scenario(
+        db: AsyncSession,
+        *,
+        user_id: int,
+        scenario_id: int,
+    ) -> Session | None:
+        objective_completion = SessionScore.score_metadata["objective_completion"].as_string()
+        stmt = (
+            select(Session)
+            .join(SessionScore, SessionScore.session_id == Session.id)
+            .options(joinedload(Session.score))
+            .where(
+                Session.user_id == user_id,
+                Session.scenario_id == scenario_id,
+                Session.status == "completed",
+                Session.deleted_at.is_(None),
+                objective_completion == "completed",
+            )
+            .order_by(
+                desc(Session.ended_at).nulls_last(),
+                desc(Session.started_at),
+                desc(Session.id),
+            )
+            .limit(1)
+        )
         result = await db.execute(stmt)
         return result.unique().scalar_one_or_none()
 

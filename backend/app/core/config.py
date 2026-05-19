@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # --- Provider Selection ---
     asr_provider: str = Field(default="deepgram", description="ASR provider: deepgram")
-    llm_provider: str = Field(default="openai", description="LLM provider: OpenAI Responses API")
+    llm_provider: str = Field(default="openai", description="LLM provider: OpenAI Chat Completions API")
     tts_provider: str = Field(default="dashscope", description="TTS provider: dashscope")
 
     # --- Database ---
@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     llm_model: str = Field(default="ai-talk", description="LLM model name")
     llm_base_url: str = Field(
         default=DEFAULT_LLM_BASE_URL,
-        description="OpenAI Responses API base URL",
+        description="OpenAI Chat Completions API base URL",
     )
     llm_system_prompt: str = Field(
         default=(
@@ -191,7 +191,7 @@ class Settings(BaseSettings):
 
     @property
     def llm_api_key(self) -> str | None:
-        """Get the API key for OpenAI Responses API."""
+        """Get the API key for OpenAI Chat Completions API."""
         return self.openai_api_key
 
     model_config = {

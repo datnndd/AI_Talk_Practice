@@ -41,7 +41,10 @@ def serialize_admin_scenario(
 
 def serialize_scenario(
     scenario: Scenario,
+    *,
+    progress: dict | None = None,
 ) -> ScenarioRead:
+    progress = progress or {}
     return ScenarioRead.model_validate(
         {
             "id": scenario.id,
@@ -58,6 +61,10 @@ def serialize_scenario(
             "time_limit_minutes": scenario.time_limit_minutes,
             "is_active": scenario.is_active,
             "is_pro": scenario.is_pro,
+            "has_completed_session": bool(progress.get("has_completed_session", False)),
+            "latest_completed_session_id": progress.get("latest_completed_session_id"),
+            "latest_completed_session_result_url": progress.get("latest_completed_session_result_url"),
+            "objective_completion": progress.get("objective_completion"),
             "character": serialize_character(scenario.character) if scenario.character else None,
             "created_at": scenario.created_at,
             "updated_at": scenario.updated_at,

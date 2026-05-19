@@ -7,7 +7,7 @@ Real-time AI conversation backend: **Microphone → ASR → LLM → TTS → Spea
 ```
 Browser (Mic) ──WebSocket──▶ FastAPI Backend
                               ├── ASR: Deepgram Nova-3
-                              ├── LLM: OpenAI Responses API
+                              ├── LLM: OpenAI Chat Completions API
                               └── TTS: DashScope
 ```
 
@@ -17,7 +17,7 @@ Browser (Mic) ──WebSocket──▶ FastAPI Backend
 
 | Provider | Key | Get it at |
 |----------|-----|-----------|
-| **OpenAI Responses API** | `OPENAI_API_KEY` | Your OpenAI API key |
+| **OpenAI Chat Completions API** | `OPENAI_API_KEY` | Your OpenAI API key |
 | **Deepgram** (ASR) | `DEEPGRAM_API_KEY` | [Deepgram Console](https://console.deepgram.com/) |
 | **DashScope** (TTS) | `DASHSCOPE_API_KEY` | [Alibaba Cloud Model Studio](https://modelstudio.console.alibabacloud.com/) |
 
@@ -50,7 +50,7 @@ curl http://localhost:8000/providers
 ```env
 # Switch providers by changing these:
 ASR_PROVIDER=deepgram           # deepgram
-LLM_PROVIDER=openai             # OpenAI Responses API
+LLM_PROVIDER=openai             # OpenAI Chat Completions API
 TTS_PROVIDER=dashscope          # dashscope
 
 # API Keys

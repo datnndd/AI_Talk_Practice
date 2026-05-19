@@ -14,7 +14,11 @@ const PublicRoute = ({ children }) => {
   }
 
   if (isAuthenticated) {
-    return <Navigate to={user?.is_admin ? "/admin/scenarios" : "/scenarios"} replace />;
+    if (user?.is_admin) {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+
+    return <Navigate to={user?.is_onboarding_completed ? "/scenarios" : "/onboarding"} replace />;
   }
 
   return children;

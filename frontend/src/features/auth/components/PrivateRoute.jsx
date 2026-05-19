@@ -1,8 +1,9 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/context/AuthContext";
 
 const PrivateRoute = ({ children, requireAdmin = false }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -14,6 +15,10 @@ const PrivateRoute = ({ children, requireAdmin = false }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (!user?.is_admin && !user?.is_onboarding_completed && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" replace />;
   }
 
   if (requireAdmin && !user?.is_admin) {

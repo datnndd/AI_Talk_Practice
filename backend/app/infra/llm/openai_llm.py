@@ -1,4 +1,4 @@
-"""OpenAI Responses API LLM provider."""
+"""OpenAI Chat Completions API LLM provider."""
 
 import json
 import logging
@@ -13,59 +13,52 @@ from app.infra.contracts import LLMBase, Message
 logger = logging.getLogger(__name__)
 
 
-def _responses_input(messages: list[Message]) -> list[dict[str, str]]:
-    return [{"role": msg.role, "content": msg.content} for msg in messages]
+def _chat_messages(messages: list[Message], system_prompt: str | None = None) -> list[dict[str, str]]:
+    api_messages = []
+    if system_prompt:
+        api_messages.append({"role": "system", "content": system_prompt})
+    api_messages.extend({"role": msg.role, "content": msg.content} for msg in messages)
+    return api_messages
 
+def _messages_for_log(messages: list[dict[str, str]]) -> str:
+    return "\n".join([f"[{msg['role'].upper()}]: {msg['content']}" for msg in messages])
 
-def _extract_response_message_text(message: dict[str, Any]) -> str:
-    content = message.get("content")
-    if not isinstance(content, list):
+def _continuation_messages(messages: list[dict[str, str]], output: str) -> list[dict[str, str]]:
+    return [
+        *messages,
+        {"role": "assistant", "content": output},
+        {
+            "role": "user",
+            "content": (
+                "Your previous message stopped mid-sentence. "
+                "Continue from exactly where it stopped and finish the same reply. "
+                "Return only the remaining words, no recap."
+            ),
+        },
+    ]
+
+def _extract_chat_delta(data: dict[str, Any]) -> str:
+    choices = data.get("choices")
+    if not isinstance(choices, list) or not choices:
         return ""
-
-    parts: list[str] = []
-    for item in content:
-        if not isinstance(item, dict):
-            continue
-        text = item.get("text")
-        if isinstance(text, str):
-            parts.append(text)
-    return "".join(parts)
-
-
-def _extract_response_output_text(response_data: dict[str, Any]) -> str:
-    output_text = response_data.get("output_text")
-    if isinstance(output_text, str):
-        return output_text
-
-    output = response_data.get("output")
-    if not isinstance(output, list):
+    choice = choices[0]
+    if not isinstance(choice, dict):
         return ""
+    delta = choice.get("delta")
+    if not isinstance(delta, dict):
+        return ""
+    content = delta.get("content")
+    return content if isinstance(content, str) else ""
 
-    parts: list[str] = []
-    for item in output:
-        if isinstance(item, dict) and item.get("type") == "message":
-            parts.append(_extract_response_message_text(item))
-    return "".join(parts)
-
-
-def _extract_response_delta(data: dict[str, Any]) -> str:
-    event_type = data.get("type")
-    if event_type in {"response.output_text.delta", "response.refusal.delta"}:
-        delta = data.get("delta")
-        return delta if isinstance(delta, str) else ""
-    return ""
-
-
-def _extract_response_status(data: dict[str, Any]) -> str | None:
-    response = data.get("response")
-    if isinstance(response, dict):
-        status = response.get("status")
-        if isinstance(status, str):
-            return status
-
-    status = data.get("status")
-    return status if isinstance(status, str) else None
-
+def _extract_chat_finish_reason(data: dict[str, Any]) -> str | None:
+    choices = data.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return None
+    choice = choices[0]
+    if not isinstance(choice, dict):
+        return None
+    finish_reason = choice.get("finish_reason")
+    return finish_reason if isinstance(finish_reason, str) else None
 
 def _looks_incomplete_text(text: str) -> bool:
     stripped = text.rstrip()
@@ -86,7 +79,7 @@ def _should_continue_incomplete_output(text: str) -> bool:
 
 
 class OpenAILLM(LLMBase):
-    """LLM client backed by OpenAI Responses API."""
+    """LLM client backed by OpenAI Chat Completions API."""
 
     def __init__(self, config: Settings):
         self._config = config
@@ -100,7 +93,7 @@ class OpenAILLM(LLMBase):
             },
             timeout=120.0,
         )
-        logger.info("OpenAILLM initialized for Responses API (model=%s, base_url=%s)", self._model, config.llm_base_url)
+        logger.info("OpenAILLM initialized for Chat Completions API (model=%s, base_url=%s)", self._model, config.llm_base_url)
 
     async def chat_stream(
         self,
@@ -108,26 +101,23 @@ class OpenAILLM(LLMBase):
         system_prompt: Optional[str] = None,
         max_tokens: Optional[int] = None,
     ) -> AsyncGenerator[str, None]:
-        """Stream text chunks from Responses API while preserving old LLMBase interface."""
+        """Stream text chunks from Chat Completions API while preserving old LLMBase interface."""
 
         prompt = system_prompt or self._config.llm_system_prompt
-        api_input = _responses_input(messages)
+        api_messages = _chat_messages(messages, prompt)
         logger.info(
-            "--- LLM INPUT (%s) ---\n[INSTRUCTIONS]: %s\n%s",
+            "--- LLM INPUT (%s) ---\n%s",
             self._model,
-            prompt or "",
-            "\n".join([f"[{m['role'].upper()}]: {m['content']}" for m in api_input]),
+            _messages_for_log(api_messages),
         )
 
         payload: dict[str, Any] = {
             "model": self._model,
-            "input": api_input,
+            "messages": api_messages,
             "stream": True,
             "temperature": self._config.llm_temperature,
-            "max_output_tokens": max_tokens or self._config.llm_max_tokens,
+            "max_tokens": max_tokens or self._config.llm_max_tokens,
         }
-        if prompt:
-            payload["instructions"] = prompt
 
         async def _stream_request(
             request_payload: dict[str, Any],
@@ -138,12 +128,11 @@ class OpenAILLM(LLMBase):
         ) -> AsyncGenerator[str, None]:
             stats["raw_samples"] = []
             stats["raw_tail_samples"] = []
-            stats["status"] = None
+            stats["finish_reason"] = None
             stats["stream_line_count"] = 0
             stats["content_chunk_count"] = 0
-            stats["completed_text"] = ""
 
-            async with self._client.stream("POST", "/responses", json=request_payload) as response:
+            async with self._client.stream("POST", "/chat/completions", json=request_payload) as response:
                 response.raise_for_status()
 
                 async for line in response.aiter_lines():
@@ -170,19 +159,9 @@ class OpenAILLM(LLMBase):
                         logger.debug("Ignoring non-object LLM chunk (phase=%s): %s", phase, data_str[:300])
                         continue
 
-                    stats["status"] = _extract_response_status(data) or stats["status"]
-                    event_type = data.get("type")
-                    if event_type == "response.completed":
-                        response_data = data.get("response")
-                        if isinstance(response_data, dict):
-                            stats["completed_text"] = _extract_response_output_text(response_data)
-                        continue
-                    if event_type == "response.failed":
-                        response_data = data.get("response")
-                        error = response_data.get("error") if isinstance(response_data, dict) else None
-                        raise UpstreamServiceError(f"LLM API response failed: {error or data_str[:300]}")
+                    stats["finish_reason"] = _extract_chat_finish_reason(data) or stats["finish_reason"]
 
-                    content = _extract_response_delta(data)
+                    content = _extract_chat_delta(data)
                     if content:
                         stats["content_chunk_count"] += 1
                         response_parts.append(content)
@@ -200,16 +179,11 @@ class OpenAILLM(LLMBase):
                 yield content
 
             output = "".join(full_response)
-            if not output and primary_stats.get("completed_text"):
-                output = str(primary_stats["completed_text"])
-                full_response.append(output)
-                yield output
-
             logger.info(
-                "LLM stream finished (model=%s, status=%s, max_output_tokens=%s, stream_lines=%s, content_chunks=%s, output_chars=%s)",
+                "LLM stream finished (model=%s, finish_reason=%s, max_tokens=%s, stream_lines=%s, content_chunks=%s, output_chars=%s)",
                 self._model,
-                primary_stats.get("status"),
-                payload["max_output_tokens"],
+                primary_stats.get("finish_reason"),
+                payload["max_tokens"],
                 primary_stats.get("stream_line_count"),
                 primary_stats.get("content_chunk_count"),
                 len(output),
@@ -217,27 +191,16 @@ class OpenAILLM(LLMBase):
 
             if _should_continue_incomplete_output(output):
                 logger.warning(
-                    "LLM output appears incomplete; requesting one continuation (model=%s, status=%s, output_chars=%s, raw_tail_samples=%s)",
+                    "LLM output appears incomplete; requesting one continuation (model=%s, finish_reason=%s, output_chars=%s, raw_tail_samples=%s)",
                     self._model,
-                    primary_stats.get("status"),
+                    primary_stats.get("finish_reason"),
                     len(output),
                     primary_stats.get("raw_tail_samples"),
                 )
                 continuation_payload = {
                     **payload,
-                    "input": [
-                        *api_input,
-                        {"role": "assistant", "content": output},
-                        {
-                            "role": "user",
-                            "content": (
-                                "Your previous message stopped mid-sentence. "
-                                "Continue from exactly where it stopped and finish the same reply. "
-                                "Return only the remaining words, no recap."
-                            ),
-                        },
-                    ],
-                    "max_output_tokens": min(240, int(payload["max_output_tokens"])),
+                    "messages": _continuation_messages(api_messages, output),
+                    "max_tokens": min(240, int(payload["max_tokens"])),
                 }
                 continuation_stats: dict[str, Any] = {}
                 async for content in _stream_request(
@@ -249,9 +212,9 @@ class OpenAILLM(LLMBase):
                     yield content
                 output = "".join(full_response)
                 logger.info(
-                    "LLM continuation finished (model=%s, status=%s, stream_lines=%s, content_chunks=%s, output_chars=%s)",
+                    "LLM continuation finished (model=%s, finish_reason=%s, stream_lines=%s, content_chunks=%s, output_chars=%s)",
                     self._model,
-                    continuation_stats.get("status"),
+                    continuation_stats.get("finish_reason"),
                     continuation_stats.get("stream_line_count"),
                     continuation_stats.get("content_chunk_count"),
                     len(output),
@@ -259,26 +222,26 @@ class OpenAILLM(LLMBase):
 
             if output:
                 logger.info("--- LLM OUTPUT (%s) ---\n%s", self._model, output)
-                if primary_stats.get("status") == "incomplete":
+                if primary_stats.get("finish_reason") == "length":
                     logger.warning(
-                        "LLM output stopped because max_output_tokens was reached (model=%s, max_output_tokens=%s, output_chars=%s)",
+                        "LLM output stopped because max_tokens was reached (model=%s, max_tokens=%s, output_chars=%s)",
                         self._model,
-                        payload["max_output_tokens"],
+                        payload["max_tokens"],
                         len(output),
                     )
                 elif _looks_incomplete_text(output):
                     logger.warning(
-                        "LLM output appears incomplete despite status=%s (model=%s, output_chars=%s, raw_tail_samples=%s)",
-                        primary_stats.get("status"),
+                        "LLM output appears incomplete despite finish_reason=%s (model=%s, output_chars=%s, raw_tail_samples=%s)",
+                        primary_stats.get("finish_reason"),
                         self._model,
                         len(output),
                         primary_stats.get("raw_tail_samples"),
                     )
             else:
                 logger.warning(
-                    "LLM stream completed with empty output (model=%s, status=%s, raw_samples=%s, raw_tail_samples=%s)",
+                    "LLM stream completed with empty output (model=%s, finish_reason=%s, raw_samples=%s, raw_tail_samples=%s)",
                     self._model,
-                    primary_stats.get("status"),
+                    primary_stats.get("finish_reason"),
                     primary_stats.get("raw_samples"),
                     primary_stats.get("raw_tail_samples"),
                 )

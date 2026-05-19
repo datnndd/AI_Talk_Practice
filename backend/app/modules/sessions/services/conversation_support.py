@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -56,7 +56,7 @@ class FinalEvaluationPayload(BaseModel):
     vocabulary_score: float = Field(ge=0.0, le=10.0)
     relevance_score: float = Field(ge=0.0, le=10.0)
     overall_score: float = Field(ge=0.0, le=10.0)
-    objective_completion: str = "unknown"
+    objective_completion: Literal["completed", "not_completed"] = "not_completed"
     strengths: list[str] = Field(default_factory=list)
     improvements: list[str] = Field(default_factory=list)
     corrections: list[dict[str, Any]] = Field(default_factory=list)

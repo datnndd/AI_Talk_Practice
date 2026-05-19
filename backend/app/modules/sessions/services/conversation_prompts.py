@@ -142,7 +142,7 @@ def build_full_assessment_prompt(
             '  "vocabulary_score": 0.0,',
             '  "relevance_score": 0.0,',
             '  "overall_score": 0.0,',
-            '  "objective_completion": "completed|partial|not_completed",',
+            '  "objective_completion": "completed|not_completed",',
             '  "strengths": ["..."],',
             '  "improvements": ["..."],',
             '  "corrections": [{"original":"...","suggestion":"...","explanation":"..."}],',

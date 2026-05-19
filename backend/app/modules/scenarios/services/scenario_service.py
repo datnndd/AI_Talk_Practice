@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.modules.scenarios.models.scenario import Scenario
 from app.modules.scenarios.repository import ScenarioRepository
+from app.modules.sessions.repository import SessionRepository
 from app.modules.users.models.user import User
 
 
@@ -61,4 +62,32 @@ class ScenarioService:
         if enforce_access and scenario.is_pro and not user_is_vip(user):
             raise ForbiddenError("This scenario requires VIP access")
         return scenario
+
+    @staticmethod
+    async def get_objective_completion_progress(
+        db: AsyncSession,
+        *,
+        scenario_id: int,
+        user_id: int,
+    ) -> dict:
+        session = await SessionRepository.get_latest_objective_completed_for_user_scenario(
+            db,
+            user_id=user_id,
+            scenario_id=scenario_id,
+        )
+        if session is None:
+            return {
+                "has_completed_session": False,
+                "latest_completed_session_id": None,
+                "latest_completed_session_result_url": None,
+                "objective_completion": None,
+            }
+        metadata = dict(session.score.score_metadata or {}) if session.score else {}
+        objective_completion = metadata.get("objective_completion")
+        return {
+            "has_completed_session": True,
+            "latest_completed_session_id": session.id,
+            "latest_completed_session_result_url": f"/sessions/{session.id}/result",
+            "objective_completion": objective_completion,
+        }
 

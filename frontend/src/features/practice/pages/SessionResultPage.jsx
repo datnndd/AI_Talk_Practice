@@ -186,7 +186,6 @@ const SessionResultPage = () => {
 
   const completionBadge = {
     completed: { label: "Hoàn thành", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle },
-    partial: { label: "Gần hoàn thành", color: "bg-amber-100 text-amber-700 border-amber-200", icon: WarningCircle },
     not_completed: { label: "Cần luyện thêm", color: "bg-rose-100 text-rose-700 border-rose-200", icon: XCircle },
   }[objectiveCompletion] || null;
   const scenarioId = session.scenario?.id;

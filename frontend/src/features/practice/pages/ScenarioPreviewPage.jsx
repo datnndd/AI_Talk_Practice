@@ -76,7 +76,7 @@ const ScenarioPreviewPage = () => {
       setIsLoading(!cachedScenario);
     });
 
-    void practiceApi.getScenario(id).then((data) => {
+    void practiceApi.getScenario(id, { force: true }).then((data) => {
       if (mounted) setScenario(data);
     }).catch((err) => {
       if (mounted) setError(err?.response?.data?.detail || "Không thể tải tình huống luyện nói.");
@@ -115,6 +115,8 @@ const ScenarioPreviewPage = () => {
   const tasks = Array.isArray(scenario.tasks) && scenario.tasks.length > 0
     ? scenario.tasks
     : ["Start the conversation naturally.", "Ask and answer follow-up questions.", "Close the conversation politely."];
+  const hasObjectiveCompleted = scenario.has_completed_session === true && Boolean(scenario.latest_completed_session_id);
+  const analysisUrl = scenario.latest_completed_session_result_url || `/sessions/${scenario.latest_completed_session_id}/result`;
 
   return (
     <div className="app-page-wide">
@@ -170,9 +172,20 @@ const ScenarioPreviewPage = () => {
             ))}
           </ol>
 
-          <Link to={startUrl} className="mt-8 w-full rounded-2xl bg-primary py-4 text-center text-base font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition-transform hover:scale-[1.01] active:scale-[0.99]">
-            Start Conversation
-          </Link>
+          {hasObjectiveCompleted ? (
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <Link to={startUrl} className="w-full rounded-2xl bg-primary py-4 text-center text-base font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition-transform hover:scale-[1.01] active:scale-[0.99]">
+                Restart Conversation
+              </Link>
+              <Link to={analysisUrl} className="w-full rounded-2xl border border-primary/30 bg-primary/10 py-4 text-center text-base font-semibold text-primary transition-transform hover:scale-[1.01] active:scale-[0.99]">
+                View Analyst
+              </Link>
+            </div>
+          ) : (
+            <Link to={startUrl} className="mt-8 w-full rounded-2xl bg-primary py-4 text-center text-base font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition-transform hover:scale-[1.01] active:scale-[0.99]">
+              Start Conversation
+            </Link>
+          )}
         </div>
       </div>
     </div>
