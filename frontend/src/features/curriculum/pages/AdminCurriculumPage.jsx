@@ -15,48 +15,48 @@ import { getApiBaseUrl } from "@/shared/api/httpClient";
 
 const EMPTY_CONTENT = {
   shadowing: {
-    reference_text: "Could you help me with my reservation?",
-    meaning_vi: "B\u1ea1n c\u00f3 th\u1ec3 gi\u00fap t\u00f4i v\u1edbi \u0111\u1eb7t ch\u1ed7 c\u1ee7a t\u00f4i kh\u00f4ng?",
-    sample_audio_url: "",
-    slow_audio_url: "",
+    reference_text:"Could you help me with my reservation?",
+    meaning_vi:"B\u1ea1n c\u00f3 th\u1ec3 gi\u00fap t\u00f4i v\u1edbi \u0111\u1eb7t ch\u1ed7 c\u1ee7a t\u00f4i kh\u00f4ng?",
+    sample_audio_url:"",
+    slow_audio_url:"",
   },
   read_aloud: {
-    text: "I would like to order breakfast, please.",
-    meaning_vi: "T\u00f4i mu\u1ed1n g\u1ecdi b\u1eefa s\u00e1ng.",
-    sample_audio_url: "",
+    text:"I would like to order breakfast, please.",
+    meaning_vi:"T\u00f4i mu\u1ed1n g\u1ecdi b\u1eefa s\u00e1ng.",
+    sample_audio_url:"",
   },
   definition_choice: {
-    definition_text: "A booking made before you arrive.",
-    definition_audio_url: "",
+    definition_text:"A booking made before you arrive.",
+    definition_audio_url:"",
     options: [
-      { word: "reservation", meaning_vi: "\u0111\u1eb7t ch\u1ed7", is_correct: true },
-      { word: "reception", meaning_vi: "l\u1ec5 t\u00e2n", is_correct: false },
-      { word: "recommendation", meaning_vi: "g\u1ee3i \u00fd", is_correct: false },
-      { word: "restaurant", meaning_vi: "nh\u00e0 h\u00e0ng", is_correct: false },
+      { word:"reservation", meaning_vi:"\u0111\u1eb7t ch\u1ed7", is_correct: true },
+      { word:"reception", meaning_vi:"l\u1ec5 t\u00e2n", is_correct: false },
+      { word:"recommendation", meaning_vi:"g\u1ee3i \u00fd", is_correct: false },
+      { word:"restaurant", meaning_vi:"nh\u00e0 h\u00e0ng", is_correct: false },
     ],
   },
   quick_qa: {
-    question_text: "What did you eat for breakfast?",
-    question_audio_url: "",
-    answer_hints: ["I ate bread.", "I had coffee.", "I ate noodles."],
+    question_text:"What did you eat for breakfast?",
+    question_audio_url:"",
+    answer_hints: ["I ate bread.","I had coffee.","I ate noodles."],
     min_words: 2,
   },
 };
 
 const EXERCISE_TYPES = [
-  { value: "shadowing", label: "Shadowing / Repeat" },
-  { value: "read_aloud", label: "Read aloud" },
-  { value: "definition_choice", label: "Definition choice" },
-  { value: "quick_qa", label: "Quick Q&A" },
+  { value:"shadowing", label:"Shadowing / Repeat" },
+  { value:"read_aloud", label:"Read aloud" },
+  { value:"definition_choice", label:"Definition choice" },
+  { value:"quick_qa", label:"Quick Q&A" },
 ];
 
 const CURRICULUM_STATUS_FILTERS = [
-  { value: "", label: "All statuses" },
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
+  { value:"", label:"All statuses" },
+  { value:"active", label:"Active" },
+  { value:"inactive", label:"Inactive" },
 ];
 
-const CEFR_FILTERS = ["", "A1", "A2", "B1", "B2", "C1", "C2"];
+const CEFR_FILTERS = ["","A1","A2","B1","B2","C1","C2"];
 
 const pretty = (value) => JSON.stringify(value || {}, null, 2);
 
@@ -71,7 +71,7 @@ const parseNumber = (value, fallback = 0) => {
 const getErrorMessage = (error, fallback) => {
   const detail = error?.response?.data?.detail;
   if (Array.isArray(detail)) {
-    return detail.map((item) => item.msg || item.message || String(item)).join(" ");
+    return detail.map((item) => item.msg || item.message || String(item)).join("");
   }
   return detail || error?.message || fallback;
 };
@@ -94,11 +94,11 @@ const normalizeSectionTree = (sections = []) =>
 
 const statusTone = (isActive) =>
   isActive
-    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-    : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
+    ?"bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+    :"bg-[var(--surface-strong)] text-[var(--page-muted)] ";
 
 const FieldLabel = ({ children }) => (
-  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">
     {children}
   </label>
 );
@@ -110,26 +110,26 @@ const StatusBadge = ({ children, isActive = true }) => (
 );
 
 const EmptyState = ({ children }) => (
-  <div className="rounded-[24px] border border-dashed border-zinc-200 bg-zinc-50 px-4 py-8 text-center text-sm font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+  <div className="rounded-[24px] border border-dashed border-border bg-muted px-4 py-8 text-center text-sm font-medium text-[var(--page-muted)]">
     {children}
   </div>
 );
 
 const RowActions = ({ item, kind, items, onEdit, onToggle, onMove, disabled, canMove = false }) => (
   <div className="flex shrink-0 flex-wrap justify-end gap-1">
-    <button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Edit">
+    <button type="button" onClick={(event) => { event.stopPropagation(); onEdit(); }} className="rounded-full border border-border bg-card p-1.5 text-[var(--page-muted)] hover:text-primary" aria-label="Edit">
       <PencilSimple size={13} />
     </button>
-    <button type="button" onClick={(event) => { event.stopPropagation(); onToggle(); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-rose-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label={item.is_active ? "Deactivate" : "Restore"}>
+    <button type="button" onClick={(event) => { event.stopPropagation(); onToggle(); }} className="rounded-full border border-border bg-card p-1.5 text-[var(--page-muted)] hover:text-rose-600" aria-label={item.is_active ?"Deactivate" :"Restore"}>
       <ProhibitInset size={13} />
     </button>
     {canMove && (
-      <button type="button" disabled={disabled || items.findIndex((entry) => entry.id === item.id) <= 0} onClick={(event) => { event.stopPropagation(); onMove(kind, items, item.id, -1); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary disabled:opacity-30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Move up">
+      <button type="button" disabled={disabled || items.findIndex((entry) => entry.id === item.id) <= 0} onClick={(event) => { event.stopPropagation(); onMove(kind, items, item.id, -1); }} className="rounded-full border border-border bg-card p-1.5 text-[var(--page-muted)] hover:text-primary disabled:opacity-30" aria-label="Move up">
         ↑
       </button>
     )}
     {canMove && (
-      <button type="button" disabled={disabled || items.findIndex((entry) => entry.id === item.id) >= items.length - 1} onClick={(event) => { event.stopPropagation(); onMove(kind, items, item.id, 1); }} className="rounded-full border border-zinc-200 bg-white p-1.5 text-zinc-600 hover:text-primary disabled:opacity-30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300" aria-label="Move down">
+      <button type="button" disabled={disabled || items.findIndex((entry) => entry.id === item.id) >= items.length - 1} onClick={(event) => { event.stopPropagation(); onMove(kind, items, item.id, 1); }} className="rounded-full border border-border bg-card p-1.5 text-[var(--page-muted)] hover:text-primary disabled:opacity-30" aria-label="Move down">
         ↓
       </button>
     )}
@@ -139,36 +139,36 @@ const RowActions = ({ item, kind, items, onEdit, onToggle, onMove, disabled, can
 const CurriculumTreeSkeleton = () => (
   <div className="space-y-2">
     {[0, 1, 2].map((item) => (
-      <div key={item} className="rounded-[18px] bg-white px-3 py-3 dark:bg-zinc-900">
-        <div className="h-4 w-2/3 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
-        <div className="mt-2 h-3 w-1/3 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
+      <div key={item} className="rounded-[18px] bg-card px-3 py-3">
+        <div className="h-4 w-2/3 animate-pulse rounded-full bg-[var(--surface-strong)] " />
+        <div className="mt-2 h-3 w-1/3 animate-pulse rounded-full bg-[var(--surface-strong)] " />
       </div>
     ))}
   </div>
 );
 
 const toLevelForm = (level) => ({
-  code: level?.code || "",
-  title: level?.title || "",
-  cefr_level: level?.cefr_level || "",
-  description: level?.description || "",
+  code: level?.code ||"",
+  title: level?.title ||"",
+  cefr_level: level?.cefr_level ||"",
+  description: level?.description ||"",
   is_active: level?.is_active ?? true,
 });
 
 const toLessonForm = (lesson, selectedLevelId) => ({
-  level_id: lesson?.level_id ?? selectedLevelId ?? "",
-  title: lesson?.title || "",
-  description: lesson?.description || "",
+  level_id: lesson?.level_id ?? selectedLevelId ??"",
+  title: lesson?.title ||"",
+  description: lesson?.description ||"",
   xp_reward: lesson?.xp_reward ?? 50,
   coin_reward: lesson?.coin_reward ?? 0,
   is_active: lesson?.is_active ?? true,
 });
 
 const toExerciseForm = (exercise, selectedLessonId, nextOrder) => {
-  const type = exercise?.type || "shadowing";
+  const type = exercise?.type ||"shadowing";
   const content = exercise?.content || EMPTY_CONTENT[type];
   return {
-    lesson_id: exercise?.lesson_id ?? selectedLessonId ?? "",
+    lesson_id: exercise?.lesson_id ?? selectedLessonId ??"",
     type,
     title: exercise?.title || `Lesson ${nextOrder + 1}`,
     order_index: exercise?.order_index ?? nextOrder,
@@ -203,49 +203,49 @@ const normalizeExercisePayload = (form) => ({
   order_index: parseNumber(form.order_index),
   pass_score: parseNumber(form.pass_score, 80),
   is_active: Boolean(form.is_active),
-  content: JSON.parse(form.contentJson || "{}"),
+  content: JSON.parse(form.contentJson ||"{}"),
 });
 
 const absoluteApiUrl = (value) => {
-  if (!value) return "";
+  if (!value) return"";
   if (/^https?:\/\//i.test(value)) return value;
-  const apiBase = getApiBaseUrl().replace(/\/$/, "");
+  const apiBase = getApiBaseUrl().replace(/\/$/,"");
   const origin = apiBase.endsWith("/api") ? apiBase.slice(0, -4) : apiBase;
   return `${origin}${value.startsWith("/") ? value : `/${value}`}`;
 };
 
-const AudioAssetControl = ({ value, onChange, text = "", language = "en", lessonId = "", compact = false }) => {
-  const [state, setState] = useState({ loading: "", error: "" });
+const AudioAssetControl = ({ value, onChange, text ="", language ="en", lessonId ="", compact = false }) => {
+  const [state, setState] = useState({ loading:"", error:"" });
   const fileInputRef = useRef(null);
 
   const createTts = async () => {
-    const defaultText = text?.trim() || window.prompt("Text for TTS", "")?.trim();
+    const defaultText = text?.trim() || window.prompt("Text for TTS","")?.trim();
     if (!defaultText) {
-      setState({ loading: "", error: "Nhập text để tạo TTS." });
+      setState({ loading:"", error:"Nhập text để tạo TTS." });
       return;
     }
     const editableText = window.prompt("Text for TTS", defaultText);
     const finalText = editableText?.trim();
     if (!finalText) return;
-    setState({ loading: "tts", error: "" });
+    setState({ loading:"tts", error:"" });
     try {
       const result = await adminCurriculumApi.createLessonAudioTts({
         text: finalText,
-        language: language || "en",
+        language: language ||"en",
         ...(lessonId ? { lesson_id: parseNumber(lessonId) } : {}),
       });
-      onChange(result.url || "");
+      onChange(result.url ||"");
     } catch (error) {
-      setState({ loading: "", error: getErrorMessage(error, "Không thể tạo audio TTS.") });
+      setState({ loading:"", error: getErrorMessage(error,"Không thể tạo audio TTS.") });
       return;
     }
-    setState({ loading: "", error: "" });
+    setState({ loading:"", error:"" });
   };
 
   const uploadAudio = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    setState({ loading: "upload", error: "" });
+    setState({ loading:"upload", error:"" });
     try {
       const result = await adminCurriculumApi.uploadLessonAudio({
         file,
@@ -253,22 +253,22 @@ const AudioAssetControl = ({ value, onChange, text = "", language = "en", lesson
         text,
         language,
       });
-      onChange(result.url || "");
+      onChange(result.url ||"");
     } catch (error) {
-      setState({ loading: "", error: getErrorMessage(error, "Không thể upload audio.") });
+      setState({ loading:"", error: getErrorMessage(error,"Không thể upload audio.") });
       return;
     } finally {
-      event.target.value = "";
+      event.target.value ="";
     }
-    setState({ loading: "", error: "" });
+    setState({ loading:"", error:"" });
   };
 
   return (
     <div className="space-y-2">
-      <div className={`grid gap-2 ${compact ? "" : "sm:grid-cols-[minmax(0,1fr)_auto]"}`}>
-        <div className="min-w-0 rounded-[16px] border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-950">
-          <p className="truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-            {value || "Generate TTS hoặc upload file audio để lấy Supabase URL"}
+      <div className={`grid gap-2 ${compact ?"" :"sm:grid-cols-[minmax(0,1fr)_auto]"}`}>
+        <div className="min-w-0 rounded-[16px] border border-border bg-muted px-3 py-2">
+          <p className="truncate text-xs font-semibold text-[var(--page-muted)]">
+            {value ||"Generate TTS hoặc upload file audio để lấy Supabase URL"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -276,16 +276,16 @@ const AudioAssetControl = ({ value, onChange, text = "", language = "en", lesson
             type="button"
             onClick={createTts}
             disabled={Boolean(state.loading)}
-            className="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-[11px] font-black text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-1 text-[11px] font-black text-[var(--page-muted)] hover:bg-muted disabled:opacity-50   hover:bg-muted"
           >
             <SpeakerHigh size={13} />
-            {state.loading === "tts" ? "Generating" : "Generate TTS"}
+            {state.loading ==="tts" ?"Generating" :"Generate TTS"}
           </button>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={Boolean(state.loading)}
-            className="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-[11px] font-black text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-1 text-[11px] font-black text-[var(--page-muted)] hover:bg-muted disabled:opacity-50   hover:bg-muted"
           >
             Upload
           </button>
@@ -298,7 +298,7 @@ const AudioAssetControl = ({ value, onChange, text = "", language = "en", lesson
   );
 };
 
-const curriculumKindLabel = (kind) => (kind === "level" ? "section" : kind === "lesson" ? "unit" : "lesson");
+const curriculumKindLabel = (kind) => (kind ==="level" ?"section" : kind ==="lesson" ?"unit" :"lesson");
 
 const EntityModal = ({
   kind,
@@ -317,7 +317,7 @@ const EntityModal = ({
   const updateExerciseContent = (content) => updateForm({ content, contentJson: pretty(content) });
 
   const kindLabel = curriculumKindLabel(kind);
-  const title = `${editingItem ? "Edit" : "New"} ${kindLabel}`;
+  const title = `${editingItem ?"Edit" :"New"} ${kindLabel}`;
 
   const renderLevelFields = () => (
     <>
@@ -329,7 +329,7 @@ const EntityModal = ({
             required
             value={form.code}
             onChange={(event) => updateForm({ code: event.target.value })}
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </div>
         <div>
@@ -339,7 +339,7 @@ const EntityModal = ({
             value={form.cefr_level}
             onChange={(event) => updateForm({ cefr_level: event.target.value })}
             placeholder="A1"
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </div>
         <div>
@@ -349,7 +349,7 @@ const EntityModal = ({
             required
             value={form.title}
             onChange={(event) => updateForm({ title: event.target.value })}
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </div>
       </div>
@@ -358,7 +358,7 @@ const EntityModal = ({
         <textarea
           value={form.description}
           onChange={(event) => updateForm({ description: event.target.value })}
-          className="min-h-[96px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+          className="min-h-[96px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
         />
       </div>
       <ToggleField label="Active" checked={form.is_active} onChange={(value) => updateForm({ is_active: value })} />
@@ -372,7 +372,7 @@ const EntityModal = ({
         <select
           value={form.level_id}
           onChange={(event) => updateForm({ level_id: event.target.value })}
-          className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+          className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
         >
           {levels.map((level) => (
             <option key={level.id} value={level.id}>
@@ -388,7 +388,7 @@ const EntityModal = ({
           required
           value={form.title}
           onChange={(event) => updateForm({ title: event.target.value })}
-          className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+          className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
         />
       </div>
       <div>
@@ -396,7 +396,7 @@ const EntityModal = ({
         <textarea
           value={form.description}
           onChange={(event) => updateForm({ description: event.target.value })}
-          className="min-h-[96px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+          className="min-h-[96px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -407,7 +407,7 @@ const EntityModal = ({
             min="0"
             value={form.xp_reward}
             onChange={(event) => updateForm({ xp_reward: event.target.value })}
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </div>
         <div>
@@ -417,7 +417,7 @@ const EntityModal = ({
             min="0"
             value={form.coin_reward}
             onChange={(event) => updateForm({ coin_reward: event.target.value })}
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </div>
       </div>
@@ -429,7 +429,7 @@ const EntityModal = ({
     <div>
       <FieldLabel>Options</FieldLabel>
       <textarea
-        value={(content.options || []).map((option) => `${option.is_correct ? "*" : ""}${option.word || ""}${option.meaning_vi ? ` | ${option.meaning_vi}` : ""}`).join("\n")}
+        value={(content.options || []).map((option) => `${option.is_correct ?"*" :""}${option.word ||""}${option.meaning_vi ? ` | ${option.meaning_vi}` :""}`).join("\n")}
         onChange={(event) => {
           const options = event.target.value
             .split(/\n/)
@@ -439,14 +439,14 @@ const EntityModal = ({
               const isCorrect = line.startsWith("*");
               const cleanLine = isCorrect ? line.slice(1).trim() : line;
               const [word, meaningVi] = cleanLine.split("|").map((item) => item.trim());
-              return { word, meaning_vi: meaningVi || "", is_correct: isCorrect };
+              return { word, meaning_vi: meaningVi ||"", is_correct: isCorrect };
             });
           updateExerciseContent({ ...content, options });
         }}
         placeholder={"*reservation | \u0111\u1eb7t ch\u1ed7\nreception | l\u1ec5 t\u00e2n\nrecommendation | g\u1ee3i \u00fd\nrestaurant | nh\u00e0 h\u00e0ng"}
-        className="min-h-[150px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-xs outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+        className="min-h-[150px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 font-mono text-xs outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
       />
-      <p className="mt-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Prefix exactly one correct option with *. Use exactly four options.</p>
+      <p className="mt-2 text-xs font-semibold text-[var(--page-muted)]">Prefix exactly one correct option with *. Use exactly four options.</p>
     </div>
   );
 
@@ -460,7 +460,7 @@ const EntityModal = ({
           answer_hints: event.target.value.split(/\n/).map((line) => line.trim()).filter(Boolean).slice(0, 3),
         })}
         placeholder={"I ate bread.\nI had coffee.\nI ate noodles."}
-        className="min-h-[110px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+        className="min-h-[110px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
       />
     </div>
   );
@@ -468,58 +468,58 @@ const EntityModal = ({
   const renderExerciseBuilder = () => {
     const content = form.content || {};
 
-    if (form.type === "shadowing") {
+    if (form.type ==="shadowing") {
       return (
         <div className="space-y-4">
           <div>
             <FieldLabel>Reference Text</FieldLabel>
-            <textarea value={content.reference_text || ""} onChange={(event) => updateExerciseContent({ ...content, reference_text: event.target.value })} className="min-h-[110px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
+            <textarea value={content.reference_text ||""} onChange={(event) => updateExerciseContent({ ...content, reference_text: event.target.value })} className="min-h-[110px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]" />
           </div>
           <div>
             <FieldLabel>Meaning VI</FieldLabel>
-            <textarea value={content.meaning_vi || ""} onChange={(event) => updateExerciseContent({ ...content, meaning_vi: event.target.value })} className="min-h-[90px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
+            <textarea value={content.meaning_vi ||""} onChange={(event) => updateExerciseContent({ ...content, meaning_vi: event.target.value })} className="min-h-[90px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]" />
           </div>
           <div>
             <FieldLabel>Sample Audio</FieldLabel>
-            <AudioAssetControl value={content.sample_audio_url || ""} text={content.reference_text || ""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })} />
+            <AudioAssetControl value={content.sample_audio_url ||""} text={content.reference_text ||""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })} />
           </div>
           <div>
             <FieldLabel>Slow Audio (optional)</FieldLabel>
-            <AudioAssetControl value={content.slow_audio_url || ""} text={content.reference_text || ""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, slow_audio_url: audioUrl })} />
+            <AudioAssetControl value={content.slow_audio_url ||""} text={content.reference_text ||""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, slow_audio_url: audioUrl })} />
           </div>
         </div>
       );
     }
 
-    if (form.type === "read_aloud") {
+    if (form.type ==="read_aloud") {
       return (
         <div className="space-y-4">
           <div>
             <FieldLabel>Text</FieldLabel>
-            <textarea value={content.text || ""} onChange={(event) => updateExerciseContent({ ...content, text: event.target.value })} className="min-h-[150px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
+            <textarea value={content.text ||""} onChange={(event) => updateExerciseContent({ ...content, text: event.target.value })} className="min-h-[150px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]" />
           </div>
           <div>
             <FieldLabel>Meaning VI</FieldLabel>
-            <textarea value={content.meaning_vi || ""} onChange={(event) => updateExerciseContent({ ...content, meaning_vi: event.target.value })} className="min-h-[90px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
+            <textarea value={content.meaning_vi ||""} onChange={(event) => updateExerciseContent({ ...content, meaning_vi: event.target.value })} className="min-h-[90px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]" />
           </div>
           <div>
             <FieldLabel>Sample Audio (optional)</FieldLabel>
-            <AudioAssetControl value={content.sample_audio_url || ""} text={content.text || ""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })} />
+            <AudioAssetControl value={content.sample_audio_url ||""} text={content.text ||""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, sample_audio_url: audioUrl })} />
           </div>
         </div>
       );
     }
 
-    if (form.type === "definition_choice") {
+    if (form.type ==="definition_choice") {
       return (
         <div className="space-y-4">
           <div>
             <FieldLabel>Definition Text (admin only)</FieldLabel>
-            <textarea value={content.definition_text || ""} onChange={(event) => updateExerciseContent({ ...content, definition_text: event.target.value })} className="min-h-[110px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
+            <textarea value={content.definition_text ||""} onChange={(event) => updateExerciseContent({ ...content, definition_text: event.target.value })} className="min-h-[110px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]" />
           </div>
           <div>
             <FieldLabel>Definition Audio</FieldLabel>
-            <AudioAssetControl value={content.definition_audio_url || ""} text={content.definition_text || ""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, definition_audio_url: audioUrl })} />
+            <AudioAssetControl value={content.definition_audio_url ||""} text={content.definition_text ||""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, definition_audio_url: audioUrl })} />
           </div>
           {renderOptionsEditor(content)}
         </div>
@@ -530,16 +530,16 @@ const EntityModal = ({
       <div className="space-y-4">
         <div>
           <FieldLabel>Question Text</FieldLabel>
-          <textarea value={content.question_text || ""} onChange={(event) => updateExerciseContent({ ...content, question_text: event.target.value })} className="min-h-[110px] w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
+          <textarea value={content.question_text ||""} onChange={(event) => updateExerciseContent({ ...content, question_text: event.target.value })} className="min-h-[110px] w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]" />
         </div>
         <div>
           <FieldLabel>Question Audio (optional)</FieldLabel>
-          <AudioAssetControl value={content.question_audio_url || ""} text={content.question_text || ""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, question_audio_url: audioUrl })} />
+          <AudioAssetControl value={content.question_audio_url ||""} text={content.question_text ||""} language="en" lessonId={form.lesson_id} onChange={(audioUrl) => updateExerciseContent({ ...content, question_audio_url: audioUrl })} />
         </div>
         {renderHintsEditor(content)}
         <div>
           <FieldLabel>Minimum Words</FieldLabel>
-          <input type="number" min="1" value={content.min_words || 2} onChange={(event) => updateExerciseContent({ ...content, min_words: parseNumber(event.target.value, 2) })} className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950" />
+          <input type="number" min="1" value={content.min_words || 2} onChange={(event) => updateExerciseContent({ ...content, min_words: parseNumber(event.target.value, 2) })} className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]" />
         </div>
       </div>
     );
@@ -553,7 +553,7 @@ const EntityModal = ({
           <select
             value={form.lesson_id}
             onChange={(event) => updateForm({ lesson_id: event.target.value })}
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
           >
             {lessons.map((lesson) => (
               <option key={lesson.id} value={lesson.id}>
@@ -572,7 +572,7 @@ const EntityModal = ({
               const content = EMPTY_CONTENT[type];
               updateForm({ type, content, contentJson: pretty(content) });
             }}
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
           >
             {EXERCISE_TYPES.map((type) => (
               <option key={type.value} value={type.value}>
@@ -589,7 +589,7 @@ const EntityModal = ({
           required
           value={form.title}
           onChange={(event) => updateForm({ title: event.target.value })}
-          className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+          className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -600,7 +600,7 @@ const EntityModal = ({
             min="0"
             value={form.order_index}
             onChange={(event) => updateForm({ order_index: event.target.value })}
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </div>
         <div>
@@ -611,16 +611,16 @@ const EntityModal = ({
             max="100"
             value={form.pass_score}
             onChange={(event) => updateForm({ pass_score: event.target.value })}
-            className="w-full rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </div>
         <ToggleField label="Active" checked={form.is_active} onChange={(value) => updateForm({ is_active: value })} />
       </div>
-      <div className="flex gap-2 rounded-[20px] bg-zinc-100 p-1 dark:bg-zinc-950">
+      <div className="flex gap-2 rounded-[20px] bg-muted p-1">
         <button
           type="button"
           onClick={() => setActiveTab("builder")}
-          className={`flex-1 rounded-2xl px-4 py-2 text-sm font-black ${activeTab === "builder" ? "bg-white text-primary shadow-sm dark:bg-zinc-900" : "text-zinc-500"}`}
+          className={`flex-1 rounded-2xl px-4 py-2 text-sm font-black ${activeTab ==="builder" ?"bg-white text-primary shadow-sm" :"text-[var(--page-muted)]"}`}
         >
           Builder
         </button>
@@ -628,12 +628,12 @@ const EntityModal = ({
           type="button"
           data-testid="exercise-json-tab"
           onClick={() => setActiveTab("json")}
-          className={`flex-1 rounded-2xl px-4 py-2 text-sm font-black ${activeTab === "json" ? "bg-white text-primary shadow-sm dark:bg-zinc-900" : "text-zinc-500"}`}
+          className={`flex-1 rounded-2xl px-4 py-2 text-sm font-black ${activeTab ==="json" ?"bg-white text-primary shadow-sm" :"text-[var(--page-muted)]"}`}
         >
           JSON
         </button>
       </div>
-      {activeTab === "builder" ? (
+      {activeTab ==="builder" ? (
         renderExerciseBuilder()
       ) : (
         <div>
@@ -642,7 +642,7 @@ const EntityModal = ({
             data-testid="exercise-json-input"
             value={form.contentJson}
             onChange={(event) => updateForm({ contentJson: event.target.value })}
-            className="min-h-[260px] w-full rounded-[20px] border border-zinc-200 bg-zinc-950 px-4 py-3 font-mono text-xs text-zinc-50 outline-none focus:border-primary"
+            className="min-h-[260px] w-full rounded-[20px] border border-border bg-gradient-to-r from-brand-blue to-primary px-4 py-3 font-mono text-xs text-zinc-50 outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </div>
       )}
@@ -651,7 +651,7 @@ const EntityModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 px-4 py-6">
-      <div className="max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-[30px] border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="max-h-[92dvh] w-full max-w-3xl overflow-y-auto rounded-[30px] border border-border bg-card p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Curriculum Editor</p>
@@ -660,7 +660,7 @@ const EntityModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-[var(--page-muted)] hover:bg-muted"
             aria-label="Close editor"
           >
             <X size={18} />
@@ -668,15 +668,15 @@ const EntityModal = ({
         </div>
 
         <form onSubmit={onSubmit} className="mt-5 space-y-4">
-          {kind === "level" && renderLevelFields()}
-          {kind === "lesson" && renderLessonFields()}
-          {kind === "exercise" && renderExerciseFields()}
+          {kind ==="level" && renderLevelFields()}
+          {kind ==="lesson" && renderLessonFields()}
+          {kind ==="exercise" && renderExerciseFields()}
 
           <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="inline-flex items-center justify-center rounded-2xl border border-border px-4 py-3 text-sm font-semibold text-[var(--page-muted)] hover:bg-muted"
             >
               Cancel
             </button>
@@ -687,7 +687,7 @@ const EntityModal = ({
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-black text-white shadow-lg shadow-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FloppyDiskBack size={16} />
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ?"Saving..." :"Save"}
             </button>
           </div>
         </form>
@@ -697,7 +697,7 @@ const EntityModal = ({
 };
 
 const ToggleField = ({ label, checked, onChange }) => (
-  <label className="flex items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-black dark:border-zinc-700 dark:bg-zinc-950">
+  <label className="flex items-center justify-between gap-3 rounded-[20px] border border-border bg-muted px-4 py-3 text-sm font-black">
     <span>{label}</span>
     <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
   </label>
@@ -716,7 +716,7 @@ const AdminCurriculumPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
-  const [filters, setFilters] = useState({ search: "", status: "", cefr_level: "", page: 1, page_size: 30 });
+  const [filters, setFilters] = useState({ search:"", status:"", cefr_level:"", page: 1, page_size: 30 });
   const [sectionTotal, setSectionTotal] = useState(0);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -776,7 +776,7 @@ const AdminCurriculumPage = () => {
         replaceExercise(exercise.id, detail);
         return detail;
       } catch (detailError) {
-        setError(getErrorMessage(detailError, "Failed to load lesson content."));
+        setError(getErrorMessage(detailError,"Failed to load lesson content."));
         return exercise;
       }
     },
@@ -796,7 +796,7 @@ const AdminCurriculumPage = () => {
       setSectionDetailCache({});
       setSectionDetailError("");
     } catch (loadError) {
-      setError(getErrorMessage(loadError, "Failed to load curriculum."));
+      setError(getErrorMessage(loadError,"Failed to load curriculum."));
     } finally {
       setIsLoading(false);
     }
@@ -807,7 +807,7 @@ const AdminCurriculumPage = () => {
   };
 
   const resetFilters = () => {
-    setFilters({ search: "", status: "", cefr_level: "", page: 1, page_size: 30 });
+    setFilters({ search:"", status:"", cefr_level:"", page: 1, page_size: 30 });
   };
 
   const totalSectionPages = Math.max(1, Math.ceil(sectionTotal / filters.page_size));
@@ -823,7 +823,7 @@ const AdminCurriculumPage = () => {
       setSectionDetailCache((current) => ({ ...current, [levelId]: detail }));
       return detail;
     } catch (loadError) {
-      setSectionDetailError(getErrorMessage(loadError, "Failed to load section detail."));
+      setSectionDetailError(getErrorMessage(loadError,"Failed to load section detail."));
       return null;
     } finally {
       setLoadingSectionId(null);
@@ -857,9 +857,9 @@ const AdminCurriculumPage = () => {
     const nextExerciseOrder = selectedExercises.length;
     let modalItem = item;
 
-    if (kind === "level") {
+    if (kind ==="level") {
       setForm(toLevelForm(modalItem));
-    } else if (kind === "lesson") {
+    } else if (kind ==="lesson") {
       setForm(toLessonForm(modalItem, selectedLevelId));
     } else {
       modalItem = await loadExerciseDetail(modalItem);
@@ -881,13 +881,13 @@ const AdminCurriculumPage = () => {
     setIsSaving(true);
     setError("");
     try {
-      if (modal.kind === "level") {
+      if (modal.kind ==="level") {
         const payload = normalizeLevelPayload(form);
         const saved = modal.item
           ? await adminCurriculumApi.updateSection(modal.item.id, payload)
           : await adminCurriculumApi.createSection(payload);
         setSelectedLevelId(saved.id);
-      } else if (modal.kind === "lesson") {
+      } else if (modal.kind ==="lesson") {
         const payload = normalizeLessonPayload(form);
         const saved = modal.item
           ? await adminCurriculumApi.updateUnit(modal.item.id, payload)
@@ -917,13 +917,13 @@ const AdminCurriculumPage = () => {
     const nextActive = !item.is_active;
     setError("");
     try {
-      if (kind === "level") {
+      if (kind ==="level") {
         if (nextActive) {
           await adminCurriculumApi.updateSection(item.id, { is_active: true });
         } else {
           await adminCurriculumApi.deleteSection(item.id);
         }
-      } else if (kind === "lesson") {
+      } else if (kind ==="lesson") {
         if (nextActive) {
           await adminCurriculumApi.updateUnit(item.id, { is_active: true });
         } else {
@@ -942,7 +942,7 @@ const AdminCurriculumPage = () => {
   };
 
   const moveItem = async (kind, items, itemId, direction) => {
-    if (kind !== "exercise") return;
+    if (kind !=="exercise") return;
     const currentIndex = items.findIndex((item) => item.id === itemId);
     const targetIndex = currentIndex + direction;
     if (currentIndex < 0 || targetIndex < 0 || targetIndex >= items.length) return;
@@ -985,7 +985,7 @@ const AdminCurriculumPage = () => {
   };
 
   const refreshCurrentData = async (kind = modal?.kind) => {
-    if (kind === "level" || !selectedLevelId) {
+    if (kind ==="level" || !selectedLevelId) {
       await loadLevels();
       return;
     }
@@ -993,10 +993,10 @@ const AdminCurriculumPage = () => {
   };
 
   const summaryCards = [
-    { label: "Sections", value: levels.length },
-    { label: "Units", value: levels.reduce((sum, level) => sum + (level.lessons?.length || 0), 0) },
-    { label: "Lessons", value: allLessons.reduce((sum, lesson) => sum + (lesson.exercises?.length || 0), 0) },
-    { label: "Inactive", value: levels.filter((level) => !level.is_active).length + allLessons.filter((lesson) => !lesson.is_active).length },
+    { label:"Sections", value: levels.length },
+    { label:"Units", value: levels.reduce((sum, level) => sum + (level.lessons?.length || 0), 0) },
+    { label:"Lessons", value: allLessons.reduce((sum, lesson) => sum + (lesson.exercises?.length || 0), 0) },
+    { label:"Inactive", value: levels.filter((level) => !level.is_active).length + allLessons.filter((lesson) => !lesson.is_active).length },
   ];
 
   return (
@@ -1009,8 +1009,8 @@ const AdminCurriculumPage = () => {
           <div
             className={`rounded-[26px] px-5 py-4 text-sm font-semibold ${
               error
-                ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
-                : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                ?"bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+                :"bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
             }`}
           >
             {error || notice}
@@ -1019,15 +1019,15 @@ const AdminCurriculumPage = () => {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((card) => (
-            <div key={card.label} className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">{card.label}</p>
+            <div key={card.label} className="rounded-[28px] border border-border bg-card p-5 shadow-sm">
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--page-muted)]">{card.label}</p>
               <p className="mt-3 font-display text-4xl font-black tracking-tight">{card.value}</p>
             </div>
           ))}
         </div>
 
         <section id="curriculum-library">
-          <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="rounded-[30px] border border-border bg-card p-5 shadow-sm">
             <PanelHeader
               eyebrow="Curriculum Browser"
               title="Sections ? Units ? Lessons"
@@ -1037,18 +1037,18 @@ const AdminCurriculumPage = () => {
               onRefresh={loadLevels}
             />
 
-            <div className="mt-5 grid gap-3 rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950 md:grid-cols-[1fr_180px_160px_auto]">
+            <div className="mt-5 grid gap-3 rounded-[24px] border border-border bg-muted p-4   md:grid-cols-[1fr_180px_160px_auto]">
               <input
                 type="search"
                 value={filters.search}
                 onChange={(event) => updateFilter("search", event.target.value)}
                 placeholder="Search sections..."
-                className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-2xl border border-border bg-card px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
               />
               <select
                 value={filters.status}
                 onChange={(event) => updateFilter("status", event.target.value)}
-                className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-2xl border border-border bg-card px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
               >
                 {CURRICULUM_STATUS_FILTERS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
@@ -1057,27 +1057,27 @@ const AdminCurriculumPage = () => {
               <select
                 value={filters.cefr_level}
                 onChange={(event) => updateFilter("cefr_level", event.target.value)}
-                className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-2xl border border-border bg-card px-4 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
               >
                 {CEFR_FILTERS.map((level) => (
-                  <option key={level || "all"} value={level}>{level || "All CEFR"}</option>
+                  <option key={level ||"all"} value={level}>{level ||"All CEFR"}</option>
                 ))}
               </select>
               <button
                 type="button"
                 onClick={resetFilters}
-                className="rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-700 transition hover:bg-white dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                className="rounded-2xl border border-border px-4 py-3 text-sm font-black text-[var(--page-muted)] transition hover:bg-white   dark:hover:bg-zinc-900"
               >
                 Reset
               </button>
             </div>
 
             <div className="mt-5 grid gap-4 xl:grid-cols-3">
-              <div className="rounded-[26px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="rounded-[26px] border border-border bg-muted p-3">
                 <div className="mb-3 flex items-center justify-between gap-3 px-2">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Sections</p>
-                    <p className="mt-1 text-xs font-semibold text-zinc-500">{levels.length} items</p>
+                    <p className="mt-1 text-xs font-semibold text-[var(--page-muted)]">{levels.length} items</p>
                   </div>
                   <button type="button" onClick={() => openModal("level")} className="rounded-xl bg-primary px-3 py-2 text-xs font-black text-white">New</button>
                 </div>
@@ -1092,29 +1092,29 @@ const AdminCurriculumPage = () => {
                       data-testid={`curriculum-level-row-${level.id}`}
                       onClick={() => selectLevelNode(level.id)}
                       onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") selectLevelNode(level.id);
+                        if (event.key ==="Enter" || event.key ==="") selectLevelNode(level.id);
                       }}
                       className={`flex w-full items-start justify-between gap-3 rounded-[18px] px-3 py-3 text-left transition ${
-                        selectedLevelId === level.id ? "bg-primary/10 text-primary dark:text-white" : "bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+                        selectedLevelId === level.id ?"bg-primary/10 text-primary dark:text-white" :"bg-white hover:bg-muted"
                       }`}
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black">{levelIndex + 1}. {level.title}</p>
-                        <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{level.cefr_level || level.code}</p>
+                        <p className="mt-1 truncate text-xs font-semibold text-[var(--page-muted)]">{level.cefr_level || level.code}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
-                        <StatusBadge isActive={level.is_active}>{level.is_active ? "Active" : "Inactive"}</StatusBadge>
+                        <StatusBadge isActive={level.is_active}>{level.is_active ?"Active" :"Inactive"}</StatusBadge>
                         <RowActions item={level} kind="level" items={levels} onEdit={() => openModal("level", level)} onToggle={() => toggleActive("level", level)} onMove={moveItem} disabled={isReordering} />
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-2 border-t border-zinc-200 px-2 pt-3 text-xs font-bold text-zinc-500 dark:border-zinc-800">
+                <div className="mt-3 flex items-center justify-between gap-2 border-t border-border px-2 pt-3 text-xs font-bold text-[var(--page-muted)]">
                   <button
                     type="button"
                     disabled={filters.page <= 1 || isLoading}
                     onClick={() => setFilters((current) => ({ ...current, page: Math.max(1, current.page - 1) }))}
-                    className="rounded-xl border border-zinc-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-700"
+                    className="rounded-xl border border-border px-3 py-2 disabled:opacity-40"
                   >
                     Prev
                   </button>
@@ -1123,18 +1123,18 @@ const AdminCurriculumPage = () => {
                     type="button"
                     disabled={filters.page >= totalSectionPages || isLoading}
                     onClick={() => setFilters((current) => ({ ...current, page: Math.min(totalSectionPages, current.page + 1) }))}
-                    className="rounded-xl border border-zinc-200 px-3 py-2 disabled:opacity-40 dark:border-zinc-700"
+                    className="rounded-xl border border-border px-3 py-2 disabled:opacity-40"
                   >
                     Next
                   </button>
                 </div>
               </div>
 
-              <div className="rounded-[26px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="rounded-[26px] border border-border bg-muted p-3">
                 <div className="mb-3 flex items-center justify-between gap-3 px-2">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Units</p>
-                    <p className="mt-1 text-xs font-semibold text-zinc-500">{selectedLevel ? selectedLevel.title : "Select a section"}</p>
+                    <p className="mt-1 text-xs font-semibold text-[var(--page-muted)]">{selectedLevel ? selectedLevel.title :"Select a section"}</p>
                   </div>
                   <button
                     type="button"
@@ -1158,18 +1158,18 @@ const AdminCurriculumPage = () => {
                       data-testid={`curriculum-lesson-row-${lesson.id}`}
                       onClick={() => selectLessonNode(selectedLevelId, lesson.id)}
                       onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") selectLessonNode(selectedLevelId, lesson.id);
+                        if (event.key ==="Enter" || event.key ==="") selectLessonNode(selectedLevelId, lesson.id);
                       }}
                       className={`flex w-full items-start justify-between gap-3 rounded-[18px] px-3 py-3 text-left transition ${
-                        selectedLessonId === lesson.id ? "bg-primary/10 text-primary dark:text-white" : "bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+                        selectedLessonId === lesson.id ?"bg-primary/10 text-primary dark:text-white" :"bg-white hover:bg-muted"
                       }`}
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black">{lessonIndex + 1}. {lesson.title}</p>
-                        <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{lesson.xp_reward || 0} XP ? {lesson.coin_reward || 0} coins ? {(lesson.exercises || []).length} lessons</p>
+                        <p className="mt-1 truncate text-xs font-semibold text-[var(--page-muted)]">{lesson.xp_reward || 0} XP ? {lesson.coin_reward || 0} coins ? {(lesson.exercises || []).length} lessons</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
-                        <StatusBadge isActive={lesson.is_active}>{lesson.is_active ? "Active" : "Inactive"}</StatusBadge>
+                        <StatusBadge isActive={lesson.is_active}>{lesson.is_active ?"Active" :"Inactive"}</StatusBadge>
                         <RowActions item={lesson} kind="lesson" items={selectedLessons} onEdit={() => openModal("lesson", lesson)} onToggle={() => toggleActive("lesson", lesson)} onMove={moveItem} disabled={isReordering} />
                       </div>
                     </div>
@@ -1177,11 +1177,11 @@ const AdminCurriculumPage = () => {
                 </div>
               </div>
 
-              <div className="rounded-[26px] border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="rounded-[26px] border border-border bg-muted p-3">
                 <div className="mb-3 flex items-center justify-between gap-3 px-2">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Lessons</p>
-                    <p className="mt-1 text-xs font-semibold text-zinc-500">{selectedLesson ? selectedLesson.title : "Select a unit"}</p>
+                    <p className="mt-1 text-xs font-semibold text-[var(--page-muted)]">{selectedLesson ? selectedLesson.title :"Select a unit"}</p>
                   </div>
                   <button
                     type="button"
@@ -1203,18 +1203,18 @@ const AdminCurriculumPage = () => {
                       data-testid={`curriculum-exercise-row-${exercise.id}`}
                       onClick={() => selectExerciseNode(selectedLevelId, selectedLessonId, exercise.id)}
                       onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") selectExerciseNode(selectedLevelId, selectedLessonId, exercise.id);
+                        if (event.key ==="Enter" || event.key ==="") selectExerciseNode(selectedLevelId, selectedLessonId, exercise.id);
                       }}
                       className={`flex w-full items-start justify-between gap-3 rounded-[18px] px-3 py-3 text-left transition ${
-                        selectedExerciseId === exercise.id ? "bg-primary/10 text-primary dark:text-white" : "bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+                        selectedExerciseId === exercise.id ?"bg-primary/10 text-primary dark:text-white" :"bg-white hover:bg-muted"
                       }`}
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black">{exerciseIndex + 1}. {exercise.title}</p>
-                        <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{exercise.type} ? pass {exercise.pass_score}</p>
+                        <p className="mt-1 truncate text-xs font-semibold text-[var(--page-muted)]">{exercise.type} ? pass {exercise.pass_score}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
-                        <StatusBadge isActive={exercise.is_active}>{exercise.is_active ? "Active" : "Inactive"}</StatusBadge>
+                        <StatusBadge isActive={exercise.is_active}>{exercise.is_active ?"Active" :"Inactive"}</StatusBadge>
                         <RowActions item={exercise} kind="exercise" items={selectedExercises} onEdit={() => openModal("exercise", exercise)} onToggle={() => toggleActive("exercise", exercise)} onMove={moveItem} disabled={isReordering} canMove />
                       </div>
                     </div>
@@ -1225,7 +1225,7 @@ const AdminCurriculumPage = () => {
           </div>
         </section>
 
-        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs font-semibold text-[var(--page-muted)]">
           Lesson audio is generated by backend TTS or uploaded directly by admins.
         </p>
       </div>
@@ -1260,7 +1260,7 @@ const PanelHeader = ({ eyebrow, title, actionLabel, actionTestId, onAction, onRe
           onClick={() => {
             void onRefresh();
           }}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border text-[var(--page-muted)] hover:bg-muted"
           aria-label="Refresh"
         >
           <ArrowClockwise size={16} />

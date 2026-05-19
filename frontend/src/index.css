@@ -6,22 +6,31 @@
   --page-bg: #F8FAFC; 
   --page-fg: #1A0F2E; /* Use the deep purple for contrast in light mode */
   --page-muted: #64748B;
-  --page-subtle: #94A3B8;
+  --page-subtle: #475569;
+  --surface-bg: #FFFFFF;
+  --surface-elevated: rgba(255, 255, 255, 0.92);
+  --surface-muted: #F1F5F9;
+  --surface-strong: #E2E8F0;
+  --input-bg: #FFFFFF;
+  --input-border: #CBD5E1;
+  --text-inverse: #FFFFFF;
+  --text-on-brand: #FFFFFF;
+  --focus-ring: rgba(28, 176, 246, 0.28);
   --page-glow-1: rgba(167, 243, 208, 0.5); /* Soft Cyan glow */
   --page-glow-2: rgba(147, 197, 253, 0.4); /* Light Blue highlight */
-  --panel-bg: rgba(255, 255, 255, 0.65);
-  --panel-alt: rgba(214, 238, 255, 0.4); /* Soft Sky Blue */
-  --panel-border: rgba(191, 227, 255, 0.3); /* Pastel Blue border */
+  --panel-bg: rgba(255, 255, 255, 0.84);
+  --panel-alt: rgba(226, 246, 255, 0.78); /* Soft Sky Blue */
+  --panel-border: rgba(125, 180, 230, 0.48); /* Pastel Blue border */
   --panel-shadow: 0 20px 50px -20px rgba(147, 197, 253, 0.2);
   --nav-bg: rgba(248, 250, 252, 0.85);
   --nav-text: #1A0F2E;
   --nav-muted: #64748B;
   --chip-bg: #DDFCE5; /* Mint Green */
-  --chip-text: #059669;
+  --chip-text: #047857;
   --chip-neutral-bg: #D6EEFF;
   --chip-neutral-text: #0369A1;
   --success-bg: #DDFCE5;
-  --success-text: #059669;
+  --success-text: #047857;
   --warning-bg: #FEF3C7;
   --warning-text: #D97706;
   --color-promo-from: #58CC02;
@@ -32,12 +41,21 @@
   --page-bg: #1A0F2E; /* Deep Purple base */
   --page-fg: #F8FAFC;
   --page-muted: #94A3B8;
-  --page-subtle: #64748B;
+  --page-subtle: #CBD5E1;
+  --surface-bg: #120B20;
+  --surface-elevated: rgba(26, 15, 46, 0.92);
+  --surface-muted: rgba(30, 41, 59, 0.72);
+  --surface-strong: rgba(51, 65, 85, 0.86);
+  --input-bg: rgba(15, 23, 42, 0.86);
+  --input-border: rgba(148, 163, 184, 0.42);
+  --text-inverse: #0F172A;
+  --text-on-brand: #FFFFFF;
+  --focus-ring: rgba(52, 219, 197, 0.24);
   --page-glow-1: rgba(108, 59, 255, 0.3); /* Violet Glow */
   --page-glow-2: rgba(11, 26, 58, 0.6);  /* Indigo / Blue Night */
-  --panel-bg: rgba(26, 15, 46, 0.7);
-  --panel-alt: rgba(11, 26, 58, 0.4);
-  --panel-border: rgba(192, 132, 252, 0.2); /* Nebula Pink border */
+  --panel-bg: rgba(26, 15, 46, 0.84);
+  --panel-alt: rgba(11, 26, 58, 0.72);
+  --panel-border: rgba(192, 132, 252, 0.36); /* Nebula Pink border */
   --panel-shadow: 0 30px 100px -40px rgba(0, 0, 0, 0.9);
   --nav-bg: rgba(11, 26, 58, 0.85);
   --nav-text: #F8FAFC;
@@ -63,6 +81,14 @@
   --color-card-foreground: var(--page-fg);
   --color-muted: var(--panel-alt);
   --color-muted-foreground: var(--page-subtle);
+  --color-surface-bg: var(--surface-bg);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-strong: var(--surface-strong);
+  --color-input-bg: var(--input-bg);
+  --color-input-border: var(--input-border);
+  --color-text-inverse: var(--text-inverse);
+  --color-text-on-brand: var(--text-on-brand);
   
   /* Promo Colors */
   --color-promo-from: var(--color-promo-from);
@@ -106,17 +132,17 @@
   --color-brand-red: #FF4B4B;
   --color-brand-gray: #E5E5E5;
   --color-brand-text: #4B4B4B;
-  --color-brand-muted-text: #777777;
+  --color-brand-muted-text: #5F6673;
   --color-brand-muted: #AFAFAF;
   --color-brand-border: #E5E5E5;
   
-  --color-surface: #f9f9fc;
-  --color-on-surface: #1a1c1e;
-  --color-surface-variant: #e2e2e5;
-  --color-on-surface-variant: #414753;
-  --color-surface-container: #eeeef0;
-  --color-surface-container-low: #f3f3f6;
-  --color-surface-container-lowest: #ffffff;
+  --color-surface: var(--surface-bg);
+  --color-on-surface: var(--page-fg);
+  --color-surface-variant: var(--surface-muted);
+  --color-on-surface-variant: var(--page-muted);
+  --color-surface-container: var(--surface-strong);
+  --color-surface-container-low: var(--surface-muted);
+  --color-surface-container-lowest: var(--surface-bg);
   
   --color-outline: var(--page-subtle);
   --color-outline-variant: var(--panel-border);
@@ -274,7 +300,11 @@
   }
 
   .liquid-glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)];
+    @apply border shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)];
+    background-color: var(--surface-elevated);
+    border-color: var(--panel-border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 
   .refraction {
@@ -308,7 +338,10 @@
   }
 
   .app-button-secondary {
-    @apply relative inline-flex items-center justify-center rounded-2xl border-2 border-b-4 border-[#e5e5e5] bg-white px-6 py-3 font-black uppercase tracking-wide text-[#afafaf] transition-all hover:bg-[#f7f7f7] active:border-b-2 active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply relative inline-flex items-center justify-center rounded-2xl border-2 border-b-4 px-6 py-3 font-black uppercase tracking-wide transition-all active:border-b-2 active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--surface-bg);
+    border-color: var(--input-border);
+    color: var(--page-muted);
   }
 
   .app-button-green {
@@ -337,12 +370,14 @@
   }
 
   .app-label {
-    @apply mb-2 block text-sm font-black uppercase tracking-wide text-[#777777];
+    @apply mb-2 block text-sm font-black uppercase tracking-wide;
+    color: var(--page-muted);
   }
 
   /* Course Sections & Progress Bar */
   .app-progress-bar {
-    @apply relative h-[22px] w-full items-center rounded-full bg-[#e5e5e5];
+    @apply relative h-[22px] w-full items-center rounded-full;
+    background-color: var(--surface-strong);
     --progress-color: #58cc02;
   }
 
@@ -361,15 +396,21 @@
   }
 
   .section-card {
-    @apply relative flex min-h-[140px] w-full flex-col justify-between overflow-hidden rounded-2xl border-2 border-[#e5e5e5] bg-white p-6 transition-all;
+    @apply relative flex min-h-[140px] w-full flex-col justify-between overflow-hidden rounded-2xl border-2 p-6 transition-all;
+    background-color: var(--surface-elevated);
+    border-color: var(--input-border);
+    color: var(--page-fg);
   }
 
   .section-card-completed {
-    @apply border-[#58cc02] bg-white;
+    @apply border-[#58cc02];
+    background-color: var(--surface-elevated);
   }
 
   .section-badge {
-    @apply inline-flex items-center rounded-xl bg-[#e5e5e5] px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-[#777777];
+    @apply inline-flex items-center rounded-xl px-3 py-1.5 text-[11px] font-black uppercase tracking-wider;
+    background-color: var(--surface-strong);
+    color: var(--page-muted);
   }
 
   .section-badge-active {
@@ -377,12 +418,17 @@
   }
 
   .character-bubble {
-    @apply relative rounded-2xl border-2 border-[#e5e5e5] bg-white p-4 text-sm font-bold text-[#4B4B4B] shadow-sm;
+    @apply relative rounded-2xl border-2 p-4 text-sm font-bold shadow-sm;
+    background-color: var(--surface-elevated);
+    border-color: var(--input-border);
+    color: var(--page-fg);
   }
 
   /* Scenarios UI Refinements */
   .app-section-panel {
-    @apply flex items-center justify-between rounded-[20px] border-2 border-b-[4px] border-brand-border bg-white p-6 transition-all;
+    @apply flex items-center justify-between rounded-[20px] border-2 border-b-[4px] p-6 transition-all;
+    background-color: var(--surface-elevated);
+    border-color: var(--input-border);
   }
   
   .app-section-spacing {
@@ -418,7 +464,9 @@
   }
 
   .app-section-button {
-    @apply relative inline-flex items-center justify-center rounded-[16px] border-2 border-b-[4px] border-brand-border bg-white px-8 h-[50px] font-black uppercase tracking-wide text-brand-blue transition-all hover:bg-[#f7f7f7] active:border-b-2 active:translate-y-[2px];
+    @apply relative inline-flex items-center justify-center rounded-[16px] border-2 border-b-[4px] px-8 h-[50px] font-black uppercase tracking-wide text-brand-blue transition-all active:border-b-2 active:translate-y-[2px];
+    background-color: var(--surface-bg);
+    border-color: var(--input-border);
     box-shadow: none;
   }
 
@@ -441,7 +489,8 @@
   }
 
   .section-completed .app-section-panel {
-    @apply border-brand-border bg-white;
+    border-color: var(--input-border);
+    background-color: var(--surface-elevated);
   }
 
   .learn-path-page {
@@ -449,11 +498,14 @@
   }
 
   .learn-path-header {
-    @apply sticky top-0 z-20 flex h-[72px] items-center border-b-2 border-[#e5e5e5] bg-white/80 backdrop-blur-md;
+    @apply sticky top-0 z-20 flex h-[72px] items-center border-b-2 backdrop-blur-md;
+    background-color: var(--nav-bg);
+    border-color: var(--panel-border);
   }
 
   .learn-back-link {
-    @apply inline-flex items-center gap-2 text-sm font-black uppercase tracking-wide text-[#afafaf] transition-colors hover:text-[#777777];
+    @apply inline-flex items-center gap-2 text-sm font-black uppercase tracking-wide transition-colors;
+    color: var(--page-muted);
   }
 
   .learn-section-list {
@@ -465,7 +517,9 @@
   }
 
   .learn-section-panel {
-    @apply flex items-center justify-between gap-5 rounded-[20px] border-2 border-b-[4px] border-[#e5e5e5] bg-white p-6 shadow-sm;
+    @apply flex items-center justify-between gap-5 rounded-[20px] border-2 border-b-[4px] p-6 shadow-sm;
+    background-color: var(--surface-elevated);
+    border-color: var(--input-border);
   }
 
   .learn-section-level {
@@ -473,7 +527,8 @@
   }
 
   .learn-section-title {
-    @apply text-[28px] font-black leading-tight text-[#4b4b4b];
+    @apply text-[28px] font-black leading-tight;
+    color: var(--page-fg);
   }
 
   .learn-section-status {
@@ -481,7 +536,9 @@
   }
 
   .learn-section-button {
-    @apply inline-flex h-[50px] shrink-0 items-center justify-center rounded-[16px] border-2 border-b-[4px] border-[#e5e5e5] bg-white px-8 text-sm font-black uppercase tracking-wide text-[#1cb0f6] transition-all hover:bg-[#f7f7f7] active:translate-y-[2px] active:border-b-2;
+    @apply inline-flex h-[50px] shrink-0 items-center justify-center rounded-[16px] border-2 border-b-[4px] px-8 text-sm font-black uppercase tracking-wide text-[#1cb0f6] transition-all active:translate-y-[2px] active:border-b-2;
+    background-color: var(--surface-bg);
+    border-color: var(--input-border);
   }
 
   .learn-section-active .learn-section-panel {
@@ -498,19 +555,22 @@
   }
 
   .learn-section-locked .learn-section-panel {
-    @apply border-[#e5e5e5] bg-[#f7f7f7];
+    border-color: var(--input-border);
+    background-color: var(--surface-muted);
   }
 
   .learn-section-locked .learn-section-title {
-    @apply text-[#afafaf];
+    color: var(--page-muted);
   }
 
   .learn-section-locked .learn-section-status {
-    @apply text-[#afafaf];
+    color: var(--page-muted);
   }
 
   .learn-section-locked .learn-section-button {
-    @apply border-[#e5e5e5] bg-white text-[#afafaf];
+    border-color: var(--input-border);
+    background-color: var(--surface-bg);
+    color: var(--page-muted);
   }
 
   .learn-progress {
@@ -535,20 +595,28 @@
   }
 
   .learn-speech-bubble {
-    @apply relative max-w-[320px] rounded-2xl border-2 border-[#e5e5e5] bg-white p-4 text-[15px] font-black leading-snug text-[#4b4b4b] shadow-sm;
+    @apply relative max-w-[320px] rounded-2xl border-2 p-4 text-[15px] font-black leading-snug shadow-sm;
+    background-color: var(--surface-elevated);
+    border-color: var(--input-border);
+    color: var(--page-fg);
   }
 
   .learn-speech-bubble::after {
     content: "";
-    @apply absolute -right-[9px] bottom-5 h-4 w-4 rotate-45 border-r-2 border-t-2 border-[#e5e5e5] bg-white;
+    @apply absolute -right-[9px] bottom-5 h-4 w-4 rotate-45 border-r-2 border-t-2;
+    background-color: var(--surface-elevated);
+    border-color: var(--input-border);
   }
 
   .learn-mascot {
-    @apply shrink-0 rounded-full bg-white p-3 shadow-sm;
+    @apply shrink-0 rounded-full p-3 shadow-sm;
+    background-color: var(--surface-elevated);
   }
 
   .learn-current-unit {
-    @apply absolute -bottom-7 right-0 flex max-w-[360px] items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black text-[#777777] shadow-sm;
+    @apply absolute -bottom-7 right-0 flex max-w-[360px] items-center gap-2 rounded-full px-4 py-2 text-xs font-black shadow-sm;
+    background-color: var(--surface-elevated);
+    color: var(--page-muted);
   }
 
   @media (max-width: 640px) {

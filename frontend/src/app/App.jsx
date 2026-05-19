@@ -33,7 +33,7 @@ const SubscriptionPage = lazy(() => import("@/features/subscription/pages/Subscr
 const ShopPage = lazy(() => import("@/features/gamification/pages/ShopPage"));
 
 const RouteFallback = () => (
-  <div className="flex min-h-[100dvh] items-center justify-center bg-zinc-50">
+  <div className="flex min-h-[100dvh] items-center justify-center bg-muted">
     <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
   </div>
 );

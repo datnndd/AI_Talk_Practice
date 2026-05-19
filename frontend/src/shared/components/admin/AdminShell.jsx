@@ -29,7 +29,7 @@ const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) =
 
   return (
     <div className="app-page-shell min-h-[100dvh] font-sans antialiased text-[var(--page-fg)]">
-      <div className="min-h-screen text-zinc-900 transition-colors dark:text-zinc-50">
+      <div className="min-h-screen text-[var(--page-fg)] transition-colors">
         <div className="grid min-h-screen lg:grid-cols-[260px_minmax(0,1fr)]">
           <aside className="sticky top-0 hidden h-screen border-r border-border bg-background p-6 backdrop-blur lg:flex lg:flex-col">
             <div className="mb-8">
@@ -42,8 +42,8 @@ const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) =
                 const isActive = item.to ? location.pathname === item.to : location.hash === item.anchor;
                 const className = `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
                   isActive
-                    ? "border border-primary/30 bg-primary/15 text-primary shadow-sm shadow-primary/10 dark:border-primary/40 dark:bg-primary/20 dark:text-white"
-                    : "border border-transparent text-zinc-600 hover:border-zinc-200 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-white"
+                    ? "border border-primary/40 bg-primary/20 text-[var(--page-fg)] shadow-sm shadow-primary/10"
+                    : "border border-transparent text-[var(--page-muted)] hover:border-border hover:bg-muted hover:text-[var(--page-fg)]"
                 }`;
                 if (item.to) {
                   return (
@@ -65,12 +65,12 @@ const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) =
             <div className="mt-auto pt-8">
               <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-900 text-sm font-black text-white dark:bg-zinc-100 dark:text-zinc-900">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-blue to-primary text-sm font-black text-white">
                     {initials}
                   </div>
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{user?.display_name || "Admin user"}</p>
-                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{user?.email}</p>
+                    <p className="truncate text-xs text-[var(--page-muted)]">{user?.email}</p>
                   </div>
                 </div>
                 <button
@@ -79,7 +79,7 @@ const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) =
                     logout();
                     navigate("/login");
                   }}
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-semibold text-[var(--page-muted)] transition hover:bg-muted hover:text-[var(--page-fg)]"
                 >
                   <SignOut size={16} />
                   Logout
@@ -94,7 +94,7 @@ const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) =
                 <div className="min-w-0">
                   <h1 className="truncate font-display text-xl font-black tracking-tight md:text-2xl">{title}</h1>
                   {subtitle ? (
-                    <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>
+                    <p className="mt-0.5 truncate text-xs text-[var(--page-muted)]">{subtitle}</p>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -116,8 +116,8 @@ const AdminShell = ({ title, subtitle, navItems = defaultNavItems, children }) =
                   const isActive = item.to ? location.pathname === item.to : location.hash === item.anchor;
                   const className = `inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] transition ${
                     isActive
-                      ? "border-primary/30 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/20 dark:text-white"
-                      : "border-zinc-200 bg-white text-zinc-600 hover:text-primary dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                      ? "border-primary/40 bg-primary/20 text-[var(--page-fg)]"
+                      : "border-border bg-card text-[var(--page-muted)] hover:bg-muted hover:text-[var(--page-fg)]"
                   }`;
                   if (item.to) {
                     return (

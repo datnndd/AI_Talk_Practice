@@ -38,7 +38,7 @@ const FinalStep = ({ formData, updateData }) => {
       <div className="space-y-6">
         {/* Name */}
         <motion.div variants={itemVariants} className="flex flex-col gap-2">
-          <label className="text-sm font-bold text-zinc-700 flex items-center gap-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-[var(--page-muted)]">
             <User size={18} /> Display Name
           </label>
           <input 
@@ -47,12 +47,12 @@ const FinalStep = ({ formData, updateData }) => {
             value={formData.display_name}
             onChange={handleInputChange}
             placeholder="E.g. Alex"
-            className="w-full bg-surface-container-lowest border-2 border-outline-variant/30 focus:border-primary/50 rounded-xl px-4 py-3 outline-none transition-all font-medium text-zinc-900"
+            className="w-full rounded-xl border-2 border-outline-variant/30 bg-surface-container-lowest px-4 py-3 font-medium text-[var(--page-fg)] outline-none transition-all focus:border-primary/50 focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </motion.div>
 
         <motion.div variants={itemVariants} className="flex flex-col gap-2">
-          <label className="text-sm font-bold text-zinc-700 flex items-center gap-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-[var(--page-muted)]">
             <CalendarBlank size={18} /> Age
           </label>
           <input
@@ -62,13 +62,13 @@ const FinalStep = ({ formData, updateData }) => {
             onChange={handleInputChange}
             placeholder="Your age"
             min="5" max="100"
-            className="w-full bg-surface-container-lowest border-2 border-outline-variant/30 focus:border-primary/50 rounded-xl px-4 py-3 outline-none transition-all font-medium text-zinc-900"
+            className="w-full rounded-xl border-2 border-outline-variant/30 bg-surface-container-lowest px-4 py-3 font-medium text-[var(--page-fg)] outline-none transition-all focus:border-primary/50 focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </motion.div>
 
         {/* Main Challenge */}
         <motion.div variants={itemVariants} className="flex flex-col gap-2">
-          <label className="text-sm font-bold text-zinc-700 flex items-center gap-2">
+          <label className="flex items-center gap-2 text-sm font-bold text-[var(--page-muted)]">
             <Lightning size={18} /> Your Main Challenge
           </label>
           <input 
@@ -77,7 +77,7 @@ const FinalStep = ({ formData, updateData }) => {
             value={formData.main_challenge}
             onChange={handleInputChange}
             placeholder="E.g. Speaking fluently, vocabulary..."
-            className="w-full bg-surface-container-lowest border-2 border-outline-variant/30 focus:border-primary/50 rounded-xl px-4 py-3 outline-none transition-all font-medium text-zinc-900"
+            className="w-full rounded-xl border-2 border-outline-variant/30 bg-surface-container-lowest px-4 py-3 font-medium text-[var(--page-fg)] outline-none transition-all focus:border-primary/50 focus:ring-4 focus:ring-[var(--focus-ring)]"
           />
         </motion.div>
 

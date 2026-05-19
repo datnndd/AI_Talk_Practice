@@ -80,7 +80,7 @@ const ScenarioCard = ({ scenario, hasProAccess }) => {
         </div>
         {isLocked ? (
           <div className="absolute inset-0 grid place-items-center bg-zinc-950/35">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-amber-700 shadow-lg">
+            <div className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-amber-700 shadow-lg">
               <LockSimple size={14} weight="fill" /> Mở khóa Pro
             </div>
           </div>
@@ -153,14 +153,14 @@ const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = ""
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Tìm theo tình huống, chủ đề, mục tiêu..."
-              className="w-full rounded-2xl border border-border bg-muted px-11 py-3 text-sm font-semibold outline-none transition focus:border-primary"
+              className="w-full rounded-2xl border border-border bg-muted px-11 py-3 text-sm font-semibold outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
             />
           </label>
-          <select value={difficulty} onChange={(event) => setDifficulty(event.target.value)} className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm font-black outline-none focus:border-primary">
+          <select value={difficulty} onChange={(event) => setDifficulty(event.target.value)} className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm font-black outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]">
             <option value="all">All levels</option>
             {DIFFICULTY_GROUPS.map((group) => <option key={group.key} value={group.key}>{group.title}</option>)}
           </select>
-          <select value={category} onChange={(event) => setCategory(event.target.value)} className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm font-black outline-none focus:border-primary">
+          <select value={category} onChange={(event) => setCategory(event.target.value)} className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm font-black outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]">
             <option value="all">All topics</option>
             {categories.map((item) => <option key={item} value={item}>{formatCategory(item)}</option>)}
           </select>

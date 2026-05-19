@@ -59,7 +59,7 @@ const ScoreRing = ({ score, size = 80 }) => {
 };
 
 const SkillCard = ({ skillKey, value }) => {
-  const meta = SKILL_META[skillKey] || { label: skillKey, color: "bg-zinc-50 border-zinc-200 text-zinc-700" };
+  const meta = SKILL_META[skillKey] || { label: skillKey, color: "bg-muted border-zinc-200 text-[var(--page-muted)]" };
   const Icon = meta.icon;
   const avg = typeof value === "object" ? value.avg : value;
   return (
@@ -151,12 +151,12 @@ const SessionResultPage = () => {
 
   if (error || !session) {
     return (
-      <div className="app-page-narrow rounded-lg border border-rose-100 bg-white p-6 shadow-sm">
+      <div className="app-page-narrow rounded-lg border border-rose-100 bg-card p-6 shadow-sm">
         <div className="flex items-start gap-3 text-rose-600">
           <WarningCircle size={24} weight="fill" className="mt-0.5 shrink-0" />
           <div>
-            <h1 className="font-display text-2xl font-black text-zinc-950">Session result unavailable</h1>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-600">{error || "This session could not be loaded."}</p>
+            <h1 className="font-display text-2xl font-black text-[var(--page-fg)]">Session result unavailable</h1>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--page-muted)]">{error || "This session could not be loaded."}</p>
           </div>
         </div>
         <button
@@ -218,7 +218,7 @@ const SessionResultPage = () => {
     {
       title: "Bước tiếp theo",
       icon: ArrowRight,
-      tone: "border-primary/20 bg-primary/5 text-zinc-800",
+      tone: "border-primary/20 bg-primary/5 text-[var(--page-fg)]",
       titleClass: "text-primary",
       iconClass: "text-primary",
       items: nextSteps,
@@ -236,11 +236,11 @@ const SessionResultPage = () => {
               {score ? "Hoàn thành" : "Đã lưu bài"}
             </div>
             <p className="mt-4 text-[11px] font-black uppercase tracking-[0.24em] text-primary">Kết quả luyện nói</p>
-            <h1 className="mt-2 font-display text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">
+            <h1 className="mt-2 font-display text-3xl font-black tracking-tight text-[var(--page-fg)] sm:text-4xl">
               {heroTitle}
             </h1>
-            <p className="mt-3 text-base font-bold text-zinc-800">{scenarioTitle}</p>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+            <p className="mt-3 text-base font-bold text-[var(--page-fg)]">{scenarioTitle}</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--page-muted)]">
               {session.scenario?.description || heroMessage}
             </p>
             <p className="mt-3 text-sm font-semibold text-emerald-700">{heroMessage}</p>
@@ -249,32 +249,32 @@ const SessionResultPage = () => {
           <div className="rounded-2xl border border-white/80 bg-white/90 p-5 shadow-sm lg:min-w-[260px]">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Điểm tổng</p>
-                <p className="mt-2 text-4xl font-black text-zinc-950">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">Điểm tổng</p>
+                <p className="mt-2 text-4xl font-black text-[var(--page-fg)]">
                   {score ? Number(score.overall_score || 0).toFixed(1) : "--"}
                 </p>
               </div>
               {score ? (
                 <div className="relative flex items-center justify-center">
                   <ScoreRing score={score.overall_score} size={84} />
-                  <span className="absolute text-xs font-black uppercase tracking-wider text-zinc-500">/10</span>
+                  <span className="absolute text-xs font-black uppercase tracking-wider text-[var(--page-muted)]">/10</span>
                 </div>
               ) : (
                 <div className="h-16 w-16 animate-spin rounded-full border-4 border-sky-100 border-t-sky-500" />
               )}
             </div>
             <div className="mt-5 grid gap-2 text-sm">
-              <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2">
-                <span className="font-bold text-zinc-500">Thời lượng</span>
-                <span className="font-black text-zinc-950">{formatDuration(session.duration_seconds)}</span>
+              <div className="flex items-center justify-between rounded-xl bg-muted px-3 py-2">
+                <span className="font-bold text-[var(--page-muted)]">Thời lượng</span>
+                <span className="font-black text-[var(--page-fg)]">{formatDuration(session.duration_seconds)}</span>
               </div>
-              <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2">
-                <span className="font-bold text-zinc-500">Trạng thái</span>
-                <span className="font-black capitalize text-zinc-950">{session.status}</span>
+              <div className="flex items-center justify-between rounded-xl bg-muted px-3 py-2">
+                <span className="font-bold text-[var(--page-muted)]">Trạng thái</span>
+                <span className="font-black capitalize text-[var(--page-fg)]">{session.status}</span>
               </div>
-              <div className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2">
-                <span className="font-bold text-zinc-500">Lý do</span>
-                <span className="text-right font-black text-zinc-950">{endReason}</span>
+              <div className="flex items-center justify-between rounded-xl bg-muted px-3 py-2">
+                <span className="font-bold text-[var(--page-muted)]">Lý do</span>
+                <span className="text-right font-black text-[var(--page-fg)]">{endReason}</span>
               </div>
             </div>
           </div>
@@ -293,7 +293,7 @@ const SessionResultPage = () => {
             <button
               type="button"
               onClick={() => navigate(`/practice/${scenarioId}/preview`)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3 text-sm font-black text-zinc-800 shadow-sm transition hover:bg-zinc-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-3 text-sm font-black text-[var(--page-fg)] shadow-sm transition hover:bg-muted"
             >
               Luyện lại kịch bản
             </button>
@@ -327,9 +327,9 @@ const SessionResultPage = () => {
       )}
 
       {score?.feedback_summary ? (
-        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Tóm tắt feedback</p>
-          <p className="mt-3 text-sm leading-relaxed text-zinc-700 italic">{score.feedback_summary}</p>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--page-muted)] italic">{score.feedback_summary}</p>
           {completionBadge && (() => {
             const BadgeIcon = completionBadge.icon;
             return (
@@ -367,7 +367,7 @@ const SessionResultPage = () => {
       </div>
 
       {Object.keys(skillBreakdown).length > 0 && (
-        <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Kỹ năng</p>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {Object.entries(skillBreakdown).map(([key, val]) => (

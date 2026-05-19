@@ -32,7 +32,7 @@ const DefinitionChoiceExercise = ({ exercise, onAttempt }) => {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl bg-zinc-50 p-5 dark:bg-zinc-900">
+    <div className="rounded-xl bg-muted p-5 text-[var(--page-fg)]">
         <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wide text-muted-foreground"><SpeakerHigh size={18} weight="fill" /> Nghe ??nh ngh?a v? ch?n t?</p>
         {content.definition_audio_url && <audio controls src={absoluteAudioUrl(content.definition_audio_url)} className="mt-3 w-full" />}
       </div>

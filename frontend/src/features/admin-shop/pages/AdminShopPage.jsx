@@ -174,8 +174,8 @@ const AdminShopPage = () => {
       )}
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => setTab("products")} className={`rounded-full px-4 py-2 text-sm font-black ${tab === "products" ? "bg-zinc-950 text-white" : "bg-white text-zinc-600"}`}>Sản phẩm</button>
-        <button type="button" onClick={() => setTab("redemptions")} className={`rounded-full px-4 py-2 text-sm font-black ${tab === "redemptions" ? "bg-zinc-950 text-white" : "bg-white text-zinc-600"}`}>Đơn đổi</button>
+        <button type="button" onClick={() => setTab("products")} className={`rounded-full px-4 py-2 text-sm font-black ${tab === "products" ? "bg-zinc-950 text-white" : "bg-white text-[var(--page-muted)]"}`}>Sản phẩm</button>
+        <button type="button" onClick={() => setTab("redemptions")} className={`rounded-full px-4 py-2 text-sm font-black ${tab === "redemptions" ? "bg-zinc-950 text-white" : "bg-white text-[var(--page-muted)]"}`}>Đơn đổi</button>
         <button type="button" onClick={startCreate} className="ml-auto inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-black text-white">
           <Plus size={16} /> Thêm sản phẩm
         </button>
@@ -191,15 +191,15 @@ const AdminShopPage = () => {
                 <div key={product.id} className="flex flex-col gap-3 rounded-xl border border-border p-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-black text-zinc-950">{product.name}</h3>
+                      <h3 className="font-black text-[var(--page-fg)]">{product.name}</h3>
                       <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-black text-amber-700">{product.price_coin} Coin</span>
-                      <span className={`rounded-full px-2 py-1 text-xs font-black ${product.is_active ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}>{product.is_active ? "Hiện" : "Ẩn"}</span>
+                      <span className={`rounded-full px-2 py-1 text-xs font-black ${product.is_active ? "bg-emerald-50 text-emerald-700" : "bg-muted text-[var(--page-muted)]"}`}>{product.is_active ? "Hiện" : "Ẩn"}</span>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{product.description}</p>
-                    <p className="mt-1 text-xs font-bold text-zinc-400">Code: {product.code} · Tồn: {product.stock_quantity} · Thứ tự: {product.sort_order}</p>
+                    <p className="mt-1 text-xs font-bold text-[var(--page-subtle)]">Code: {product.code} · Tồn: {product.stock_quantity} · Thứ tự: {product.sort_order}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => setSelectedProductId(product.id)} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-black text-zinc-700"><PencilSimple size={14} /> Sửa</button>
+                    <button type="button" onClick={() => setSelectedProductId(product.id)} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-black text-[var(--page-muted)]"><PencilSimple size={14} /> Sửa</button>
                     <button type="button" onClick={() => hideProduct(product.id)} className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-700"><Trash size={14} /> Ẩn</button>
                   </div>
                 </div>
@@ -208,7 +208,7 @@ const AdminShopPage = () => {
           </div>
 
           <form onSubmit={saveProduct} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <h2 className="text-lg font-black text-zinc-950">{selectedProductId ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h2>
+            <h2 className="text-lg font-black text-[var(--page-fg)]">{selectedProductId ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h2>
             <div className="mt-4 space-y-3">
               <input required placeholder="Code" value={form.code} onChange={(event) => updateForm("code", event.target.value)} className="w-full rounded-xl border border-border px-4 py-3 text-sm" />
               <input required placeholder="Tên sản phẩm" value={form.name} onChange={(event) => updateForm("name", event.target.value)} className="w-full rounded-xl border border-border px-4 py-3 text-sm" />
@@ -216,10 +216,10 @@ const AdminShopPage = () => {
               <div className="rounded-xl border border-border p-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">Ảnh sản phẩm</p>
-                    <p className="mt-1 truncate text-xs font-semibold text-zinc-500">{imageFile?.name || form.image_url || "Chưa có ảnh"}</p>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--page-muted)]">Ảnh sản phẩm</p>
+                    <p className="mt-1 truncate text-xs font-semibold text-[var(--page-muted)]">{imageFile?.name || form.image_url || "Chưa có ảnh"}</p>
                   </div>
-                  <button type="button" onClick={() => imageInputRef.current?.click()} disabled={isSaving} className="rounded-xl border border-border px-4 py-2 text-xs font-black text-zinc-700 disabled:opacity-50">
+                  <button type="button" onClick={() => imageInputRef.current?.click()} disabled={isSaving} className="rounded-xl border border-border px-4 py-2 text-xs font-black text-[var(--page-muted)] disabled:opacity-50">
                     Chọn ảnh
                   </button>
                 </div>
@@ -231,11 +231,11 @@ const AdminShopPage = () => {
                 <input type="number" min="0" placeholder="Tồn" value={form.stock_quantity} onChange={(event) => updateForm("stock_quantity", event.target.value)} className="rounded-xl border border-border px-4 py-3 text-sm" />
                 <input type="number" placeholder="Thứ tự" value={form.sort_order} onChange={(event) => updateForm("sort_order", event.target.value)} className="rounded-xl border border-border px-4 py-3 text-sm" />
               </div>
-              <label className="flex items-center gap-2 text-sm font-bold text-zinc-700">
+              <label className="flex items-center gap-2 text-sm font-bold text-[var(--page-muted)]">
                 <input type="checkbox" checked={form.is_active} onChange={(event) => updateForm("is_active", event.target.checked)} /> Hiển thị trong shop
               </label>
             </div>
-            <button type="submit" disabled={isSaving} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+            <button type="submit" disabled={isSaving} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-blue to-primary px-4 py-3 text-sm font-black text-white disabled:opacity-50">
               {form.is_active ? <CheckCircle size={16} /> : <ProhibitInset size={16} />}
               {isSaving ? "Đang lưu..." : "Lưu sản phẩm"}
             </button>
@@ -248,11 +248,11 @@ const AdminShopPage = () => {
               <div key={item.id} className="rounded-xl border border-border p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <h3 className="font-black text-zinc-950">#{item.id} · {item.product_name}</h3>
+                    <h3 className="font-black text-[var(--page-fg)]">#{item.id} · {item.product_name}</h3>
                     <p className="mt-1 text-sm text-muted-foreground">{item.user_email} · {item.price_coin} Coin · {formatDateTime(item.created_at)}</p>
-                    <p className="mt-3 text-sm font-bold text-zinc-800">{item.recipient_name} · {item.phone}</p>
-                    <p className="mt-1 text-sm text-zinc-600">{item.address}</p>
-                    {item.note && <p className="mt-1 text-sm text-zinc-500">Ghi chú: {item.note}</p>}
+                    <p className="mt-3 text-sm font-bold text-[var(--page-fg)]">{item.recipient_name} · {item.phone}</p>
+                    <p className="mt-1 text-sm text-[var(--page-muted)]">{item.address}</p>
+                    {item.note && <p className="mt-1 text-sm text-[var(--page-muted)]">Ghi chú: {item.note}</p>}
                     {item.refunded && <p className="mt-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Đã hoàn Coin</p>}
                   </div>
                   <select value={item.status} onChange={(event) => updateStatus(item.id, event.target.value)} className="rounded-xl border border-border px-3 py-2 text-sm font-bold">

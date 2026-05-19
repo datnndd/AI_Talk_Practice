@@ -1,4 +1,4 @@
-﻿import { BookOpen, Hexagon, Star } from '@phosphor-icons/react';
+import { BookOpen, Hexagon, Star } from '@phosphor-icons/react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import './RightSidePanel.css';
 

@@ -7,7 +7,7 @@ const PublicRoute = ({ children }) => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-50">
+      <div className="flex h-screen items-center justify-center bg-[var(--page-bg)]">
         <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
       </div>
     );

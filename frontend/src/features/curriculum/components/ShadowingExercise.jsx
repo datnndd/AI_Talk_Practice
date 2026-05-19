@@ -20,17 +20,17 @@ const ShadowingExercise = ({ exercise, onAttempt }) => {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl bg-zinc-50 p-5 dark:bg-zinc-900">
+      <div className="rounded-xl bg-muted p-5 text-[var(--page-fg)]">
         <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Nghe v? l?p l?i</p>
-        <p className="mt-2 text-2xl font-black leading-9 text-zinc-950 dark:text-white">{content.reference_text}</p>
-        {content.meaning_vi && <p className="mt-2 text-sm font-semibold text-zinc-600 dark:text-zinc-300">{content.meaning_vi}</p>}
+        <p className="mt-2 text-2xl font-black leading-9 text-[var(--page-fg)]">{content.reference_text}</p>
+        {content.meaning_vi && <p className="mt-2 text-sm font-semibold text-[var(--page-muted)]">{content.meaning_vi}</p>}
       </div>
       {audioUrl && (
         <div className="space-y-3">
           <audio ref={audioRef} controls src={absoluteAudioUrl(audioUrl)} className="w-full" onLoadedMetadata={() => changeSpeed(speed)} />
           <div className="flex gap-2">
             {[0.75, 1].map((value) => (
-              <button key={value} type="button" onClick={() => changeSpeed(value)} className={`rounded-full px-4 py-2 text-xs font-black ${speed === value ? "bg-primary text-white" : "bg-zinc-100 text-zinc-700"}`}>
+              <button key={value} type="button" onClick={() => changeSpeed(value)} className={`rounded-full px-4 py-2 text-xs font-black ${speed === value ? "bg-primary text-white" : "bg-muted text-[var(--page-muted)]"}`}>
                 {value}x
               </button>
             ))}

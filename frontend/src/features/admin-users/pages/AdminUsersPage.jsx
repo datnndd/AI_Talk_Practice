@@ -93,7 +93,7 @@ const getStatusBadge = (user) => (user?.deleted_at ? "Inactive" : "Active");
 const getCoinBalance = (user) => Number(user?.gamification?.coin?.balance ?? user?.coin_balance ?? 0);
 
 const FieldLabel = ({ children }) => (
-  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+  <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-subtle)]">
     {children}
   </label>
 );
@@ -286,7 +286,7 @@ const AdminUsersPage = () => {
         )}
 
         <section id="user-directory">
-          <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="rounded-[30px] border border-border bg-card p-5 shadow-sm  ">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">User Directory</p>
@@ -297,7 +297,7 @@ const AdminUsersPage = () => {
                 onClick={() => {
                   void handleRefresh();
                 }}
-                className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                className="inline-flex items-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-semibold text-[var(--page-muted)] transition hover:bg-muted"
               >
                 <ArrowClockwise size={16} />
                 Refresh
@@ -306,19 +306,19 @@ const AdminUsersPage = () => {
 
             <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_160px_160px_170px]">
               <label className="relative block">
-                <MagnifyingGlass size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
+                <MagnifyingGlass size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--page-subtle)]" />
                 <input
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   placeholder="Search email or display name..."
-                  className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-11 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                  className="w-full rounded-[22px] border border-border bg-muted px-11 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
                 />
               </label>
 
               <select
                 value={filters.status}
                 onChange={(event) => updateFilter("status", event.target.value)}
-                className="rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                className="rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
               >
                 <option value="">All status</option>
                 <option value="active">Active</option>
@@ -328,7 +328,7 @@ const AdminUsersPage = () => {
               <select
                 value={filters.role}
                 onChange={(event) => updateFilter("role", event.target.value)}
-                className="rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                className="rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
               >
                 <option value="">All roles</option>
                 <option value="learner">Learners</option>
@@ -338,7 +338,7 @@ const AdminUsersPage = () => {
               <select
                 value={filters.subscription_tier}
                 onChange={(event) => updateFilter("subscription_tier", event.target.value)}
-                className="rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                className="rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
               >
                 <option value="">All plans</option>
                 <option value="FREE">Free</option>
@@ -346,8 +346,8 @@ const AdminUsersPage = () => {
               </select>
             </div>
 
-            <div className="mt-5 overflow-hidden rounded-[26px] border border-zinc-200 dark:border-zinc-800">
-              <div className="grid grid-cols-[minmax(0,1.6fr)_120px_120px_120px_160px] gap-3 bg-zinc-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.24em] text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+            <div className="mt-5 overflow-hidden rounded-[26px] border border-border ">
+              <div className="grid grid-cols-[minmax(0,1.6fr)_120px_120px_120px_160px] gap-3 bg-muted px-4 py-3 text-[11px] font-black uppercase tracking-[0.24em] text-[var(--page-muted)]  ">
                 <span>User</span>
                 <span>Role</span>
                 <span>Plan</span>
@@ -357,11 +357,11 @@ const AdminUsersPage = () => {
 
               <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
                 {isLoadingList && (
-                  <div className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">Loading users...</div>
+                  <div className="px-4 py-8 text-sm text-[var(--page-muted)] ">Loading users...</div>
                 )}
 
                 {!isLoadingList && users.length === 0 && (
-                  <div className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">No users matched the current filters.</div>
+                  <div className="px-4 py-8 text-sm text-[var(--page-muted)] ">No users matched the current filters.</div>
                 )}
 
                 {!isLoadingList && users.map((item) => (
@@ -377,21 +377,21 @@ const AdminUsersPage = () => {
                     }`}
                   >
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-zinc-900 dark:text-zinc-100">
+                      <p className="truncate font-semibold text-[var(--page-fg)] ">
                         {item.display_name || item.email}
                       </p>
-                      <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{item.email}</p>
+                      <p className="truncate text-xs text-[var(--page-muted)] ">{item.email}</p>
                     </div>
                     <div className="flex items-center">
                       <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
                         item.is_admin
                           ? "bg-primary/10 text-primary dark:bg-primary/15 dark:text-white"
-                          : "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                          : "bg-[var(--surface-strong)] text-[var(--page-muted)]  "
                       }`}>
                         {getRoleBadge(item)}
                       </span>
                     </div>
-                    <div className="flex items-center text-zinc-600 dark:text-zinc-300">{getPlanBadge(item)}</div>
+                    <div className="flex items-center text-[var(--page-muted)] ">{getPlanBadge(item)}</div>
                     <div className="flex items-center">
                       <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
                         item.deleted_at
@@ -401,7 +401,7 @@ const AdminUsersPage = () => {
                         {getStatusBadge(item)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-end text-xs text-zinc-500 dark:text-zinc-400">
+                    <div className="flex items-center justify-end text-xs text-[var(--page-muted)] ">
                       {formatDateTime(item.updated_at)}
                     </div>
                   </button>
@@ -409,7 +409,7 @@ const AdminUsersPage = () => {
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between text-sm text-zinc-500 dark:text-zinc-400">
+            <div className="mt-4 flex items-center justify-between text-sm text-[var(--page-muted)] ">
               <span>
                 Page {filters.page} / {totalPages}
               </span>
@@ -418,7 +418,7 @@ const AdminUsersPage = () => {
                   type="button"
                   disabled={filters.page <= 1}
                   onClick={() => updateFilter("page", filters.page - 1)}
-                  className="rounded-2xl border border-zinc-200 px-4 py-2 font-semibold transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                  className="rounded-2xl border border-border px-4 py-2 font-semibold transition hover:bg-muted disabled:opacity-50  hover:bg-muted"
                 >
                   Previous
                 </button>
@@ -426,7 +426,7 @@ const AdminUsersPage = () => {
                   type="button"
                   disabled={filters.page >= totalPages}
                   onClick={() => updateFilter("page", filters.page + 1)}
-                  className="rounded-2xl border border-zinc-200 px-4 py-2 font-semibold transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                  className="rounded-2xl border border-border px-4 py-2 font-semibold transition hover:bg-muted disabled:opacity-50  hover:bg-muted"
                 >
                   Next
                 </button>
@@ -434,24 +434,24 @@ const AdminUsersPage = () => {
             </div>
           </div>
 
-          <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-2xl overflow-y-auto border-l border-zinc-200 bg-zinc-50 p-4 shadow-2xl transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950 ${selectedUserId ? "translate-x-0" : "translate-x-full"}`}>
-            <div className="mb-4 rounded-[30px] border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-2xl overflow-y-auto border-l border-border bg-muted p-4 shadow-2xl transition-transform duration-300   ${selectedUserId ? "translate-x-0" : "translate-x-full"}`}>
+            <div className="mb-4 rounded-[30px] border border-border bg-card p-4 shadow-sm  ">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Selected User</p>
                   <h2 className="mt-1 text-xl font-black">{selectedUser?.display_name || selectedUser?.email || "Loading..."}</h2>
-                  <p className="mt-1 truncate text-xs text-zinc-500 dark:text-zinc-400">{selectedUser?.email || "Select a user to inspect"}</p>
+                  <p className="mt-1 truncate text-xs text-[var(--page-muted)] ">{selectedUser?.email || "Select a user to inspect"}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setSelectedUserId(null)}
-                  className="rounded-2xl border border-zinc-200 p-3 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  className="rounded-2xl border border-border p-3 text-[var(--page-muted)] transition hover:bg-muted"
                   aria-label="Close user detail"
                 >
                   <X size={18} />
                 </button>
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-2 rounded-2xl bg-zinc-100 p-1 text-xs font-black dark:bg-zinc-950">
+              <div className="mt-4 grid grid-cols-3 gap-2 rounded-2xl bg-muted p-1 text-xs font-black ">
                 {[
                   ["overview", "Overview"],
                   ["profile", "Profile"],
@@ -461,7 +461,7 @@ const AdminUsersPage = () => {
                     key={value}
                     type="button"
                     onClick={() => setActiveUserTab(value)}
-                    className={`rounded-xl px-3 py-2 transition ${activeUserTab === value ? "bg-white text-primary shadow-sm dark:bg-zinc-900 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"}`}
+                    className={`rounded-xl px-3 py-2 transition ${activeUserTab === value ? "bg-white text-primary shadow-sm  dark:text-white" : "text-[var(--page-muted)] hover:text-[var(--page-fg)]  dark:hover:text-white"}`}
                   >
                     {label}
                   </button>
@@ -470,38 +470,38 @@ const AdminUsersPage = () => {
             </div>
 
             {activeUserTab === "overview" && (
-            <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <section className="rounded-[30px] border border-border bg-card p-5 shadow-sm  ">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">User Detail</p>
-              {isLoadingDetail && <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">Loading detail...</p>}
+              {isLoadingDetail && <p className="mt-4 text-sm text-[var(--page-muted)] ">Loading detail...</p>}
               {!isLoadingDetail && !selectedUser && (
-                <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">Select a user to inspect the account.</p>
+                <p className="mt-4 text-sm text-[var(--page-muted)] ">Select a user to inspect the account.</p>
               )}
               {!isLoadingDetail && selectedUser && (
                 <div className="mt-4 space-y-4">
-                  <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Identity</p>
+                  <div className="rounded-[24px] bg-muted p-4 ">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)] ">Identity</p>
                     <p className="mt-2 text-sm font-semibold">{selectedUser.display_name || "No display name"}</p>
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{selectedUser.email}</p>
+                    <p className="mt-1 text-xs text-[var(--page-muted)] ">{selectedUser.email}</p>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Role & status</p>
+                    <div className="rounded-[24px] bg-muted p-4 ">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)] ">Role & status</p>
                       <p className="mt-2 text-sm font-semibold">{getRoleBadge(selectedUser)}</p>
-                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{getStatusBadge(selectedUser)}</p>
+                      <p className="mt-1 text-xs text-[var(--page-muted)] ">{getStatusBadge(selectedUser)}</p>
                     </div>
-                    <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Subscription</p>
+                    <div className="rounded-[24px] bg-muted p-4 ">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)] ">Subscription</p>
                       <p className="mt-2 text-sm font-semibold">{getPlanBadge(selectedUser)}</p>
-                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-1 text-xs text-[var(--page-muted)] ">
                         {selectedUser.subscription?.status || "inactive"}
                       </p>
                     </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Learning</p>
+                    <div className="rounded-[24px] bg-muted p-4 ">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)] ">Learning</p>
                       <p className="mt-2 text-sm font-semibold">Level: {selectedUser.level || "Not set"}</p>
                     </div>
                     <div className="rounded-[24px] bg-amber-50 p-4 text-amber-900 dark:bg-amber-500/10 dark:text-amber-100">
@@ -512,10 +512,10 @@ const AdminUsersPage = () => {
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Timeline</p>
+                    <div className="rounded-[24px] bg-muted p-4 ">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)] ">Timeline</p>
                       <p className="mt-2 text-sm font-semibold">{formatDateTime(selectedUser.created_at)}</p>
-                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-1 text-xs text-[var(--page-muted)] ">
                         Updated {formatDateTime(selectedUser.updated_at)}
                       </p>
                     </div>
@@ -526,7 +526,7 @@ const AdminUsersPage = () => {
             )}
 
             {activeUserTab === "profile" && (
-            <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <section className="rounded-[30px] border border-border bg-card p-5 shadow-sm  ">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Edit Profile</p>
               <form className="mt-4 space-y-4" onSubmit={handleSave}>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -535,7 +535,7 @@ const AdminUsersPage = () => {
                     <input
                       value={formData.display_name}
                       onChange={(event) => setFormData((current) => ({ ...current, display_name: event.target.value }))}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                      className="w-full rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
                     />
                   </div>
                   <div>
@@ -546,7 +546,7 @@ const AdminUsersPage = () => {
                       max="120"
                       value={formData.age}
                       onChange={(event) => setFormData((current) => ({ ...current, age: event.target.value }))}
-                      className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                      className="w-full rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
                     />
                   </div>
                 </div>
@@ -555,7 +555,7 @@ const AdminUsersPage = () => {
                   <select
                     value={formData.level}
                     onChange={(event) => setFormData((current) => ({ ...current, level: event.target.value }))}
-                    className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                    className="w-full rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
                   >
                     {LEVEL_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -569,7 +569,7 @@ const AdminUsersPage = () => {
                     value={formData.favorite_topics}
                     onChange={(event) => setFormData((current) => ({ ...current, favorite_topics: event.target.value }))}
                     placeholder="travel, interview, networking"
-                    className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                    className="w-full rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
                   />
                 </div>
 
@@ -579,7 +579,7 @@ const AdminUsersPage = () => {
                     value={formData.learning_purpose}
                     onChange={(event) => setFormData((current) => ({ ...current, learning_purpose: event.target.value }))}
                     placeholder="travel, meetings, study abroad"
-                    className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                    className="w-full rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
                   />
                 </div>
 
@@ -588,7 +588,7 @@ const AdminUsersPage = () => {
                   <textarea
                     value={formData.main_challenge}
                     onChange={(event) => setFormData((current) => ({ ...current, main_challenge: event.target.value }))}
-                    className="min-h-[110px] w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                    className="min-h-[110px] w-full rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
                   />
                 </div>
 
@@ -608,7 +608,7 @@ const AdminUsersPage = () => {
                       setFormData(toFormState(selectedUser));
                       setError("");
                     }}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-semibold text-[var(--page-muted)] transition hover:bg-muted disabled:opacity-50   hover:bg-muted"
                   >
                     <ArrowClockwise size={16} />
                     Reset Form
@@ -619,16 +619,16 @@ const AdminUsersPage = () => {
             )}
 
             {activeUserTab === "actions" && (
-            <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <section className="rounded-[30px] border border-border bg-card p-5 shadow-sm  ">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Admin Actions</p>
               <div className="mt-4 grid gap-3">
-                <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                <div className="rounded-[24px] bg-muted p-4 ">
                   <div className="flex flex-col gap-3">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)] ">
                         Subscription Plan
                       </p>
-                      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-2 text-xs text-[var(--page-muted)] ">
                         Apply a plan change directly from admin controls.
                       </p>
                     </div>
@@ -638,7 +638,7 @@ const AdminUsersPage = () => {
                         value={selectedPlan}
                         onChange={(event) => setSelectedPlan(event.target.value)}
                         disabled={!selectedUserId || isRunningAction}
-                        className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
+                        className="w-full rounded-[22px] border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)] disabled:opacity-50  "
                       >
                         {PLAN_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -655,7 +655,7 @@ const AdminUsersPage = () => {
                         onChange={(event) => setSubscriptionDurationDays(event.target.value)}
                         disabled={!selectedUserId || isRunningAction || selectedPlan === "FREE"}
                         placeholder="Days"
-                        className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
+                        className="w-full rounded-[22px] border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)] disabled:opacity-50  "
                       />
 
                       <button
@@ -678,7 +678,7 @@ const AdminUsersPage = () => {
                       </button>
                     </div>
 
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="text-xs text-[var(--page-muted)] ">
                       Current plan: <span className="font-semibold">{getPlanBadge(selectedUser)}</span>
                       {selectedUser?.subscription?.expires_at ? ` · Expires ${formatDateTime(selectedUser.subscription.expires_at)}` : ""}
                     </p>
@@ -688,13 +688,13 @@ const AdminUsersPage = () => {
                   </div>
                 </div>
 
-                <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
+                <div className="rounded-[24px] bg-muted p-4 ">
                   <div className="flex flex-col gap-3">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)] ">
                         Coin Balance
                       </p>
-                      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-2 text-xs text-[var(--page-muted)] ">
                         Add or subtract coins for the selected learner.
                       </p>
                     </div>
@@ -707,14 +707,14 @@ const AdminUsersPage = () => {
                         onChange={(event) => setCoinDelta(event.target.value)}
                         disabled={!selectedUserId || isRunningAction}
                         placeholder="+100 / -50"
-                        className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
+                        className="w-full rounded-[22px] border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)] disabled:opacity-50  "
                       />
                       <input
                         value={coinReason}
                         onChange={(event) => setCoinReason(event.target.value)}
                         disabled={!selectedUserId || isRunningAction}
                         placeholder="Reason shown in transaction metadata"
-                        className="w-full rounded-[22px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
+                        className="w-full rounded-[22px] border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)] disabled:opacity-50  "
                       />
                     </div>
 
@@ -730,7 +730,7 @@ const AdminUsersPage = () => {
                       Apply Coin Change
                     </button>
 
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="text-xs text-[var(--page-muted)] ">
                       Current coins: <span className="font-semibold">{getCoinBalance(selectedUser).toLocaleString()}</span>
                     </p>
                   </div>
@@ -745,7 +745,7 @@ const AdminUsersPage = () => {
                       selectedUser?.is_admin ? "Admin access removed." : "Admin access granted.",
                     );
                   }}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-blue to-primary px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 "
                 >
                   <Sparkle size={16} />
                   {selectedUser?.is_admin ? "Remove Admin Access" : "Grant Admin Access"}
@@ -770,7 +770,7 @@ const AdminUsersPage = () => {
                 </button>
 
                 {isSelfSelected ? (
-                  <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs font-medium text-[var(--page-muted)] ">
                     Self-protection is enabled. Your own admin access and account status cannot be changed here.
                   </p>
                 ) : null}

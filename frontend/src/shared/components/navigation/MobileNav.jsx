@@ -13,7 +13,7 @@ const MobileNav = () => {
   const hasProAccess = canAccessSubscriptionFeatures(user);
 
   return (
-    <footer className="fixed inset-x-0 bottom-0 z-50 lg:hidden bg-white border-t-2 border-[#e5e5e5] pb-safe">
+    <footer className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-border bg-background pb-safe lg:hidden">
       <Link
         to="/subscription"
         className={`mx-3 mt-2 flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] ${
@@ -33,8 +33,8 @@ const MobileNav = () => {
                 whileTap={{ scale: 0.9 }}
                 className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2 transition-all ${
                   isActive
-                    ? "bg-[#ddf4ff] text-[#1cb0f6]"
-                    : "text-[#afafaf]"
+                    ? "bg-primary/15 text-brand-blue"
+                    : "text-[var(--page-muted)]"
                 }`}
               >
                 {item.usesAvatar ? (
@@ -53,7 +53,7 @@ const MobileNav = () => {
                       )}
                     </div>
                     <span className={`absolute -right-1 -top-1 flex h-4 w-4 rotate-12 items-center justify-center rounded-full border ${
-                      hasProAccess ? "border-amber-200 bg-amber-300 text-amber-900" : "border-zinc-300 bg-zinc-200 text-zinc-500"
+                      hasProAccess ? "border-amber-200 bg-amber-300 text-amber-900" : "border-zinc-300 bg-zinc-200 text-[var(--page-muted)]"
                     }`}>
                       <Crown size={9} weight="fill" />
                     </span>
@@ -61,7 +61,7 @@ const MobileNav = () => {
                 ) : (
                   <Icon size={28} weight={isActive ? "fill" : "bold"} />
                 )}
-                <span className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-[#1cb0f6]' : 'text-[#afafaf]'}`}>
+                <span className={`text-[10px] font-black uppercase tracking-wider ${isActive ? "text-brand-blue" : "text-[var(--page-muted)]"}`}>
                   {item.label}
                 </span>
               </motion.div>

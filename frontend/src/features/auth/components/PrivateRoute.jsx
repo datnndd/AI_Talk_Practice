@@ -6,7 +6,7 @@ const PrivateRoute = ({ children, requireAdmin = false }) => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-zinc-50">
+      <div className="flex h-screen items-center justify-center bg-[var(--page-bg)]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );

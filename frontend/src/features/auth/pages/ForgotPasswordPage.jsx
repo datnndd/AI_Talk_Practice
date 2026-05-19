@@ -27,10 +27,10 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#fafafa] px-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-[28px] border border-zinc-200 bg-white p-8 shadow-xl">
-        <h1 className="text-2xl font-black text-[#20314a]">Quên mật khẩu</h1>
-        <p className="mt-2 text-sm font-medium text-[#667394]">Nhập email để nhận mã OTP đặt lại mật khẩu.</p>
+    <div className="flex min-h-screen items-center justify-center app-page-shell px-4">
+      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-[28px] border border-border bg-card p-8 shadow-xl">
+        <h1 className="text-2xl font-black text-[var(--page-fg)]">Quên mật khẩu</h1>
+        <p className="mt-2 text-sm font-medium text-[var(--page-muted)]">Nhập email để nhận mã OTP đặt lại mật khẩu.</p>
         {error ? <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600">{error}</div> : null}
         <label className="relative mt-6 block">
           <EnvelopeSimple className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a8c4]" size={22} />
@@ -40,7 +40,7 @@ const ForgotPasswordPage = () => {
             onChange={(event) => setEmail(event.target.value)}
             required
             type="email"
-            className="h-12 w-full rounded-xl border border-[#d9dde8] bg-white py-3 pl-12 pr-4 font-semibold text-[#20314a] focus:border-[#34DBC5] focus:outline-none focus:ring-4 focus:ring-[#34DBC5]/10"
+            className="h-12 w-full rounded-xl border border-border bg-card py-3 pl-12 pr-4 font-semibold text-[var(--page-fg)] focus:border-[#34DBC5] focus:outline-none focus:ring-4 focus:ring-[var(--focus-ring)]"
             placeholder="Email"
           />
         </label>

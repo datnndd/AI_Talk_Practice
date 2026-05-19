@@ -5,7 +5,7 @@ import AdminShell from "@/shared/components/admin/AdminShell";
 import SiteFooter from "@/shared/components/SiteFooter";
 import { defaultSiteSettings, getSiteSettings, normalizeSiteSettings, saveSiteSettings } from "@/shared/config/siteSettings";
 
-const fieldClass = "w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
+const fieldClass = "w-full rounded-2xl border border-border bg-card px-4 py-3 text-sm font-semibold text-[var(--page-fg)] outline-none transition focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10   ";
 
 const socialFields = [
   { key: "facebook", label: "Facebook URL", placeholder: "https://facebook.com/..." },
@@ -60,21 +60,21 @@ const AdminSiteSettingsPage = () => {
               </div>
               <div>
                 <h2 className="text-xl font-black">Thương hiệu</h2>
-                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Logo và text hiển thị ở navbar/footer.</p>
+                <p className="text-sm font-medium text-[var(--page-muted)] ">Logo và text hiển thị ở navbar/footer.</p>
               </div>
             </div>
 
             <div className="space-y-4">
               <label className="block">
-                <span className="mb-2 block text-sm font-bold text-zinc-600 dark:text-zinc-300">Tên thương hiệu</span>
+                <span className="mb-2 block text-sm font-bold text-[var(--page-muted)] ">Tên thương hiệu</span>
                 <input className={fieldClass} value={settings.brandName} onChange={(event) => updateField("brandName", event.target.value)} />
               </label>
               <label className="block">
-                <span className="mb-2 block text-sm font-bold text-zinc-600 dark:text-zinc-300">Tagline</span>
+                <span className="mb-2 block text-sm font-bold text-[var(--page-muted)] ">Tagline</span>
                 <input className={fieldClass} value={settings.tagline} onChange={(event) => updateField("tagline", event.target.value)} />
               </label>
               <label className="block">
-                <span className="mb-2 block text-sm font-bold text-zinc-600 dark:text-zinc-300">Logo URL</span>
+                <span className="mb-2 block text-sm font-bold text-[var(--page-muted)] ">Logo URL</span>
                 <input className={fieldClass} value={settings.logoUrl} onChange={(event) => updateField("logoUrl", event.target.value)} placeholder="https://... hoặc /assets/..." />
               </label>
             </div>
@@ -87,14 +87,14 @@ const AdminSiteSettingsPage = () => {
               </div>
               <div>
                 <h2 className="text-xl font-black">Mạng xã hội</h2>
-                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Điền link thật để footer mở đúng kênh.</p>
+                <p className="text-sm font-medium text-[var(--page-muted)] ">Điền link thật để footer mở đúng kênh.</p>
               </div>
             </div>
 
             <div className="space-y-4">
               {socialFields.map((field) => (
                 <label key={field.key} className="block">
-                  <span className="mb-2 block text-sm font-bold text-zinc-600 dark:text-zinc-300">{field.label}</span>
+                  <span className="mb-2 block text-sm font-bold text-[var(--page-muted)] ">{field.label}</span>
                   <input
                     className={fieldClass}
                     value={settings.socialLinks?.[field.key] || ""}
@@ -104,7 +104,7 @@ const AdminSiteSettingsPage = () => {
                 </label>
               ))}
               <label className="block">
-                <span className="mb-2 block text-sm font-bold text-zinc-600 dark:text-zinc-300">Ghi chú liên hệ</span>
+                <span className="mb-2 block text-sm font-bold text-[var(--page-muted)] ">Ghi chú liên hệ</span>
                 <textarea className={`${fieldClass} min-h-24 resize-y`} value={settings.contactNote} onChange={(event) => updateField("contactNote", event.target.value)} />
               </label>
             </div>
@@ -112,12 +112,12 @@ const AdminSiteSettingsPage = () => {
         </section>
 
         <div className="flex flex-col gap-3 rounded-[28px] border border-border bg-card p-5 shadow-sm md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3 text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+          <div className="flex items-center gap-3 text-sm font-semibold text-[var(--page-muted)] ">
             <GlobeHemisphereWest size={22} weight="duotone" />
             Cấu hình lưu ở trình duyệt hiện tại và cập nhật ngay landing/footer.
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button type="button" onClick={resetDefaults} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-5 py-3 text-sm font-black text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
+            <button type="button" onClick={resetDefaults} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border px-5 py-3 text-sm font-black text-[var(--page-muted)] hover:bg-muted">
               <ArrowCounterClockwise size={18} weight="bold" />
               Mặc định
             </button>
@@ -137,7 +137,7 @@ const AdminSiteSettingsPage = () => {
         <section className="rounded-[28px] border border-border bg-card p-4 shadow-sm">
           <div className="px-2 pb-3">
             <h2 className="text-xl font-black">Preview footer</h2>
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Preview cập nhật theo form hiện tại.</p>
+            <p className="text-sm font-medium text-[var(--page-muted)] ">Preview cập nhật theo form hiện tại.</p>
           </div>
           <SiteFooter className="bg-transparent p-0 md:p-0" settings={previewSettings} />
         </section>

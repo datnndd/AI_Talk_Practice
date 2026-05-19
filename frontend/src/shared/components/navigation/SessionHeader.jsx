@@ -31,7 +31,7 @@ const SessionHeader = ({
   }, [timeLimitSeconds, durationSeconds, tick]);
 
   const pillColor = useMemo(() => {
-    if (remaining === null || !timeLimitSeconds) return "border-zinc-200 bg-white text-zinc-500";
+    if (remaining === null || !timeLimitSeconds) return "border-border bg-card text-[var(--page-muted)]";
     const pct = remaining / timeLimitSeconds;
     if (pct <= 0.1) return "border-rose-200 bg-rose-50 text-rose-700 animate-pulse";
     if (pct <= 0.2) return "border-amber-200 bg-amber-50 text-amber-700";
@@ -44,12 +44,12 @@ const SessionHeader = ({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-700 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.5)] transition hover:text-rose-600"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-[var(--page-muted)] shadow-[0_14px_30px_-24px_rgba(15,23,42,0.5)] transition hover:text-rose-600"
           title="Kết thúc buổi học"
         >
           <ArrowLeft size={18} weight="bold" />
         </button>
-        <span className="text-sm font-bold tracking-tight text-zinc-400">Kết thúc</span>
+        <span className="text-sm font-bold tracking-tight text-[var(--page-subtle)]">Kết thúc</span>
       </div>
 
       <div className="flex items-center gap-2">
@@ -67,7 +67,7 @@ const SessionHeader = ({
           <button
             onClick={onReconnect}
             disabled={connectionState === "connecting" || connectionState === "reconnecting"}
-            className="flex h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50"
+            className="flex h-11 items-center gap-2 rounded-2xl border border-border bg-card px-4 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--page-muted)] shadow-sm transition hover:bg-muted disabled:opacity-50"
           >
             <ArrowsClockwise size={16} weight="bold" />
             Thử kết nối lại

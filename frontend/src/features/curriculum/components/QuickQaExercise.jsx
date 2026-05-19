@@ -12,9 +12,9 @@ const QuickQaExercise = ({ exercise, onAttempt }) => {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl bg-zinc-50 p-5 dark:bg-zinc-900">
+      <div className="rounded-xl bg-muted p-5 text-[var(--page-fg)]">
         <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Tr? l?i nhanh</p>
-        <p className="mt-2 text-2xl font-black leading-9 text-zinc-950 dark:text-white">{content.question_text}</p>
+        <p className="mt-2 text-2xl font-black leading-9 text-[var(--page-fg)]">{content.question_text}</p>
         {content.question_audio_url && <audio controls src={absoluteAudioUrl(content.question_audio_url)} className="mt-3 w-full" />}
       </div>
       {hints.length > 0 && (

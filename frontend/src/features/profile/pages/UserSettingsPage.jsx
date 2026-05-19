@@ -162,7 +162,7 @@ const UserSettingsPage = () => {
       )}
 
       <div className="space-y-6">
-        <section className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border-2 border-[#e5e5e5] bg-card p-6 shadow-sm">
           <div className="mb-6">
             <h2 className="text-xl font-black text-[#4b4b4b]">Chỉnh sửa hồ sơ</h2>
             <p className="mt-1 text-sm font-bold text-[#afafaf]">Thông tin hiển thị trong tài khoản học viên.</p>
@@ -235,7 +235,7 @@ const UserSettingsPage = () => {
           </form>
         </section>
 
-        <section className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border-2 border-[#e5e5e5] bg-card p-6 shadow-sm">
           <div className="mb-6">
             <h2 className="text-xl font-black text-[#4b4b4b]">Mật khẩu</h2>
             <p className="mt-1 text-sm font-bold text-[#afafaf]">Đổi mật khẩu hoặc đặt mật khẩu bằng OTP.</p>

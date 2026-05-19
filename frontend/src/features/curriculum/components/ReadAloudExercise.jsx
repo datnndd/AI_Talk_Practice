@@ -12,10 +12,10 @@ const ReadAloudExercise = ({ exercise, onAttempt }) => {
   return (
     <div className="space-y-5">
       {content.sample_audio_url && <audio controls src={absoluteAudioUrl(content.sample_audio_url)} className="w-full" />}
-      <div className="rounded-xl bg-zinc-50 p-5 dark:bg-zinc-900">
+      <div className="rounded-xl bg-muted p-5 text-[var(--page-fg)]">
         <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">??c to v?n b?n</p>
-        <p className="mt-2 whitespace-pre-line text-xl font-black leading-8 text-zinc-950 dark:text-white">{content.text}</p>
-        {content.meaning_vi && <p className="mt-3 whitespace-pre-line text-sm font-semibold text-zinc-600 dark:text-zinc-300">{content.meaning_vi}</p>}
+        <p className="mt-2 whitespace-pre-line text-xl font-black leading-8 text-[var(--page-fg)]">{content.text}</p>
+        {content.meaning_vi && <p className="mt-3 whitespace-pre-line text-sm font-semibold text-[var(--page-muted)]">{content.meaning_vi}</p>}
       </div>
       <RecordButton />
       {feedback?.assessment && <div className="rounded-xl border border-border bg-card p-4 text-sm font-semibold">Score: {Math.round(feedback.assessment.score || 0)} ({feedback.assessment.source})</div>}

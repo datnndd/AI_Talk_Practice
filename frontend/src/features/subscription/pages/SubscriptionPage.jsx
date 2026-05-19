@@ -175,7 +175,7 @@ const SubscriptionPage = () => {
             ? "border-emerald-200 bg-emerald-50 text-emerald-800"
             : paymentMessage.tone === "error"
               ? "border-rose-200 bg-rose-50 text-rose-700"
-              : "border-zinc-200 bg-zinc-50 text-zinc-700"
+              : "border-border bg-muted text-[var(--page-muted)]"
         }`}>
           {paymentMessage.text}
         </div>
@@ -210,25 +210,25 @@ const SubscriptionPage = () => {
             const amount = plan.price_amount;
             const savingPercent = getSavingPercent(plan, bestMonthly);
             return (
-              <motion.article key={plan.code} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-[2rem] border border-zinc-200 bg-white p-7 shadow-sm">
+              <motion.article key={plan.code} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-[2rem] border border-border bg-card p-7 shadow-sm">
                 <div className={`absolute inset-x-0 top-0 h-2 bg-gradient-to-r ${planAccent[plan.code] || "from-amber-300 to-yellow-500"}`} />
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-600">{formatDuration(plan.duration_days)}</p>
-                    <h2 className="mt-2 font-display text-3xl font-black text-zinc-950">{plan.name}</h2>
+                    <h2 className="mt-2 font-display text-3xl font-black text-[var(--page-fg)]">{plan.name}</h2>
                   </div>
                   <div className="rounded-2xl bg-amber-100 p-3 text-amber-700"><Crown size={24} weight="fill" /></div>
                 </div>
                 <div className="mt-7">
-                  <p className="text-4xl font-black tracking-tight text-zinc-950">{formatVnd(amount)}</p>
+                  <p className="text-4xl font-black tracking-tight text-[var(--page-fg)]">{formatVnd(amount)}</p>
                   {savingPercent > 0 ? <p className="mt-2 inline-flex rounded-full bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">Tiết kiệm khoảng {savingPercent}%/tháng</p> : null}
                 </div>
-                <ul className="mt-7 space-y-3 text-sm font-semibold text-zinc-600">
+                <ul className="mt-7 space-y-3 text-sm font-semibold text-[var(--page-muted)]">
                   {PLAN_FEATURES.map((item) => (
                     <li key={item} className="flex items-center gap-2"><CheckCircle size={17} weight="fill" className="text-emerald-500" />{item}</li>
                   ))}
                 </ul>
-                <button type="button" onClick={() => handleCheckout(plan)} disabled={submittingPlan !== null} className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-white shadow-lg transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60">
+                <button type="button" onClick={() => handleCheckout(plan)} disabled={submittingPlan !== null} className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-blue to-primary px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-white shadow-lg transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60">
                   <Lightning size={16} weight="fill" />
                   {submittingPlan === plan.code ? "Đang chuyển..." : isSubscribed ? `Gia hạn thêm ${plan.duration_days} ngày` : "Thanh toán với Stripe"}
                 </button>
@@ -241,7 +241,7 @@ const SubscriptionPage = () => {
       {actionError ? <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700 shadow-sm">{actionError}</div> : null}
 
       {isSubscribed ? (
-        <Link to="/scenarios" className="inline-flex rounded-2xl border border-zinc-200 px-5 py-3 text-sm font-black text-zinc-700 hover:bg-zinc-50">Tiếp tục luyện tập</Link>
+        <Link to="/scenarios" className="inline-flex rounded-2xl border border-border px-5 py-3 text-sm font-black text-[var(--page-muted)] hover:bg-muted">Tiếp tục luyện tập</Link>
       ) : null}
     </div>
   );

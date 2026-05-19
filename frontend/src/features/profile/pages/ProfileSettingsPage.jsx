@@ -100,7 +100,7 @@ const ProfileSettingsPage = () => {
               <span className={`absolute -right-1 top-3 flex h-12 w-12 rotate-12 items-center justify-center rounded-full border-2 ${
                 hasProAccess
                   ? "border-amber-200 bg-amber-300 text-amber-900 shadow-[0_0_18px_rgba(251,191,36,0.9)]"
-                  : "border-zinc-300 bg-zinc-200 text-zinc-500"
+                  : "border-zinc-300 bg-zinc-200 text-[var(--page-muted)]"
               }`}>
                 <Crown size={28} weight="fill" />
               </span>
@@ -150,25 +150,25 @@ const ProfileSettingsPage = () => {
         <section className="space-y-4">
           <h2 className="text-2xl font-black text-[#4b4b4b]">Thông tin học viên</h2>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-card p-4">
               <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Email</p>
               <p className="mt-1 font-bold text-[#4b4b4b]">{user?.email || emptyText}</p>
             </div>
-            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-card p-4">
               <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Trình độ</p>
               <p className="mt-1 font-bold text-[#4b4b4b]">{user?.level || emptyText}</p>
             </div>
-            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-card p-4">
               <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Mục tiêu học</p>
               <p className="mt-1 font-bold text-[#4b4b4b]">{user?.learning_purpose || emptyText}</p>
             </div>
-            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+            <div className="rounded-2xl border-2 border-[#e5e5e5] bg-card p-4">
               <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Thử thách chính</p>
               <p className="mt-1 font-bold text-[#4b4b4b]">{user?.main_challenge || emptyText}</p>
             </div>
           </div>
 
-          <div className="rounded-2xl border-2 border-[#e5e5e5] bg-white p-4">
+          <div className="rounded-2xl border-2 border-[#e5e5e5] bg-card p-4">
             <p className="text-xs font-black uppercase tracking-wide text-[#afafaf]">Chủ đề yêu thích</p>
             {topics.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2">

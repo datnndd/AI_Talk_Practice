@@ -65,16 +65,16 @@ const LessonNode = ({ unit, index, status, accent, onSelect }) => {
           : status === "current"
             ? `border-white/40 border-b-white/60 bg-gradient-to-br ${accent} text-white shadow-2xl shadow-sky-900/20`
             : status === "locked"
-              ? "border-zinc-200 border-b-zinc-300 bg-zinc-100 text-zinc-400 opacity-70"
-              : "border-zinc-200 border-b-zinc-300 bg-white text-zinc-700 shadow-sm hover:border-primary/30"
+              ? "border-zinc-200 border-b-zinc-300 bg-zinc-100 text-[var(--page-subtle)] opacity-70"
+              : "border-zinc-200 border-b-zinc-300 bg-white text-[var(--page-muted)] shadow-sm hover:border-primary/30"
       }`}
     >
       {status === "current" && <span className="absolute inset-0 animate-ping rounded-[32px] border-4 border-white/30" />}
-      <span className="relative z-10 mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/90 text-zinc-900 shadow-sm group-hover:rotate-3">
+      <span className="relative z-10 mb-3 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/90 text-[var(--page-fg)] shadow-sm group-hover:rotate-3">
         <Icon size={34} weight="fill" className={status === "completed" ? "text-emerald-500" : status === "current" ? "text-primary" : ""} />
       </span>
       <p className="relative z-10 line-clamp-2 text-sm font-black">{unit.title}</p>
-      <span className="relative z-10 mt-2 rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+      <span className="relative z-10 mt-2 rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--page-muted)]">
         {getUnitLabel(unit)}
       </span>
       <div className="relative z-10 mt-3 flex flex-wrap justify-center gap-2 text-[10px] font-black uppercase tracking-[0.14em]">
@@ -95,7 +95,7 @@ const PreviewDrawer = ({ unit, onClose }) => {
   return (
     <AnimatePresence>
       <motion.div className="fixed inset-0 z-50 flex justify-end bg-black/35 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-        <motion.aside initial={{ x: 420 }} animate={{ x: 0 }} exit={{ x: 420 }} transition={{ type: "spring", damping: 24 }} className="h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl dark:bg-zinc-950">
+        <motion.aside initial={{ x: 420 }} animate={{ x: 0 }} exit={{ x: 420 }} transition={{ type: "spring", damping: 24 }} className="h-full w-full max-w-xl overflow-y-auto bg-card p-5 shadow-2xl ">
           <div className="rounded-[30px] bg-gradient-to-br from-zinc-950 to-zinc-800 p-5 text-white">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -115,15 +115,15 @@ const PreviewDrawer = ({ unit, onClose }) => {
             <div className="rounded-3xl bg-violet-50 p-4 text-violet-700"><p className="text-2xl font-black">{lessons.length}</p><p className="text-[10px] font-black uppercase">Tasks</p></div>
           </div>
 
-          <div className="mt-5 rounded-[30px] border border-zinc-200 p-5 dark:border-zinc-800">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">Quest Tasks</p>
+          <div className="mt-5 rounded-[30px] border border-zinc-200 p-5 ">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">Quest Tasks</p>
             <div className="mt-4 space-y-3">
-              {lessons.length === 0 ? <p className="text-sm font-semibold text-zinc-500">No task details yet.</p> : lessons.map((lesson, index) => (
-                <div key={lesson.id} className="flex items-center gap-3 rounded-2xl bg-zinc-50 p-3 dark:bg-zinc-900">
+              {lessons.length === 0 ? <p className="text-sm font-semibold text-[var(--page-muted)]">No task details yet.</p> : lessons.map((lesson, index) => (
+                <div key={lesson.id} className="flex items-center gap-3 rounded-2xl bg-muted p-3 ">
                   <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-sm font-black text-primary shadow-sm dark:bg-zinc-800">{index + 1}</span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black">{lesson.title}</p>
-                    <p className="text-xs font-semibold text-zinc-500">{lesson.type || "practice"} · pass {lesson.pass_score || 80}</p>
+                    <p className="text-xs font-semibold text-[var(--page-muted)]">{lesson.type || "practice"} · pass {lesson.pass_score || 80}</p>
                   </div>
                 </div>
               ))}

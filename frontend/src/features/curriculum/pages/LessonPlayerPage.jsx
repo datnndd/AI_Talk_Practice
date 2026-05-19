@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle, Circle } from "@phosphor-icons/react";
 import { curriculumApi } from "@/features/curriculum/api/curriculumApi";
@@ -130,7 +130,7 @@ const LessonPlayerPage = () => {
           <ArrowLeft size={16} /> Lộ trình
         </Link>
         <div className="rounded-xl border border-border bg-card p-4">
-          <h1 className="text-2xl font-black text-zinc-950">{unit.title}</h1>
+          <h1 className="text-2xl font-black text-[var(--page-fg)]">{unit.title}</h1>
           {unit.description && <p className="mt-2 text-sm leading-6 text-muted-foreground">{unit.description}</p>}
         </div>
         <div className="space-y-2">
@@ -166,16 +166,16 @@ const LessonPlayerPage = () => {
                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-primary">
                   {activeExercise.type.replaceAll("_", " ")}
                 </p>
-                <h2 className="mt-1 text-2xl font-black text-zinc-950">{activeExercise.title}</h2>
+                <h2 className="mt-1 text-2xl font-black text-[var(--page-fg)]">{activeExercise.title}</h2>
               </div>
-              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-600">
+              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-[var(--page-muted)]">
                 Pass {Math.round(activeExercise.pass_score)} · +{unit.xp_reward || 0} XP · +{unit.coin_reward || 0} Coin
               </span>
             </div>
             <Suspense fallback={<div className="py-6 text-sm font-semibold text-muted-foreground">Đang tải nội dung bài...</div>}>
               {renderExercise(activeExercise, handleAttempt)}
             </Suspense>
-            <div className="mt-8 rounded-xl bg-zinc-50 px-4 py-3 text-sm font-bold text-muted-foreground dark:bg-zinc-900">
+            <div className="mt-8 rounded-xl bg-muted px-4 py-3 text-sm font-bold text-muted-foreground ">
               {queueTotal > 0
                 ? `H?ng ??i luy?n t?p: ${activeQueuePosition + 1}/${queueTotal}. Sai th? b?i s? quay l?i cu?i h?ng.`
                 : "B?n ?? ho?n th?nh t?t c? b?i trong h?ng ??i."}

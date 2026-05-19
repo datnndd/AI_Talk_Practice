@@ -5,26 +5,26 @@ import AdminShell from "@/shared/components/admin/AdminShell";
 import { adminCharactersApi } from "@/features/admin-characters/api/adminCharactersApi";
 import { getApiErrorMessage } from "@/shared/api/httpClient";
 
-const DEFAULT_MODEL_URL = "https://rgpmptospjqospitmcqw.supabase.co/storage/v1/object/public/live2d-models/ai-tutor/pachirisu%20anime%20girl%20-%20top%20half.model3.json";
-const DEFAULT_CORE_URL = "https://rgpmptospjqospitmcqw.supabase.co/storage/v1/object/public/live2d-models/live2dcubismcore.min.js";
-const DEFAULT_FILTERS = { search: "", include_deleted: false, page: 1, page_size: 50 };
+const DEFAULT_MODEL_URL ="https://rgpmptospjqospitmcqw.supabase.co/storage/v1/object/public/live2d-models/ai-tutor/pachirisu%20anime%20girl%20-%20top%20half.model3.json";
+const DEFAULT_CORE_URL ="https://rgpmptospjqospitmcqw.supabase.co/storage/v1/object/public/live2d-models/live2dcubismcore.min.js";
+const DEFAULT_FILTERS = { search:"", include_deleted: false, page: 1, page_size: 50 };
 
 const createInitialForm = (character) => ({
-  name: character?.name || "",
-  description: character?.description || "",
+  name: character?.name ||"",
+  description: character?.description ||"",
   model_url: character?.model_url || DEFAULT_MODEL_URL,
   core_url: character?.core_url || DEFAULT_CORE_URL,
-  tts_voice: character?.tts_voice || "Cherry",
-  tts_language: character?.tts_language || "en",
+  tts_voice: character?.tts_voice ||"Cherry",
+  tts_language: character?.tts_language ||"en",
   sort_order: character?.sort_order ?? 0,
   is_active: character?.is_active ?? true,
 });
 
-const StatusBadge = ({ children, tone = "zinc" }) => {
+const StatusBadge = ({ children, tone ="zinc" }) => {
   const tones = {
-    emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
-    rose: "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
-    zinc: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+    emerald:"bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+    rose:"bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
+    zinc:"bg-muted text-[var(--page-muted)] ",
   };
   return (
     <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${tones[tone]}`}>
@@ -35,17 +35,17 @@ const StatusBadge = ({ children, tone = "zinc" }) => {
 
 const CharacterStatus = ({ character }) => (
   <>
-    <StatusBadge tone={character.is_active ? "emerald" : "zinc"}>
-      {character.is_active ? "Active" : "Inactive"}
+    <StatusBadge tone={character.is_active ?"emerald" :"zinc"}>
+      {character.is_active ?"Active" :"Inactive"}
     </StatusBadge>
     {character.deleted_at ? <StatusBadge tone="rose">Deleted</StatusBadge> : null}
   </>
 );
 
 const DetailField = ({ label, value }) => (
-  <div className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-950">
-    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{label}</p>
-    <p className="mt-1 break-all text-sm font-semibold">{value || "Not set"}</p>
+  <div className="rounded-[20px] bg-muted px-4 py-3">
+    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--page-muted)]">{label}</p>
+    <p className="mt-1 break-all text-sm font-semibold">{value ||"Not set"}</p>
   </div>
 );
 
@@ -55,8 +55,8 @@ const FeedbackMessage = ({ error, notice }) => {
   return (
     <div className={`rounded-[26px] px-5 py-4 text-sm font-semibold ${
       error
-        ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
-        : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+        ?"bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+        :"bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
     }`}
     >
       {error || notice}
@@ -83,26 +83,26 @@ const CharacterEditorModal = ({ character, onClose, onSubmit, isSaving }) => {
         is_active: form.is_active,
       });
     } catch (error) {
-      setFormError(getApiErrorMessage(error, "Please check the character form."));
+      setFormError(getApiErrorMessage(error,"Please check the character form."));
     }
   };
 
   return (
     <div className="fixed inset-0 z-[120] bg-zinc-950/60 p-3 backdrop-blur md:p-6">
-      <div className="mx-auto flex h-full max-w-3xl flex-col overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+      <div className="mx-auto flex h-full max-w-3xl flex-col overflow-hidden rounded-[24px] border border-border bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">
-              {character ? "Edit Character" : "Create Character"}
+              {character ?"Edit Character" :"Create Character"}
             </p>
             <h2 className="mt-1 font-display text-2xl font-black tracking-tight">
-              {character ? character.name : "New Character"}
+              {character ? character.name :"New Character"}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-zinc-200 p-2 text-zinc-500 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="rounded-xl border border-border p-2 text-[var(--page-muted)] transition hover:bg-muted"
           >
             <X size={18} />
           </button>
@@ -118,76 +118,76 @@ const CharacterEditorModal = ({ character, onClose, onSubmit, isSaving }) => {
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block space-y-2">
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Name</span>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">Name</span>
                 <input
                   required
                   value={form.name}
                   onChange={(event) => updateField("name", event.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
                 />
               </label>
               <label className="block space-y-2">
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Voice</span>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">Voice</span>
                 <input
                   required
                   value={form.tts_voice}
                   onChange={(event) => updateField("tts_voice", event.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
                   placeholder="Cherry"
                 />
               </label>
               <label className="block space-y-2">
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">TTS language</span>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">TTS language</span>
                 <input
                   required
                   value={form.tts_language}
                   onChange={(event) => updateField("tts_language", event.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
                   placeholder="en"
                 />
               </label>
               <label className="block space-y-2">
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Sort order</span>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">Sort order</span>
                 <input
                   type="number"
                   value={form.sort_order}
                   onChange={(event) => updateField("sort_order", event.target.value)}
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
                 />
               </label>
             </div>
 
             <label className="block space-y-2">
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Description</span>
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">Description</span>
               <textarea
                 value={form.description}
                 onChange={(event) => updateField("description", event.target.value)}
                 rows={3}
-                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
               />
             </label>
 
             <label className="block space-y-2">
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Live2D model URL</span>
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">Live2D model URL</span>
               <input
                 required
                 value={form.model_url}
                 onChange={(event) => updateField("model_url", event.target.value)}
-                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
               />
             </label>
 
             <label className="block space-y-2">
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Cubism core URL</span>
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">Cubism core URL</span>
               <input
                 required
                 value={form.core_url}
                 onChange={(event) => updateField("core_url", event.target.value)}
-                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
               />
             </label>
 
-            <label className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+            <label className="flex items-center gap-3 rounded-xl border border-border bg-muted px-4 py-3">
               <input
                 type="checkbox"
                 checked={form.is_active}
@@ -197,11 +197,11 @@ const CharacterEditorModal = ({ character, onClose, onSubmit, isSaving }) => {
             </label>
           </div>
 
-          <div className="flex items-center justify-between gap-3 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+          <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-[var(--page-muted)] transition hover:bg-muted"
             >
               Cancel
             </button>
@@ -210,7 +210,7 @@ const CharacterEditorModal = ({ character, onClose, onSubmit, isSaving }) => {
               disabled={isSaving}
               className="rounded-xl bg-primary px-5 py-3 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSaving ? "Saving..." : character ? "Save Character" : "Create Character"}
+              {isSaving ?"Saving..." : character ?"Save Character" :"Create Character"}
             </button>
           </div>
         </form>
@@ -248,7 +248,7 @@ const AdminCharactersPage = () => {
         return data.items?.[0]?.id || null;
       });
     } catch (loadError) {
-      setError(getApiErrorMessage(loadError, "Failed to load characters."));
+      setError(getApiErrorMessage(loadError,"Failed to load characters."));
     } finally {
       setIsLoading(false);
     }
@@ -278,11 +278,11 @@ const AdminCharactersPage = () => {
       } else {
         await adminCharactersApi.createCharacter(payload);
       }
-      setNotice(editingCharacter ? "Character updated." : "Character created.");
+      setNotice(editingCharacter ?"Character updated." :"Character created.");
       setIsEditorOpen(false);
       await loadCharacters();
     } catch (saveError) {
-      setError(getApiErrorMessage(saveError, "Failed to save character."));
+      setError(getApiErrorMessage(saveError,"Failed to save character."));
       throw saveError;
     } finally {
       setIsSaving(false);
@@ -295,7 +295,7 @@ const AdminCharactersPage = () => {
       setNotice("Character soft-deleted.");
       await loadCharacters();
     } catch (deleteError) {
-      setError(getApiErrorMessage(deleteError, "Failed to delete character."));
+      setError(getApiErrorMessage(deleteError,"Failed to delete character."));
     }
   };
 
@@ -305,7 +305,7 @@ const AdminCharactersPage = () => {
       setNotice("Character restored.");
       await loadCharacters();
     } catch (restoreError) {
-      setError(getApiErrorMessage(restoreError, "Failed to restore character."));
+      setError(getApiErrorMessage(restoreError,"Failed to restore character."));
     }
   };
 
@@ -315,7 +315,7 @@ const AdminCharactersPage = () => {
       setNotice("Character visibility updated.");
       await loadCharacters();
     } catch (toggleError) {
-      setError(getApiErrorMessage(toggleError, "Failed to toggle character."));
+      setError(getApiErrorMessage(toggleError,"Failed to toggle character."));
     }
   };
 
@@ -328,12 +328,12 @@ const AdminCharactersPage = () => {
         <FeedbackMessage error={error} notice={notice} />
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="min-w-0 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="min-w-0 rounded-[30px] border border-border bg-card p-5 shadow-sm">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Master List</p>
                 <h2 className="mt-1 font-display text-3xl font-black tracking-tight">Characters</h2>
-                <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{characters.length} loaded</p>
+                <p className="mt-2 text-sm text-[var(--page-muted)]">{characters.length} loaded</p>
               </div>
               <button
                 type="button"
@@ -350,9 +350,9 @@ const AdminCharactersPage = () => {
                 value={filters.search}
                 onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value, page: 1 }))}
                 placeholder="Search name, description, voice..."
-                className="rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                className="rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
               />
-              <label className="flex items-center gap-3 rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold dark:border-zinc-700 dark:bg-zinc-950">
+              <label className="flex items-center gap-3 rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-semibold">
                 <input
                   type="checkbox"
                   checked={filters.include_deleted}
@@ -362,18 +362,18 @@ const AdminCharactersPage = () => {
               </label>
             </div>
 
-            <div className="mt-5 overflow-hidden rounded-[24px] border border-zinc-200 dark:border-zinc-800">
-              <div className="grid grid-cols-[minmax(0,1fr)_120px_100px] gap-3 bg-zinc-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+            <div className="mt-5 overflow-hidden rounded-[24px] border border-border">
+              <div className="grid grid-cols-[minmax(0,1fr)_120px_100px] gap-3 bg-muted px-4 py-3 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)]">
                 <span>Character</span>
                 <span>Voice</span>
                 <span>Status</span>
               </div>
-              <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              <div className="divide-y divide-border">
                 {isLoading ? (
-                  <div className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">Loading characters...</div>
+                  <div className="px-4 py-8 text-sm text-[var(--page-muted)]">Loading characters...</div>
                 ) : null}
                 {!isLoading && characters.length === 0 ? (
-                  <div className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">No characters found.</div>
+                  <div className="px-4 py-8 text-sm text-[var(--page-muted)]">No characters found.</div>
                 ) : null}
                 {!isLoading && characters.map((character) => {
                   const isSelected = selectedCharacter?.id === character.id;
@@ -383,14 +383,14 @@ const AdminCharactersPage = () => {
                       type="button"
                       onClick={() => setSelectedCharacterId(character.id)}
                       className={`grid w-full grid-cols-[minmax(0,1fr)_120px_100px] gap-3 px-4 py-4 text-left text-sm transition ${
-                        isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-zinc-50 dark:hover:bg-zinc-950/60"
+                        isSelected ?"bg-primary/15" :"hover:bg-muted"
                       }`}
                     >
                       <span className="min-w-0">
-                        <span className="block truncate font-semibold text-zinc-900 dark:text-zinc-100">{character.name}</span>
-                        <span className="mt-1 block truncate text-xs text-zinc-500 dark:text-zinc-400">{character.description || character.model_url}</span>
+                        <span className="block truncate font-semibold text-[var(--page-fg)]">{character.name}</span>
+                        <span className="mt-1 block truncate text-xs text-[var(--page-muted)]">{character.description || character.model_url}</span>
                       </span>
-                      <span className="flex items-center text-zinc-600 dark:text-zinc-300">{character.tts_voice}</span>
+                      <span className="flex items-center text-[var(--page-muted)]">{character.tts_voice}</span>
                       <span className="flex flex-col justify-center gap-1">
                         <CharacterStatus character={character} />
                       </span>
@@ -401,18 +401,18 @@ const AdminCharactersPage = () => {
             </div>
           </div>
 
-          <aside className="min-w-0 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 xl:sticky xl:top-28 xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto">
+          <aside className="min-w-0 rounded-[30px] border border-border bg-card p-5 shadow-sm   xl:sticky xl:top-28 xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto">
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Detail</p>
             {!selectedCharacter ? (
-              <div className="mt-6 rounded-[24px] bg-zinc-50 p-5 text-sm text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+              <div className="mt-6 rounded-[24px] bg-muted p-5 text-sm text-[var(--page-muted)]">
                 Select a character to inspect details and actions.
               </div>
             ) : (
               <div className="mt-2 space-y-5">
                 <div>
                   <h3 className="font-display text-3xl font-black tracking-tight">{selectedCharacter.name}</h3>
-                  <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    {selectedCharacter.description || "No description configured."}
+                  <p className="mt-3 text-sm leading-6 text-[var(--page-muted)]">
+                    {selectedCharacter.description ||"No description configured."}
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <CharacterStatus character={selectedCharacter} />
@@ -441,9 +441,9 @@ const AdminCharactersPage = () => {
                     type="button"
                     onClick={() => handleToggle(selectedCharacter.id)}
                     disabled={Boolean(selectedCharacter.deleted_at)}
-                    className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    className="inline-flex items-center justify-center rounded-2xl border border-border px-4 py-3 text-sm font-semibold text-[var(--page-muted)] transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50   hover:bg-muted"
                   >
-                    {selectedCharacter.is_active ? "Deactivate" : "Activate"}
+                    {selectedCharacter.is_active ?"Deactivate" :"Activate"}
                   </button>
                   {selectedCharacter.deleted_at ? (
                     <button
@@ -473,7 +473,7 @@ const AdminCharactersPage = () => {
 
       {isEditorOpen ? (
         <CharacterEditorModal
-          key={editingCharacter?.id || "new-character"}
+          key={editingCharacter?.id ||"new-character"}
           character={editingCharacter}
           onClose={() => setIsEditorOpen(false)}
           onSubmit={handleSave}

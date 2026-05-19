@@ -28,19 +28,19 @@ const ListEditorField = ({
     <label className="block space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <span className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
+          <span className="text-xs font-black uppercase tracking-[0.24em] text-[var(--page-muted)]">
             {label}
           </span>
-          {helperText && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{helperText}</p>}
+          {helperText && <p className="mt-1 text-xs text-[var(--page-muted)]">{helperText}</p>}
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+          <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-[var(--page-muted)]">
             {items.length} items
           </span>
           <button
             type="button"
             onClick={() => onChange(formatItems(value))}
-            className="rounded-full border border-zinc-200 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="rounded-full border border-border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--page-muted)] transition hover:bg-muted hover:text-[var(--page-fg)]"
           >
             Format
           </button>
@@ -52,7 +52,7 @@ const ListEditorField = ({
         onChange={(event) => onChange(event.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className="w-full rounded-[24px] border border-zinc-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-900"
+        className="w-full rounded-[24px] border border-border bg-card px-4 py-3 text-sm font-medium text-[var(--page-fg)] outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
       />
 
       {items.length > 0 && (
@@ -62,7 +62,7 @@ const ListEditorField = ({
               key={`${label}-${item}`}
               type="button"
               onClick={() => removeItem(item)}
-              className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+              className="rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-[var(--page-muted)] transition hover:bg-[var(--surface-strong)] hover:text-[var(--page-fg)]"
             >
               {item}
             </button>

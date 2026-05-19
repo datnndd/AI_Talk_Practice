@@ -34,7 +34,7 @@ const StatusBadge = ({ children, tone = "zinc" }) => {
     emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
     amber: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
     rose: "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300",
-    zinc: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+    zinc: "bg-muted text-[var(--page-muted)]  ",
   };
 
   return (
@@ -70,8 +70,8 @@ const FeedbackMessage = ({ error, notice }) => {
 };
 
 const DetailField = ({ label, value }) => (
-  <div className="rounded-[20px] bg-zinc-50 px-4 py-3 dark:bg-zinc-950">
-    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{label}</p>
+  <div className="rounded-[20px] bg-muted px-4 py-3 ">
+    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--page-muted)] ">{label}</p>
     <p className="mt-1 truncate text-sm font-semibold">{value || "Not set"}</p>
   </div>
 );
@@ -81,7 +81,7 @@ const PaginationButton = ({ children, disabled, onClick }) => (
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className="rounded-2xl border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+    className="rounded-2xl border border-border px-4 py-2 text-sm font-semibold text-[var(--page-muted)] transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50   hover:bg-muted"
   >
     {children}
   </button>
@@ -239,12 +239,12 @@ const AdminScenarios = () => {
         <FeedbackMessage error={error} notice={notice} />
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]" id="scenario-library">
-          <div className="min-w-0 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="min-w-0 rounded-[30px] border border-border bg-card p-5 shadow-sm  ">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Master List</p>
                 <h2 className="mt-1 font-display text-3xl font-black tracking-tight">Scenarios</h2>
-                <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="mt-2 text-sm text-[var(--page-muted)] ">
                   {total} total, {selectedCount} selected
                 </p>
               </div>
@@ -265,26 +265,26 @@ const AdminScenarios = () => {
                   value={filters.search}
                   onChange={(event) => updateFilter("search", event.target.value)}
                   placeholder="Search title, description, tags..."
-                  className="w-full rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                  className="w-full rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
                 />
               </label>
               <input
                 value={filters.category}
                 onChange={(event) => updateFilter("category", event.target.value)}
                 placeholder="Category"
-                className="rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                className="rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
               />
               <select
                 value={filters.difficulty}
                 onChange={(event) => updateFilter("difficulty", event.target.value)}
-                className="rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium outline-none transition focus:border-primary dark:border-zinc-700 dark:bg-zinc-950"
+                className="rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-medium outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  "
               >
                 <option value="">All difficulty</option>
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
                 <option value="hard">Hard</option>
               </select>
-              <label className="flex items-center gap-3 rounded-[22px] border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold dark:border-zinc-700 dark:bg-zinc-950">
+              <label className="flex items-center gap-3 rounded-[22px] border border-border bg-muted px-4 py-3 text-sm font-semibold  ">
                 <FadersHorizontal size={16} />
                 <input
                   type="checkbox"
@@ -306,15 +306,15 @@ const AdminScenarios = () => {
                   type="button"
                   onClick={() => handleBulkAction(action)}
                   disabled={selectedCount === 0}
-                  className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-zinc-600 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  className="rounded-full border border-border px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-[var(--page-muted)] transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50   hover:bg-muted"
                 >
                   {label}
                 </button>
               ))}
             </div>
 
-            <div className="mt-5 overflow-hidden rounded-[24px] border border-zinc-200 dark:border-zinc-800">
-              <div className="grid grid-cols-[44px_minmax(0,1fr)_92px_100px] gap-3 bg-zinc-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+            <div className="mt-5 overflow-hidden rounded-[24px] border border-border ">
+              <div className="grid grid-cols-[44px_minmax(0,1fr)_92px_100px] gap-3 bg-muted px-4 py-3 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--page-muted)]  ">
                 <button
                   type="button"
                   onClick={() =>
@@ -333,11 +333,11 @@ const AdminScenarios = () => {
 
               <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
                 {isLoadingScenarios && (
-                  <div className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">Loading scenarios...</div>
+                  <div className="px-4 py-8 text-sm text-[var(--page-muted)] ">Loading scenarios...</div>
                 )}
 
                 {!isLoadingScenarios && scenarios.length === 0 && (
-                  <div className="px-4 py-8 text-sm text-zinc-500 dark:text-zinc-400">No scenarios found.</div>
+                  <div className="px-4 py-8 text-sm text-[var(--page-muted)] ">No scenarios found.</div>
                 )}
 
                 {!isLoadingScenarios &&
@@ -350,7 +350,7 @@ const AdminScenarios = () => {
                         key={scenario.id}
                         data-testid={`scenario-row-${scenario.id}`}
                         className={`grid grid-cols-[44px_minmax(0,1fr)_92px_100px] gap-3 px-4 py-4 text-sm transition ${
-                          isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-zinc-50 dark:hover:bg-zinc-950/60"
+                          isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-muted"
                         }`}
                       >
                         <label className="flex items-start pt-1">
@@ -371,8 +371,8 @@ const AdminScenarios = () => {
                           onClick={() => setSelectedScenarioId(scenario.id)}
                           className="min-w-0 text-left"
                         >
-                          <p className="truncate font-semibold text-zinc-900 dark:text-zinc-100">{scenario.title}</p>
-                          <p className="mt-1 line-clamp-2 text-xs text-zinc-500 dark:text-zinc-400">
+                          <p className="truncate font-semibold text-[var(--page-fg)] ">{scenario.title}</p>
+                          <p className="mt-1 line-clamp-2 text-xs text-[var(--page-muted)] ">
                             {scenario.description}
                           </p>
                           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -383,7 +383,7 @@ const AdminScenarios = () => {
                             ))}
                           </div>
                         </button>
-                        <div className="flex items-center text-zinc-600 dark:text-zinc-300">{scenario.usage_count}</div>
+                        <div className="flex items-center text-[var(--page-muted)] ">{scenario.usage_count}</div>
                         <div className="flex flex-col justify-center gap-1">
                           <ScenarioStatus scenario={scenario} />
                         </div>
@@ -394,7 +394,7 @@ const AdminScenarios = () => {
             </div>
 
             <div className="mt-5 flex items-center justify-between gap-3">
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              <p className="text-sm text-[var(--page-muted)] ">
                 Page {filters.page} of {totalPages}
               </p>
               <div className="flex gap-2">
@@ -414,18 +414,18 @@ const AdminScenarios = () => {
             </div>
           </div>
 
-          <aside className="min-w-0 rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 xl:sticky xl:top-28 xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto">
+          <aside className="min-w-0 rounded-[30px] border border-border bg-card p-5 shadow-sm   xl:sticky xl:top-28 xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto">
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-primary">Detail</p>
 
             {!selectedScenario ? (
-              <div className="mt-6 rounded-[24px] bg-zinc-50 p-5 text-sm text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+              <div className="mt-6 rounded-[24px] bg-muted p-5 text-sm text-[var(--page-muted)]  ">
                 Select a scenario to inspect details and actions.
               </div>
             ) : (
               <div className="mt-2 space-y-5">
                 <div>
                   <h3 className="font-display text-3xl font-black tracking-tight">{selectedScenario.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                  <p className="mt-3 text-sm leading-6 text-[var(--page-muted)] ">
                     {selectedScenario.description}
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -444,19 +444,19 @@ const AdminScenarios = () => {
                   ].map(([label, value]) => <DetailField key={label} label={label} value={value} />)}
                 </div>
 
-                <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                <div className="rounded-[24px] bg-muted p-4 ">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--page-muted)] ">
                     Roles
                   </p>
                   <div className="mt-3 space-y-3 text-sm">
                     <div>
-                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--page-muted)] ">
                         AI
                       </p>
                       <p className="mt-1 font-semibold">{selectedScenario.ai_role || "Not set"}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--page-muted)] ">
                         Learner
                       </p>
                       <p className="mt-1 font-semibold">{selectedScenario.user_role || "Not set"}</p>
@@ -464,23 +464,23 @@ const AdminScenarios = () => {
                   </div>
                 </div>
 
-                <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                <div className="rounded-[24px] bg-muted p-4 ">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--page-muted)] ">
                     Learner Tasks
                   </p>
                   {(selectedScenario.tasks || []).length > 0 ? (
-                    <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-zinc-700 dark:text-zinc-200">
+                    <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-[var(--page-muted)] ">
                       {selectedScenario.tasks.map((task) => (
                         <li key={task}>{task}</li>
                       ))}
                     </ol>
                   ) : (
-                    <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">No learner tasks configured.</p>
+                    <p className="mt-3 text-sm text-[var(--page-muted)] ">No learner tasks configured.</p>
                   )}
                 </div>
 
-                <div className="rounded-[24px] bg-zinc-50 p-4 dark:bg-zinc-950">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+                <div className="rounded-[24px] bg-muted p-4 ">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--page-muted)] ">
                     Contextual Actions
                   </p>
                   <div className="mt-4 grid gap-2">
@@ -496,7 +496,7 @@ const AdminScenarios = () => {
                       type="button"
                       onClick={() => handleToggleScenario(selectedScenario.id)}
                       disabled={Boolean(selectedScenario.deleted_at)}
-                      className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                      className="inline-flex items-center justify-center rounded-2xl border border-border px-4 py-3 text-sm font-semibold text-[var(--page-muted)] transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50   hover:bg-muted"
                     >
                       {selectedScenario.is_active ? "Deactivate" : "Activate"}
                     </button>

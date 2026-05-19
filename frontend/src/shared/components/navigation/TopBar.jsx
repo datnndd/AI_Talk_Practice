@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Crown, Fire, Moon, Sun } from "@phosphor-icons/react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { canAccessSubscriptionFeatures } from "@/features/auth/utils/subscription";
+import { getApiErrorMessage, httpClient } from "@/shared/api/httpClient";
 import { useTheme } from "@/shared/context/ThemeContext";
 
 const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
@@ -46,13 +47,27 @@ const getCalendarOffset = (calendarDays) => {
   return (firstDate.getDay() + 6) % 7;
 };
 
+const formatNotificationTime = (value) => {
+  if (!value) return "";
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+};
+
 const TopBar = () => {
   const { user, gamification, checkInDaily, refreshGamification } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isStreakOpen, setIsStreakOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [isNotificationLoading, setIsNotificationLoading] = useState(false);
+  const [notificationError, setNotificationError] = useState("");
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [checkInError, setCheckInError] = useState("");
   const streakRef = useRef(null);
+  const notificationRef = useRef(null);
   const isDark = theme === "dark";
 
   const level = gamification?.xp?.level || 1;
@@ -70,18 +85,23 @@ const TopBar = () => {
     : "Đăng nhập mỗi ngày để giữ streak.";
   const initials = user?.display_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "D";
   const hasProAccess = canAccessSubscriptionFeatures(user);
+  const unreadNotificationCount = notifications.filter((notification) => !notification.read_at).length;
 
   useEffect(() => {
-    if (!isStreakOpen) return undefined;
+    if (!isStreakOpen && !isNotificationOpen) return undefined;
 
     const handlePointerDown = (event) => {
-      if (!streakRef.current?.contains(event.target)) {
+      if (isStreakOpen && !streakRef.current?.contains(event.target)) {
         setIsStreakOpen(false);
+      }
+      if (isNotificationOpen && !notificationRef.current?.contains(event.target)) {
+        setIsNotificationOpen(false);
       }
     };
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         setIsStreakOpen(false);
+        setIsNotificationOpen(false);
       }
     };
 
@@ -91,7 +111,36 @@ const TopBar = () => {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isStreakOpen]);
+  }, [isNotificationOpen, isStreakOpen]);
+
+  useEffect(() => {
+    if (!isNotificationOpen) return undefined;
+
+    let isMounted = true;
+    setIsNotificationLoading(true);
+    setNotificationError("");
+    httpClient
+      .get("/notifications", { params: { page_size: 10 } })
+      .then(({ data }) => {
+        if (isMounted) {
+          setNotifications(data?.items || []);
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          setNotificationError(getApiErrorMessage(error, "Không thể tải thông báo."));
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsNotificationLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isNotificationOpen]);
 
   const handleCheckIn = async () => {
     if (checkIn?.checked_in_today || isCheckingIn) return;
@@ -104,6 +153,29 @@ const TopBar = () => {
       await refreshGamification?.().catch(() => null);
     } finally {
       setIsCheckingIn(false);
+    }
+  };
+
+  const handleToggleNotifications = () => {
+    setIsNotificationOpen((current) => !current);
+  };
+
+  const handleReadNotification = async (notificationId) => {
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === notificationId
+          ? { ...notification, read_at: notification.read_at || new Date().toISOString() }
+          : notification,
+      ),
+    );
+
+    try {
+      const { data } = await httpClient.post(`/notifications/${notificationId}/read`);
+      setNotifications((current) =>
+        current.map((notification) => (notification.id === notificationId ? data : notification)),
+      );
+    } catch (error) {
+      setNotificationError(getApiErrorMessage(error, "Không thể đánh dấu đã đọc."));
     }
   };
 
@@ -237,16 +309,68 @@ const TopBar = () => {
           {isDark ? <Sun size={20} weight="bold" /> : <Moon size={20} weight="bold" />}
         </button>
 
-        <button
-          aria-label="Thông báo"
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card hover:bg-muted transition-colors relative"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bell h-5 w-5 text-foreground/70" aria-hidden="true">
-            <path d="M10.268 21a2 2 0 0 0 3.464 0"></path>
-            <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path>
-          </svg>
-          <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-brand-red border-2 border-card"></span>
-        </button>
+        <div ref={notificationRef} className="relative">
+          <button
+            type="button"
+            onClick={handleToggleNotifications}
+            aria-label="Thông báo"
+            aria-expanded={isNotificationOpen}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card hover:bg-muted transition-colors relative"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bell h-5 w-5 text-foreground/70" aria-hidden="true">
+              <path d="M10.268 21a2 2 0 0 0 3.464 0"></path>
+              <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path>
+            </svg>
+            {unreadNotificationCount > 0 ? (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-card bg-brand-red px-1 text-[10px] font-black text-white">
+                {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
+              </span>
+            ) : null}
+          </button>
+
+          {isNotificationOpen ? (
+            <div className="absolute right-0 top-12 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-card shadow-2xl shadow-zinc-950/10">
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <div>
+                  <p className="text-sm font-black text-foreground">Thông báo</p>
+                  <p className="mt-0.5 text-xs font-semibold text-muted-foreground">
+                    {unreadNotificationCount > 0 ? `${unreadNotificationCount} chưa đọc` : "Không có thông báo mới"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto p-2">
+                {isNotificationLoading ? (
+                  <div className="p-5 text-center text-sm font-bold text-muted-foreground">Đang tải thông báo...</div>
+                ) : notificationError ? (
+                  <div className="p-5 text-center text-sm font-bold text-rose-500">{notificationError}</div>
+                ) : notifications.length ? (
+                  notifications.map((notification) => (
+                    <button
+                      type="button"
+                      key={notification.id}
+                      onClick={() => handleReadNotification(notification.id)}
+                      className={`w-full rounded-2xl p-4 text-left transition hover:bg-muted ${
+                        notification.read_at ? "opacity-70" : "bg-primary/5"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${notification.read_at ? "bg-border" : "bg-brand-red"}`} />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-black text-foreground">{notification.title}</span>
+                          <span className="mt-1 block text-sm font-medium leading-6 text-muted-foreground">{notification.body}</span>
+                          <span className="mt-2 block text-[11px] font-bold text-muted-foreground">{formatNotificationTime(notification.created_at)}</span>
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-5 text-center text-sm font-bold text-muted-foreground">Bạn chưa có thông báo.</div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         <Link
           to="/profile"

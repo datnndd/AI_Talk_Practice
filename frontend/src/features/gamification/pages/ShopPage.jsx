@@ -35,7 +35,7 @@ const formatDate = (value) => {
 };
 
 const statusLabel = (status) => STATUS_LABELS[status] || status || "Không rõ";
-const statusClass = (status) => STATUS_CLASSES[status] || "bg-zinc-50 text-zinc-700 ring-zinc-100 dark:bg-white/10 dark:text-zinc-200 dark:ring-white/10";
+const statusClass = (status) => STATUS_CLASSES[status] || "bg-muted text-[var(--page-muted)] ring-zinc-100 dark:bg-white/10  dark:ring-white/10";
 
 const ShopPage = () => {
   const { refreshGamification } = useAuth();
@@ -134,26 +134,26 @@ const ShopPage = () => {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">Shop</p>
-          <h1 className="mt-1 text-3xl font-black text-zinc-950 dark:text-zinc-50">Đổi Coin lấy quà</h1>
+          <h1 className="mt-1 text-3xl font-black text-[var(--page-fg)] dark:text-zinc-50">Đổi Coin lấy quà</h1>
           <p className="mt-2 text-sm text-muted-foreground">Chọn sản phẩm vật lý và theo dõi trạng thái đơn đổi quà.</p>
         </div>
-        <div className="rounded-xl border border-border dark:border-white/10 bg-card dark:bg-zinc-950/70 px-4 py-3 text-sm font-black text-zinc-800 dark:text-zinc-100">
+        <div className="rounded-xl border border-border dark:border-white/10 bg-card /70 px-4 py-3 text-sm font-black text-[var(--page-fg)] ">
           {coinBalance.toLocaleString("en-US")} Coin
         </div>
       </div>
 
-      <div className="mb-5 flex gap-2 rounded-2xl border border-border dark:border-white/10 bg-card dark:bg-zinc-950/70 p-1">
+      <div className="mb-5 flex gap-2 rounded-2xl border border-border dark:border-white/10 bg-card /70 p-1">
         <button
           type="button"
           onClick={() => setActiveTab("shop")}
-          className={`flex-1 rounded-xl px-4 py-2 text-sm font-black transition ${activeTab === "shop" ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950" : "text-zinc-500 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/10"}`}
+          className={`flex-1 rounded-xl px-4 py-2 text-sm font-black transition ${activeTab === "shop" ? "bg-zinc-950 text-white dark:bg-white dark:text-[var(--page-fg)]" : "text-[var(--page-muted)]  hover:bg-muted dark:hover:bg-white/10"}`}
         >
           Đổi quà
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("orders")}
-          className={`flex-1 rounded-xl px-4 py-2 text-sm font-black transition ${activeTab === "orders" ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950" : "text-zinc-500 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/10"}`}
+          className={`flex-1 rounded-xl px-4 py-2 text-sm font-black transition ${activeTab === "orders" ? "bg-zinc-950 text-white dark:bg-white dark:text-[var(--page-fg)]" : "text-[var(--page-muted)]  hover:bg-muted dark:hover:bg-white/10"}`}
         >
           Đơn của tôi
         </button>
@@ -167,7 +167,7 @@ const ShopPage = () => {
 
       {activeTab === "shop" && (
         items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border dark:border-white/10 bg-card dark:bg-zinc-950/70 p-8 text-center text-sm font-semibold text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border dark:border-white/10 bg-card /70 p-8 text-center text-sm font-semibold text-muted-foreground">
             Hiện chưa có sản phẩm có thể đổi.
           </div>
         ) : (
@@ -175,8 +175,8 @@ const ShopPage = () => {
             {items.map((item) => {
               const disabled = isRedeeming || coinBalance < item.price_coin || item.stock_quantity <= 0;
               return (
-                <article key={item.code} className="overflow-hidden rounded-2xl border border-border dark:border-white/10 bg-card dark:bg-zinc-950/70 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-                  <div className="relative flex aspect-[4/3] items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 p-4 text-zinc-400 dark:text-zinc-500">
+                <article key={item.code} className="overflow-hidden rounded-2xl border border-border dark:border-white/10 bg-card /70 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+                  <div className="relative flex aspect-[4/3] items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800 p-4 text-[var(--page-subtle)] dark:text-[var(--page-muted)]">
                     <span className="absolute right-3 top-3 z-10 rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 shadow-sm ring-1 ring-amber-100 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20">
                       {item.price_coin} Coin
                     </span>
@@ -187,9 +187,9 @@ const ShopPage = () => {
                     )}
                   </div>
                   <div className="pt-4">
-                    <h2 className="text-xl font-black text-zinc-950 dark:text-zinc-50">{item.name}</h2>
+                    <h2 className="text-xl font-black text-[var(--page-fg)] dark:text-zinc-50">{item.name}</h2>
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">{item.description}</p>
-                    <div className="mt-4 flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">
+                    <div className="mt-4 flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.16em] text-[var(--page-subtle)] dark:text-[var(--page-muted)]">
                       <span>Còn {item.stock_quantity} sản phẩm</span>
                       <span className={coinBalance >= item.price_coin ? "text-emerald-600 dark:text-emerald-300" : "text-rose-500 dark:text-rose-300"}>
                         {coinBalance >= item.price_coin ? "Đủ coin" : "Thiếu coin"}
@@ -214,18 +214,18 @@ const ShopPage = () => {
 
       {activeTab === "orders" && (
         redemptions.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border dark:border-white/10 bg-card dark:bg-zinc-950/70 p-8 text-center text-sm font-semibold text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border dark:border-white/10 bg-card /70 p-8 text-center text-sm font-semibold text-muted-foreground">
             <Package size={40} className="mx-auto mb-3 text-zinc-300" weight="duotone" />
             Chưa có đơn đổi quà.
           </div>
         ) : (
           <div className="space-y-4">
             {redemptions.map((order) => (
-              <article key={order.id} className="rounded-2xl border border-border dark:border-white/10 bg-card dark:bg-zinc-950/70 p-5 shadow-sm">
+              <article key={order.id} className="rounded-2xl border border-border dark:border-white/10 bg-card /70 p-5 shadow-sm">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">Đơn #{order.id}</p>
-                    <h2 className="mt-1 text-xl font-black text-zinc-950 dark:text-zinc-50">{order.product_name}</h2>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--page-subtle)] dark:text-[var(--page-muted)]">Đơn #{order.id}</p>
+                    <h2 className="mt-1 text-xl font-black text-[var(--page-fg)] dark:text-zinc-50">{order.product_name}</h2>
                     <p className="mt-1 text-sm font-semibold text-muted-foreground">{formatDate(order.created_at)}</p>
                   </div>
                   <span className={`w-fit rounded-full px-3 py-1 text-xs font-black ring-1 ${statusClass(order.status)}`}>
@@ -234,23 +234,23 @@ const ShopPage = () => {
                 </div>
 
                 <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
-                  <div className="rounded-xl bg-zinc-50 p-4 dark:bg-white/5">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Chi phí</p>
+                  <div className="rounded-xl bg-muted p-4 dark:bg-white/5">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--page-subtle)] dark:text-[var(--page-muted)]">Chi phí</p>
                     <p className="mt-1 font-black text-amber-700 dark:text-amber-200">{Number(order.price_coin || 0).toLocaleString("en-US")} Coin</p>
                   </div>
-                  <div className="rounded-xl bg-zinc-50 p-4 dark:bg-white/5">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Người nhận</p>
-                    <p className="mt-1 font-bold text-zinc-800 dark:text-zinc-100">{order.recipient_name}</p>
+                  <div className="rounded-xl bg-muted p-4 dark:bg-white/5">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--page-subtle)] dark:text-[var(--page-muted)]">Người nhận</p>
+                    <p className="mt-1 font-bold text-[var(--page-fg)] ">{order.recipient_name}</p>
                     <p className="break-words text-muted-foreground">{order.phone}</p>
                   </div>
-                  <div className="rounded-xl bg-zinc-50 p-4 dark:bg-white/5 md:col-span-2">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Địa chỉ</p>
-                    <p className="mt-1 break-words font-semibold text-zinc-800 dark:text-zinc-100">{order.address}</p>
+                  <div className="rounded-xl bg-muted p-4 dark:bg-white/5 md:col-span-2">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--page-subtle)] dark:text-[var(--page-muted)]">Địa chỉ</p>
+                    <p className="mt-1 break-words font-semibold text-[var(--page-fg)] ">{order.address}</p>
                   </div>
                   {order.note && (
-                    <div className="rounded-xl bg-zinc-50 p-4 dark:bg-white/5 md:col-span-2">
-                      <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">Ghi chú</p>
-                      <p className="mt-1 break-words font-semibold text-zinc-800 dark:text-zinc-100">{order.note}</p>
+                    <div className="rounded-xl bg-muted p-4 dark:bg-white/5 md:col-span-2">
+                      <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--page-subtle)] dark:text-[var(--page-muted)]">Ghi chú</p>
+                      <p className="mt-1 break-words font-semibold text-[var(--page-fg)] ">{order.note}</p>
                     </div>
                   )}
                 </div>
@@ -262,33 +262,33 @@ const ShopPage = () => {
 
       {selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
-          <form onSubmit={redeem} className="w-full max-w-lg rounded-2xl bg-white p-6 dark:bg-zinc-950 dark:text-zinc-50 shadow-2xl">
+          <form onSubmit={redeem} className="w-full max-w-lg rounded-2xl bg-card p-6  dark:text-zinc-50 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">Thông tin nhận hàng</p>
-                <h2 className="mt-1 text-2xl font-black text-zinc-950 dark:text-zinc-50">{selectedItem.name}</h2>
+                <h2 className="mt-1 text-2xl font-black text-[var(--page-fg)] dark:text-zinc-50">{selectedItem.name}</h2>
               </div>
-              <button type="button" onClick={closeRedeemForm} className="rounded-full p-2 text-zinc-500 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10">
+              <button type="button" onClick={closeRedeemForm} className="rounded-full p-2 text-[var(--page-muted)]  hover:bg-muted dark:hover:bg-white/10">
                 <X size={18} />
               </button>
             </div>
 
             <div className="space-y-4">
-              <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-200">
+              <label className="block text-sm font-bold text-[var(--page-muted)] ">
                 Họ tên
-                <input required value={form.recipient_name} onChange={(event) => updateForm("recipient_name", event.target.value)} className="mt-2 w-full rounded-xl border border-border dark:border-white/10 px-4 py-3 text-sm outline-none focus:border-primary dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500" />
+                <input required value={form.recipient_name} onChange={(event) => updateForm("recipient_name", event.target.value)} className="mt-2 w-full rounded-xl border border-border dark:border-white/10 px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  dark:text-zinc-50 dark:placeholder:text-[var(--page-muted)]" />
               </label>
-              <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-200">
+              <label className="block text-sm font-bold text-[var(--page-muted)] ">
                 SĐT
-                <input required value={form.phone} onChange={(event) => updateForm("phone", event.target.value)} className="mt-2 w-full rounded-xl border border-border dark:border-white/10 px-4 py-3 text-sm outline-none focus:border-primary dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500" />
+                <input required value={form.phone} onChange={(event) => updateForm("phone", event.target.value)} className="mt-2 w-full rounded-xl border border-border dark:border-white/10 px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  dark:text-zinc-50 dark:placeholder:text-[var(--page-muted)]" />
               </label>
-              <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-200">
+              <label className="block text-sm font-bold text-[var(--page-muted)] ">
                 Địa chỉ đầy đủ
-                <textarea required rows={3} value={form.address} onChange={(event) => updateForm("address", event.target.value)} className="mt-2 w-full rounded-xl border border-border dark:border-white/10 px-4 py-3 text-sm outline-none focus:border-primary dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500" />
+                <textarea required rows={3} value={form.address} onChange={(event) => updateForm("address", event.target.value)} className="mt-2 w-full rounded-xl border border-border dark:border-white/10 px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  dark:text-zinc-50 dark:placeholder:text-[var(--page-muted)]" />
               </label>
-              <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-200">
+              <label className="block text-sm font-bold text-[var(--page-muted)] ">
                 Ghi chú
-                <textarea rows={2} value={form.note} onChange={(event) => updateForm("note", event.target.value)} className="mt-2 w-full rounded-xl border border-border dark:border-white/10 px-4 py-3 text-sm outline-none focus:border-primary dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500" />
+                <textarea rows={2} value={form.note} onChange={(event) => updateForm("note", event.target.value)} className="mt-2 w-full rounded-xl border border-border dark:border-white/10 px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]  dark:text-zinc-50 dark:placeholder:text-[var(--page-muted)]" />
               </label>
             </div>
 
