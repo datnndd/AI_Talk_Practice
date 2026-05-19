@@ -10,6 +10,13 @@ from app.modules.payments.models import PaymentTransaction
 from app.modules.payments.services.payment_service import PaymentService
 from app.modules.users.models.subscription import Subscription
 
+class FakeStripeObject:
+    def __init__(self, data):
+        self.data = data
+
+    def to_dict_recursive(self):
+        return self.data
+
 
 @pytest.mark.asyncio
 async def test_create_stripe_checkout_returns_checkout_url(client, db_session, test_user, monkeypatch):
@@ -79,19 +86,22 @@ async def test_stripe_webhook_marks_payment_paid_and_upgrades_subscription(clien
         return {
             "id": "evt_test_123",
             "type": "checkout.session.completed",
-            "data": {"object": {"id": "cs_test_123"}},
+            "data": {"object": FakeStripeObject({"id": "cs_test_123", "metadata": {"nested": ["value"]}})},
         }
 
     def fake_retrieve(cls, checkout_id):
         assert checkout_id == "cs_test_123"
-        return {
-            "id": "cs_test_123",
-            "metadata": {"payment_order_code": payment.order_code},
-            "amount_total": 99000,
-            "currency": "vnd",
-            "payment_status": "paid",
-            "payment_intent": "pi_test_123",
-        }
+        return FakeStripeObject(
+            {
+                "id": "cs_test_123",
+                "metadata": {"payment_order_code": payment.order_code},
+                "amount_total": 99000,
+                "currency": "vnd",
+                "payment_status": "paid",
+                "payment_intent": "pi_test_123",
+                "line_items": [{"price": FakeStripeObject({"id": "price_test_123"})}],
+            }
+        )
 
     monkeypatch.setattr(PaymentService, "_construct_stripe_event", classmethod(fake_construct))
     monkeypatch.setattr(PaymentService, "_retrieve_stripe_checkout_session", classmethod(fake_retrieve))
@@ -115,6 +125,60 @@ async def test_stripe_webhook_marks_payment_paid_and_upgrades_subscription(clien
     assert subscription.tier == "PRO"
     assert subscription.status == "active"
 
+@pytest.mark.asyncio
+async def test_get_payment_status_reconciles_paid_stripe_session(client, db_session, test_user, monkeypatch):
+    token = create_access_token(user_id=test_user.id)
+
+    payment = PaymentTransaction(
+        user_id=test_user.id,
+        provider="stripe",
+        plan="PRO",
+        plan_code="PRO_30D",
+        duration_days=30,
+        amount=99000,
+        currency="VND",
+        status="pending",
+        order_code="ORDERRECONCILE001",
+        external_checkout_id="cs_reconcile_123",
+        provider_payload={},
+    )
+    db_session.add(payment)
+    await db_session.commit()
+
+    def fake_retrieve(cls, checkout_id):
+        assert checkout_id == "cs_reconcile_123"
+        return FakeStripeObject(
+            {
+                "id": "cs_reconcile_123",
+                "metadata": {"payment_order_code": payment.order_code},
+                "amount_total": 99000,
+                "currency": "vnd",
+                "payment_status": "paid",
+                "payment_intent": "pi_reconcile_123",
+            }
+        )
+
+    monkeypatch.setattr(PaymentService, "_retrieve_stripe_checkout_session", classmethod(fake_retrieve))
+
+    response = await client.get(
+        f"/api/payments/transactions/{payment.order_code}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["order_code"] == payment.order_code
+    assert data["status"] == "paid"
+
+    await db_session.refresh(payment)
+    assert payment.status == "paid"
+    assert payment.external_transaction_id == "pi_reconcile_123"
+
+    subscription = (
+        await db_session.execute(select(Subscription).where(Subscription.user_id == test_user.id))
+    ).scalar_one()
+    assert subscription.tier == "PRO"
+    assert subscription.status == "active"
 
 @pytest.mark.asyncio
 async def test_get_payment_status_returns_only_current_user_payment(client, db_session, test_user):

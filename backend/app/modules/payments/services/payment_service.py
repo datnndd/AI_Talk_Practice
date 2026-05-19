@@ -37,6 +37,56 @@ DEFAULT_SUBSCRIPTION_PLANS = [
 
 
 class PaymentService:
+    @classmethod
+    def _stripe_to_plain_data(cls, value: Any) -> Any:
+        if hasattr(value, "to_dict_recursive"):
+            return cls._stripe_to_plain_data(value.to_dict_recursive())
+        if isinstance(value, dict):
+            return {str(key): cls._stripe_to_plain_data(item) for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [cls._stripe_to_plain_data(item) for item in value]
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
+        return str(value)
+
+    @classmethod
+    async def _sync_stripe_payment_from_session(
+        cls,
+        db: AsyncSession,
+        *,
+        payment: PaymentTransaction,
+        session_payload: dict[str, Any],
+    ) -> PaymentTransaction:
+        amount_total = int(session_payload.get("amount_total") or 0)
+        currency = str(session_payload.get("currency") or "").upper()
+        payment_status = str(session_payload.get("payment_status") or "")
+        session_status = str(session_payload.get("status") or "")
+
+        if amount_total != payment.amount or currency != payment.currency:
+            return await cls.mark_payment_failed(
+                db,
+                payment=payment,
+                reason="Stripe amount or currency mismatch",
+                provider_payload=session_payload,
+            )
+        if payment_status == "paid":
+            return await cls.mark_payment_paid(
+                db,
+                payment=payment,
+                external_transaction_id=str(session_payload.get("payment_intent") or ""),
+                provider_payload=session_payload,
+                paid_at=datetime.now(timezone.utc),
+            )
+        if session_status == "expired":
+            return await cls.mark_payment_failed(
+                db,
+                payment=payment,
+                reason="Stripe checkout session expired",
+                provider_payload=session_payload,
+                status="expired",
+            )
+        return payment
+
     @staticmethod
     async def ensure_default_subscription_plans(db: AsyncSession) -> None:
         for item in DEFAULT_SUBSCRIPTION_PLANS:
@@ -122,6 +172,17 @@ class PaymentService:
         payment = await cls._get_payment_by_order_code(db, order_code)
         if payment is None or payment.user_id != user.id:
             raise NotFoundError("Payment transaction not found.")
+        if payment.provider == "stripe" and payment.status == "pending" and payment.external_checkout_id:
+            session_payload = cls._stripe_to_plain_data(
+                cls._retrieve_stripe_checkout_session(payment.external_checkout_id)
+            )
+            payment = await cls._sync_stripe_payment_from_session(
+                db,
+                payment=payment,
+                session_payload=session_payload,
+            )
+            await db.commit()
+            await db.refresh(payment)
         return payment
 
     @staticmethod
@@ -379,52 +440,49 @@ class PaymentService:
         if await cls._get_processed_event(db, provider="stripe", event_id=event_id):
             return {"received": True, "duplicate": True}
 
-        event_object = event.get("data", {}).get("object", {})
+        event_object = cls._stripe_to_plain_data(event.get("data", {}).get("object", {}))
         checkout_id = str(event_object.get("id") or "")
         payment = None
-        session_payload: dict[str, Any] = dict(event_object)
+        session_payload: dict[str, Any] = event_object
+        order_code = ""
 
         if checkout_id:
             payment = await cls._get_payment_by_checkout_id(db, checkout_id)
 
         if event_type in {"checkout.session.completed", "checkout.session.async_payment_succeeded"}:
-            if not checkout_id:
-                raise BadRequestError("Stripe webhook missing checkout session id.")
+            try:
+                if not checkout_id:
+                    raise BadRequestError("Stripe webhook missing checkout session id.")
 
-            session = cls._retrieve_stripe_checkout_session(checkout_id)
-            session_payload = dict(session)
-            metadata = session_payload.get("metadata") or {}
-            order_code = str(metadata.get("payment_order_code") or "")
-            if payment is None and order_code:
-                payment = await cls._get_payment_by_order_code(db, order_code)
-            if payment is None:
-                raise NotFoundError("Payment transaction not found for Stripe session.")
+                session_payload = cls._stripe_to_plain_data(cls._retrieve_stripe_checkout_session(checkout_id))
+                metadata = session_payload.get("metadata") or {}
+                order_code = str(metadata.get("payment_order_code") or "")
+                if payment is None and order_code:
+                    payment = await cls._get_payment_by_order_code(db, order_code)
+                if payment is None:
+                    raise NotFoundError("Payment transaction not found for Stripe session.")
 
-            amount_total = int(session_payload.get("amount_total") or 0)
-            currency = str(session_payload.get("currency") or "").upper()
-            payment_status = str(session_payload.get("payment_status") or "")
-            if amount_total != payment.amount or currency != payment.currency:
-                await cls.mark_payment_failed(
+                synced_payment = await cls._sync_stripe_payment_from_session(
                     db,
                     payment=payment,
-                    reason="Stripe amount or currency mismatch",
-                    provider_payload=session_payload,
+                    session_payload=session_payload,
                 )
-            elif payment_status == "paid":
-                await cls.mark_payment_paid(
-                    db,
-                    payment=payment,
-                    external_transaction_id=str(session_payload.get("payment_intent") or ""),
-                    provider_payload=session_payload,
-                    paid_at=datetime.now(timezone.utc),
+                if synced_payment.status == "pending":
+                    await cls.mark_payment_failed(
+                        db,
+                        payment=synced_payment,
+                        reason=f"Stripe payment status is `{session_payload.get('payment_status') or ''}`",
+                        provider_payload=session_payload,
+                    )
+            except Exception:
+                logger.exception(
+                    "Stripe webhook processing failed event_id=%s event_type=%s checkout_id=%s order_code=%s",
+                    event_id,
+                    event_type,
+                    checkout_id,
+                    order_code,
                 )
-            else:
-                await cls.mark_payment_failed(
-                    db,
-                    payment=payment,
-                    reason=f"Stripe payment status is `{payment_status}`",
-                    provider_payload=session_payload,
-                )
+                raise
 
         elif event_type in {"checkout.session.expired", "checkout.session.async_payment_failed"}:
             if payment is not None:
