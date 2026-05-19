@@ -53,7 +53,6 @@ class SessionScore(Base, TimestampMixin):
     avg_fluency: Mapped[float] = mapped_column(Float, nullable=False)
     avg_grammar: Mapped[float] = mapped_column(Float, nullable=False)
     avg_vocabulary: Mapped[float] = mapped_column(Float, nullable=False)
-    avg_intonation: Mapped[float] = mapped_column(Float, nullable=False)
     relevance_score: Mapped[float] = mapped_column(Float, nullable=False)
     overall_score: Mapped[float] = mapped_column(Float, nullable=False)
 
@@ -84,7 +83,6 @@ class SessionScore(Base, TimestampMixin):
         CheckConstraint("avg_fluency BETWEEN 0 AND 10", name="ck_ss_fluency"),
         CheckConstraint("avg_grammar BETWEEN 0 AND 10", name="ck_ss_grammar"),
         CheckConstraint("avg_vocabulary BETWEEN 0 AND 10", name="ck_ss_vocabulary"),
-        CheckConstraint("avg_intonation BETWEEN 0 AND 10", name="ck_ss_intonation"),
         CheckConstraint("relevance_score BETWEEN 0 AND 10", name="ck_ss_relevance"),
         CheckConstraint("overall_score BETWEEN 0 AND 10", name="ck_ss_overall"),
         CheckConstraint("scored_message_count >= 0", name="ck_ss_scored_count"),

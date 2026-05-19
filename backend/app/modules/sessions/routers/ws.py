@@ -585,7 +585,6 @@ async def websocket_conversation(websocket: WebSocket):
                         llm=runtime_llm_clients.analysis,
                         max_tokens=settings.analysis_llm_max_tokens or 400,
                         turn_interval=settings.conversation_summary_turn_interval,
-                        summary_max_chars=settings.conversation_summary_max_chars,
                     )
                     async def generate_reply_stream(_: str):
                         nonlocal pending_natural_close

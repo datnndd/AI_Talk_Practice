@@ -112,10 +112,6 @@ class Settings(BaseSettings):
     evaluation_llm_max_tokens: int | None = Field(default=None, description="Maximum tokens for final session evaluation")
 
     # --- Hybrid Conversation Orchestration ---
-    conversation_summary_max_chars: int = Field(
-        default=900,
-        description="Maximum characters retained in the hybrid conversation rolling summary",
-    )
     conversation_summary_turn_interval: int = Field(
         default=8,
         description="Summarize hybrid conversation memory after this many learner turns",

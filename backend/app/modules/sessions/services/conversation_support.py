@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 SESSION_END_MARKER_RE = re.compile(r"^\s*\[\[SESSION_END=(yes|no)\]\][ \t]*(?:\r?\n)?", re.IGNORECASE)
 SESSION_END_MARKER_PREFIX = "[[SESSION_END="
-SESSION_END_MARKER_MAX_CHARS = 80
+SESSION_END_MARKER_LIMIT = 80
 
 def strip_session_end_marker(text: str) -> str:
     return SESSION_END_MARKER_RE.sub("", text or "", count=1).strip()
@@ -54,7 +54,6 @@ class FinalEvaluationPayload(BaseModel):
     fluency_score: float = Field(ge=0.0, le=10.0)
     grammar_score: float = Field(ge=0.0, le=10.0)
     vocabulary_score: float = Field(ge=0.0, le=10.0)
-    intonation_score: float = Field(ge=0.0, le=10.0)
     relevance_score: float = Field(ge=0.0, le=10.0)
     overall_score: float = Field(ge=0.0, le=10.0)
     objective_completion: str = "unknown"
@@ -97,7 +96,7 @@ class EndAwareReplyStream:
             may_still_be_marker = bool(normalized_buffer) and marker_prefix.lower() == normalized_buffer.lower()
             should_wait = (
                 not normalized_buffer
-                or (may_still_be_marker and len(buffer) < SESSION_END_MARKER_MAX_CHARS)
+            or (may_still_be_marker and len(buffer) < SESSION_END_MARKER_LIMIT)
                 or (normalized_buffer.upper().startswith(SESSION_END_MARKER_PREFIX) and "]]" not in normalized_buffer)
             )
             if should_wait and "\n" not in buffer and "\r" not in buffer:
@@ -248,22 +247,18 @@ class ConversationHintService:
         *,
         session,
         user_level: str | None = None,
-        user_text: str | None = None,
     ) -> LessonHintRead:
         del user_level
         current_question = session_current_question(session)
         system_prompt = build_hint_prompt(
             scenario=session.scenario,
-            rolling_summary=session_rolling_summary(session),
-            recent_turns=session_recent_turns_text(session, limit=10),
             current_question=current_question,
-            user_text=user_text,
         )
         payload = await _collect_json(
             self.llm,
             model=HintPayload,
             system_prompt=system_prompt,
-            user_text=user_text or current_question or session.scenario.title,
+            user_text=current_question or session.scenario.title,
             max_tokens=self.max_tokens,
         )
         hints = [payload.hint1, payload.hint2, payload.hint3]
@@ -314,11 +309,10 @@ class RealtimeCorrectionService:
 
 
 class ConversationSummaryService:
-    def __init__(self, *, llm: LLMBase, max_tokens: int = 400, turn_interval: int = 8, summary_max_chars: int = 600):
+    def __init__(self, *, llm: LLMBase, max_tokens: int = 400, turn_interval: int = 8):
         self.llm = llm
         self.max_tokens = max_tokens
         self.turn_interval = max(1, int(turn_interval))
-        self.summary_max_chars = max(120, int(summary_max_chars))
 
     def should_summarize(self, session) -> bool:
         turn_count = session_user_turn_count(session)
@@ -329,7 +323,6 @@ class ConversationSummaryService:
             scenario=session.scenario,
             previous_summary=session_rolling_summary(session),
             recent_turns=session_recent_turns_text(session, limit=16),
-            max_chars=self.summary_max_chars,
         )
         payload = await _collect_json(
             self.llm,
@@ -338,7 +331,7 @@ class ConversationSummaryService:
             user_text=session_recent_turns_text(session, limit=16) or session.scenario.title,
             max_tokens=self.max_tokens,
         )
-        return payload.summary[: self.summary_max_chars].strip()
+        return payload.summary.strip()
 
 
 class ConversationFinalEvaluationBuilder:

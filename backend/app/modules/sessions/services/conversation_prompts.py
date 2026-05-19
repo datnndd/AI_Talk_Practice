@@ -59,7 +59,6 @@ def build_summary_prompt(
     scenario: Any,
     previous_summary: str,
     recent_turns: str,
-    max_chars: int,
 ) -> str:
     return "\n".join(
         [
@@ -71,7 +70,6 @@ def build_summary_prompt(
             f"Learner role: {getattr(scenario, 'user_role', '') or 'English learner'}",
             f"Previous summary: {previous_summary or 'None'}",
             f"Recent turns:\n{recent_turns or 'None'}",
-            f"Keep the summary under {max_chars} characters.",
             "Capture only conversation context needed for future turns: completed tasks, user choices, scenario constraints, unresolved questions, and relevant situational details.",
             "Do not extract or infer long-term personal profile information.",
             'JSON schema: {"summary": "compact summary for future turns"}',
@@ -102,21 +100,16 @@ def build_realtime_correction_prompt(
 def build_hint_prompt(
     *,
     scenario: Any,
-    rolling_summary: str,
-    recent_turns: str,
     current_question: str,
-    user_text: str | None = None,
 ) -> str:
-    del rolling_summary
     return "\n".join(
         [
             "Create three short hints for a learner in an English speaking role-play.",
             "Return only one JSON object. Do not include markdown.",
             "Help the learner answer the assistant, not continue the assistant side.",
             f"Scenario: {scenario.title}",
-            f"Current question: {current_question or scenario.description}",
-            f"Recent turns: {recent_turns or 'None'}",
-            f"Learner draft: {user_text or 'None'}",
+            f"Scenario description: {scenario.description}",
+            f"Current question: {current_question}",
             "JSON schema: {",
             '  "hint1": "...",',
             '  "hint2": "...",',
@@ -147,7 +140,6 @@ def build_full_assessment_prompt(
             '  "fluency_score": 0.0,',
             '  "grammar_score": 0.0,',
             '  "vocabulary_score": 0.0,',
-            '  "intonation_score": 0.0,',
             '  "relevance_score": 0.0,',
             '  "overall_score": 0.0,',
             '  "objective_completion": "completed|partial|not_completed",',

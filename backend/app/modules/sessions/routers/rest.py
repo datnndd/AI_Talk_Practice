@@ -74,7 +74,7 @@ async def add_message(
 @router.post("/{session_id}/hint", response_model=LessonHintRead)
 async def build_session_hint(
     session_id: int,
-    body: SessionHintRequest,
+    _body: SessionHintRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -82,7 +82,6 @@ async def build_session_hint(
         db,
         session_id=session_id,
         user_id=user.id,
-        payload=body,
         user_level=user.level,
     )
 

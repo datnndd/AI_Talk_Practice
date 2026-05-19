@@ -43,17 +43,17 @@ def test_dialogue_prompt_includes_roles_summary_and_recent_turns():
     assert "Never mention, explain, or reveal the hidden marker" in prompt
 
 
-def test_summary_prompt_has_json_contract_and_length_limit():
+def test_summary_prompt_has_json_contract_and_context():
     prompt = build_summary_prompt(
         scenario=_scenario(),
         previous_summary="The learner said hello.",
         recent_turns="Learner: Is my coffee ready?\nAssistant: Let me check.",
-        max_chars=500,
     )
 
     assert "Return only one JSON object" in prompt
     assert '"summary"' in prompt
-    assert "Keep the summary under 500 characters" in prompt
+    assert "Previous summary: The learner said hello." in prompt
+    assert "Recent turns:" in prompt
 
 
 def test_realtime_correction_prompt_focuses_on_grammar_and_clarity_json():

@@ -42,7 +42,6 @@ def serialize_session_score(score: SessionScore) -> SessionScoreRead:
             "avg_fluency": score.avg_fluency,
             "avg_grammar": score.avg_grammar,
             "avg_vocabulary": score.avg_vocabulary,
-            "avg_intonation": score.avg_intonation,
             "relevance_score": score.relevance_score,
             "overall_score": score.overall_score,
             "scored_message_count": score.scored_message_count,

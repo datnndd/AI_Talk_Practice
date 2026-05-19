@@ -23,7 +23,6 @@ from app.modules.sessions.schemas.session import (
     RealtimeCorrectionResponse,
     SessionCreate,
     SessionFinishRequest,
-    SessionHintRequest,
 )
 from app.modules.sessions.services.conversation_support import ConversationHintService, RealtimeCorrectionService
 from app.modules.sessions.services.final_evaluation import SessionFinalEvaluationService
@@ -167,21 +166,19 @@ class SessionService:
         *,
         session_id: int,
         user_id: int,
-        payload: SessionHintRequest,
         user_level: str | None = None,
     ) -> LessonHintRead:
         session = await SessionRepository.get_by_id_for_user(db, session_id, user_id, full=True)
         if session is None:
             raise NotFoundError("Session not found")
 
-        text = await SessionService._resolve_user_text(db, session=session, payload=payload)
         llm = create_llm_for_role(settings, LLMRole.DIALOGUE)
         try:
             service = ConversationHintService(
                 llm=llm,
                 max_tokens=settings.lesson_hint_llm_max_tokens or 700,
             )
-            return await service.build_hint(session=session, user_level=user_level, user_text=text)
+            return await service.build_hint(session=session, user_level=user_level)
         finally:
             await llm.close()
 
@@ -302,21 +299,6 @@ class SessionService:
         if session is None:
             return
         await SessionService._run_final_evaluation_if_needed(db, session=session)
-
-    @staticmethod
-    async def _resolve_user_text(db: AsyncSession, *, session: Session, payload: SessionHintRequest) -> str | None:
-        if payload.text and payload.text.strip():
-            return payload.text.strip()
-        if payload.message_id is None:
-            return None
-        message = await SessionRepository.get_message_for_session(
-            db,
-            session_id=session.id,
-            message_id=payload.message_id,
-        )
-        if message is None or message.role != "user":
-            raise BadRequestError("Message does not belong to this session or is not a learner message")
-        return message.content.strip()
 
     @staticmethod
     async def _finalize_session(

@@ -23,8 +23,7 @@ class MessageRealtimeFeedbackRead(ORMModel):
 
 
 class SessionHintRequest(BaseModel):
-    message_id: int | None = None
-    text: str | None = None
+    pass
 
 
 class RealtimeCorrectionRequest(BaseModel):
@@ -61,7 +60,6 @@ class SessionScoreRead(ORMModel):
     avg_fluency: float
     avg_grammar: float
     avg_vocabulary: float
-    avg_intonation: float
     relevance_score: float
     overall_score: float
     scored_message_count: int

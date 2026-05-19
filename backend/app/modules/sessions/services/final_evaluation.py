@@ -49,7 +49,6 @@ class SessionFinalEvaluationService:
             "fluency": {"avg": payload.fluency_score},
             "grammar": {"avg": payload.grammar_score},
             "vocabulary": {"avg": payload.vocabulary_score},
-            "intonation": {"avg": payload.intonation_score},
             "relevance": {"avg": payload.relevance_score},
         }
         metadata = {
@@ -69,7 +68,6 @@ class SessionFinalEvaluationService:
                 "avg_fluency": payload.fluency_score,
                 "avg_grammar": payload.grammar_score,
                 "avg_vocabulary": payload.vocabulary_score,
-                "avg_intonation": payload.intonation_score,
                 "relevance_score": payload.relevance_score,
                 "overall_score": payload.overall_score,
                 "scored_message_count": len(user_messages),

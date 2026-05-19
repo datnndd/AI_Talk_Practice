@@ -80,11 +80,8 @@ export const practiceApi = {
     const { data } = await httpClient.post(`/sessions/${sessionId}/end`, payload);
     return data;
   },
-  getLessonHint: async ({ sessionId, text, messageId }) => {
-    const { data } = await httpClient.post(`/sessions/${sessionId}/hint`, {
-      ...(messageId ? { message_id: messageId } : {}),
-      ...(text ? { text } : {}),
-    });
+  getLessonHint: async ({ sessionId }) => {
+    const { data } = await httpClient.post(`/sessions/${sessionId}/hint`, {});
     return data;
   },
   translate: async ({ text, targetLanguage }) => {

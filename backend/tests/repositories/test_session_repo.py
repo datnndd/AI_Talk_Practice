@@ -59,7 +59,6 @@ async def test_upsert_session_score(db_session, test_session):
         "avg_fluency": 7.0,
         "avg_grammar": 9.0,
         "avg_vocabulary": 8.0,
-        "avg_intonation": 7.5,
         "relevance_score": 8.0,
         "scored_message_count": 5
     }
