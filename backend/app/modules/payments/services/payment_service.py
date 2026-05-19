@@ -39,14 +39,41 @@ DEFAULT_SUBSCRIPTION_PLANS = [
 class PaymentService:
     @classmethod
     def _stripe_to_plain_data(cls, value: Any) -> Any:
-        if hasattr(value, "to_dict_recursive"):
-            return cls._stripe_to_plain_data(value.to_dict_recursive())
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
         if isinstance(value, dict):
             return {str(key): cls._stripe_to_plain_data(item) for key, item in value.items()}
         if isinstance(value, (list, tuple)):
             return [cls._stripe_to_plain_data(item) for item in value]
-        if value is None or isinstance(value, (str, int, float, bool)):
-            return value
+
+        for method_name in ("to_dict_recursive", "to_dict"):
+            try:
+                converter = getattr(value, method_name)
+            except (AttributeError, KeyError, TypeError):
+                continue
+            if callable(converter):
+                try:
+                    return cls._stripe_to_plain_data(converter())
+                except (AttributeError, KeyError, TypeError):
+                    continue
+
+        try:
+            raw_data = getattr(value, "_data")
+        except (AttributeError, KeyError, TypeError):
+            raw_data = None
+        if isinstance(raw_data, dict):
+            return cls._stripe_to_plain_data(raw_data)
+
+        try:
+            items = value.items()
+        except (AttributeError, KeyError, TypeError):
+            items = None
+        if items is not None:
+            try:
+                return {str(key): cls._stripe_to_plain_data(item) for key, item in items}
+            except (AttributeError, KeyError, TypeError):
+                pass
+
         return str(value)
 
     @classmethod
@@ -173,9 +200,25 @@ class PaymentService:
         if payment is None or payment.user_id != user.id:
             raise NotFoundError("Payment transaction not found.")
         if payment.provider == "stripe" and payment.status == "pending" and payment.external_checkout_id:
-            session_payload = cls._stripe_to_plain_data(
-                cls._retrieve_stripe_checkout_session(payment.external_checkout_id)
-            )
+            try:
+                session_payload = cls._stripe_to_plain_data(
+                    cls._retrieve_stripe_checkout_session(payment.external_checkout_id)
+                )
+            except Exception:
+                logger.exception(
+                    "Stripe payment reconcile failed order_code=%s checkout_id=%s",
+                    payment.order_code,
+                    payment.external_checkout_id,
+                )
+                return payment
+            if not isinstance(session_payload, dict):
+                logger.error(
+                    "Stripe payment reconcile returned non-object payload order_code=%s checkout_id=%s payload_type=%s",
+                    payment.order_code,
+                    payment.external_checkout_id,
+                    type(session_payload).__name__,
+                )
+                return payment
             payment = await cls._sync_stripe_payment_from_session(
                 db,
                 payment=payment,
@@ -434,13 +477,30 @@ class PaymentService:
         signature: str,
     ) -> dict[str, Any]:
         event = cls._construct_stripe_event(payload, signature)
-        event_id = str(event.get("id"))
-        event_type = str(event.get("type"))
+        event_payload = cls._stripe_to_plain_data(event)
+        if not isinstance(event_payload, dict):
+            logger.error(
+                "Stripe webhook event payload is not an object payload_type=%s",
+                type(event_payload).__name__,
+            )
+            raise BadRequestError("Invalid Stripe webhook event payload.")
+
+        event_id = str(event_payload.get("id"))
+        event_type = str(event_payload.get("type"))
 
         if await cls._get_processed_event(db, provider="stripe", event_id=event_id):
             return {"received": True, "duplicate": True}
 
-        event_object = cls._stripe_to_plain_data(event.get("data", {}).get("object", {}))
+        event_data = event_payload.get("data") or {}
+        event_object = cls._stripe_to_plain_data(event_data.get("object", {}) if isinstance(event_data, dict) else {})
+        if not isinstance(event_object, dict):
+            logger.error(
+                "Stripe webhook event object is not an object event_id=%s event_type=%s payload_type=%s",
+                event_id,
+                event_type,
+                type(event_object).__name__,
+            )
+            raise BadRequestError("Invalid Stripe webhook object payload.")
         checkout_id = str(event_object.get("id") or "")
         payment = None
         session_payload: dict[str, Any] = event_object
@@ -455,6 +515,15 @@ class PaymentService:
                     raise BadRequestError("Stripe webhook missing checkout session id.")
 
                 session_payload = cls._stripe_to_plain_data(cls._retrieve_stripe_checkout_session(checkout_id))
+                if not isinstance(session_payload, dict):
+                    logger.error(
+                        "Stripe checkout session payload is not an object event_id=%s event_type=%s checkout_id=%s payload_type=%s",
+                        event_id,
+                        event_type,
+                        checkout_id,
+                        type(session_payload).__name__,
+                    )
+                    raise BadRequestError("Invalid Stripe checkout session payload.")
                 metadata = session_payload.get("metadata") or {}
                 order_code = str(metadata.get("payment_order_code") or "")
                 if payment is None and order_code:
