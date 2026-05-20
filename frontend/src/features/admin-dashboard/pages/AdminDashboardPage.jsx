@@ -68,14 +68,14 @@ const buildSmoothPath = (points) => {
 const AreaTrendChart = ({ items = [], valueKey, currency, emptyText, titleFormatter, valueFormatter }) => {
   const maxValue = Math.max(...items.map((item) => item[valueKey] || 0), 0);
   if (maxValue <= 0) {
-    return <div className="flex h-56 items-center justify-center rounded-[24px] bg-muted text-sm font-bold text-[var(--page-muted)]">{emptyText}</div>;
+    return <div className="flex h-80 items-center justify-center rounded-[24px] bg-muted text-sm font-bold text-[var(--page-muted)]">{emptyText}</div>;
   }
 
   const width = Math.max(items.length * 42, 720);
-  const height = 220;
-  const padding = { top: 28, right: 34, bottom: 42, left: 44 };
+  const height = 300;
+  const padding = { top: 34, right: 34, bottom: 54, left: 44 };
   const chartWidth = width - padding.left - padding.right;
-  const chartHeight = 138;
+  const chartHeight = height - padding.top - padding.bottom;
   const baselineY = padding.top + chartHeight;
   const safeItemsLength = Math.max(items.length - 1, 1);
   const points = items.map((item, index) => {
@@ -94,7 +94,7 @@ const AreaTrendChart = ({ items = [], valueKey, currency, emptyText, titleFormat
 
   return (
     <div className="overflow-x-auto rounded-[24px] bg-muted p-3">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-56 min-w-[720px] w-full" role="img" aria-label="Dashboard chart">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-80 min-w-[720px] w-full" role="img" aria-label="Dashboard chart">
         <defs>
           <linearGradient id={`${chartId}-fill`} x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" className="text-primary" stopColor="currentColor" stopOpacity="0.24" />
@@ -131,7 +131,7 @@ const AreaTrendChart = ({ items = [], valueKey, currency, emptyText, titleFormat
         {tickIndexes.map((index) => {
           const point = points[index];
           return (
-            <text key={`${point.item.label}-${index}`} x={point.x} y="202" textAnchor="middle" className="fill-[var(--page-muted)] text-[10px] font-bold">
+            <text key={`${point.item.label}-${index}`} x={point.x} y={height - 18} textAnchor="middle" className="fill-[var(--page-muted)] text-[10px] font-bold">
               {point.item.label}
             </text>
           );
@@ -262,7 +262,7 @@ const AdminDashboardPage = () => {
 
         {!isLoading && dashboard && (
           <>
-            <div className="grid gap-6 xl:grid-cols-2">
+            <div>
               <ChartCard eyebrow="Revenue Trend" title="Doanh thu đã thanh toán">
                 <AreaTrendChart
                   items={dashboard.revenue_trend}

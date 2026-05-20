@@ -161,7 +161,6 @@ const ScenarioCard = ({ scenario, hasProAccess }) => {
 
 const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = "", hasProAccess = false }) => {
   const [query, setQuery] = useState("");
-  const [difficulty, setDifficulty] = useState("all");
   const [category, setCategory] = useState("all");
   const [groupPages, setGroupPages] = useState({});
 
@@ -182,18 +181,17 @@ const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = ""
         || scenario.title?.toLowerCase().includes(normalizedQuery)
         || scenario.description?.toLowerCase().includes(normalizedQuery)
         || formatCategory(scenario.category).toLowerCase().includes(normalizedQuery);
-      const matchesDifficulty = difficulty === "all" || normalizeDifficulty(scenario.difficulty) === difficulty;
       const matchesCategory = category === "all" || scenario.category === category;
-      return matchesQuery && matchesDifficulty && matchesCategory;
+      return matchesQuery && matchesCategory;
     });
-  }, [category, difficulty, normalizedScenarios, query]);
+  }, [category, normalizedScenarios, query]);
 
   const groupedScenarios = useMemo(
     () => DIFFICULTY_GROUPS.map((group) => ({
       ...group,
       scenarios: filteredScenarios.filter((scenario) => normalizeDifficulty(scenario.difficulty) === group.key),
-    })).filter((group) => difficulty === "all" || group.key === difficulty),
-    [difficulty, filteredScenarios],
+    })),
+    [filteredScenarios],
   );
 
   const getGroupPage = (groupKey, totalPages) =>
@@ -212,13 +210,13 @@ const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = ""
           </div>
           <h2 className="mt-5 text-4xl font-black tracking-tight md:text-5xl">Chọn bối cảnh, vào vai, nói thật tự nhiên</h2>
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/70">
-            Lọc kịch bản theo cấp độ và chủ đề, xem nhiệm vụ trước khi bước vào phòng hội thoại AI.
+            Lọc kịch bản theo chủ đề, xem nhiệm vụ trước khi bước vào phòng hội thoại AI.
           </p>
         </div>
       </div>
 
       <div className="rounded-[30px] border border-border bg-card p-4 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_190px_220px]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
           <label className="relative block">
             <MagnifyingGlass size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -228,10 +226,6 @@ const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = ""
               className="w-full rounded-2xl border border-border bg-muted px-11 py-3 text-sm font-semibold outline-none transition focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]"
             />
           </label>
-          <select value={difficulty} onChange={(event) => setDifficulty(event.target.value)} className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm font-black outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]">
-            <option value="all">All levels</option>
-            {DIFFICULTY_GROUPS.map((group) => <option key={group.key} value={group.key}>{group.title}</option>)}
-          </select>
           <select value={category} onChange={(event) => setCategory(event.target.value)} className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm font-black outline-none focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)]">
             <option value="all">All topics</option>
             {categories.map((item) => <option key={item} value={item}>{formatCategory(item)}</option>)}
