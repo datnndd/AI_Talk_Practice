@@ -6,10 +6,33 @@ import fallbackScenarioImage from "@/assets/buddy_talk_logo.jpg";
 import { practiceApi } from "@/features/practice/api/practiceApi";
 import { getApiBaseUrl } from "@/shared/api/httpClient";
 
+const SCENARIOS_PER_GROUP_PAGE = 3;
+
 const DIFFICULTY_GROUPS = [
-  { key: "easy", title: "Mới bắt đầu", badge: "Easy", accent: "from-emerald-500 to-lime-400", chip: "bg-emerald-100 text-emerald-700" },
-  { key: "medium", title: "Trung cấp", badge: "Medium", accent: "from-amber-500 to-orange-400", chip: "bg-amber-100 text-amber-700" },
-  { key: "hard", title: "Nâng cao", badge: "Hard", accent: "from-rose-500 to-pink-500", chip: "bg-rose-100 text-rose-700" },
+  {
+    key: "easy",
+    title: "Easy",
+    subtitle: "Chủ đề dễ, câu ngắn, phù hợp để khởi động.",
+    badge: "Easy",
+    accent: "from-emerald-500 to-lime-400",
+    chip: "bg-emerald-100 text-emerald-700",
+  },
+  {
+    key: "medium",
+    title: "Medium",
+    subtitle: "Tình huống trung bình, cần giải thích và hỏi thêm thông tin.",
+    badge: "Medium",
+    accent: "from-amber-500 to-orange-400",
+    chip: "bg-amber-100 text-amber-700",
+  },
+  {
+    key: "hard",
+    title: "Hard",
+    subtitle: "Kịch bản khó, cần phản hồi linh hoạt và lập luận rõ.",
+    badge: "Hard",
+    accent: "from-rose-500 to-pink-500",
+    chip: "bg-rose-100 text-rose-700",
+  },
 ];
 
 const formatCategory = (category = "") =>
@@ -140,6 +163,7 @@ const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = ""
   const [query, setQuery] = useState("");
   const [difficulty, setDifficulty] = useState("all");
   const [category, setCategory] = useState("all");
+  const [groupPages, setGroupPages] = useState({});
 
   const normalizedScenarios = useMemo(
     () => (Array.isArray(scenarios) ? scenarios : []),
@@ -163,6 +187,21 @@ const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = ""
       return matchesQuery && matchesDifficulty && matchesCategory;
     });
   }, [category, difficulty, normalizedScenarios, query]);
+
+  const groupedScenarios = useMemo(
+    () => DIFFICULTY_GROUPS.map((group) => ({
+      ...group,
+      scenarios: filteredScenarios.filter((scenario) => normalizeDifficulty(scenario.difficulty) === group.key),
+    })).filter((group) => difficulty === "all" || group.key === difficulty),
+    [difficulty, filteredScenarios],
+  );
+
+  const getGroupPage = (groupKey, totalPages) =>
+    Math.min(Math.max(Number(groupPages[groupKey]) || 1, 1), totalPages);
+
+  const setGroupPage = (groupKey, nextPage) => {
+    setGroupPages((current) => ({ ...current, [groupKey]: nextPage }));
+  };
 
   return (
     <section className="relative mb-8 mt-12 space-y-6">
@@ -215,8 +254,73 @@ const ScenarioPlaylistSection = ({ scenarios = [], isLoading = false, error = ""
       ) : null}
 
       {!isLoading && !error && filteredScenarios.length > 0 ? (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {filteredScenarios.map((scenario) => <ScenarioCard key={scenario.id} scenario={scenario} hasProAccess={hasProAccess} />)}
+        <div className="space-y-8">
+          {groupedScenarios.map((group) => (
+            <section key={group.key} className="overflow-hidden rounded-[30px] border border-border bg-card shadow-sm">
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil(group.scenarios.length / SCENARIOS_PER_GROUP_PAGE));
+                const currentPage = getGroupPage(group.key, totalPages);
+                const pageScenarios = group.scenarios.slice(
+                  (currentPage - 1) * SCENARIOS_PER_GROUP_PAGE,
+                  currentPage * SCENARIOS_PER_GROUP_PAGE,
+                );
+
+                return (
+                  <>
+              <div className="flex flex-col gap-3 border-b border-border p-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className={`mt-1 h-11 w-2 rounded-full bg-gradient-to-b ${group.accent}`} />
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-2xl font-black tracking-tight text-foreground">{group.title}</h3>
+                      <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${group.chip}`}>
+                        {group.scenarios.length} kịch bản
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm font-semibold text-muted-foreground">{group.subtitle}</p>
+                  </div>
+                </div>
+                {totalPages > 1 ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGroupPage(group.key, currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="rounded-xl border border-border px-3 py-2 text-xs font-black text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Trước
+                    </button>
+                    <span className="rounded-xl bg-muted px-3 py-2 text-xs font-black text-foreground">
+                      {currentPage}/{totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setGroupPage(group.key, currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="rounded-xl border border-border px-3 py-2 text-xs font-black text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Sau
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              {group.scenarios.length > 0 ? (
+                <div className="grid gap-5 p-5 md:grid-cols-2 xl:grid-cols-3">
+                  {pageScenarios.map((scenario) => (
+                    <ScenarioCard key={scenario.id} scenario={scenario} hasProAccess={hasProAccess} />
+                  ))}
+                </div>
+              ) : (
+                <div className="px-5 py-8 text-sm font-semibold text-muted-foreground">
+                  Không có kịch bản phù hợp trong nhóm {group.title}.
+                </div>
+              )}
+                  </>
+                );
+              })()}
+            </section>
+          ))}
         </div>
       ) : null}
     </section>

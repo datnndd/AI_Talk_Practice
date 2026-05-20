@@ -287,9 +287,14 @@ class RealtimeCorrectionService:
         self,
         *,
         scenario_title: str,
+        current_question: str,
         text: str,
     ) -> RealtimeCorrectionResponse:
-        system_prompt = build_realtime_correction_prompt(scenario_title=scenario_title, text=text)
+        system_prompt = build_realtime_correction_prompt(
+            scenario_title=scenario_title,
+            current_question=current_question,
+            text=text,
+        )
         try:
             payload = await _collect_json(
                 self.llm,

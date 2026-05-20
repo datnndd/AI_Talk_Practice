@@ -99,14 +99,17 @@ def build_summary_prompt(
 def build_realtime_correction_prompt(
     *,
     scenario_title: str,
+    current_question: str,
     text: str,
 ) -> str:
     return "\n".join(
         [
             "Judge one learner utterance from an English speaking practice session.",
             "Return only one JSON object. Do not include markdown.",
-            "Decide if the answer is good enough for the scenario. Ignore tiny style issues unless they affect meaning.",
+            "Decide if the learner answer is good enough for the current question and scenario. Ignore tiny style issues unless they affect meaning.",
+            "Base better_answer on the current question. It should be a natural learner answer to that question.",
             f"Scenario: {scenario_title}",
+            f"Current question: {current_question.strip()}",
             f"Learner text: {text.strip()}",
             "JSON schema: {",
             '  "is_good": true,',

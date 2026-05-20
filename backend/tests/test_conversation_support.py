@@ -36,7 +36,11 @@ async def test_realtime_correction_retries_once_after_invalid_json():
     )
     service = RealtimeCorrectionService(llm=llm, max_tokens=300)
 
-    response = await service.correct(scenario_title="Greeting", text="Hello good morning")
+    response = await service.correct(
+        scenario_title="Greeting",
+        current_question="How can I help you today?",
+        text="Hello good morning",
+    )
 
     assert response.is_good is False
     assert response.better_answer == "Hello. Good morning."
@@ -54,7 +58,11 @@ async def test_realtime_correction_falls_back_to_partial_corrected_text_when_jso
     )
     service = RealtimeCorrectionService(llm=llm, max_tokens=300)
 
-    response = await service.correct(scenario_title="Greeting", text="Hello good morning")
+    response = await service.correct(
+        scenario_title="Greeting",
+        current_question="How can I help you today?",
+        text="Hello good morning",
+    )
 
     assert response.is_good is True
     assert response.better_answer == "Hello. Good morning."

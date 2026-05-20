@@ -62,10 +62,12 @@ def test_summary_prompt_has_json_contract_and_context():
 def test_realtime_correction_prompt_focuses_on_grammar_and_clarity_json():
     prompt = build_realtime_correction_prompt(
         scenario_title="Coffee Shop Delay",
+        current_question="Could you tell me what you ordered?",
         text="I wait coffee long time.",
     )
 
-    assert "Decide if the answer is good enough" in prompt
+    assert "Decide if the learner answer is good enough" in prompt
+    assert "Could you tell me what you ordered?" in prompt
     assert "I wait coffee long time." in prompt
     assert '"is_good"' in prompt
     assert '"better_answer"' in prompt

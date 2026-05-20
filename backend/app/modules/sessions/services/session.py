@@ -24,7 +24,11 @@ from app.modules.sessions.schemas.session import (
     SessionCreate,
     SessionFinishRequest,
 )
-from app.modules.sessions.services.conversation_support import ConversationHintService, RealtimeCorrectionService
+from app.modules.sessions.services.conversation_support import (
+    ConversationHintService,
+    RealtimeCorrectionService,
+    session_current_question,
+)
 from app.modules.sessions.services.final_evaluation import SessionFinalEvaluationService
 from app.modules.scenarios.services.scenario_service import user_is_vip
 from app.modules.users.models.user import User
@@ -214,7 +218,11 @@ class SessionService:
                 llm=llm,
                 max_tokens=settings.analysis_llm_max_tokens or 700,
             )
-            response = await service.correct(scenario_title=session.scenario.title, text=text)
+            response = await service.correct(
+                scenario_title=session.scenario.title,
+                current_question=session_current_question(session),
+                text=text,
+            )
         finally:
             await llm.close()
 
