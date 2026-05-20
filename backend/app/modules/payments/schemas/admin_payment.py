@@ -54,11 +54,6 @@ class AdminPaymentTransactionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PaymentVolumeBucketRead(BaseModel):
-    label: str
-    period_start: datetime
-    transactions: int
-
 class PaymentStatusBreakdownRead(BaseModel):
     status: str
     transactions: int
@@ -74,7 +69,6 @@ class PaymentDashboardRead(BaseModel):
     currency: str = "VND"
     overview: PaymentOverviewRead
     revenue_trend: list[PaymentStatsBucketRead]
-    transaction_volume: list[PaymentVolumeBucketRead]
     status_breakdown: list[PaymentStatusBreakdownRead]
     plan_revenue_split: list[PaymentPlanRevenueRead]
     recent_payments: list[AdminPaymentTransactionRead]

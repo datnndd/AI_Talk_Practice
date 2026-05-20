@@ -15,7 +15,6 @@ from app.modules.payments.schemas.admin_payment import PaymentPlanRevenueRead
 from app.modules.payments.schemas.admin_payment import PaymentStatsBucketRead
 from app.modules.payments.schemas.admin_payment import PaymentStatsRead
 from app.modules.payments.schemas.admin_payment import PaymentStatusBreakdownRead
-from app.modules.payments.schemas.admin_payment import PaymentVolumeBucketRead
 from app.modules.payments.serializers import serialize_admin_payment_transaction
 from app.modules.payments.services.payment_service import PaymentService
 from app.modules.users.models.user import User
@@ -182,20 +181,6 @@ class AdminPaymentService:
 
         overview = await cls.get_overview(db)
         revenue_stats = await cls.get_revenue_stats(db, period)
-        buckets = cls._build_stat_buckets(period)
-        earliest_bucket = buckets[0][1]
-        volume_totals = {bucket_start: 0 for _, bucket_start in buckets}
-
-        volume_rows = (
-            await db.execute(
-                select(PaymentTransaction.created_at)
-                .where(PaymentTransaction.created_at >= earliest_bucket)
-            )
-        ).all()
-        for (created_at,) in volume_rows:
-            bucket_start = cls._bucket_key(created_at, period)
-            if bucket_start in volume_totals:
-                volume_totals[bucket_start] += 1
 
         status_rows = (
             await db.execute(
@@ -231,10 +216,6 @@ class AdminPaymentService:
             currency="VND",
             overview=overview,
             revenue_trend=revenue_stats.items,
-            transaction_volume=[
-                PaymentVolumeBucketRead(label=label, period_start=bucket_start, transactions=volume_totals[bucket_start])
-                for label, bucket_start in buckets
-            ],
             status_breakdown=[
                 PaymentStatusBreakdownRead(status=status, transactions=status_totals.get(status, 0))
                 for status in ("paid", "pending", "failed", "cancelled")
