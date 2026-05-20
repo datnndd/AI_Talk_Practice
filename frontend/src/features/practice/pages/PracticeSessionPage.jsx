@@ -81,6 +81,37 @@ const appendMessageAudioChunk = (messages, messageId, chunk) => messages.map((me
   };
 });
 
+const updateMessageServerAudio = (messages, messageId, payload) => messages.map((message) => {
+  if (message.id !== messageId) {
+    return message;
+  }
+
+  return {
+    ...message,
+    serverMessageId: payload.message_id ?? message.serverMessageId,
+    orderIndex: payload.order_index ?? message.orderIndex,
+    audio: {
+      ...(message.audio || { chunks: [], sampleRate: 24000 }),
+      url: payload.audio_url || message.audio?.url || "",
+    },
+  };
+});
+
+const updateMessageAudioUrl = (messages, payload) => messages.map((message) => {
+  if (message.serverMessageId !== payload.message_id) {
+    return message;
+  }
+
+  return {
+    ...message,
+    audio: {
+      ...(message.audio || { chunks: [], sampleRate: payload.role === "user" ? 16000 : 24000 }),
+      role: payload.role || message.audio?.role || message.role,
+      url: payload.audio_url || message.audio?.url || "",
+    },
+  };
+});
+
 const PracticeSession = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -475,11 +506,57 @@ const PracticeSession = () => {
     }
   }, [ensureAudioContext, scheduleLipSyncFrames, stopAssistantPlayback]);
 
+  const playAudioUrl = useCallback(async (url, { withLipSync = false } = {}) => {
+    if (!url) {
+      return;
+    }
+
+    stopAssistantPlayback();
+    try {
+      const audioContext = await ensureAudioContext();
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Unable to load replay audio.");
+      }
+      const audioData = await response.arrayBuffer();
+      const buffer = await audioContext.decodeAudioData(audioData);
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+
+      const currentTime = audioContext.currentTime;
+      const startAt = playbackCursorRef.current > currentTime
+        ? playbackCursorRef.current
+        : currentTime + PLAYBACK_JITTER_BUFFER_SECONDS;
+      source.start(startAt);
+      playbackCursorRef.current = startAt + buffer.duration;
+      if (withLipSync) {
+        scheduleLipSyncFrames(buildLipSyncFrames(buffer.getChannelData(0), buffer.sampleRate), startAt, audioContext);
+      }
+      playbackSourcesRef.current.add(source);
+      source.onended = () => {
+        playbackSourcesRef.current.delete(source);
+        source.disconnect();
+      };
+    } catch (error) {
+      console.warn("Web Audio replay failed; falling back to browser audio element.", error);
+      const element = new Audio(url);
+      void element.play();
+    }
+  }, [ensureAudioContext, scheduleLipSyncFrames, stopAssistantPlayback]);
+
   const handleReplayAudio = useCallback((audio) => {
+    if (audio?.url) {
+      void playAudioUrl(audio.url, {
+        withLipSync: audio?.role === "assistant",
+      });
+      return;
+    }
+
     void playPcmChunks(audio?.chunks || [], audio?.sampleRate || 24000, {
       withLipSync: audio?.role === "assistant",
     });
-  }, [playPcmChunks]);
+  }, [playAudioUrl, playPcmChunks]);
 
   const handleSocketMessage = useCallback(async (event) => {
     let payload;
@@ -627,6 +704,14 @@ const PracticeSession = () => {
         recordingStateRef.current = "idle";
         setRecordingState("idle");
         break;
+      case "assistant_message_saved":
+        if (latestAssistantMessageIdRef.current) {
+          setMessages((current) => updateMessageServerAudio(current, latestAssistantMessageIdRef.current, payload));
+        }
+        break;
+      case "message_audio_saved":
+        setMessages((current) => updateMessageAudioUrl(current, payload));
+        break;
       case "message_correction":
         setMessages((current) => {
           const hasMessage = current.some((message) => message.serverMessageId === payload.message_id);
@@ -660,7 +745,6 @@ const PracticeSession = () => {
         recordingStateRef.current = "idle";
         setConnectionState("closed");
         setRecordingState("idle");
-        navigate(resultUrl);
         break;
       }
       case "assistant_interrupted":
@@ -1089,7 +1173,11 @@ const PracticeSession = () => {
               isHintLoading={isHintLoading}
               onRequestHint={handleRequestHint}
               analysisResultUrl={analysisResultUrl}
-              onViewAnalysis={() => navigate(analysisResultUrl)}
+              onViewAnalysis={() => {
+                if (analysisResultUrl) {
+                  navigate(analysisResultUrl);
+                }
+              }}
             />
         </section>
 

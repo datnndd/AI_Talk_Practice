@@ -73,7 +73,14 @@ const MessageBubble = ({
   const [translation, setTranslation] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationError, setTranslationError] = useState("");
-  const hasReplayAudio = Boolean(audio?.chunks?.length && onReplayAudio && !isLive && !isNotice);
+  const hasReplayAudio = Boolean((audio?.chunks?.length || audio?.url) && onReplayAudio && !isLive && !isNotice);
+  const canTranslate = Boolean(isAI && !isLive && !isNotice && !translation);
+  const actionCount = Number(hasReplayAudio) + Number(canTranslate);
+  const actionPaddingClass = actionCount >= 2
+    ? (isAI ? "pr-20" : "pl-20")
+    : actionCount === 1
+      ? (isAI ? "pr-12" : "pl-12")
+      : "";
 
   const handleTranslate = async () => {
     if (translation || isTranslating || isLive) return;
@@ -101,36 +108,43 @@ const MessageBubble = ({
 
     <div className="flex max-w-[75%] flex-col gap-2">
       <div
-        className={`relative rounded-2xl p-3.5 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.8)] group ${bubbleClass} ${isLive ? "border border-dashed border-current/30" : ""}`}
+        className={`group relative rounded-2xl p-3.5 ${actionPaddingClass} shadow-[0_16px_40px_-28px_rgba(15,23,42,0.8)] ${bubbleClass} ${isLive ? "border border-dashed border-current/30" : ""}`}
       >
         <p className={`text-sm font-medium leading-relaxed ${isLive ? "italic opacity-70" : ""}`}>{content}</p>
-        
-        {hasReplayAudio && (
-          <button
-            type="button"
-            onClick={() => onReplayAudio(audio)}
-            title={isAI ? "Nghe lại giọng AI" : "Nghe lại giọng của bạn"}
-            className={`absolute top-2 rounded-full p-2 opacity-0 transition-opacity group-hover:opacity-100 ${
-              isAI
-                ? "-right-10 text-[var(--page-muted)] hover:bg-white/10 hover:text-primary"
-                : "-left-10 text-[var(--page-muted)] hover:bg-primary/10 hover:text-primary"
-            }`}
-          >
-            <SpeakerHigh size={18} weight="bold" />
-          </button>
-        )}
 
-        {isAI && !isLive && !isNotice && !translation && (
-          <button
-            onClick={handleTranslate}
-            disabled={isTranslating}
-            title="Dịch câu này"
-            className={`absolute -right-10 rounded-full p-2 text-[var(--page-muted)] opacity-0 transition-opacity hover:bg-white/10 hover:text-primary group-hover:opacity-100 disabled:opacity-50 ${
-              hasReplayAudio ? "top-11" : "top-2"
+        {actionCount > 0 && (
+          <div
+            className={`absolute top-2 z-10 flex gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 ${
+              isAI ? "right-2" : "left-2"
             }`}
           >
-            {isTranslating ? <CircleNotch size={18} className="animate-spin" /> : <Translate size={18} />}
-          </button>
+            {hasReplayAudio && (
+              <button
+                type="button"
+                onClick={() => onReplayAudio(audio)}
+                title={isAI ? "Nghe lại giọng AI" : "Nghe lại giọng của bạn"}
+                className={`grid h-8 w-8 place-items-center rounded-full transition disabled:opacity-50 ${
+                  isAI
+                    ? "bg-card/80 text-[var(--page-muted)] hover:bg-white hover:text-primary"
+                    : "bg-white/20 text-white hover:bg-white/30"
+                }`}
+              >
+                <SpeakerHigh size={18} weight="bold" />
+              </button>
+            )}
+
+            {canTranslate && (
+              <button
+                type="button"
+                onClick={handleTranslate}
+                disabled={isTranslating}
+                title="Dịch câu này"
+                className="grid h-8 w-8 place-items-center rounded-full bg-card/80 text-[var(--page-muted)] transition hover:bg-white hover:text-primary disabled:opacity-50"
+              >
+                {isTranslating ? <CircleNotch size={18} className="animate-spin" /> : <Translate size={18} />}
+              </button>
+            )}
+          </div>
         )}
       </div>
       

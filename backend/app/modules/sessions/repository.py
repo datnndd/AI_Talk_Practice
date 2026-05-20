@@ -211,6 +211,22 @@ class SessionRepository:
         return result.unique().scalar_one()
 
     @staticmethod
+    async def update_message_audio_url(
+        db: AsyncSession,
+        *,
+        message_id: int,
+        audio_url: str,
+    ) -> Message | None:
+        stmt = select(Message).where(Message.id == message_id)
+        result = await db.execute(stmt)
+        message = result.scalar_one_or_none()
+        if message is None:
+            return None
+        message.audio_url = audio_url
+        await db.flush()
+        return message
+
+    @staticmethod
     async def upsert_message_realtime_feedback(
         db: AsyncSession,
         *,

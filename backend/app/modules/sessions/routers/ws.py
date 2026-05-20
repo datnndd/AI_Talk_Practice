@@ -24,6 +24,7 @@ from app.infra.supabase_storage import supabase_storage
 from app.modules.sessions.schemas.session import MessageCreate, RealtimeCorrectionRequest, SessionCreate
 from app.modules.sessions.serializers import get_session_character_payload
 from app.modules.auth.services.auth_service import AuthService
+from app.modules.sessions.repository import SessionRepository
 from app.modules.sessions.services.conversation import ConversationSession
 from app.modules.sessions.services.conversation_support import (
     ConversationReplyService,
@@ -255,6 +256,44 @@ async def websocket_conversation(websocket: WebSocket):
             trace("audio_upload_error", folder=folder, audio_bytes=len(audio_bytes))
             return None
 
+    def schedule_audio_upload(
+        *,
+        message_id: int,
+        role: str,
+        chunks: list[bytes],
+        folder: str,
+        sample_rate: int,
+    ) -> None:
+        if not chunks:
+            return
+
+        async def run() -> None:
+            audio_url = await upload_audio_chunks(chunks, folder=folder, sample_rate=sample_rate)
+            if not audio_url:
+                return
+            try:
+                async with AsyncSessionLocal() as db_audio:
+                    await SessionRepository.update_message_audio_url(
+                        db_audio,
+                        message_id=message_id,
+                        audio_url=audio_url,
+                    )
+                    await db_audio.commit()
+                trace("audio_upload_done", role=role, message_id=message_id)
+                await send_json_safe(
+                    {
+                        "type": "message_audio_saved",
+                        "role": role,
+                        "message_id": message_id,
+                        "audio_url": audio_url,
+                    }
+                )
+            except Exception:
+                logger.exception("Failed to persist audio url for message id=%s", message_id)
+                trace("audio_url_persist_error", role=role, message_id=message_id)
+
+        asyncio.create_task(run())
+
     async def persist_message(role: str, content: str, audio_url: str | None = None):
         nonlocal finalized_user_messages, pending_natural_close
         if not session_id or not content.strip():
@@ -300,7 +339,7 @@ async def websocket_conversation(websocket: WebSocket):
                         message_id=message.id,
                         order_index=message.order_index,
                     )
-                    return {"message_id": message.id, "order_index": message.order_index}
+                    return {"message_id": message.id, "order_index": message.order_index, "audio_url": message.audio_url}
         except Exception:
             logger.exception("Failed to persist websocket message")
             trace("persist_message_error", role=role, text_len=len(content or ""))
@@ -396,13 +435,18 @@ async def websocket_conversation(websocket: WebSocket):
 
     async def on_assistant_message_persist(text: str) -> None:
         nonlocal pending_natural_close, assistant_audio_chunks
-        audio_url = await upload_audio_chunks(
-            assistant_audio_chunks,
-            folder="conversation-audio/assistant",
-            sample_rate=24000,
-        )
+        chunks = assistant_audio_chunks
         assistant_audio_chunks = []
-        await persist_message("assistant", text, audio_url=audio_url)
+        metadata = await persist_message("assistant", text)
+        if metadata:
+            await send_json_safe({"type": "assistant_message_saved", **metadata})
+            schedule_audio_upload(
+                message_id=metadata["message_id"],
+                role="assistant",
+                chunks=chunks,
+                folder="conversation-audio/assistant",
+                sample_rate=24000,
+            )
         if not pending_natural_close or finalized_by_server:
             return
         pending_natural_close = False
@@ -423,13 +467,18 @@ async def websocket_conversation(websocket: WebSocket):
 
     async def on_user_message_persist(text: str) -> dict | None:
         nonlocal user_audio_chunks
-        audio_url = await upload_audio_chunks(
-            user_audio_chunks,
-            folder="conversation-audio/user",
-            sample_rate=16000,
-        )
+        chunks = user_audio_chunks
         user_audio_chunks = []
-        return await persist_message("user", text, audio_url=audio_url)
+        metadata = await persist_message("user", text)
+        if metadata:
+            schedule_audio_upload(
+                message_id=metadata["message_id"],
+                role="user",
+                chunks=chunks,
+                folder="conversation-audio/user",
+                sample_rate=16000,
+            )
+        return metadata
 
     async def schedule_resume_finalize(user_message_count: int) -> None:
         if session_id is None:
