@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from pathlib import Path
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -18,6 +19,13 @@ from app.core.config import settings  # noqa: E402
 from app.core.exceptions import setup_exception_handlers  # noqa: E402
 
 # ─── Logging ────────────────────────────────────────────────────────────────
+
+RUNNING_ON_VERCEL = bool(os.getenv("VERCEL"))
+
+# Vercel filesystem là read-only, chỉ nên ghi tạm vào /tmp
+WRITABLE_ROOT = Path("/tmp") if RUNNING_ON_VERCEL else Path(".")
+LOG_DIR = WRITABLE_ROOT / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class SuppressDashScopeWebSocketNoise(logging.Filter):
@@ -47,52 +55,74 @@ class SuppressDashScopeWebSocketNoise(logging.Filter):
         return True
 
 
-os.makedirs("logs", exist_ok=True)
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("logs/server.log", encoding="utf-8"),
+        logging.FileHandler(LOG_DIR / "server.log", encoding="utf-8"),
     ],
 )
+
 logging.getLogger("websocket").addFilter(SuppressDashScopeWebSocketNoise())
+
 conversation_trace_logger = logging.getLogger("conversation_trace")
 conversation_trace_logger.setLevel(logging.INFO)
-conversation_log_path = os.path.abspath("logs/conversations.log")
+
+conversation_log_path = LOG_DIR / "conversations.log"
+
 if not any(
     isinstance(handler, logging.FileHandler)
-    and os.path.abspath(getattr(handler, "baseFilename", "")) == conversation_log_path
+    and Path(getattr(handler, "baseFilename", "")).resolve()
+    == conversation_log_path.resolve()
     for handler in conversation_trace_logger.handlers
 ):
-    conversation_trace_handler = logging.FileHandler(conversation_log_path, encoding="utf-8")
+    conversation_trace_handler = logging.FileHandler(
+        conversation_log_path,
+        encoding="utf-8",
+    )
     conversation_trace_handler.setFormatter(
         logging.Formatter("%(asctime)s | %(levelname)-7s | %(message)s")
     )
     conversation_trace_logger.addHandler(conversation_trace_handler)
+
 conversation_trace_logger.propagate = False
 
 deepgram_payload_logger = logging.getLogger("deepgram_asr")
+
 if settings.deepgram_log_payloads:
     deepgram_payload_logger.setLevel(logging.INFO)
-    deepgram_log_path = os.path.abspath(settings.deepgram_log_file)
-    os.makedirs(os.path.dirname(deepgram_log_path) or ".", exist_ok=True)
+
+    configured_deepgram_log_path = Path(settings.deepgram_log_file)
+
+    if RUNNING_ON_VERCEL:
+        deepgram_log_path = LOG_DIR / configured_deepgram_log_path.name
+    else:
+        deepgram_log_path = configured_deepgram_log_path
+
+    deepgram_log_path.parent.mkdir(parents=True, exist_ok=True)
+
     if not any(
         isinstance(handler, logging.FileHandler)
-        and os.path.abspath(getattr(handler, "baseFilename", "")) == deepgram_log_path
+        and Path(getattr(handler, "baseFilename", "")).resolve()
+        == deepgram_log_path.resolve()
         for handler in deepgram_payload_logger.handlers
     ):
-        deepgram_payload_handler = logging.FileHandler(deepgram_log_path, encoding="utf-8")
+        deepgram_payload_handler = logging.FileHandler(
+            deepgram_log_path,
+            encoding="utf-8",
+        )
         deepgram_payload_handler.setFormatter(
             logging.Formatter("%(asctime)s | %(levelname)-7s | %(message)s")
         )
         deepgram_payload_logger.addHandler(deepgram_payload_handler)
+
     deepgram_payload_logger.propagate = False
 
 logger = logging.getLogger(__name__)
 
 # ─── Lifespan ──────────────────────────────────────────────────────────────
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -104,10 +134,12 @@ async def lifespan(app: FastAPI):
     logger.info(f"TTS Provider: {settings.tts_provider}")
     logger.info(f"DashScope Region: {settings.dashscope_region}")
     logger.info("=" * 60)
+
     yield
-    
+
     # Shutdown logic if any
     logger.info("Application shutting down")
+
 
 # ─── FastAPI App ────────────────────────────────────────────────────────────
 
@@ -128,7 +160,6 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Exception handlers
 setup_exception_handlers(app)
 
-
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
@@ -138,20 +169,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.staticfiles import StaticFiles  # noqa: E402
 
-from fastapi.staticfiles import StaticFiles
+# Vercel không cho tạo thư mục trong project, nên upload tạm chuyển sang /tmp
+STATIC_DIR = Path("/tmp/static") if RUNNING_ON_VERCEL else Path("static")
+UPLOAD_DIR = STATIC_DIR / "uploads"
 
-os.makedirs("static/uploads", exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Register routers
 app.include_router(api_router, prefix="/api")
-# WebSocket router is mounted at root level (no /api prefix)
+
+# WebSocket router is mounted at root level no /api prefix
 # so the WS endpoint lives at ws://host/ws/conversation
 app.include_router(ws_router)
 
-
 # ─── Health Check ───────────────────────────────────────────────────────────
+
 
 @app.get("/")
 async def health_check():
@@ -172,6 +208,7 @@ async def health_check():
         },
     }
 
+
 @app.get("/providers")
 async def list_providers():
     """List available providers and current configuration."""
@@ -190,12 +227,14 @@ async def list_providers():
         },
     }
 
-# (Startup logic moved to lifespan)
+
+# Startup logic moved to lifespan
 
 # ─── Entry point ────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=settings.host,
