@@ -533,6 +533,7 @@ class ConversationSession:
             await self._on_llm_chunk(full_response, True)
 
         # Signal audio done
+        self._mark_turn_phase("audio_done")
         if self._on_audio_chunk:
             await self._on_audio_chunk(None)  # None = sentinel for "audio done"
 
@@ -622,6 +623,7 @@ class ConversationSession:
         if not interrupted and self._on_llm_chunk:
             await self._on_llm_chunk(full_response, True)
 
+        self._mark_turn_phase("audio_done")
         if self._on_audio_chunk:
             await self._on_audio_chunk(None)
 
@@ -687,6 +689,7 @@ class ConversationSession:
         if not interrupted and self._on_llm_chunk:
             await self._on_llm_chunk(full_response, True)
 
+        self._mark_turn_phase("audio_done")
         if self._on_audio_chunk:
             await self._on_audio_chunk(None)
 
@@ -758,6 +761,7 @@ class ConversationSession:
         asr_final = self._turn_timing.get("asr_final_ready")
         llm_first = self._turn_timing.get("llm_first_token")
         tts_first = self._turn_timing.get("tts_first_audio")
+        audio_done = self._turn_timing.get("audio_done")
 
         def _ms(current: float | None, previous: float | None) -> int | None:
             if current is None or previous is None:
@@ -765,10 +769,11 @@ class ConversationSession:
             return max(0, int((current - previous) * 1000))
 
         logger.info(
-            "Turn timing: asr_final_ms=%s llm_first_token_ms=%s tts_first_audio_ms=%s interrupted=%s response_len=%s",
+            "Turn timing: asr_final_ms=%s llm_first_token_ms=%s tts_first_audio_ms=%s audio_done_ms=%s interrupted=%s response_len=%s",
             _ms(asr_final, user_stop),
             _ms(llm_first, user_stop),
             _ms(tts_first, user_stop),
+            _ms(audio_done, user_stop),
             interrupted,
             response_len,
         )

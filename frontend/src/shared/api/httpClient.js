@@ -1,4 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const DEFAULT_GET_CACHE_TTL_MS = 12_000;
+const getRequestCache = new Map();
 
 const buildUrl = (path, params) => {
   const normalizedPath = path.startsWith("http")
@@ -111,7 +113,23 @@ const refreshAccessToken = async () => {
   return accessToken;
 };
 
-const request = async ({ method = "GET", path, params, data, headers = {}, _retry = false }) => {
+const stableCacheKey = ({ method, path, params }) => `${method}:${buildUrl(path, params)}`;
+
+export const clearHttpCache = (prefix = "") => {
+  if (!prefix) {
+    getRequestCache.clear();
+    return;
+  }
+  for (const key of getRequestCache.keys()) {
+    if (key.includes(prefix)) {
+      getRequestCache.delete(key);
+    }
+  }
+};
+
+const cachePrefixForPath = (path) => path.split("/").slice(0, 3).join("/");
+
+const request = async ({ method = "GET", path, params, data, headers = {}, cacheTtlMs, _retry = false }) => {
   const accessToken = localStorage.getItem("access_token");
   const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
   const requestHeaders = {
@@ -126,51 +144,90 @@ const request = async ({ method = "GET", path, params, data, headers = {}, _retr
     requestHeaders.Authorization = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(buildUrl(path, params), {
-    method,
-    headers: requestHeaders,
-    body: data !== undefined ? (isFormData ? data : JSON.stringify(data)) : undefined,
-  });
-
-  const responseData = await parseResponse(response);
-
-  if (response.status === 401 && !_retry && path !== "/auth/refresh") {
-    try {
-      const refreshedToken = await refreshAccessToken();
-
-      if (refreshedToken) {
-        return request({
-          method,
-          path,
-          params,
-          data,
-          headers,
-          _retry: true,
-        });
-      }
-    } catch {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      window.location.href = "/login";
+  const cacheKey = method === "GET" && cacheTtlMs !== 0 ? stableCacheKey({ method, path, params }) : null;
+  if (cacheKey) {
+    const cached = getRequestCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.promise;
     }
   }
 
-  if (!response.ok) {
-    throw createHttpError(response.status, responseData);
+  const executeRequest = async () => {
+    const response = await fetch(buildUrl(path, params), {
+      method,
+      headers: requestHeaders,
+      body: data !== undefined ? (isFormData ? data : JSON.stringify(data)) : undefined,
+    });
+
+    const responseData = await parseResponse(response);
+
+    if (response.status === 401 && !_retry && path !== "/auth/refresh") {
+      try {
+        const refreshedToken = await refreshAccessToken();
+
+        if (refreshedToken) {
+          return request({
+            method,
+            path,
+            params,
+            data,
+            headers,
+            cacheTtlMs,
+            _retry: true,
+          });
+        }
+      } catch {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        window.location.href = "/login";
+      }
+    }
+
+    if (!response.ok) {
+      throw createHttpError(response.status, responseData);
+    }
+
+    return { data: responseData };
+  };
+
+  const promise = executeRequest().catch((error) => {
+    if (cacheKey) {
+      getRequestCache.delete(cacheKey);
+    }
+    throw error;
+  });
+
+  if (cacheKey) {
+    getRequestCache.set(cacheKey, {
+      promise,
+      expiresAt: Date.now() + (cacheTtlMs ?? DEFAULT_GET_CACHE_TTL_MS),
+    });
   }
 
-  return { data: responseData };
+  return promise;
 };
 
 export const httpClient = {
   defaults: {
     baseURL: API_BASE_URL,
   },
-  get: (path, config = {}) => request({ method: "GET", path, params: config.params, headers: config.headers }),
-  post: (path, data, config = {}) => request({ method: "POST", path, data, params: config.params, headers: config.headers }),
-  patch: (path, data, config = {}) => request({ method: "PATCH", path, data, params: config.params, headers: config.headers }),
-  put: (path, data, config = {}) => request({ method: "PUT", path, data, params: config.params, headers: config.headers }),
-  delete: (path, config = {}) => request({ method: "DELETE", path, params: config.params, headers: config.headers }),
+  get: (path, config = {}) => request({ method: "GET", path, params: config.params, headers: config.headers, cacheTtlMs: config.cacheTtlMs }),
+  post: (path, data, config = {}) => {
+    clearHttpCache(cachePrefixForPath(path));
+    return request({ method: "POST", path, data, params: config.params, headers: config.headers });
+  },
+  patch: (path, data, config = {}) => {
+    clearHttpCache(cachePrefixForPath(path));
+    return request({ method: "PATCH", path, data, params: config.params, headers: config.headers });
+  },
+  put: (path, data, config = {}) => {
+    clearHttpCache(cachePrefixForPath(path));
+    return request({ method: "PUT", path, data, params: config.params, headers: config.headers });
+  },
+  delete: (path, config = {}) => {
+    clearHttpCache(cachePrefixForPath(path));
+    return request({ method: "DELETE", path, params: config.params, headers: config.headers });
+  },
 };
 
 export const getApiBaseUrl = () => httpClient.defaults.baseURL;

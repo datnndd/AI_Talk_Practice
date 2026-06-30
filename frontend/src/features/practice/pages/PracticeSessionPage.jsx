@@ -19,6 +19,7 @@ const STOP_CAPTURE_FLUSH_MS = 250;
 const LIP_SYNC_FRAME_MS = 48;
 const LIP_SYNC_RESET_DELAY_MS = 80;
 const PLAYBACK_JITTER_BUFFER_SECONDS = 0.18;
+const AUDIO_STATE_FLUSH_MS = 220;
 const RECONNECT_DELAYS_MS = [500, 1000, 2000];
 const NO_INPUT_NOTICE = "Mải mê nghe giọng bạn làm mình đãng trí. Bạn có thể nói lại một lần nữa được không?";
 
@@ -66,20 +67,6 @@ const upsertMessageRealtimeFeedback = (messages, payload) => messages.map((messa
   };
 });
 
-const appendMessageAudioChunk = (messages, messageId, chunk) => messages.map((message) => {
-  if (message.id !== messageId) {
-    return message;
-  }
-
-  const audio = message.audio || { chunks: [], sampleRate: 24000 };
-  return {
-    ...message,
-    audio: {
-      ...audio,
-      chunks: [...(audio.chunks || []), chunk],
-    },
-  };
-});
 
 const updateMessageServerAudio = (messages, messageId, payload) => messages.map((message) => {
   if (message.id !== messageId) {
@@ -166,9 +153,47 @@ const PracticeSession = () => {
   const isNavigatingToResultRef = useRef(false);
   const currentUserAudioChunksRef = useRef([]);
   const latestAssistantMessageIdRef = useRef(null);
+  const pendingAssistantAudioChunksRef = useRef([]);
+  const audioStateFlushTimerRef = useRef(null);
   const pendingCorrectionsRef = useRef(new Map());
   const initialSessionIdRef = useRef(Number.isFinite(initialSessionId) && initialSessionId > 0 ? initialSessionId : null);
 
+
+  const flushAssistantAudioChunks = useCallback(() => {
+    const messageId = latestAssistantMessageIdRef.current;
+    const chunks = pendingAssistantAudioChunksRef.current;
+    if (!messageId || chunks.length === 0) {
+      return;
+    }
+    pendingAssistantAudioChunksRef.current = [];
+    setMessages((current) => current.map((message) => {
+      if (message.id !== messageId) {
+        return message;
+      }
+      const audio = message.audio || { chunks: [], sampleRate: 24000 };
+      return {
+        ...message,
+        audio: {
+          ...audio,
+          chunks: [...(audio.chunks || []), ...chunks],
+        },
+      };
+    }));
+  }, []);
+
+  const enqueueAssistantAudioChunk = useCallback((chunk) => {
+    if (!chunk) {
+      return;
+    }
+    pendingAssistantAudioChunksRef.current.push(chunk);
+    if (audioStateFlushTimerRef.current) {
+      return;
+    }
+    audioStateFlushTimerRef.current = window.setTimeout(() => {
+      audioStateFlushTimerRef.current = null;
+      flushAssistantAudioChunks();
+    }, AUDIO_STATE_FLUSH_MS);
+  }, [flushAssistantAudioChunks]);
   const buildMessage = (role, content, options = {}) => {
       const {
         serverMessageId = null,
@@ -693,7 +718,7 @@ const PracticeSession = () => {
         recordingStateRef.current = "assistant";
         setRecordingState("assistant");
         if (latestAssistantMessageIdRef.current && payload.data) {
-          setMessages((current) => appendMessageAudioChunk(current, latestAssistantMessageIdRef.current, payload.data));
+          enqueueAssistantAudioChunk(payload.data);
         }
         await queuePlaybackChunk(payload.data);
         break;
@@ -701,6 +726,11 @@ const PracticeSession = () => {
         if (suppressAssistantStreamRef.current) {
           break;
         }
+        if (audioStateFlushTimerRef.current) {
+          window.clearTimeout(audioStateFlushTimerRef.current);
+          audioStateFlushTimerRef.current = null;
+        }
+        flushAssistantAudioChunks();
         recordingStateRef.current = "idle";
         setRecordingState("idle");
         break;
@@ -785,7 +815,7 @@ const PracticeSession = () => {
       default:
         break;
     }
-  }, [closeSocket, queuePlaybackChunk, scenario, startRecordingTurn, stopAssistantPlayback]);
+  }, [closeSocket, enqueueAssistantAudioChunk, flushAssistantAudioChunks, queuePlaybackChunk, scenario, startRecordingTurn, stopAssistantPlayback]);
 
   const connectSocket = useCallback((options = true) => {
     const resetConversation = typeof options === "boolean" ? options : options.resetConversation !== false;

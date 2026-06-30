@@ -8,6 +8,7 @@ MultiModalConversation API while preserving the app's streaming contract.
 import asyncio
 import base64
 import logging
+import re
 from collections.abc import AsyncGenerator, Generator
 from http import HTTPStatus
 from typing import Any
@@ -19,6 +20,10 @@ from app.core.config import Settings
 from app.infra.contracts import TTSBase, TTSConfig
 
 logger = logging.getLogger(__name__)
+
+_SENTENCE_END_RE = re.compile(r"[.!?。！？]\s+$")
+_MIN_STREAM_TEXT_CHARS = 80
+_MAX_STREAM_TEXT_CHARS = 180
 
 _LANGUAGE_TYPE_BY_CODE = {
     "en": "English",
@@ -115,28 +120,13 @@ class DashScopeTTS(TTSBase):
 
         return MultiModalConversation.call(**kwargs)
 
-    async def synthesize_stream(
-        self,
-        text_iterator: AsyncGenerator[str, None],
-        config: TTSConfig | None = None,
-    ) -> AsyncGenerator[bytes, None]:
-        """Convert streamed text into streamed audio chunks."""
-        cfg = config or TTSConfig(
-            voice=self._config.tts_voice,
-            language=self._config.tts_language,
-        )
-
-        parts: list[str] = []
-        async for text_chunk in text_iterator:
-            if text_chunk.strip():
-                parts.append(text_chunk)
-
-        full_text = "".join(parts).strip()
-        if not full_text:
+    async def _yield_tts_audio(self, text: str, cfg: TTSConfig) -> AsyncGenerator[bytes, None]:
+        text = text.strip()
+        if not text:
             return
 
         try:
-            response_stream = await self._run_blocking(self._call_tts, full_text, cfg)
+            response_stream = await self._run_blocking(self._call_tts, text, cfg)
         except Exception as exc:
             logger.error("DashScope TTS request failed: %s", exc)
             return
@@ -164,8 +154,42 @@ class DashScopeTTS(TTSBase):
                 "DashScope TTS finished without audio (model=%s, voice=%s, text_len=%s)",
                 self._config.tts_model,
                 cfg.voice,
-                len(full_text),
+                len(text),
             )
+
+    @staticmethod
+    def _should_flush_text(buffer: str) -> bool:
+        stripped = buffer.strip()
+        if len(stripped) >= _MAX_STREAM_TEXT_CHARS:
+            return True
+        return len(stripped) >= _MIN_STREAM_TEXT_CHARS and bool(_SENTENCE_END_RE.search(stripped))
+
+    async def synthesize_stream(
+        self,
+        text_iterator: AsyncGenerator[str, None],
+        config: TTSConfig | None = None,
+    ) -> AsyncGenerator[bytes, None]:
+        """Convert streamed text into streamed audio chunks."""
+        cfg = config or TTSConfig(
+            voice=self._config.tts_voice,
+            language=self._config.tts_language,
+        )
+
+        buffer = ""
+        async for text_chunk in text_iterator:
+            if not text_chunk.strip():
+                continue
+            buffer = f"{buffer}{text_chunk}"
+            if not self._should_flush_text(buffer):
+                continue
+            text_to_speak = buffer.strip()
+            buffer = ""
+            async for audio_bytes in self._yield_tts_audio(text_to_speak, cfg):
+                yield audio_bytes
+
+        if buffer.strip():
+            async for audio_bytes in self._yield_tts_audio(buffer, cfg):
+                yield audio_bytes
 
     async def synthesize(
         self,

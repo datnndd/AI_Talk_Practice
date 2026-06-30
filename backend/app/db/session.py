@@ -12,17 +12,27 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 connect_args = {}
+engine_options = {
+    "echo": settings.is_debug,
+    "pool_pre_ping": True,
+    "connect_args": connect_args,
+}
 if settings.database_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 elif settings.database_url.startswith("postgresql+asyncpg"):
     connect_args = {"ssl": "require", "statement_cache_size": 0}
+    engine_options.update(
+        {
+            "pool_size": settings.db_pool_size,
+            "max_overflow": settings.db_max_overflow,
+            "pool_timeout": settings.db_pool_timeout,
+            "pool_recycle": settings.db_pool_recycle,
+        }
+    )
 
-engine = create_async_engine(
-    settings.database_url,
-    echo=settings.is_debug,
-    pool_pre_ping=True,
-    connect_args=connect_args,
-)
+engine_options["connect_args"] = connect_args
+
+engine = create_async_engine(settings.database_url, **engine_options)
 
 AsyncSessionLocal = async_sessionmaker(
     engine,

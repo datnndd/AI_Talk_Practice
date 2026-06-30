@@ -1,3 +1,4 @@
+/* global sampleRate */
 /* global AudioWorkletProcessor, registerProcessor */
 
 class AudioCaptureProcessor extends AudioWorkletProcessor {

@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     database_url: str = Field(
         description="Async database connection URL",
     )
+    db_pool_size: int = Field(default=10, description="Database connection pool size")
+    db_max_overflow: int = Field(default=20, description="Database pool overflow connections")
+    db_pool_timeout: int = Field(default=30, description="Seconds to wait for a database pool connection")
+    db_pool_recycle: int = Field(default=1800, description="Seconds before recycling pooled DB connections")
 
     # --- Auth / JWT ---
     jwt_secret_key: str = Field(default="change-me-in-production", description="JWT signing secret")
